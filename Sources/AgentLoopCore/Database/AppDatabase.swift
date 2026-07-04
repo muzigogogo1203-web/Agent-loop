@@ -108,7 +108,7 @@ public final class AppDatabase: Sendable {
             try db.create(table: "camp_note") { t in
                 t.primaryKey("id", .text)
                 t.column("campId", .text).notNull().references("camp")
-                t.column("missionId", .text)
+                t.column("missionId", .text).references("mission") // FK Fix 5
                 t.column("title", .text).notNull()
                 t.column("bodyMd", .text).notNull()
                 t.column("pinned", .boolean).notNull().defaults(to: false)
@@ -126,23 +126,40 @@ public final class AppDatabase: Sendable {
                 t.column("createdAt", .datetime).notNull()
                 t.column("answeredAt", .datetime)
             }
-            // chat_thread
+            // chat_thread (Fix 5: campId FK)
             try db.create(table: "chat_thread") { t in
                 t.primaryKey("id", .text)
                 t.column("kind", .text).notNull()
                 t.column("companionId", .text).notNull().references("companion")
-                t.column("campId", .text)
+                t.column("campId", .text).references("camp") // FK Fix 5
                 t.column("createdAt", .datetime).notNull()
             }
             // chat_message
             try db.create(table: "chat_message") { t in
                 t.primaryKey("id", .text)
-                t.column("threadId", .text).notNull().references("chat_thread")
+                t.column("threadId", .text).notNull().references("chat_thread").indexed() // Fix 5: index
                 t.column("role", .text).notNull()
                 t.column("contentJson", .text).notNull()
                 t.column("distilled", .boolean).notNull().defaults(to: false)
                 t.column("createdAt", .datetime).notNull()
             }
+
+            // Fix 5: additional indexes for hot query paths
+            try db.create(index: "event_cardId", on: "event", columns: ["cardId"])
+            try db.create(index: "run_cardId", on: "run", columns: ["cardId"])
+            try db.create(index: "artifact_cardId", on: "artifact", columns: ["cardId"])
+
+            // Fix 5: append-only enforcement for event table via SQLite triggers
+            try db.execute(sql: """
+                CREATE TRIGGER event_no_update BEFORE UPDATE ON event BEGIN
+                    SELECT RAISE(ABORT, 'event is append-only');
+                END
+                """)
+            try db.execute(sql: """
+                CREATE TRIGGER event_no_delete BEFORE DELETE ON event BEGIN
+                    SELECT RAISE(ABORT, 'event is append-only');
+                END
+                """)
         }
         return m
     }
@@ -175,9 +192,8 @@ public final class AppDatabase: Sendable {
 
     // MARK: Companion CRUD
 
-    public func saveCompanion(_ c: inout CompanionRecord) throws {
-        let captured = c
-        try pool.write { db in try captured.save(db) }
+    public func saveCompanion(_ c: CompanionRecord) throws { // Fix 7: drop inout
+        try pool.write { db in try c.save(db) }
     }
 
     public func companion(id: String) throws -> CompanionRecord? {
@@ -261,7 +277,9 @@ public final class AppDatabase: Sendable {
     public func transitionCard(id: String, to next: CardStatus, eventKind: String,
                                payload: JSONValue, blockedReasonJson: String? = nil) throws {
         try pool.write { db in
-            guard var card = try CardRecord.fetchOne(db, key: id) else { return }
+            guard var card = try CardRecord.fetchOne(db, key: id) else {
+                throw RecordNotFoundError(table: "card", id: id)
+            }
             guard card.status.canTransition(to: next) else {
                 throw CardTransitionError(from: card.status, to: next)
             }
@@ -279,7 +297,7 @@ public final class AppDatabase: Sendable {
                                    runId: String?, kind: String, payload: JSONValue) throws {
         try EventRecord(
             id: UUID().uuidString, missionId: missionId, cardId: cardId, runId: runId,
-            kind: kind, payloadJson: (try? payload.encodedString()) ?? "{}",
+            kind: kind, payloadJson: try payload.encodedString(), // Fix 6: encoding failure throws
             createdAt: Date()
         ).insert(db)
     }
@@ -288,7 +306,7 @@ public final class AppDatabase: Sendable {
         try pool.read { db in
             try EventRecord
                 .filter(Column("cardId") == cardId)
-                .order(Column("createdAt"))
+                .order(Column("createdAt"), Column.rowID)
                 .fetchAll(db)
         }
     }
@@ -302,10 +320,8 @@ public final class AppDatabase: Sendable {
     }
 
     public func insertRun(id: String, cardId: String) throws {
-        let attempt = try pool.read { db in
-            try RunRecord.filter(Column("cardId") == cardId).fetchCount(db)
-        }
         try pool.write { db in
+            let attempt = try RunRecord.filter(Column("cardId") == cardId).fetchCount(db)
             try RunRecord(
                 id: id, cardId: cardId, attempt: attempt + 1, outcome: nil,
                 turns: 0, tokensIn: 0, tokensOut: 0, startedAt: Date(), endedAt: nil
@@ -315,7 +331,9 @@ public final class AppDatabase: Sendable {
 
     public func finishRun(id: String, outcome: String, turns: Int, tokensIn: Int, tokensOut: Int) throws {
         try pool.write { db in
-            guard var run = try RunRecord.fetchOne(db, key: id) else { return }
+            guard var run = try RunRecord.fetchOne(db, key: id) else {
+                throw RecordNotFoundError(table: "run", id: id)
+            }
             run.outcome = outcome
             run.turns = turns
             run.tokensIn = tokensIn
@@ -360,12 +378,10 @@ public final class AppDatabase: Sendable {
     }
 
     public func appendChatMessage(threadId: String, role: String, text: String) throws {
-        let contentJson: String
-        if let data = try? JSONEncoder().encode(["text": text]),
-           let s = String(data: data, encoding: .utf8) {
-            contentJson = s
-        } else {
-            contentJson = "{\"text\":\"\"}"
+        // Fix 6: encoding failure throws — no fallback to empty JSON
+        let data = try JSONEncoder().encode(["text": text])
+        guard let contentJson = String(data: data, encoding: .utf8) else {
+            throw EncodingError.invalidValue(text, .init(codingPath: [], debugDescription: "UTF-8 encoding failed"))
         }
         try pool.write { db in
             try ChatMessageRecord(

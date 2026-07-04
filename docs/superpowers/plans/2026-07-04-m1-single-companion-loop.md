@@ -1023,8 +1023,8 @@ private func tempDB() throws -> AppDatabase {
 
 @Test func companionCRUD() throws {
     let db = try tempDB()
-    var c = CompanionRecord.new(name: "阿规", color: "purple", rolePrompt: "你是产品伙伴", model: "claude-sonnet-4-6")
-    try db.saveCompanion(&c)
+    let c = CompanionRecord.new(name: "阿规", color: "purple", rolePrompt: "你是产品伙伴", model: "claude-sonnet-4-6")
+    try db.saveCompanion(c)
     let all = try db.regularCompanions()
     #expect(all.map(\.name) == ["阿规"])
 }
@@ -1068,7 +1068,9 @@ public enum CardStatus: String, Sendable, Codable, CaseIterable {
         switch (self, next) {
         case (.todo, .ready), (.ready, .running), (.running, .done),
              (.running, .blocked), (.blocked, .ready), (.blocked, .canceled),
-             (.todo, .canceled), (.ready, .canceled):
+             (.todo, .canceled), (.ready, .canceled),
+             (.running, .ready),    // §14 crash-recovery: interrupt returns card to ready
+             (.running, .canceled): // §13 budget-exhausted early-close terminalization
             return true
         default: return false
         }
@@ -1274,8 +1276,8 @@ public final class AppDatabase: Sendable {
     }
 
     // MARK: 伙伴
-    public func saveCompanion(_ c: inout CompanionRecord) throws {
-        try pool.write { [c] db in try c.save(db) }
+    public func saveCompanion(_ c: CompanionRecord) throws { // inout removed — value type, no mutation
+        try pool.write { db in try c.save(db) }
     }
     public func regularCompanions() throws -> [CompanionRecord] {
         try pool.read { db in
@@ -2538,8 +2540,8 @@ import Foundation
     let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
     let db = try AppDatabase(path: base.appendingPathComponent("t.sqlite").path)
-    var c = CompanionRecord.new(name: "细细", color: "coral", rolePrompt: "你是审校伙伴", model: "m")
-    try db.saveCompanion(&c)
+    let c = CompanionRecord.new(name: "细细", color: "coral", rolePrompt: "你是审校伙伴", model: "m")
+    try db.saveCompanion(c)
 
     let mock = MockProvider(script: [TurnResult(content: [.text("你好呀")], stopReason: .endTurn)])
     let chat = ChatService(db: db, provider: mock)
@@ -2981,8 +2983,8 @@ struct CompanionEditorView: View {
                 TextEditor(text: $rolePrompt).frame(minHeight: 120)
             }
             Button("保存伙伴") {
-                var c = CompanionRecord.new(name: name, color: color, rolePrompt: rolePrompt, model: model)
-                try? store.db.saveCompanion(&c)
+                let c = CompanionRecord.new(name: name, color: color, rolePrompt: rolePrompt, model: model)
+                try? store.db.saveCompanion(c)
                 store.reload(); onDone()
             }
             .disabled(name.isEmpty || rolePrompt.isEmpty)

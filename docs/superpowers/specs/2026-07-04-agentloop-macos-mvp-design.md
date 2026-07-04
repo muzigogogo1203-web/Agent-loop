@@ -119,6 +119,7 @@ todo ──依赖全部完成──▶ ready ──被伙伴认领──▶ runn
 ```
 
 - 状态转移是一个穷举 `switch` 的纯函数；非法转移编译期不可表达。
+- 补充转移（与 §13/§14 对齐）：`running → ready`（崩溃恢复把中断的卡片放回就绪）与 `running → canceled`（预算耗尽提前收营时终态化在途卡片）；`blocked` 解除后回 `ready` 经调度器重新派发，而非直接回 `running`。
 - **MVP 无卡级人工验收**：`complete_card` 的交接包校验（§7）同步执行——校验失败作为 tool_result 错误返回、卡片保持 `running` 让伙伴修正；校验通过即 `done`，下游依赖立即解锁。人工验收只发生在行动层（收营）。这保证「零人工到收营」的活体冒烟硬门（§15-5）与下游冷启动（§16-M2）成立。
 - `blocked` 必须携带类型化原因（关联值，非可空列）：`needsHumanInput(UserRequest)` / `budgetExhausted` / `toolFailure(String)` / `refusal` / `noTerminator`。
 - Mission 状态：`planning → executing → delivering → accepted / failed`，由小目标状态纯函数推导 rollup。`delivering` = 全部小目标终态且至少一个 done，等用户收营。

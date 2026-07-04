@@ -23,8 +23,8 @@ private func tempDB() throws -> AppDatabase {
 
 @Test func companionCRUD() throws {
     let db = try tempDB()
-    var c = CompanionRecord.new(name: "阿规", color: "purple", rolePrompt: "你是产品伙伴", model: "claude-sonnet-4-6")
-    try db.saveCompanion(&c)
+    let c = CompanionRecord.new(name: "阿规", color: "purple", rolePrompt: "你是产品伙伴", model: "claude-sonnet-4-6") // Fix 7: let, no &
+    try db.saveCompanion(c)
     let all = try db.regularCompanions()
     #expect(all.map(\.name) == ["阿规"])
 }
@@ -49,5 +49,20 @@ private func tempDB() throws -> AppDatabase {
     // ready → done 非法（createSingleCardMission 建卡即 ready；done 必须先经 running，spec §5.1）
     #expect(throws: CardTransitionError.self) {
         try db.transitionCard(id: ids.cardId, to: .done, eventKind: "x", payload: .object([:]))
+    }
+}
+
+// Fix 3: unknown ids throw instead of silent no-op
+@Test func transitionUnknownCardThrows() throws {
+    let db = try tempDB()
+    #expect(throws: RecordNotFoundError.self) {
+        try db.transitionCard(id: "nope", to: .running, eventKind: "x", payload: .object([:]))
+    }
+}
+
+@Test func finishUnknownRunThrows() throws {
+    let db = try tempDB()
+    #expect(throws: RecordNotFoundError.self) {
+        try db.finishRun(id: "nope", outcome: "completed", turns: 0, tokensIn: 0, tokensOut: 0)
     }
 }

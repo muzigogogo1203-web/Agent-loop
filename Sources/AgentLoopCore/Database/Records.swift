@@ -6,12 +6,14 @@ import GRDB
 public enum CardStatus: String, Sendable, Codable, CaseIterable {
     case todo, ready, running, done, blocked, canceled
 
-    /// spec §5.1 exhaustive transitions
+    /// spec §5.1 exhaustive transitions + §13/§14 supplemental pairs
     public func canTransition(to next: CardStatus) -> Bool {
         switch (self, next) {
         case (.todo, .ready), (.ready, .running), (.running, .done),
              (.running, .blocked), (.blocked, .ready), (.blocked, .canceled),
-             (.todo, .canceled), (.ready, .canceled):
+             (.todo, .canceled), (.ready, .canceled),
+             (.running, .ready),    // §14 crash-recovery: interrupt returns card to ready
+             (.running, .canceled): // §13 budget-exhausted early-close terminalization
             return true
         default: return false
         }
@@ -24,6 +26,15 @@ public struct CardTransitionError: Error, Equatable {
     public init(from: CardStatus, to: CardStatus) {
         self.from = from
         self.to = to
+    }
+}
+
+public struct RecordNotFoundError: Error, Equatable {
+    public let table: String
+    public let id: String
+    public init(table: String, id: String) {
+        self.table = table
+        self.id = id
     }
 }
 
