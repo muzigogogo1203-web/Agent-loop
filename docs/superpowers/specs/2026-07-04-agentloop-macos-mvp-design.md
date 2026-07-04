@@ -223,7 +223,7 @@ struct HandoffPayload: Codable {   // v1
 | 网络 | `web_fetch(url)` | URL → 正文 markdown；只读 |
 | 笔记 | `search_camp_notes(query)` | 关键词 + 最近优先，返回笔记摘要 |
 | 向导专属 | `camp_status()` | 只读营地全景：小队/行动/小目标状态/最近交付物 |
-| | `propose_squad(name, member_ids, goal)` | 提案制组队：产出确认卡片，用户确认后内核才创建小队与行动（§10.2） |
+| | `propose_squad(name, member_ids, goal, budget?)` | 提案制组队：产出确认卡片，用户确认后内核才创建小队与行动（§10.2）；budget 缺省取设置默认值（§13） |
 
 - 每个伙伴可勾选工具子集（`companion.tools_json` 白名单）。
 - 向导的工具集固定（`search_camp_notes` + 向导专属两项），不参与勾选；普通伙伴不可用向导专属工具；私聊不带工具（MVP）。
@@ -253,7 +253,8 @@ struct HandoffPayload: Codable {   // v1
 - **营地对话**：营地首页的常驻单线程对话，无需创建小队即可使用。能力 = 读 + 提案：
   - 读知识：`search_camp_notes` 检索营地笔记；
   - 读状态：`camp_status()` 只读营地全景（小队、行动、小目标状态、最近交付物）；
-  - **提案组队**：`propose_squad(name, member_ids, goal)` 产出结构化组队提案（小队名 + 从全局名册选的成员 + 行动目标 + 预算建议），在对话中渲染为确认卡片；**用户确认后内核才创建小队与行动**，向导永不静默建队（前身 P8 教训：领航员提案制）。
+  - **提案组队**：`propose_squad(name, member_ids, goal, budget?)` 产出结构化组队提案（小队名 + 从全局名册选的成员 + 行动目标 + 预算建议），在对话中渲染为确认卡片；**用户确认后内核才创建小队与行动**，向导永不静默建队（前身 P8 教训：领航员提案制）。未确认的提案是 `chat_message.content_json` 里的类型化结构块（非自由文本），重启后仍可确认；确认动作以提案 id 幂等，杜绝重复建队。
+- 向导对话的上下文构成：人设 prompt + 对话历史 + 工具定义——知识与状态**按需拉取**（工具调用），不自动注入营地笔记。
 - 营地对话可手动「沉淀」为营地笔记（入 `camp_note`，与收营蒸馏同表同交互）。
 
 ## 11. UI 设计（SwiftUI，macOS 14+）
@@ -345,4 +346,5 @@ struct HandoffPayload: Codable {   // v1
 
 1. 正式产品名（工作名 AgentLoop；仓库 /Users/muzi/Agent-loop）。
 2. `web_search` 的搜索后端选型（若 MVP 内做）。
-3. 营地笔记蒸馏的 prompt 模板细节（实现期定稿）。
+3. 营地笔记/伙伴记忆蒸馏的 prompt 模板细节（实现期定稿）。
+4. 私聊自动沉淀的闲置阈值取值（实现期定稿，M4）。
