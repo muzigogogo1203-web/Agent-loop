@@ -3,10 +3,13 @@ import SwiftUI
 @main
 struct AgentLoopApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @State private var store = AppStore()
 
     var body: some Scene {
         WindowGroup("AgentLoop") {
-            Text("营地搭建中…").padding(40)
+            RootView()
+                .environment(store)
+                .frame(minWidth: 760, minHeight: 520)
         }
     }
 }
