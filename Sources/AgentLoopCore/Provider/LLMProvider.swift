@@ -34,13 +34,3 @@ public protocol LLMProvider: Sendable {
     func streamTurn(system: String, history: [APIMessage], tools: [ToolDef], maxTokens: Int)
         -> AsyncThrowingStream<ProviderEvent, Error>
 }
-
-// 临时放在 LLMProvider.swift 底部，Task 8 移入 Tools/ToolDef.swift
-public struct ToolDef: Sendable, Equatable {
-    public let name: String
-    public let description: String
-    public let inputSchema: JSONValue
-    public init(name: String, description: String, inputSchema: JSONValue) {
-        self.name = name; self.description = description; self.inputSchema = inputSchema
-    }
-}
