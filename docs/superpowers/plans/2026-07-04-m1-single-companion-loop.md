@@ -909,7 +909,7 @@ case 429, 500...599:
     // ...退避后 continue
 ```
 
-- [ ] **Step 4: 确认通过** — `swift test --filter AnthropicProviderTests` → PASS（4 tests）
+- [ ] **Step 4: 确认通过** — `swift test --filter AnthropicProviderTests` → PASS（8 tests，含评审补充的 retry-after/耗尽/确定性编码用例）
 - [ ] **Step 5: Commit** — `git commit -am "feat(m1): hand-rolled Anthropic streaming provider with retry/backoff"`
 
 ---
