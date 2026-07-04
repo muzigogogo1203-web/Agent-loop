@@ -3,6 +3,7 @@ import AgentLoopCore
 
 struct TaskRunView: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var title = ""
     @State private var description = ""
     @State private var expected = ""
@@ -11,14 +12,30 @@ struct TaskRunView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if case .idle = store.runPhase {
+            if isIdle {
                 form
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .leading).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
             } else {
                 runView
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .trailing).combined(with: .opacity)
+                    ))
             }
         }
+        .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: isIdle)
         .padding()
         .navigationTitle("单卡试运行")
+    }
+
+    private var isIdle: Bool {
+        if case .idle = store.runPhase {
+            return true
+        }
+        return false
     }
 
     private var form: some View {

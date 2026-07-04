@@ -3,6 +3,7 @@ import AgentLoopCore
 
 struct DMChatView: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let companion: CompanionRecord
     @State private var input = ""
 
@@ -21,6 +22,7 @@ struct DMChatView: View {
                         }
                     }
                     .padding()
+                    .animation(reduceMotion ? nil : .snappy, value: store.chatMessages.count)
                 }
                 .onChange(of: store.chatMessages.count) { _, newValue in
                     proxy.scrollTo(newValue - 1)
