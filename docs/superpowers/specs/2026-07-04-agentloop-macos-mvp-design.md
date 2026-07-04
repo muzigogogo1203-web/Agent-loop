@@ -81,7 +81,7 @@ UserRequest（ask_user 门，属于 Card）
 | `companion` | id, name, color, role_prompt, model, tools_json, created_at |
 | `camp` | id, name, created_at |
 | `squad` | id, camp_id, name, member_ids_json, workspace_bookmark BLOB?, created_at |
-| `mission` | id, squad_id, goal_raw, goal_refined, status, budget_tokens, spent_tokens, revision, created_at |
+| `mission` | id, squad_id, goal_raw, goal_refined, status, budget_tokens, spent_tokens, revision, created_at —— revision 为重规划计数，MVP 恒为 1（v2 动态重规划预留，前身 P5 的概念） |
 | `card` | id, mission_id, idem_key UNIQUE, title, description, expected_output, assignee_id, status, blocked_reason_json?, depends_on_json, max_turns, token_budget, created_at |
 | `run` | id, card_id, attempt, outcome?, turns, tokens_in, tokens_out, started_at, ended_at? |
 | `event` | id, mission_id?, card_id?, run_id?, kind, payload_json, created_at —— 追加式，禁止 UPDATE/DELETE |
@@ -249,7 +249,7 @@ struct HandoffPayload: Codable {   // v1
 
 ## 12. 预算与安全
 
-- 预算三层：per-turn `max_tokens`、per-card `maxTurns + token 预算`（`card.token_budget` 列，规划者在行动总额内分配，缺省取设置里的默认值）、per-mission 总额（超限 → 行动暂停，等用户加注或收营）。
+- 预算三层：per-turn `max_tokens`、per-card `maxTurns + token 预算`（`card.token_budget` 列，规划者在行动总额内分配，缺省取设置里的默认值）、per-mission 总额。行动总额耗尽时暂停并给用户三选：**加注**（继续）、**提前收营**（未完成小目标转 `canceled` 使其终态化，进入 `delivering` 验收已有成果）、**终止**（行动 `failed`）。与 §5.1 的 `delivering` 定义（全部小目标终态）一致。
 - 预算剩 10%（下限 3 轮）注入强制收尾指令：立即 complete 或 block。
 - 文件写入仅限工作目录（含 symlink 规范化检查）；无 shell；网络只读。
 - `ask_user` 是类型化持久门（`user_request` 表），不靠 regex 扫聊天。
@@ -264,7 +264,7 @@ struct HandoffPayload: Codable {   // v1
 | 工具错误 | `is_error` tool_result 自愈；同工具连续 3 次 → blocked |
 | 上下文超限 | 客户端摘要压缩（保缓存前缀） |
 | 每轮超时（120s） | 取消本轮，按工具错误路径重试一次，再超 → blocked |
-| App 崩溃/退出 | 事件已落库；重启 reconcile 把 running 标记 interrupted → 重建上下文包回到 ready（Run 记录保留） |
+| App 崩溃/退出 | 事件已落库；重启 reconcile 把 running 卡片直接转回 `ready` 并重建上下文包（`interrupted` 记在 Run 的 outcome 上，不是卡片状态——卡片状态机保持 §5.1 的穷举集合） |
 | 收营蒸馏失败 | 确定性回退：交接包摘要拼接为笔记 |
 
 每个静默状态都是显式枚举，UI 可渲染：排队中/执行中/等待用户/受阻(分类)/中断待恢复。
