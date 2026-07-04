@@ -29,7 +29,10 @@
 | 主题 | 行动 | `Mission` | 一次目标执行；同一小队同时只有一个活跃行动 |
 | 子任务 | 小目标 | `Card` | 内核的调度单元；界面上不暴露列式看板术语 |
 | Agent | 伙伴 | `Companion` | 用户定义：名字、颜色、职责、模型、工具白名单 |
+| 营地管理员 | 向导 | `Companion(kind: guide)` | 每个营地创建时自动配备：营地对话、读营地内容、提案组队；不可指派小目标 |
 | 经验沉淀 | 营地笔记 | `CampNote` | 收营复盘自动蒸馏 + 用户可编辑/置顶 |
+| 个人记忆 | 伙伴记忆 | `CompanionNote` | 私聊沉淀的个人记忆，该伙伴工作与私聊时注入 |
+| 单线程对话 | 私聊 / 营地对话 | `ChatThread` | 与伙伴的私聊（全局级）或与向导的营地对话（营地级） |
 | 完结验收 | 收营 | closeout | 行动交付验收 + 笔记蒸馏 |
 | 执行记录 | — | `Run` | 一张小目标的一次执行尝试 |
 | 事件 | 动态 | `Event` | 追加式日志；一切 UI 是它的投影 |
@@ -45,6 +48,8 @@
 - 伙伴间通过结构化交接包传递工作，下游冷启动即可开工。
 - 交付物落在用户可及的位置，验收界面一键 Finder reveal。
 - 收营自动沉淀营地笔记；新行动的规划自动携带相关笔记。
+- 用户可与任一伙伴单线程私聊；聊天内容沉淀为伙伴记忆，该伙伴此后工作时自动携带。
+- 用户可在营地里直接与向导对话（无需创建小队）：查营地笔记与行动状态、由向导提案组建小队并开工（提案制，用户确认后才创建）。
 - 崩溃/重启后行动可恢复继续。
 
 ### 非目标（明确不做，v2+）
@@ -54,7 +59,8 @@
 - 自定义看板列 / 工作流模板。
 - 同一小队多行动并行。
 - 本地 CLI Agent（claude/codex）适配。
-- 营地笔记的向量检索（MVP 用最近优先 + 手动置顶 + 关键词）。
+- 营地笔记/伙伴记忆的向量检索（MVP 均为最近优先 + 手动置顶 + 关键词）。
+- 同一伙伴或向导的多对话线程（MVP 各一个持续线程）。
 - iCloud 同步、多设备。
 
 ## 4. 领域模型与持久化
@@ -62,13 +68,16 @@
 ### 4.1 实体
 
 ```text
-Camp（营地）
+Camp（营地）── 向导: Companion(kind: guide) 自动配备
+  ├─ CampNote（营地笔记）
+  ├─ ChatThread(kind: guide)（营地对话，单线程）
   └─ Squad（小队）── 成员: [Companion]（全局名册，邀请制）
       └─ Mission（行动）── 目标原文 + 精炼目标 + 状态 + 预算
           └─ Card（小目标）── 幂等键 mission:<id>:stage-N
               └─ Run（执行尝试）
 Companion（伙伴，全局名册）
-CampNote（营地笔记，属于 Camp）
+  ├─ CompanionNote（伙伴记忆）
+  └─ ChatThread(kind: dm)（私聊，单线程）
 Event（追加式，全局）
 Artifact（属于 Card，耐久存储）
 UserRequest（ask_user 门，属于 Card）
@@ -78,7 +87,7 @@ UserRequest（ask_user 门，属于 Card）
 
 | 表 | 关键列 |
 |---|---|
-| `companion` | id, name, color, role_prompt, model, tools_json, created_at |
+| `companion` | id, name, color, role_prompt, model, tools_json, kind(regular/guide), camp_id?（guide 专属）, created_at |
 | `camp` | id, name, created_at |
 | `squad` | id, camp_id, name, member_ids_json, workspace_bookmark BLOB?, created_at |
 | `mission` | id, squad_id, goal_raw, goal_refined, status, budget_tokens, spent_tokens, revision, created_at —— revision 为重规划计数，MVP 恒为 1（v2 动态重规划预留，前身 P5 的概念） |
@@ -88,6 +97,9 @@ UserRequest（ask_user 门，属于 Card）
 | `artifact` | id, card_id, path, kind, label, created_at |
 | `camp_note` | id, camp_id, mission_id?, title, body_md, pinned, created_at, updated_at |
 | `user_request` | id, card_id, kind(choice/confirm/text), prompt, options_json?, answer_json?, created_at, answered_at? |
+| `chat_thread` | id, kind(dm/guide), companion_id, camp_id?, created_at |
+| `chat_message` | id, thread_id, role(user/companion), content_json, distilled, created_at |
+| `companion_note` | id, companion_id, source_thread_id?, title, body_md, pinned, created_at, updated_at |
 
 - `event` 与投影表（card.status 等）在**同一写事务**内更新：既有审计日志，又有快查投影。
 - UI 由 `ValueObservation` 直驱；崩溃恢复 = 纯重读。
@@ -106,7 +118,7 @@ todo ──依赖全部完成──▶ ready ──被伙伴认领──▶ runn
 ```
 
 - 状态转移是一个穷举 `switch` 的纯函数；非法转移编译期不可表达。
-- **MVP 无卡级人工验收**：`complete_card` 的交接包校验（§7）同步执行——校验失败作为 tool_result 错误返回、卡片保持 `running` 让伙伴修正；校验通过即 `done`，下游依赖立即解锁。人工验收只发生在行动层（收营）。这保证「零人工到收营」的活体冒烟硬门（§14-5）与下游冷启动（§15-M2）成立。
+- **MVP 无卡级人工验收**：`complete_card` 的交接包校验（§7）同步执行——校验失败作为 tool_result 错误返回、卡片保持 `running` 让伙伴修正；校验通过即 `done`，下游依赖立即解锁。人工验收只发生在行动层（收营）。这保证「零人工到收营」的活体冒烟硬门（§15-5）与下游冷启动（§16-M2）成立。
 - `blocked` 必须携带类型化原因（关联值，非可空列）：`needsHumanInput(UserRequest)` / `budgetExhausted` / `toolFailure(String)` / `refusal` / `noTerminator`。
 - Mission 状态：`planning → executing → delivering → accepted / failed`，由小目标状态纯函数推导 rollup。`delivering` = 全部小目标终态且至少一个 done，等用户收营。
 - **MVP 验收是单向的**：收营即 `accepted`；不满意的部分通过在小队里下达新行动解决，无卡级退回重做路径（v2 议题）。`failed` 仅两个触发：用户主动放弃行动，或预算耗尽后用户选择终止而非加注。
@@ -162,7 +174,8 @@ while run.turns < card.maxTurns {
 3. 上游小目标的交接包摘要 + 产物耐久路径
 4. 工作目录根路径 + 可用工具说明
 5. 相关营地笔记（见 §9）
-6. 交接包格式要求 + 「必须以 complete_card/block_card 收尾」契约
+6. 伙伴记忆：置顶全部 + 最近 3 张摘要（见 §10.1）
+7. 交接包格式要求 + 「必须以 complete_card/block_card 收尾」契约
 
 ### 6.3 Provider 协议
 
@@ -209,8 +222,11 @@ struct HandoffPayload: Codable {   // v1
 | 文件 | `list_dir` `read_file` `write_file` | 严格限定小队工作目录内：安全作用域书签 + 规范化路径包含检查；无工作目录的小队写入交付暂存区 `~/Library/Application Support/AgentLoop/staging/<card_id>/`（`complete_card` 时按 §5.2-2 拷入耐久存储，收营后暂存区可清理） |
 | 网络 | `web_fetch(url)` | URL → 正文 markdown；只读 |
 | 笔记 | `search_camp_notes(query)` | 关键词 + 最近优先，返回笔记摘要 |
+| 向导专属 | `camp_status()` | 只读营地全景：小队/行动/小目标状态/最近交付物 |
+| | `propose_squad(name, member_ids, goal)` | 提案制组队：产出确认卡片，用户确认后内核才创建小队与行动（§10.2） |
 
 - 每个伙伴可勾选工具子集（`companion.tools_json` 白名单）。
+- 向导的工具集固定（`search_camp_notes` + 向导专属两项），不参与勾选；普通伙伴不可用向导专属工具；私聊不带工具（MVP）。
 - `web_search` 视 MVP 进度可选（需外部搜索 API key），不在承诺范围。
 - 只读工具（read_file/list_dir/web_fetch/search_camp_notes）标记 parallel-safe，可并发执行。
 
@@ -221,11 +237,30 @@ struct HandoffPayload: Codable {   // v1
 3. **主动翻阅**：伙伴通过 `search_camp_notes` 工具按需检索。
 4. **可浏览可编辑**：笔记本是营地首页的一等界面；用户可编辑、置顶、删除。
 
-## 10. UI 设计（SwiftUI，macOS 14+）
+## 10. 对话与记忆（伙伴私聊 + 营地向导）
+
+### 10.1 伙伴私聊与伙伴记忆
+
+- 名册中每个伙伴支持单线程私聊（每伙伴一个持续线程）。私聊是纯对话循环：伙伴职责 prompt + 伙伴记忆（置顶 + 最近）+ 对话历史；MVP 私聊不带工具。
+- **沉淀**：两个触发——用户点「沉淀记忆」（对当前会话立即蒸馏）；或会话闲置/切走后对未沉淀增量自动蒸馏（`chat_message.distilled` 标记水位）。蒸馏产物是伙伴记忆（标题 + 正文 + 来源线程）；蒸馏失败静默、下次触发重试，不阻塞任何流程。
+- **注入**：该伙伴执行小目标或私聊时，上下文携带其置顶记忆全部 + 最近 3 张摘要（§6.2）。记忆严格按伙伴隔离，只注入本伙伴的运行。
+- 记忆可浏览/编辑/置顶/删除（与营地笔记同一套交互）。
+- 长线程上下文管理与 Agent Loop 相同（§6.3 客户端摘要压缩）。
+
+### 10.2 营地向导（内置管理员）
+
+- 每个营地创建时自动配备一位**向导**（`Companion(kind: guide, campId:)`）：默认名「向导」，用户可改名与自定义人设 prompt；不出现在全局名册，不可被指派小目标。
+- **营地对话**：营地首页的常驻单线程对话，无需创建小队即可使用。能力 = 读 + 提案：
+  - 读知识：`search_camp_notes` 检索营地笔记；
+  - 读状态：`camp_status()` 只读营地全景（小队、行动、小目标状态、最近交付物）；
+  - **提案组队**：`propose_squad(name, member_ids, goal)` 产出结构化组队提案（小队名 + 从全局名册选的成员 + 行动目标 + 预算建议），在对话中渲染为确认卡片；**用户确认后内核才创建小队与行动**，向导永不静默建队（前身 P8 教训：领航员提案制）。
+- 营地对话可手动「沉淀」为营地笔记（入 `camp_note`，与收营蒸馏同表同交互）。
+
+## 11. UI 设计（SwiftUI，macOS 14+）
 
 三栏 `NavigationSplitView`，shoebox 应用：
 
-- **侧栏**：营地（含营地笔记入口）→ 小队 → 行动 的层级导航；伙伴名册；设置。首次启动自动创建默认营地，不强迫理解层级。
+- **侧栏**：营地（含营地笔记与向导对话入口）→ 小队 → 行动 的层级导航；伙伴名册（点击伙伴打开私聊）；设置。首次启动自动创建默认营地，不强迫理解层级。
 - **中央（行动视图，人性化）**：
   - 顶部：行动目标（精炼一句话）+ 在场伙伴头像 + 状态摘要（「进行中 · 3/5 个小目标完成」）+ 预算指示。
   - 主体：小目标清单——每行显示：状态图标（✓/转圈/举手/虚线待启动）、标题、负责伙伴、实时一句话（来自 `add_progress_note`）。**不暴露列式看板与状态机术语**。
@@ -233,11 +268,13 @@ struct HandoffPayload: Codable {   // v1
   - 底部：交付物条（已交付文件 + Finder reveal）。
 - **小目标详情面板**（点击滑出）：完整状态、执行时间线（工具调用人话化）、交接包、Run 历史、产物列表。列式状态视图作为详情面板内的开发者视角保留。
 - **右栏（小队动态）**：类型化事件渲染成伙伴发言气泡（认领/进展/提问/受阻/完成）+ 用户输入框（下达新行动、回答提问、验收）。
+- **伙伴私聊窗口**：流式对话 + 「沉淀记忆」按钮 + 该伙伴的记忆列表（浏览/编辑/置顶/删除）。
+- **营地首页**：营地笔记本 + 向导常驻对话；组队提案渲染为结构化确认卡片（成员/目标/预算 + 确认按钮）。
 - **伙伴编辑器**：名字、颜色头像、职责 prompt、模型选择、工具勾选。
 - **设置**：API key（Keychain）、默认模型、默认预算。
 - 流式性能：token 增量 30–50ms 合批后再更新 `@Observable` store，多伙伴同时流式不掉帧。
 
-## 11. 技术栈
+## 12. 技术栈
 
 | 层 | 选型 | 理由 |
 |---|---|---|
@@ -247,14 +284,15 @@ struct HandoffPayload: Codable {   // v1
 | 并发 | actor + TaskGroup + AsyncStream + swift-async-algorithms 1.1.x | N 个并发 loop 事件流 merge 进单 @MainActor store |
 | 安全 | App 沙箱 + user-selected 读写 entitlement + 安全作用域书签；Keychain（SecItem） | 书签随 squad 存储，过期自动重铸；key 永不进 UserDefaults/SQLite |
 
-## 12. 预算与安全
+## 13. 预算与安全
 
 - 预算三层：per-turn `max_tokens`、per-card `maxTurns + token 预算`（`card.token_budget` 列，规划者在行动总额内分配，缺省取设置里的默认值）、per-mission 总额。行动总额耗尽时暂停并给用户三选：**加注**（继续）、**提前收营**（未完成小目标转 `canceled` 使其终态化，进入 `delivering` 验收已有成果）、**终止**（行动 `failed`）。与 §5.1 的 `delivering` 定义（全部小目标终态）一致。
 - 预算剩 10%（下限 3 轮）注入强制收尾指令：立即 complete 或 block。
 - 文件写入仅限工作目录（含 symlink 规范化检查）；无 shell；网络只读。
 - `ask_user` 是类型化持久门（`user_request` 表），不靠 regex 扫聊天。
+- 对话线程（私聊/营地对话）不设 token 硬顶——用户实时在场即是控制——但用量计入统计展示。
 
-## 13. 错误处理与恢复
+## 14. 错误处理与恢复
 
 | 故障 | 处理 |
 |---|---|
@@ -269,39 +307,41 @@ struct HandoffPayload: Codable {   // v1
 
 每个静默状态都是显式枚举，UI 可渲染：排队中/执行中/等待用户/受阻(分类)/中断待恢复。
 
-## 14. 测试策略
+## 15. 测试策略
 
 1. **MockProvider 脚本回放**：预设 tool_use 序列 → Agent Loop 纯逻辑单测（终止、提醒、自愈、预算收尾线）。
 2. **状态机穷举**：全部转移合法性单测。
 3. **内核不变量测试**：双规划 no-op、产物先耐久后完成、一卡一主。
 4. **金路径集成**：假 LLM 端到端跑完一个两卡行动（含交接包传递 + ask_user 门）。
 5. **活体冒烟仪式**（前身最贵教训——离线全绿抓不住打包/双规划者类回归）：每个里程碑用真实 API key 跑一个真需求零人工到收营，产物落在用户可及位置才算过。
+6. **对话与记忆**：私聊蒸馏 → 伙伴记忆生成 → 该伙伴下一次卡片上下文注入的闭环单测（Mock 驱动）；向导组队提案确认门测试（未确认不得创建小队）。
 
-## 15. 里程碑
+## 16. 里程碑
 
 实施计划按里程碑逐个制定（每个里程碑一份计划），不做单一大平铺计划。
 
 | 里程碑 | 内容 | 验收 |
 |---|---|---|
-| M1 | 单伙伴单卡完整 loop：流式 UI、文件/网络工具、Keychain 设置 | 真实 API 完成一个单卡任务，产物可 Finder reveal |
+| M1 | 单伙伴单卡完整 loop：流式 UI、文件/网络工具、Keychain 设置；伙伴私聊（纯对话，暂不沉淀） | 真实 API 完成一个单卡任务，产物可 Finder reveal；与伙伴流畅私聊 |
 | M2 | 内核：规划者、状态机、多卡串行依赖、交接包 | 两卡依赖行动端到端，下游冷启动开工 |
 | M3 | 多伙伴并发、小队动态流、ask_user 门、交付面板、行动视图人性化完整版 | 3 伙伴并发行动，中途问答 + 验收 |
-| M4 | 营地笔记（收营蒸馏 + 开工携带 + 检索工具）、崩溃恢复、预算收尾线、打包分发 | 跨行动经验复用可演示；杀进程重启行动续跑 |
+| M4 | 知识与对话层：营地笔记（收营蒸馏 + 开工携带 + 检索）、伙伴记忆（沉淀 + 注入）、向导（营地对话 + camp_status + 组队提案） | 私聊沉淀的记忆出现在该伙伴下一次工作上下文；向导对话一键组队开工；跨行动经验复用可演示 |
+| M5 | 崩溃恢复、预算收尾线、沙箱书签打磨、打包分发 | 杀进程重启行动续跑；产出可分发的 .app |
 
-## 16. 继承自前身的教训对照表
+## 17. 继承自前身的教训对照表
 
 | 前身踩坑 | 本设计的结构性规避 |
 |---|---|
 | TS/Python 双运行时契约漂移 → 双规划者事故 | 单 Swift 运行时 + 幂等键 upsert（§5.2-1） |
 | scratch GC 吞产物，下游烧预算恢复日志 | 产物先耐久后完成（§5.2-2） |
 | 僵死 worker 持卡 31 分钟（pid-alive ≠ liveness） | 进程内 task + 每轮超时，无进程模型（§5.3） |
-| 预算耗尽前没交接，成果丢失 | 10% 收尾线注入（§12） |
+| 预算耗尽前没交接，成果丢失 | 10% 收尾线注入（§13） |
 | 「做完了」口头汇报与板上状态不一致 | 工具是唯一终结方式（§5.2-4） |
-| 交付物埋在内部路径用户摸不到 | 交付面板 + Finder reveal + 位置即验收标准（§7/§10） |
-| 静默状态不可见（「领航员受阻」之谜） | 全部显式枚举可渲染（§13） |
-| 离线测试全绿掩盖打包/活体回归 | 活体冒烟仪式为里程碑硬门（§14-5） |
+| 交付物埋在内部路径用户摸不到 | 交付面板 + Finder reveal + 位置即验收标准（§7/§11） |
+| 静默状态不可见（「领航员受阻」之谜） | 全部显式枚举可渲染（§14） |
+| 离线测试全绿掩盖打包/活体回归 | 活体冒烟仪式为里程碑硬门（§15-5） |
 
-## 17. 开放问题
+## 18. 开放问题
 
 1. 正式产品名（工作名 AgentLoop；仓库 /Users/muzi/Agent-loop）。
 2. `web_search` 的搜索后端选型（若 MVP 内做）。
