@@ -25,7 +25,10 @@ let package = Package(
             name: "AgentLoopCoreTests",
             dependencies: ["AgentLoopCore"],
             swiftSettings: [
-                .unsafeFlags(["-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"]),
+                .unsafeFlags([
+                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+                    "-disable-cross-import-overlays",
+                ]),
             ],
             linkerSettings: [
                 .unsafeFlags([
@@ -42,7 +45,10 @@ let package = Package(
             dependencies: ["AgentLoopCore"],
             path: "Sources/RunTests",
             swiftSettings: [
-                .unsafeFlags(["-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"]),
+                .unsafeFlags([
+                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+                    "-disable-cross-import-overlays",
+                ]),
             ],
             linkerSettings: [
                 .unsafeFlags([
