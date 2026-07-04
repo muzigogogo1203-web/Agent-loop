@@ -1,4 +1,2 @@
-import Testing
-@testable import AgentLoopCore
-
-@Test func packageBuilds() { #expect(Bool(true)) }
+// Thin placeholder — all @Test bodies live in AgentLoopTestSuite.
+import AgentLoopTestSuite

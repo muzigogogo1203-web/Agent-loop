@@ -1,11 +1,34 @@
 // swift-tools-version: 6.0
 import PackageDescription
+import Foundation
+
+let cltFrameworks = "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"
+let useCLTWorkaround = FileManager.default.fileExists(atPath: cltFrameworks)
+
+// Shared CLT-only swift/linker settings for targets that need swift-testing.
+// Appended only when the CLT layout is detected; Xcode installs Testing differently.
+let cltSwiftSettings: [SwiftSetting] = useCLTWorkaround ? [
+    .unsafeFlags([
+        "-F", cltFrameworks,
+        "-disable-cross-import-overlays",
+    ])
+] : []
+
+let cltLinkerSettings: [LinkerSetting] = useCLTWorkaround ? [
+    .unsafeFlags([
+        "-F", cltFrameworks,
+        "-framework", "Testing",
+        "-Xlinker", "-rpath",
+        "-Xlinker", cltFrameworks,
+    ])
+] : []
 
 let package = Package(
     name: "AgentLoop",
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "AgentLoopCore", targets: ["AgentLoopCore"]),
+        .library(name: "AgentLoopTestSuite", targets: ["AgentLoopTestSuite"]),
         .executable(name: "AgentLoopApp", targets: ["AgentLoopApp"]),
         .executable(name: "RunTests", targets: ["RunTests"]),
     ],
@@ -17,47 +40,31 @@ let package = Package(
             name: "AgentLoopCore",
             dependencies: [.product(name: "GRDB", package: "GRDB.swift")]
         ),
+        // Shared test body library — @Test functions live here once, used by both
+        // the SwiftPM test target and the RunTests executable.
+        .target(
+            name: "AgentLoopTestSuite",
+            dependencies: ["AgentLoopCore"],
+            swiftSettings: cltSwiftSettings,
+            linkerSettings: cltLinkerSettings
+        ),
         .executableTarget(
             name: "AgentLoopApp",
             dependencies: ["AgentLoopCore"]
         ),
         .testTarget(
             name: "AgentLoopCoreTests",
-            dependencies: ["AgentLoopCore"],
-            swiftSettings: [
-                .unsafeFlags([
-                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
-                    "-disable-cross-import-overlays",
-                ]),
-            ],
-            linkerSettings: [
-                .unsafeFlags([
-                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
-                    "-framework", "Testing",
-                    "-Xlinker", "-rpath",
-                    "-Xlinker", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
-                ]),
-            ]
+            dependencies: ["AgentLoopCore", "AgentLoopTestSuite"],
+            swiftSettings: cltSwiftSettings,
+            linkerSettings: cltLinkerSettings
         ),
         // Standalone test runner — bypasses swiftpm-testing-helper for CI/subshell use
         .executableTarget(
             name: "RunTests",
-            dependencies: ["AgentLoopCore"],
+            dependencies: ["AgentLoopCore", "AgentLoopTestSuite"],
             path: "Sources/RunTests",
-            swiftSettings: [
-                .unsafeFlags([
-                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
-                    "-disable-cross-import-overlays",
-                ]),
-            ],
-            linkerSettings: [
-                .unsafeFlags([
-                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
-                    "-framework", "Testing",
-                    "-Xlinker", "-rpath",
-                    "-Xlinker", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
-                ]),
-            ]
+            swiftSettings: cltSwiftSettings,
+            linkerSettings: cltLinkerSettings
         ),
     ]
 )

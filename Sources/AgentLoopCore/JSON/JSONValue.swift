@@ -1,5 +1,10 @@
 import Foundation
 
+/// A type-safe representation of any JSON value.
+///
+/// Number contract: all numbers are stored as `Double`.
+/// Integers beyond 2^53 lose precision in the Double representation.
+/// Whole numbers whose absolute value is less than 1e15 re-encode without a decimal point (e.g. `3`, not `3.0`).
 public enum JSONValue: Sendable, Equatable, Codable {
     case string(String), number(Double), bool(Bool), null
     case array([JSONValue]), object([String: JSONValue])
@@ -35,13 +40,14 @@ public enum JSONValue: Sendable, Equatable, Codable {
     }
     public var stringValue: String? { if case .string(let s) = self { return s }; return nil }
     public var doubleValue: Double? { if case .number(let n) = self { return n }; return nil }
-    public var intValue: Int? { doubleValue.map(Int.init) }
+    public var intValue: Int? { doubleValue.flatMap { Int(exactly: $0) } }
     public var boolValue: Bool? { if case .bool(let b) = self { return b }; return nil }
     public var objectValue: [String: JSONValue]? { if case .object(let o) = self { return o }; return nil }
     public var arrayValue: [JSONValue]? { if case .array(let a) = self { return a }; return nil }
 
     public func encodedString() throws -> String {
-        String(data: try JSONEncoder().encode(self), encoding: .utf8) ?? "{}"
+        // Force-unwrap is safe: JSONEncoder always produces valid UTF-8.
+        String(data: try JSONEncoder().encode(self), encoding: .utf8)!
     }
     public static func decoded(from string: String) throws -> JSONValue {
         try JSONDecoder().decode(JSONValue.self, from: Data(string.utf8))
