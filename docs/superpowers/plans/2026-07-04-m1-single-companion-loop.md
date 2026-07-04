@@ -847,7 +847,8 @@ public struct AnthropicProvider: LLMProvider {
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        request.httpBody = try encoder.encode(
             Self.requestBody(model: model, system: system, history: history, tools: tools, maxTokens: maxTokens))
 
         var attempt = 0
@@ -861,14 +862,18 @@ public struct AnthropicProvider: LLMProvider {
                 return
             case 401, 403:
                 throw ProviderError.unauthorized
-            case 429, 500, 502, 503, 529 where attempt <= maxRetries, 529:
+            case 429, 500...599:
                 guard attempt <= maxRetries else {
                     throw ProviderError.overloadedRetriesExhausted
                 }
-                let retryAfter = (response as? HTTPURLResponse)?
+                let retryAfterSeconds = (response as? HTTPURLResponse)?
                     .value(forHTTPHeaderField: "retry-after").flatMap(Double.init)
-                let delay = retryAfter.map { Duration.seconds($0) }
-                    ?? retryBaseDelay * Int(pow(2.0, Double(attempt - 1)))
+                let delay: Duration
+                if let s = retryAfterSeconds, s.isFinite, s >= 0 {
+                    delay = .seconds(min(s, 60))
+                } else {
+                    delay = retryBaseDelay * (1 << (attempt - 1))
+                }
                 try await Task.sleep(for: delay)
             default:
                 var body = ""
@@ -896,10 +901,10 @@ public struct AnthropicProvider: LLMProvider {
 }
 ```
 
-注意：`case 429, 500, 502, 503, 529 where attempt <= maxRetries, 529:` 这行写法有误（示意），实现时用清晰写法：
+注意：实现时用清晰写法：
 
 ```swift
-case 429, 500, 502, 503, 529:
+case 429, 500...599:
     guard attempt <= maxRetries else { throw ProviderError.overloadedRetriesExhausted }
     // ...退避后 continue
 ```

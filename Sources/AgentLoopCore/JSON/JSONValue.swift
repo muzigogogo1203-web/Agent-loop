@@ -47,7 +47,10 @@ public enum JSONValue: Sendable, Equatable, Codable {
 
     public func encodedString() throws -> String {
         // Force-unwrap is safe: JSONEncoder always produces valid UTF-8.
-        String(data: try JSONEncoder().encode(self), encoding: .utf8)!
+        // sortedKeys: persisted payloads may be re-sent later; key order must be deterministic.
+        let enc = JSONEncoder()
+        enc.outputFormatting = [.sortedKeys]
+        return String(data: try enc.encode(self), encoding: .utf8)!
     }
     public static func decoded(from string: String) throws -> JSONValue {
         try JSONDecoder().decode(JSONValue.self, from: Data(string.utf8))

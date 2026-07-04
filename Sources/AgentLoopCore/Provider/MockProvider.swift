@@ -1,3 +1,4 @@
+/// Scripted-replay test double. Single-consumer: early cancellation still consumes a script entry and bumps callCount.
 public actor MockProvider: LLMProvider {
     private var script: [TurnResult]
     public private(set) var callCount = 0

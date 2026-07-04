@@ -2,6 +2,14 @@ import Testing
 import Foundation
 import AgentLoopCore
 
+/// Thread-safe counter used by stub tests that need call counts across async boundaries.
+final class Counter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _value = 0
+    var value: Int { lock.withLock { _value } }
+    @discardableResult func bump() -> Int { lock.withLock { _value += 1; return _value } }
+}
+
 @Test func requestBodyShape() throws {
     let body = AnthropicProvider.requestBody(
         model: "claude-sonnet-4-6", system: "你是伙伴",
@@ -16,6 +24,21 @@ import AgentLoopCore
     #expect(body["system"]?[0]?["cache_control"]?["type"]?.stringValue == "ephemeral")
     #expect(body["tools"]?[0]?["input_schema"]?["type"]?.stringValue == "object")
     #expect(body["messages"]?[0]?["role"]?.stringValue == "user")
+}
+
+@Test func requestBodyEncodesDeterministically() throws {
+    let tools = [ToolDef(name: "t", description: "d",
+                         inputSchema: ["type": "object",
+                                       "properties": ["a": ["type": "string"], "b": ["type": "string"]],
+                                       "required": ["a"],
+                                       "additionalProperties": false])]
+    let body = AnthropicProvider.requestBody(model: "m", system: "s", history: [.user("hi")],
+                                             tools: tools, maxTokens: 10)
+    let enc = JSONEncoder(); enc.outputFormatting = [.sortedKeys]
+    let a = String(data: try enc.encode(body), encoding: .utf8)!
+    let b = String(data: try enc.encode(body), encoding: .utf8)!
+    #expect(a == b)
+    #expect(a.range(of: #""additionalProperties":false"#) != nil)
 }
 
 // URLProtocol stub
@@ -75,28 +98,64 @@ func stubbedSession() -> URLSession {
 }
 
 @Test func unauthorizedFailsFastNoRetry() async {
-    final class Counter: @unchecked Sendable { var n = 0 }
     let counter = Counter()
-    StubProtocol.handler = { _ in counter.n += 1; return (401, Data(#"{"error":{"message":"bad key"}}"#.utf8), [:]) }
+    StubProtocol.handler = { _ in counter.bump(); return (401, Data(#"{"error":{"message":"bad key"}}"#.utf8), [:]) }
     let p = AnthropicProvider(apiKey: "bad", model: "m", session: stubbedSession())
     await #expect(throws: ProviderError.unauthorized) {
         for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], maxTokens: 10) {}
     }
-    #expect(counter.n == 1)
+    #expect(counter.value == 1)
 }
 
 @Test func overloadedRetriesThenSucceeds() async throws {
-    final class Counter: @unchecked Sendable { var n = 0 }
     let counter = Counter()
     let okSSE = "event: message_stop\ndata: {\"type\":\"message_stop\"}"
     StubProtocol.handler = { _ in
-        counter.n += 1
-        return counter.n < 3 ? (529, Data("overloaded".utf8), [:]) : (200, Data(okSSE.utf8), [:])
+        let n = counter.bump()
+        return n < 3 ? (529, Data("overloaded".utf8), [:]) : (200, Data(okSSE.utf8), [:])
     }
     let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(),
                               retryBaseDelay: .milliseconds(1)) // test acceleration
     for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], maxTokens: 10) {}
-    #expect(counter.n == 3)
+    #expect(counter.value == 3)
+}
+
+@Test func honorsRetryAfterHeader() async throws {
+    let counter = Counter()
+    let okSSE = "event: message_stop\ndata: {\"type\":\"message_stop\"}"
+    StubProtocol.handler = { _ in
+        let n = counter.bump()
+        return n == 1 ? (429, Data(), ["Retry-After": "0"]) : (200, Data(okSSE.utf8), [:])
+    }
+    let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(), retryBaseDelay: .seconds(30))
+    // base delay 30s: if Retry-After: 0 is not honoured the test would be extremely slow; honouring it completes instantly
+    let start = ContinuousClock.now
+    for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], maxTokens: 10) {}
+    #expect(ContinuousClock.now - start < .seconds(5))
+    #expect(counter.value == 2)
+}
+
+@Test func malformedRetryAfterFallsBackAndCaps() async throws {
+    let counter = Counter()
+    let okSSE = "event: message_stop\ndata: {\"type\":\"message_stop\"}"
+    StubProtocol.handler = { _ in
+        let n = counter.bump()
+        return n == 1 ? (429, Data(), ["Retry-After": "inf"]) : (200, Data(okSSE.utf8), [:])
+    }
+    let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(), retryBaseDelay: .milliseconds(1))
+    for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], maxTokens: 10) {}
+    #expect(counter.value == 2)  // does not crash; falls back to exponential backoff
+}
+
+@Test func retriesExhaustedThrows() async {
+    let counter = Counter()
+    StubProtocol.handler = { _ in counter.bump(); return (503, Data(), [:]) }
+    let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(),
+                              retryBaseDelay: .milliseconds(1), maxRetries: 2)
+    await #expect(throws: ProviderError.overloadedRetriesExhausted) {
+        for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], maxTokens: 10) {}
+    }
+    #expect(counter.value == 3)  // initial attempt + 2 retries
 }
 
 }

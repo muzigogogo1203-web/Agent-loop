@@ -64,7 +64,11 @@ public struct AnthropicProvider: LLMProvider {
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(
+        // spec §6.3 requires byte-deterministic prefix across process restarts for prompt-cache hits;
+        // Dictionary iteration order is per-process seeded.
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        request.httpBody = try encoder.encode(
             Self.requestBody(model: model, system: system, history: history,
                              tools: tools, maxTokens: maxTokens))
 
@@ -79,22 +83,17 @@ public struct AnthropicProvider: LLMProvider {
                 return
             case 401, 403:
                 throw ProviderError.unauthorized
-            case 429, 500, 502, 503, 529:
+            case 429, 500...599:
                 guard attempt <= maxRetries else { throw ProviderError.overloadedRetriesExhausted }
                 let retryAfterSeconds = (response as? HTTPURLResponse)?
                     .value(forHTTPHeaderField: "retry-after").flatMap(Double.init)
                 let delay: Duration
-                if let s = retryAfterSeconds {
-                    delay = .seconds(s)
+                if let s = retryAfterSeconds, s.isFinite, s >= 0 {
+                    delay = .seconds(min(s, 60))
                 } else {
-                    // Exponential backoff: base * 2^(attempt-1)
-                    let multiplier = Int64(1 << (attempt - 1))
-                    let comps = retryBaseDelay.components
-                    let totalAtto = comps.seconds * 1_000_000_000_000_000_000 + comps.attoseconds
-                    let scaledAtto = totalAtto * multiplier
-                    let scaledSecs = scaledAtto / 1_000_000_000_000_000_000
-                    let remAtto = scaledAtto % 1_000_000_000_000_000_000
-                    delay = Duration(secondsComponent: scaledSecs, attosecondsComponent: remAtto)
+                    // Exponential backoff using DurationProtocol multiplication (full-width arithmetic;
+                    // the components-decomposition approach traps for base delays >= ~9.3s).
+                    delay = retryBaseDelay * (1 << (attempt - 1))
                 }
                 try await Task.sleep(for: delay)
             default:
