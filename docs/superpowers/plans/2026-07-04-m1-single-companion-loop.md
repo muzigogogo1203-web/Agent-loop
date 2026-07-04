@@ -669,6 +669,8 @@ public struct TurnAccumulator: Sendable {
 
 **分层策略**：请求体编码是纯函数（直接单测）；HTTP 用 `URLProtocol` 桩测 headers/重试/401；流集成复用 Task 3/4 已测组件。
 
+> ⚠️ `StubProtocol.handler` 是共享静态量，而 Swift Testing 默认并行跑测试——本文件与 Task 10 的 WebFetchTests 都要给套件加 `.serialized` trait（`@Suite(.serialized)`），否则会间歇性串桩。
+
 - [ ] **Step 1: 写失败测试**
 
 ```swift
@@ -1032,7 +1034,7 @@ private func tempDB() throws -> AppDatabase {
     let db = try tempDB()
     let ids = try db.createSingleCardMission(campName: "c", squadName: "s", goal: "g",
         cardTitle: "t", cardDescription: "d", expectedOutput: "e", assigneeId: nil, maxTurns: 30)
-    // todo → done 非法（必须经 ready/running，spec §5.1）
+    // ready → done 非法（createSingleCardMission 建卡即 ready；done 必须先经 running，spec §5.1）
     #expect(throws: CardTransitionError.self) {
         try db.transitionCard(id: ids.cardId, to: .done, eventKind: "x", payload: .object([:]))
     }
@@ -1531,6 +1533,8 @@ private func makeWorkspace() throws -> URL {
 - [ ] **Step 2: 确认失败** → FAIL
 
 - [ ] **Step 3: 实现**
+
+> ⚠️ 编译要点：`Result<URL, String>` 需要 `String` 满足 `Error`。在 `Sources/AgentLoopCore/Support/` 加一行 `extension String: @retroactive Error {}`（Task 10/11 的 `HandoffPayload.parse` 同样依赖它）。不要为此改造 `resolve`/`parse` 的签名——测试已锁定 `.get()` 与 `case .failure(let msg)` 的用法。
 
 ```swift
 import Foundation
@@ -2424,7 +2428,7 @@ import Foundation
 
 - [ ] **Step 2: 确认失败** → FAIL
 
-- [ ] **Step 3: 实现**（`AppDatabase` 补 `runs(cardId:)`、`insertRun`、`finishRun`——同前模式，单事务、事件伴随；此处省略样板，实现者按 Task 7/11 的模式写并让测试通过）
+- [ ] **Step 3: 实现**（`AppDatabase` 补 `runs(cardId:)`、`insertRun`、`finishRun`、`squad(forCard:)`、`companion(id:)`——同前模式，单事务、事件伴随；此处省略样板，实现者按 Task 7/11 的模式写并让测试通过。`companion(id:)` 也是 Task 15 ChatService 的依赖）
 
 ```swift
 import Foundation
@@ -2781,7 +2785,8 @@ final class AppStore {
     }
 
     func provider(model: String) -> AnthropicProvider? {
-        guard let key = try? keychain.get(account: "anthropic-api-key"), let key else { return nil }
+        // try? 对「throws 且返回 Optional」的调用已自动展平（SE-0230），单层解包即可
+        guard let key = try? keychain.get(account: "anthropic-api-key") else { return nil }
         return AnthropicProvider(apiKey: key, model: model)
     }
 
@@ -3302,7 +3307,7 @@ git tag m1
 1. `swift test` 全绿（核心逻辑全部 TDD 覆盖：类型/SSE/累加器/Provider 重试/DB 转移/工具包含检查/交接包校验/产物耐久不变量/Loop 六场景/私聊持久化）。
 2. 活体冒烟四条验收全过且有记录文档。
 3. spec §5.2 不变量在 M1 范围内成立：产物先耐久后完成（测试 `completeCopiesArtifactBeforeDone`）、工具唯一终结（测试 `endTurnWithoutTerminatorRemindsOnceThenBlocks`）、事件同事务投影（测试 `eventAppendAndProjectionSameTransaction`）。
-4. 遗留清单写入冒烟记录（已知 M1 不做：上下文压缩、mission token 预算硬顶、多卡、沉淀、向导对话——均有 M2+ 归属）。
+4. 遗留清单写入冒烟记录（已知 M1 不做：上下文压缩、mission token 预算硬顶、每轮 120s 超时（暂依赖 URLSession 缺省超时，spec §14 项 M2 落）、多卡、沉淀、向导对话——均有 M2+ 归属）。
 
 ## 给执行者的注意事项
 
