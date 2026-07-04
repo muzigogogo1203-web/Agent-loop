@@ -16,9 +16,22 @@ public enum ContentBlock: Sendable, Equatable, Codable {
                             name: v["name"]?.stringValue ?? "",
                             input: v["input"] ?? .object([:]))
         case "tool_result":
-            self = .toolResult(toolUseId: v["tool_use_id"]?.stringValue ?? "",
-                               content: v["content"]?.stringValue ?? "",
-                               isError: v["is_error"]?.boolValue ?? false)
+            // Only decode to the typed case when `content` is a plain string (locally-generated
+            // tool results). If `content` is missing or is a non-string value (e.g. a block array
+            // returned by extended APIs), fall through to verbatim `.unknown` passthrough so that
+            // rich/unrecognized sibling shapes are preserved faithfully (spec §6.1).
+            if let contentStr = v["content"]?.stringValue {
+                self = .toolResult(toolUseId: v["tool_use_id"]?.stringValue ?? "",
+                                   content: contentStr,
+                                   isError: v["is_error"]?.boolValue ?? false)
+            } else if v["content"] == nil {
+                self = .toolResult(toolUseId: v["tool_use_id"]?.stringValue ?? "",
+                                   content: "",
+                                   isError: v["is_error"]?.boolValue ?? false)
+            } else {
+                // content exists but is not a string (e.g. block array) — pass through verbatim
+                self = .unknown(v)
+            }
         default:
             self = .unknown(v)
         }

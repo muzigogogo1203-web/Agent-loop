@@ -1,5 +1,11 @@
 import Foundation
 
+/// Assembles a complete assistant turn from a sequence of Anthropic SSE events.
+/// Supports streaming assembly of `text` and `tool_use` content blocks only;
+/// `unknown` blocks (e.g. thinking) are stored verbatim but may not receive
+/// streaming deltas — a delta arriving for a pending `.unknown` block throws
+/// `ProviderError.malformedStream` (spec §6.1 fidelity guarantee).
+/// Single-use per message stream: `finishedTurn` is set once and never resets.
 public struct TurnAccumulator: Sendable {
     private enum Pending {
         case text(String)
@@ -36,14 +42,26 @@ public struct TurnAccumulator: Sendable {
             switch delta["type"]?.stringValue {
             case "text_delta":
                 let t = delta["text"]?.stringValue ?? ""
-                if case .text(let existing) = pending[idx] { pending[idx] = .text(existing + t) }
-                onTextDelta(t)
+                if case .text(let existing) = pending[idx] {
+                    pending[idx] = .text(existing + t)
+                    onTextDelta(t)
+                }
             case "input_json_delta":
                 let part = delta["partial_json"]?.stringValue ?? ""
                 if case .toolUse(let id, let name, let buf) = pending[idx] {
                     pending[idx] = .toolUse(id: id, name: name, jsonBuffer: buf + part)
                 }
-            default: break
+            default:
+                // Delta arrived for a block type that does not support streaming assembly.
+                let blockType: String
+                if let p = pending[idx], case .unknown(let bv) = p {
+                    blockType = bv["type"]?.stringValue ?? "unknown"
+                } else {
+                    blockType = "unknown"
+                }
+                throw ProviderError.malformedStream(
+                    "content_block_delta for unsupported block type '\(blockType)' at index \(idx); " +
+                    "M1 supports text/tool_use streaming only")
             }
         case "content_block_stop":
             let idx = v["index"]?.intValue ?? 0
@@ -52,8 +70,15 @@ public struct TurnAccumulator: Sendable {
             switch p {
             case .text(let t): block = .text(t)
             case .toolUse(let id, let name, let buf):
-                let input = buf.isEmpty ? JSONValue.object([:]) : ((try? JSONValue.decoded(from: buf)) ?? .object([:]))
-                block = .toolUse(id: id, name: name, input: input)
+                if buf.isEmpty {
+                    block = .toolUse(id: id, name: name, input: .object([:]))
+                } else {
+                    guard let input = try? JSONValue.decoded(from: buf) else {
+                        let preview = String(buf.prefix(120))
+                        throw ProviderError.malformedStream("tool_use \(id) input: \(preview)")
+                    }
+                    block = .toolUse(id: id, name: name, input: input)
+                }
             case .unknown(let v): block = .unknown(v)
             }
             finished.append((idx, block))
@@ -61,6 +86,10 @@ public struct TurnAccumulator: Sendable {
             if let sr = v["delta"]?["stop_reason"]?.stringValue { stopReason = StopReason(apiValue: sr) }
             if let out = v["usage"]?["output_tokens"]?.intValue { usage.outputTokens = out }
         case "message_stop":
+            if !pending.isEmpty {
+                let indices = pending.keys.sorted().map(String.init).joined(separator: ", ")
+                throw ProviderError.malformedStream("message_stop with unfinished blocks at indices \(indices)")
+            }
             finishedTurn = TurnResult(
                 content: finished.sorted { $0.index < $1.index }.map(\.block),
                 stopReason: stopReason ?? .endTurn, usage: usage)

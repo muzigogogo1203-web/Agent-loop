@@ -1,3 +1,6 @@
+/// Anthropic-shaped SSE parser only — single-line `data:` payloads, every event carries an
+/// explicit `event:` field, emits on the data line rather than blank-line dispatch.
+/// Not a general RFC 8895 SSE parser.
 public struct RawSSEEvent: Sendable, Equatable {
     public let event: String
     public let data: String

@@ -45,3 +45,28 @@ private func feed(_ acc: inout TurnAccumulator, _ event: String, _ json: String)
         try acc.consume(RawSSEEvent(event: "error", data: #"{"type":"error","error":{"type":"overloaded_error","message":"busy"}}"#)) { _ in }
     }
 }
+
+@Test func malformedToolInputThrows() throws {
+    var acc = TurnAccumulator()
+    try acc.consume(RawSSEEvent(event: "content_block_start", data: #"{"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"t","name":"x","input":{}}}"#)) { _ in }
+    try acc.consume(RawSSEEvent(event: "content_block_delta", data: #"{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\"broken\":"}}"#)) { _ in }
+    #expect(throws: ProviderError.self) {
+        try acc.consume(RawSSEEvent(event: "content_block_stop", data: #"{"type":"content_block_stop","index":0}"#)) { _ in }
+    }
+}
+
+@Test func unknownBlockDeltaThrows() throws {
+    var acc = TurnAccumulator()
+    try acc.consume(RawSSEEvent(event: "content_block_start", data: #"{"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}"#)) { _ in }
+    #expect(throws: ProviderError.self) {
+        try acc.consume(RawSSEEvent(event: "content_block_delta", data: #"{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"hm"}}"#)) { _ in }
+    }
+}
+
+@Test func messageStopWithUnfinishedBlocksThrows() throws {
+    var acc = TurnAccumulator()
+    try acc.consume(RawSSEEvent(event: "content_block_start", data: #"{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}"#)) { _ in }
+    #expect(throws: ProviderError.self) {
+        try acc.consume(RawSSEEvent(event: "message_stop", data: #"{"type":"message_stop"}"#)) { _ in }
+    }
+}

@@ -27,3 +27,11 @@ import AgentLoopCore
     #expect(v["tool_use_id"]?.stringValue == "toolu_1")
     #expect(v["is_error"]?.boolValue == false)
 }
+
+@Test func toolResultArrayContentFallsBackToUnknown() throws {
+    let raw = #"{"type":"tool_result","tool_use_id":"t","content":[{"type":"text","text":"x"}]}"#
+    let block = try JSONDecoder().decode(ContentBlock.self, from: Data(raw.utf8))
+    guard case .unknown = block else { Issue.record("array-content tool_result must pass through verbatim"); return }
+    let re = try JSONValue.decoded(from: String(data: JSONEncoder().encode(block), encoding: .utf8)!)
+    #expect(re == (try JSONValue.decoded(from: raw)))
+}

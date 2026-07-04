@@ -635,8 +635,15 @@ public struct TurnAccumulator: Sendable {
             switch p {
             case .text(let t): block = .text(t)
             case .toolUse(let id, let name, let buf):
-                let input = buf.isEmpty ? JSONValue.object([:]) : ((try? JSONValue.decoded(from: buf)) ?? .object([:]))
-                block = .toolUse(id: id, name: name, input: input)
+                if buf.isEmpty {
+                    block = .toolUse(id: id, name: name, input: .object([:]))
+                } else {
+                    guard let input = try? JSONValue.decoded(from: buf) else {
+                        let preview = String(buf.prefix(120))
+                        throw ProviderError.malformedStream("tool_use \(id) input: \(preview)")
+                    }
+                    block = .toolUse(id: id, name: name, input: input)
+                }
             case .unknown(let v): block = .unknown(v)
             }
             finished.append((idx, block))
