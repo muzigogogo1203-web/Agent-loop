@@ -82,7 +82,7 @@ UserRequest（ask_user 门，属于 Card）
 | `camp` | id, name, created_at |
 | `squad` | id, camp_id, name, member_ids_json, workspace_bookmark BLOB?, created_at |
 | `mission` | id, squad_id, goal_raw, goal_refined, status, budget_tokens, spent_tokens, revision, created_at |
-| `card` | id, mission_id, idem_key UNIQUE, title, description, expected_output, assignee_id, status, blocked_reason_json?, depends_on_json, max_turns, created_at |
+| `card` | id, mission_id, idem_key UNIQUE, title, description, expected_output, assignee_id, status, blocked_reason_json?, depends_on_json, max_turns, token_budget, created_at |
 | `run` | id, card_id, attempt, outcome?, turns, tokens_in, tokens_out, started_at, ended_at? |
 | `event` | id, mission_id?, card_id?, run_id?, kind, payload_json, created_at —— 追加式，禁止 UPDATE/DELETE |
 | `artifact` | id, card_id, path, kind, label, created_at |
@@ -98,7 +98,7 @@ UserRequest（ask_user 门，属于 Card）
 ### 5.1 小目标状态机
 
 ```text
-todo ──依赖全部完成──▶ ready ──被伙伴认领──▶ running ──complete_card──▶ needsReview ──验收──▶ done
+todo ──依赖全部完成──▶ ready ──被伙伴认领──▶ running ──complete_card 校验通过──▶ done
                                               │  ▲
                                      block_card│  │用户解除/重试
                                               ▼  │
@@ -106,8 +106,10 @@ todo ──依赖全部完成──▶ ready ──被伙伴认领──▶ runn
 ```
 
 - 状态转移是一个穷举 `switch` 的纯函数；非法转移编译期不可表达。
+- **MVP 无卡级人工验收**：`complete_card` 的交接包校验（§7）同步执行——校验失败作为 tool_result 错误返回、卡片保持 `running` 让伙伴修正；校验通过即 `done`，下游依赖立即解锁。人工验收只发生在行动层（收营）。这保证「零人工到收营」的活体冒烟硬门（§14-5）与下游冷启动（§15-M2）成立。
 - `blocked` 必须携带类型化原因（关联值，非可空列）：`needsHumanInput(UserRequest)` / `budgetExhausted` / `toolFailure(String)` / `refusal` / `noTerminator`。
-- Mission 状态：`planning → executing → delivering → accepted / failed`，由小目标状态纯函数推导 rollup。
+- Mission 状态：`planning → executing → delivering → accepted / failed`，由小目标状态纯函数推导 rollup。`delivering` = 全部小目标终态且至少一个 done，等用户收营。
+- **MVP 验收是单向的**：收营即 `accepted`；不满意的部分通过在小队里下达新行动解决，无卡级退回重做路径（v2 议题）。`failed` 仅两个触发：用户主动放弃行动，或预算耗尽后用户选择终止而非加注。
 
 ### 5.2 不可违背的不变量（继承自前身的实战教训）
 
@@ -204,7 +206,7 @@ struct HandoffPayload: Codable {   // v1
 | | `block_card(reason, detail)` | 类型化受阻 |
 | | `add_progress_note(text)` | 一句话进展 → 小目标行的实时snippet + 动态流 |
 | | `ask_user(kind, prompt, options?)` | 类型化提问（choice/confirm/text）；卡片挂起等答复，UI 显式 CTA |
-| 文件 | `list_dir` `read_file` `write_file` | 严格限定小队工作目录内：安全作用域书签 + 规范化路径包含检查；无工作目录的小队仅内存产物（写入交付暂存区） |
+| 文件 | `list_dir` `read_file` `write_file` | 严格限定小队工作目录内：安全作用域书签 + 规范化路径包含检查；无工作目录的小队写入交付暂存区 `~/Library/Application Support/AgentLoop/staging/<card_id>/`（`complete_card` 时按 §5.2-2 拷入耐久存储，收营后暂存区可清理） |
 | 网络 | `web_fetch(url)` | URL → 正文 markdown；只读 |
 | 笔记 | `search_camp_notes(query)` | 关键词 + 最近优先，返回笔记摘要 |
 
@@ -247,7 +249,7 @@ struct HandoffPayload: Codable {   // v1
 
 ## 12. 预算与安全
 
-- 预算三层：per-turn `max_tokens`、per-card `maxTurns + token 预算`、per-mission 总额（超限 → 行动暂停，等用户加注或收营）。
+- 预算三层：per-turn `max_tokens`、per-card `maxTurns + token 预算`（`card.token_budget` 列，规划者在行动总额内分配，缺省取设置里的默认值）、per-mission 总额（超限 → 行动暂停，等用户加注或收营）。
 - 预算剩 10%（下限 3 轮）注入强制收尾指令：立即 complete 或 block。
 - 文件写入仅限工作目录（含 symlink 规范化检查）；无 shell；网络只读。
 - `ask_user` 是类型化持久门（`user_request` 表），不靠 regex 扫聊天。
@@ -276,6 +278,8 @@ struct HandoffPayload: Codable {   // v1
 5. **活体冒烟仪式**（前身最贵教训——离线全绿抓不住打包/双规划者类回归）：每个里程碑用真实 API key 跑一个真需求零人工到收营，产物落在用户可及位置才算过。
 
 ## 15. 里程碑
+
+实施计划按里程碑逐个制定（每个里程碑一份计划），不做单一大平铺计划。
 
 | 里程碑 | 内容 | 验收 |
 |---|---|---|
