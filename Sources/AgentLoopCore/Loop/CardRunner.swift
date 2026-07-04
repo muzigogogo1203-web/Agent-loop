@@ -1,0 +1,142 @@
+import Foundation
+
+public struct CardRunner: Sendable {
+    let db: AppDatabase
+    let provider: any LLMProvider
+    let artifactStoreRoot: URL
+
+    public init(db: AppDatabase, provider: any LLMProvider, artifactStoreRoot: URL) {
+        self.db = db
+        self.provider = provider
+        self.artifactStoreRoot = artifactStoreRoot
+    }
+
+    public func run(
+        cardId: String,
+        companionName: String,
+        rolePrompt: String
+    ) throws -> AsyncThrowingStream<AgentEvent, Error> {
+        guard let card = try db.card(id: cardId) else {
+            throw RecordNotFoundError(table: "card", id: cardId)
+        }
+        let squad = try db.squad(forCard: cardId)
+        let workspace = squad?.workspacePath.map { URL(fileURLWithPath: $0) }
+        let runId = UUID().uuidString
+
+        try db.insertRun(id: runId, cardId: cardId)
+        try db.transitionCard(
+            id: cardId,
+            to: .running,
+            eventKind: "card_started",
+            payload: ["runId": .string(runId)]
+        )
+
+        let board = BoardTools(
+            db: db,
+            cardId: cardId,
+            runId: runId,
+            workspaceRoot: workspace,
+            artifactStoreRoot: artifactStoreRoot
+        )
+        let files = FileTools(workspaceRoot: workspace)
+        let executor = ToolExecutor(handlers: [
+            "complete_card": BoardToolHandler(tools: board, op: .complete),
+            "block_card": BoardToolHandler(tools: board, op: .block),
+            "add_progress_note": BoardToolHandler(tools: board, op: .note),
+            "list_dir": FileToolHandler(tools: files, op: .list),
+            "read_file": FileToolHandler(tools: files, op: .read),
+            "write_file": FileToolHandler(tools: files, op: .write),
+            "web_fetch": WebFetchTool(),
+        ])
+        let packet = ContextPacket(
+            companionName: companionName,
+            rolePrompt: rolePrompt,
+            cardTitle: card.title,
+            cardDescription: card.descriptionText,
+            expectedOutput: card.expectedOutput,
+            workspacePath: workspace?.path,
+            upstreamHandoffs: []
+        )
+        let loop = AgentLoop(
+            provider: provider,
+            executor: executor,
+            packet: packet,
+            tools: ToolDef.m1Tools,
+            maxTurns: card.maxTurns,
+            maxTokensPerTurn: 8192
+        )
+
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                var totalIn = 0
+                var totalOut = 0
+                var turns = 0
+                do {
+                    for try await event in loop.run() {
+                        switch event {
+                        case .turnEnded(let usage):
+                            totalIn += usage.inputTokens
+                            totalOut += usage.outputTokens
+                            turns += 1
+                            continuation.yield(event)
+
+                        case .finished(let outcome):
+                            switch outcome {
+                            case .completed:
+                                try db.finishRun(
+                                    id: runId,
+                                    outcome: "completed",
+                                    turns: turns,
+                                    tokensIn: totalIn,
+                                    tokensOut: totalOut
+                                )
+                            case .blocked(let reason, let detail):
+                                try blockCardIfStillRunning(
+                                    cardId: cardId,
+                                    runId: runId,
+                                    reason: reason,
+                                    detail: detail
+                                )
+                                try db.finishRun(
+                                    id: runId,
+                                    outcome: "blocked",
+                                    turns: turns,
+                                    tokensIn: totalIn,
+                                    tokensOut: totalOut
+                                )
+                            }
+                            continuation.yield(event)
+
+                        default:
+                            continuation.yield(event)
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    try? db.finishRun(
+                        id: runId,
+                        outcome: "failed",
+                        turns: turns,
+                        tokensIn: totalIn,
+                        tokensOut: totalOut
+                    )
+                    try? blockCardIfStillRunning(
+                        cardId: cardId,
+                        runId: runId,
+                        reason: "other",
+                        detail: "运行错误：\(error)"
+                    )
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private func blockCardIfStillRunning(cardId: String, runId: String, reason: String, detail: String) throws {
+        guard try db.card(id: cardId)?.status == .running else {
+            return
+        }
+        try db.blockCard(id: cardId, runId: runId, reason: reason, detail: detail)
+    }
+}
