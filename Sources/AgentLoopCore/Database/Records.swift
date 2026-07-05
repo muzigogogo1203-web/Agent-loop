@@ -68,6 +68,13 @@ public struct RecordNotFoundError: Error, Equatable {
     }
 }
 
+public struct StaleUserRequestError: Error, Equatable, Sendable {
+    public let requestId: String
+    public init(requestId: String) {
+        self.requestId = requestId
+    }
+}
+
 // MARK: - Camp
 
 public struct CampRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
@@ -286,6 +293,75 @@ public struct ArtifactRecord: Codable, Sendable, FetchableRecord, PersistableRec
         self.label = label
         self.createdAt = createdAt
     }
+}
+
+// MARK: - User Request
+
+public struct UserRequestRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "user_request"
+
+    public enum Kind: String, Codable, Sendable {
+        case choice, confirm, text
+    }
+
+    public var id: String
+    public var cardId: String
+    public var kind: Kind
+    public var prompt: String
+    public var optionsJson: String?
+    public var answerJson: String?
+    public var createdAt: Date
+    public var answeredAt: Date?
+
+    public init(
+        id: String,
+        cardId: String,
+        kind: Kind,
+        prompt: String,
+        optionsJson: String?,
+        answerJson: String?,
+        createdAt: Date,
+        answeredAt: Date?
+    ) {
+        self.id = id
+        self.cardId = cardId
+        self.kind = kind
+        self.prompt = prompt
+        self.optionsJson = optionsJson
+        self.answerJson = answerJson
+        self.createdAt = createdAt
+        self.answeredAt = answeredAt
+    }
+
+    public func humanAnswer() -> String {
+        guard let answerJson,
+              let answer = try? JSONValue.decoded(from: answerJson) else {
+            return ""
+        }
+
+        switch kind {
+        case .choice:
+            guard let choice = answer["choice"]?.intValue else { return "" }
+            let options = optionsJson.flatMap { json -> [String]? in
+                try? JSONDecoder().decode([String].self, from: Data(json.utf8))
+            } ?? []
+            if options.indices.contains(choice) {
+                return options[choice]
+            }
+            return "选项 \(choice + 1)"
+        case .confirm:
+            guard let confirm = answer["confirm"]?.boolValue else { return "" }
+            return confirm ? "确认" : "否"
+        case .text:
+            return answer["text"]?.stringValue ?? ""
+        }
+    }
+}
+
+public enum AskUserAnswer: Sendable, Equatable {
+    case choice(Int)
+    case confirm(Bool)
+    case text(String)
 }
 
 // MARK: - Chat Thread

@@ -5,24 +5,28 @@ public struct CardRunner: Sendable {
     let provider: any LLMProvider
     let artifactStoreRoot: URL
     let retryDelays: [Duration]
+    let turnTimeout: Duration
 
     public init(
         db: AppDatabase,
         provider: any LLMProvider,
         artifactStoreRoot: URL,
-        retryDelays: [Duration] = [.seconds(2), .seconds(4)]
+        retryDelays: [Duration] = [.seconds(2), .seconds(4)],
+        turnTimeout: Duration = KernelDefaults.turnTimeout
     ) {
         self.db = db
         self.provider = provider
         self.artifactStoreRoot = artifactStoreRoot
         self.retryDelays = retryDelays
+        self.turnTimeout = turnTimeout
     }
 
     public func run(
         cardId: String,
         companionName: String,
         rolePrompt: String,
-        upstreamHandoffs: [UpstreamHandoff] = []
+        upstreamHandoffs: [UpstreamHandoff] = [],
+        answeredRequests: [(prompt: String, answer: String)] = []
     ) throws -> AsyncThrowingStream<AgentEvent, Error> {
         guard let card = try db.card(id: cardId) else {
             throw RecordNotFoundError(table: "card", id: cardId)
@@ -45,6 +49,7 @@ public struct CardRunner: Sendable {
             "complete_card": BoardToolHandler(tools: board, op: .complete),
             "block_card": BoardToolHandler(tools: board, op: .block),
             "add_progress_note": BoardToolHandler(tools: board, op: .note),
+            "ask_user": BoardToolHandler(tools: board, op: .askUser),
             "list_dir": FileToolHandler(tools: files, op: .list),
             "read_file": FileToolHandler(tools: files, op: .read),
             "write_file": FileToolHandler(tools: files, op: .write),
@@ -57,17 +62,19 @@ public struct CardRunner: Sendable {
             cardDescription: card.descriptionText,
             expectedOutput: card.expectedOutput,
             workspacePath: workspace?.path,
-            upstreamHandoffs: upstreamHandoffs
+            upstreamHandoffs: upstreamHandoffs,
+            answeredRequests: answeredRequests
         )
         let loop = AgentLoop(
             provider: provider,
             executor: executor,
             packet: packet,
-            tools: ToolDef.m1Tools,
+            tools: ToolDef.agentTools,
             maxTurns: card.maxTurns,
             tokenBudget: card.tokenBudget,
             maxTokensPerTurn: KernelDefaults.maxTokensPerTurn,
-            retryDelays: retryDelays
+            retryDelays: retryDelays,
+            turnTimeout: turnTimeout
         )
 
         return AsyncThrowingStream { continuation in

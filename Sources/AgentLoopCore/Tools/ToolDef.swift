@@ -90,10 +90,21 @@ extension ToolDef {
         inputSchema: objectSchema(["url": ["type": "string"]], required: ["url"])
     )
 
-    public static let m1Tools: [ToolDef] = [
+    public static let askUser = ToolDef(
+        name: "ask_user",
+        description: "当继续当前小目标需要用户选择、确认或补充文本时调用。系统会持久保存问题并挂起小目标，用户回答后从冷启动继续。",
+        inputSchema: objectSchema([
+            "kind": ["type": "string", "enum": ["choice", "confirm", "text"]],
+            "prompt": ["type": "string"],
+            "options": ["type": "array", "items": ["type": "string"]],
+        ], required: ["kind", "prompt"])
+    )
+
+    public static let agentTools: [ToolDef] = [
         completeCard,
         blockCard,
         addProgressNote,
+        askUser,
         listDir,
         readFile,
         writeFile,

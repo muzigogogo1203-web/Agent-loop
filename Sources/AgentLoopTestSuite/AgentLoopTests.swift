@@ -87,12 +87,81 @@ private actor FlakyProvider: LLMProvider {
     }
 }
 
+private actor IdlePatternProvider: LLMProvider {
+    enum Step: Sendable {
+        case hang
+        case events([ProviderEvent], interval: Duration)
+        case turn(TurnResult)
+    }
+
+    private var steps: [Step]
+    private(set) var callCount = 0
+
+    init(steps: [Step]) {
+        self.steps = steps
+    }
+
+    nonisolated func streamTurn(
+        system: String,
+        history: [APIMessage],
+        tools: [ToolDef],
+        toolChoice: ToolChoice,
+        maxTokens: Int
+    ) -> AsyncThrowingStream<ProviderEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                switch await self.next() {
+                case .hang:
+                    do {
+                        while !Task.isCancelled {
+                            try await Task.sleep(for: .seconds(3600))
+                        }
+                        continuation.finish(throwing: CancellationError())
+                    } catch {
+                        continuation.finish(throwing: error)
+                    }
+                case .events(let events, let interval):
+                    do {
+                        for event in events {
+                            try Task.checkCancellation()
+                            if interval > .zero {
+                                try await Task.sleep(for: interval)
+                            }
+                            continuation.yield(event)
+                        }
+                        continuation.finish()
+                    } catch {
+                        continuation.finish(throwing: error)
+                    }
+                case .turn(let turn):
+                    for block in turn.content {
+                        if case .text(let text) = block {
+                            continuation.yield(.textDelta(text))
+                        }
+                    }
+                    continuation.yield(.turn(turn))
+                    continuation.finish()
+                case .none:
+                    continuation.finish(throwing: ProviderError.malformedStream("idle script exhausted"))
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private func next() -> Step? {
+        callCount += 1
+        return steps.isEmpty ? nil : steps.removeFirst()
+    }
+}
+
 private func runLoop(
     provider: any LLMProvider,
     handlers: [String: any ToolHandler],
     maxTurns: Int = 10,
     tokenBudget: Int = Int.max,
-    retryDelays: [Duration] = [.seconds(2), .seconds(4)]
+    retryDelays: [Duration] = [.seconds(2), .seconds(4)],
+    turnTimeout: Duration = KernelDefaults.turnTimeout
 ) async throws -> (outcome: LoopOutcome, events: [AgentEvent]) {
     let loop = AgentLoop(
         provider: provider,
@@ -106,11 +175,12 @@ private func runLoop(
             workspacePath: nil,
             upstreamHandoffs: []
         ),
-        tools: ToolDef.m1Tools,
+        tools: ToolDef.agentTools,
         maxTurns: maxTurns,
         tokenBudget: tokenBudget,
         maxTokensPerTurn: 4096,
-        retryDelays: retryDelays
+        retryDelays: retryDelays,
+        turnTimeout: turnTimeout
     )
     var events: [AgentEvent] = []
     var final: LoopOutcome?
@@ -128,7 +198,8 @@ private func runLoop(
     handlers: [String: any ToolHandler],
     maxTurns: Int = 10,
     tokenBudget: Int = Int.max,
-    retryDelays: [Duration] = [.seconds(2), .seconds(4)]
+    retryDelays: [Duration] = [.seconds(2), .seconds(4)],
+    turnTimeout: Duration = KernelDefaults.turnTimeout
 ) async throws -> (outcome: LoopOutcome, events: [AgentEvent], mock: MockProvider) {
     let mock = MockProvider(script: script)
     let result = try await runLoop(
@@ -136,7 +207,8 @@ private func runLoop(
         handlers: handlers,
         maxTurns: maxTurns,
         tokenBudget: tokenBudget,
-        retryDelays: retryDelays
+        retryDelays: retryDelays,
+        turnTimeout: turnTimeout
     )
     return (result.outcome, result.events, mock)
 }
@@ -290,7 +362,7 @@ private let doneHandoff: JSONValue = [
             cardDescription: "d", expectedOutput: "e",
             workspacePath: nil, upstreamHandoffs: []
         ),
-        tools: ToolDef.m1Tools,
+        tools: ToolDef.agentTools,
         maxTurns: 10,
         tokenBudget: Int.max,
         maxTokensPerTurn: 4096
@@ -415,6 +487,171 @@ private let doneHandoff: JSONValue = [
     #expect(await provider.callCount == 2)
 }
 
+@Test func turnTimeoutRetriesOnceThenBlocks() async throws {
+    let provider = IdlePatternProvider(steps: [.hang, .hang])
+    let result = try await runLoop(
+        provider: provider,
+        handlers: [:],
+        turnTimeout: .milliseconds(5)
+    )
+
+    guard case .blocked(let reason, let detail) = result.outcome else {
+        Issue.record("expected blocked after repeated idle timeout")
+        return
+    }
+    #expect(reason == "tool_failure")
+    #expect(detail.contains("超时"))
+    let retries = result.events.compactMap { event -> (Int, String)? in
+        if case .turnRetrying(let attempt, let reason) = event {
+            return (attempt, reason)
+        }
+        return nil
+    }
+    #expect(retries.count == 1)
+    #expect(retries[0].0 == 1)
+    #expect(retries[0].1 == "本轮超时")
+    #expect(await provider.callCount == 2)
+}
+
+@Test func cancelWinsOverIdleTimeout() async throws {
+    enum CancelOutcome: Equatable {
+        case canceled
+        case timedOut
+        case finished
+        case other
+    }
+
+    let provider = IdlePatternProvider(steps: [.hang])
+    let loop = AgentLoop(
+        provider: provider,
+        executor: ToolExecutor(handlers: [:]),
+        packet: ContextPacket(
+            companionName: "T",
+            rolePrompt: "r",
+            cardTitle: "t",
+            cardDescription: "d",
+            expectedOutput: "e",
+            workspacePath: nil,
+            upstreamHandoffs: []
+        ),
+        tools: ToolDef.agentTools,
+        maxTurns: 10,
+        tokenBudget: Int.max,
+        maxTokensPerTurn: 4096,
+        turnTimeout: .milliseconds(5)
+    )
+    let task = Task<CancelOutcome, Never> {
+        do {
+            for try await _ in loop.run() {}
+            try Task.checkCancellation()
+            return .finished
+        } catch is CancellationError {
+            return .canceled
+        } catch is TurnTimeoutError {
+            return .timedOut
+        } catch {
+            return .other
+        }
+    }
+
+    try await Task.sleep(for: .milliseconds(1))
+    task.cancel()
+    let outcome = await task.value
+    #expect(outcome == .canceled)
+}
+
+@Test func timeoutThenSuccessDoesNotAccumulate() async throws {
+    let handoff = try HandoffPayload.parse(from: doneHandoff).get()
+    let provider = IdlePatternProvider(steps: [
+        .hang,
+        .turn(TurnResult(
+            content: [.toolUse(id: "n1", name: "add_progress_note", input: ["text": "step"])],
+            stopReason: .toolUse
+        )),
+        .hang,
+        .turn(TurnResult(
+            content: [.toolUse(id: "c1", name: "complete_card", input: doneHandoff)],
+            stopReason: .toolUse
+        )),
+    ])
+
+    let result = try await runLoop(
+        provider: provider,
+        handlers: [
+            "add_progress_note": StubHandler([.result("ok")]),
+            "complete_card": StubHandler([.completed(handoff)]),
+        ],
+        turnTimeout: .milliseconds(5)
+    )
+
+    guard case .completed = result.outcome else {
+        Issue.record("expected completed when each turn succeeds on retry")
+        return
+    }
+    #expect(retryAttempts(in: result.events) == [1, 1])
+    #expect(await provider.callCount == 4)
+}
+
+@Test func slowActiveStreamDoesNotIdleTimeout() async throws {
+    let handoff = try HandoffPayload.parse(from: doneHandoff).get()
+    let finalTurn = TurnResult(
+        content: [.text("done"), .toolUse(id: "c1", name: "complete_card", input: doneHandoff)],
+        stopReason: .toolUse
+    )
+    // 时间参数余量：总时长(7×150ms=1050ms) > timeout(600ms) 才真正证明「事件重置 deadline」；
+    // 间隔(150ms) 相对 timeout 留 4× 绝对余量，避免全量测试并行时协作线程池过载导致的假超时
+    //（曾以 25ms/80ms 在满载真机稳定假失败、单跑全绿）。
+    let provider = IdlePatternProvider(steps: [
+        .events(
+            [
+                .textDelta("a"),
+                .textDelta("b"),
+                .textDelta("c"),
+                .textDelta("d"),
+                .textDelta("e"),
+                .textDelta("f"),
+                .turn(finalTurn),
+            ],
+            interval: .milliseconds(150)
+        ),
+    ])
+
+    let result = try await runLoop(
+        provider: provider,
+        handlers: ["complete_card": StubHandler([.completed(handoff)])],
+        turnTimeout: .milliseconds(600)
+    )
+
+    guard case .completed = result.outcome else {
+        Issue.record("expected active stream to complete")
+        return
+    }
+    #expect(retryAttempts(in: result.events).isEmpty)
+    #expect(await provider.callCount == 1)
+}
+
+@Test func turnCompletesUnderTimeout() async throws {
+    let handoff = try HandoffPayload.parse(from: doneHandoff).get()
+    let provider = IdlePatternProvider(steps: [
+        .turn(TurnResult(
+            content: [.text("done"), .toolUse(id: "c1", name: "complete_card", input: doneHandoff)],
+            stopReason: .toolUse
+        )),
+    ])
+
+    let result = try await runLoop(
+        provider: provider,
+        handlers: ["complete_card": StubHandler([.completed(handoff)])],
+        turnTimeout: .seconds(1)
+    )
+
+    guard case .completed = result.outcome else {
+        Issue.record("expected completed")
+        return
+    }
+    #expect(await provider.callCount == 1)
+}
+
 @Test func turnRetryExhaustionSurfacesLastError() async throws {
     let provider = FlakyProvider(
         failures: [.url(.networkConnectionLost), .url(.networkConnectionLost), .url(.networkConnectionLost)],
@@ -432,7 +669,7 @@ private let doneHandoff: JSONValue = [
             workspacePath: nil,
             upstreamHandoffs: []
         ),
-        tools: ToolDef.m1Tools,
+        tools: ToolDef.agentTools,
         maxTurns: 10,
         tokenBudget: Int.max,
         maxTokensPerTurn: 4096,
@@ -469,7 +706,7 @@ private let doneHandoff: JSONValue = [
             workspacePath: nil,
             upstreamHandoffs: []
         ),
-        tools: ToolDef.m1Tools,
+        tools: ToolDef.agentTools,
         maxTurns: 10,
         tokenBudget: Int.max,
         maxTokensPerTurn: 4096

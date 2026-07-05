@@ -527,6 +527,168 @@ public final class AppDatabase: Sendable {
         }
     }
 
+    public func events(missionId: String, limit: Int = 200) throws -> [EventRecord] {
+        try pool.read { db in
+            let rows = try EventRecord.fetchAll(
+                db,
+                sql: """
+                    SELECT *
+                    FROM event
+                    WHERE missionId = ?
+                    ORDER BY createdAt DESC, rowid DESC
+                    LIMIT ?
+                    """,
+                arguments: [missionId, limit]
+            )
+            return rows.reversed()
+        }
+    }
+
+    public func missions(limit: Int = 20) throws -> [MissionRecord] {
+        try pool.read { db in
+            try MissionRecord
+                .order(Column("createdAt").desc, Column.rowID.desc)
+                .limit(limit)
+                .fetchAll(db)
+        }
+    }
+
+    public func suspendCardForUserRequest(
+        cardId: String,
+        runId: String?,
+        kind: UserRequestRecord.Kind,
+        prompt: String,
+        options: [String]?
+    ) throws -> String {
+        try pool.write { db in
+            guard let card = try CardRecord.fetchOne(db, key: cardId) else {
+                throw RecordNotFoundError(table: "card", id: cardId)
+            }
+
+            let requestId = UUID().uuidString
+            let optionsJson: String?
+            if let options {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.sortedKeys]
+                optionsJson = String(data: try encoder.encode(options), encoding: .utf8)
+            } else {
+                optionsJson = nil
+            }
+
+            try UserRequestRecord(
+                id: requestId,
+                cardId: cardId,
+                kind: kind,
+                prompt: prompt,
+                optionsJson: optionsJson,
+                answerJson: nil,
+                createdAt: Date(),
+                answeredAt: nil
+            ).insert(db)
+
+            let blockedPayload: JSONValue = [
+                "detail": .string(prompt),
+                "reason": "needs_human_input",
+                "userRequestId": .string(requestId),
+            ]
+            try blockCard(
+                db,
+                id: cardId,
+                runId: runId,
+                reason: "needs_human_input",
+                detail: prompt,
+                payload: blockedPayload,
+                reasonJson: try blockedPayload.encodedString()
+            )
+            try Self.appendEvent(
+                db,
+                missionId: card.missionId,
+                cardId: cardId,
+                runId: runId,
+                kind: "user_request_created",
+                payload: [
+                    "kind": .string(kind.rawValue),
+                    "prompt": .string(prompt),
+                    "userRequestId": .string(requestId),
+                ]
+            )
+            return requestId
+        }
+    }
+
+    public func answerUserRequest(requestId: String, answerJson: String) throws {
+        try pool.write { db in
+            guard var request = try UserRequestRecord.fetchOne(db, key: requestId),
+                  request.answerJson == nil,
+                  let card = try CardRecord.fetchOne(db, key: request.cardId),
+                  card.status == .blocked,
+                  let blockedReasonJson = card.blockedReasonJson,
+                  let blockedReason = try? JSONValue.decoded(from: blockedReasonJson),
+                  blockedReason["userRequestId"]?.stringValue == requestId
+            else {
+                throw StaleUserRequestError(requestId: requestId)
+            }
+
+            request.answerJson = answerJson
+            request.answeredAt = Date()
+            try request.update(db)
+
+            try transitionCard(
+                db,
+                id: card.id,
+                to: .ready,
+                eventKind: "card_ready",
+                payload: ["answeredRequest": .string(requestId)]
+            )
+            try Self.appendEvent(
+                db,
+                missionId: card.missionId,
+                cardId: card.id,
+                runId: nil,
+                kind: "user_request_answered",
+                payload: ["userRequestId": .string(requestId)]
+            )
+        }
+    }
+
+    public func answeredRequests(cardId: String) throws -> [UserRequestRecord] {
+        try pool.read { db in
+            try UserRequestRecord
+                .filter(Column("cardId") == cardId && Column("answerJson") != nil)
+                .order(Column("createdAt"), Column.rowID)
+                .fetchAll(db)
+        }
+    }
+
+    public func pendingUserRequests(missionId: String) throws -> [UserRequestRecord] {
+        try pool.read { db in
+            try UserRequestRecord.fetchAll(
+                db,
+                sql: """
+                    SELECT user_request.*
+                    FROM user_request
+                    JOIN card ON card.id = user_request.cardId
+                    WHERE card.missionId = ? AND user_request.answerJson IS NULL
+                    ORDER BY user_request.createdAt, user_request.rowid
+                    """,
+                arguments: [missionId]
+            )
+        }
+    }
+
+    public func appendKernelErrorEvent(missionId: String, message: String) {
+        try? pool.write { db in
+            try Self.appendEvent(
+                db,
+                missionId: missionId,
+                cardId: nil,
+                runId: nil,
+                kind: "kernel_error",
+                payload: ["message": .string(message)]
+            )
+        }
+    }
+
     public func appendDiagnosticEvent(cardId: String, runId: String, kind: String, payload: JSONValue) throws {
         try pool.write { db in
             guard let card = try CardRecord.fetchOne(db, key: cardId) else {

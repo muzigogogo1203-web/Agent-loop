@@ -99,6 +99,50 @@ import AgentLoopCore
     #expect(runs[0].outcome == "canceled")
 }
 
+@Test func cancelDuringArmedTimeoutLeavesCardReady() async throws {
+    let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    let workspace = base.appendingPathComponent("ws")
+    try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+    let db = try AppDatabase(path: base.appendingPathComponent("t.sqlite").path)
+    let ids = try db.createSingleCardMission(
+        campName: "c", squadName: "s", goal: "g",
+        cardTitle: "t", cardDescription: "d", expectedOutput: "e",
+        assigneeId: nil, maxTurns: 20, workspacePath: workspace.path
+    )
+    let provider = RunnerHangingProvider()
+    let runner = CardRunner(
+        db: db,
+        provider: provider,
+        artifactStoreRoot: base.appendingPathComponent("store"),
+        turnTimeout: .milliseconds(5)
+    )
+
+    let consumerTask = Task {
+        do {
+            for try await _ in try runner.run(cardId: ids.cardId, companionName: "阿规", rolePrompt: "r") {}
+        } catch is CancellationError {
+        } catch {
+            Issue.record("unexpected runner error: \(error)")
+        }
+    }
+
+    await provider.waitUntilStarted()
+    consumerTask.cancel()
+
+    var finalStatus: CardStatus?
+    for _ in 0..<40 {
+        try await Task.sleep(for: .milliseconds(50))
+        finalStatus = try db.card(id: ids.cardId)?.status
+        if finalStatus == .ready { break }
+    }
+
+    #expect(finalStatus == .ready, "card should be .ready after cancellation, got \(String(describing: finalStatus))")
+
+    let runs = try db.runs(cardId: ids.cardId)
+    #expect(runs.count == 1)
+    #expect(runs[0].outcome == "canceled")
+}
+
 @Test func runnerTransportErrorSetsFailedAndBlocked() async throws {
     // Empty script → MockProvider throws malformedStream on first call
     let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -164,4 +208,48 @@ import AgentLoopCore
     let runs = try db.runs(cardId: ids.cardId)
     #expect(runs.count == 1)
     #expect(runs[0].outcome == "blocked")
+}
+
+private actor RunnerHangingProvider: LLMProvider {
+    private var started = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    nonisolated func streamTurn(
+        system: String,
+        history: [APIMessage],
+        tools: [ToolDef],
+        toolChoice: ToolChoice,
+        maxTokens: Int
+    ) -> AsyncThrowingStream<ProviderEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                await self.markStarted()
+                do {
+                    while !Task.isCancelled {
+                        try await Task.sleep(for: .seconds(3600))
+                    }
+                    continuation.finish(throwing: CancellationError())
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    func waitUntilStarted() async {
+        if started { return }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    private func markStarted() {
+        started = true
+        let current = waiters
+        waiters.removeAll()
+        for waiter in current {
+            waiter.resume()
+        }
+    }
 }

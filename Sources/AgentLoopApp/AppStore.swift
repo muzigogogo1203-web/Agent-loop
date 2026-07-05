@@ -41,11 +41,20 @@ final class AppStore {
 
     var missionPhase: MissionPhase = .idle
     var currentMissionId: String?
+    var missionList: [MissionRecord] = []
     var missionCards: [CardRecord] = []
     var missionArtifacts: [ArtifactRecord] = []
     var cardCompanions: [String: CompanionRecord] = [:]
     var cardLatest: [String: String] = [:]
     var cardActivity: [String: [ActivityItem]] = [:]
+    var feedEntries: [FeedEntry] = []
+    var pendingRequests: [UserRequestRecord] = []
+    var cardPhases: [String: TurnPhase] = [:]
+    var recentlyCompleted: Set<String> = []
+    var companionAnimStates: [String: CompanionAnimState] = [:]
+    var theaterMode = false
+    var feedNotice: String?
+    var selectedCardId: String?
     private var missionTask: Task<Void, Never>?
     private var kernelEventsTask: Task<Void, Never>?
 
@@ -78,11 +87,13 @@ final class AppStore {
         apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
         reload()
         startKernelEventListener()
+        Task { await orchestrator.reconcile() }
     }
 
     func reload() {
         companions = (try? db.regularCompanions()) ?? []
         apiKeyPresent = ((try? keychain.get(account: "anthropic-api-key")) ?? nil) != nil
+        reloadMissionList()
     }
 
     func saveAPIKey(_ key: String) {
@@ -110,7 +121,16 @@ final class AppStore {
         cardCompanions = [:]
         cardLatest = [:]
         cardActivity = [:]
+        feedEntries = []
+        pendingRequests = []
+        cardPhases = [:]
+        recentlyCompleted = []
+        companionAnimStates = [:]
+        feedNotice = nil
+        selectedCardId = nil
+        theaterMode = false
         missionPhase = .planning
+        reloadMissionList()
         missionTask?.cancel()
         missionTask = Task { [weak self] in
             guard let self else { return }
@@ -122,11 +142,21 @@ final class AppStore {
                     plannerModel: defaultModel
                 )
                 currentMissionId = missionId
+                theaterMode = false
                 reloadMission(missionId: missionId)
+                reloadMissionList()
             } catch {
                 missionPhase = .error(readableError(error))
             }
         }
+    }
+
+    func selectMission(_ missionId: String) {
+        currentMissionId = missionId
+        theaterMode = false
+        selectedCardId = nil
+        feedNotice = nil
+        reloadMission(missionId: missionId)
     }
 
     func closeoutCurrentMission() {
@@ -136,6 +166,7 @@ final class AppStore {
             do {
                 try await orchestrator.closeout(currentMissionId)
                 reloadMission(missionId: currentMissionId)
+                reloadMissionList()
             } catch {
                 missionPhase = .error(readableError(error))
             }
@@ -146,9 +177,16 @@ final class AppStore {
         guard let currentMissionId else { return }
         missionTask = Task { [weak self] in
             guard let self else { return }
-            await orchestrator.cancelMission(currentMissionId)
-            reloadMission(missionId: currentMissionId)
+            await cancelMission(missionId: currentMissionId)
         }
+    }
+
+    func cancelMission(missionId: String) async {
+        await orchestrator.cancelMission(missionId)
+        if currentMissionId == missionId {
+            reloadMission(missionId: missionId)
+        }
+        reloadMissionList()
     }
 
     func retryCard(_ cardId: String) {
@@ -159,6 +197,31 @@ final class AppStore {
                 if let currentMissionId {
                     reloadMission(missionId: currentMissionId)
                 }
+                reloadMissionList()
+            } catch {
+                missionPhase = .error(readableError(error))
+            }
+        }
+    }
+
+    func answerRequest(requestId: String, answer: AskUserAnswer) {
+        missionTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await orchestrator.answerUserRequest(
+                    requestId: requestId,
+                    answerJson: try answerJson(for: answer)
+                )
+                feedNotice = nil
+                if let currentMissionId {
+                    reloadMission(missionId: currentMissionId)
+                }
+                reloadMissionList()
+            } catch is StaleUserRequestError {
+                if let currentMissionId {
+                    reloadMission(missionId: currentMissionId, clearNotice: false)
+                }
+                feedNotice = "这个问题已经过期"
             } catch {
                 missionPhase = .error(readableError(error))
             }
@@ -173,6 +236,14 @@ final class AppStore {
         cardCompanions = [:]
         cardLatest = [:]
         cardActivity = [:]
+        feedEntries = []
+        pendingRequests = []
+        cardPhases = [:]
+        recentlyCompleted = []
+        companionAnimStates = [:]
+        feedNotice = nil
+        selectedCardId = nil
+        theaterMode = false
     }
 
     private func startKernelEventListener() {
@@ -188,28 +259,48 @@ final class AppStore {
     private func handleKernelEvent(_ event: KernelEvent) {
         switch event {
         case .planningStarted(let missionId):
-            currentMissionId = currentMissionId ?? missionId
+            reloadMissionList()
+            guard currentMissionId == missionId else { return }
             missionPhase = .planning
         case .planCompleted(let missionId, _), .missionChanged(let missionId):
-            currentMissionId = currentMissionId ?? missionId
+            reloadMissionList()
+            guard currentMissionId == missionId else { return }
             reloadMission(missionId: missionId)
         case .cardEvent(let cardId, let agentEvent):
-            handleCardEvent(cardId: cardId, event: agentEvent)
+            if missionCards.contains(where: { $0.id == cardId }) {
+                handleCardEvent(cardId: cardId, event: agentEvent)
+            } else if case .finished = agentEvent,
+                      missionId(forCardId: cardId) == currentMissionId {
+                handleCardEvent(cardId: cardId, event: agentEvent)
+            }
         case .kernelError(let missionId, let message):
-            if currentMissionId == nil || currentMissionId == missionId || missionId.isEmpty {
+            reloadMissionList()
+            if currentMissionId == missionId || missionId.isEmpty {
+                if let currentMissionId {
+                    reloadMission(missionId: currentMissionId)
+                }
                 missionPhase = .error(message)
             }
         }
     }
 
-    private func reloadMission(missionId: String) {
+    private func reloadMission(missionId: String, clearNotice: Bool = true) {
         guard let mission = try? db.mission(id: missionId) else { return }
+        if clearNotice {
+            feedNotice = nil
+        }
         missionCards = (try? db.cards(missionId: missionId)) ?? []
         missionArtifacts = (try? db.missionArtifacts(missionId: missionId)) ?? []
+        pendingRequests = (try? db.pendingUserRequests(missionId: missionId)) ?? []
         var seenAssigneeIds = Set<String>()
         let assigneeIds = missionCards.compactMap(\.assigneeId).filter { seenAssigneeIds.insert($0).inserted }
         let companions = (try? db.companions(ids: assigneeIds)) ?? []
         cardCompanions = Dictionary(companions.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let events = (try? db.events(missionId: missionId, limit: 200)) ?? []
+        feedEntries = ActivityFeed.entries(events: events, cards: missionCards, companions: cardCompanions)
+        if let selectedCardId, !missionCards.contains(where: { $0.id == selectedCardId }) {
+            self.selectedCardId = nil
+        }
         switch mission.status {
         case .planning:
             missionPhase = .planning
@@ -222,30 +313,46 @@ final class AppStore {
         case .failed:
             missionPhase = .failed
         }
+        recomputeAnimStates()
+    }
+
+    private func reloadMissionList() {
+        missionList = (try? db.missions(limit: 20)) ?? []
     }
 
     private func handleCardEvent(cardId: String, event: AgentEvent) {
         switch event {
         case .turnStarted:
+            cardPhases[cardId] = .waitingProvider
             setCardLatest(cardId: cardId, "正在思考")
             cardActivity[cardId, default: []].append(ActivityItem(text: "开始新一轮", kind: .start))
         case .textDelta:
+            cardPhases[cardId] = .streaming
             setCardLatest(cardId: cardId, "正在生成")
         case .toolStarted(let name):
+            cardPhases[cardId] = .toolRunning
             setCardLatest(cardId: cardId, "正在\(humanToolName(name))")
             cardActivity[cardId, default: []].append(ActivityItem(text: "正在\(humanToolName(name))…", kind: .tool))
         case .toolFinished(let name, let isError):
+            cardPhases[cardId] = .streaming
             markToolActivityFinished(cardId: cardId, name: name, isError: isError)
             setCardLatest(cardId: cardId, isError ? "\(humanToolName(name))失败" : "\(humanToolName(name))完成")
+            if (name == "add_progress_note" || name == "ask_user"), let currentMissionId {
+                reloadMission(missionId: currentMissionId)
+            } else {
+                recomputeAnimStates()
+            }
         case .turnRetrying(let attempt, let reason):
             setCardLatest(cardId: cardId, "网络重试 \(attempt)")
             cardActivity[cardId, default: []].append(ActivityItem(text: "网络波动，正在重试（\(attempt)/2）：\(reason)", kind: .retry))
         case .turnEnded:
             break
         case .finished(let outcome):
+            cardPhases.removeValue(forKey: cardId)
             switch outcome {
             case .completed(let handoff):
                 setCardLatest(cardId: cardId, handoff.summary)
+                markRecentlyCompleted(cardId)
             case .blocked(_, let detail):
                 setCardLatest(cardId: cardId, detail)
             }
@@ -254,6 +361,7 @@ final class AppStore {
                 reloadMission(missionId: currentMissionId)
             }
         }
+        recomputeAnimStates()
     }
 
     private func setCardLatest(cardId: String, _ value: String) {
@@ -279,8 +387,51 @@ final class AppStore {
         case "complete_card": return "提交交接包"
         case "block_card": return "报告受阻"
         case "add_progress_note": return "汇报进展"
+        case "ask_user": return "提问"
         default: return name
         }
+    }
+
+    private func missionId(forCardId cardId: String) -> String? {
+        if let current = missionCards.first(where: { $0.id == cardId })?.missionId {
+            return current
+        }
+        return try? db.card(id: cardId)?.missionId
+    }
+
+    private func markRecentlyCompleted(_ cardId: String) {
+        recentlyCompleted.insert(cardId)
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            self?.recentlyCompleted.remove(cardId)
+            self?.recomputeAnimStates()
+        }
+    }
+
+    private func recomputeAnimStates() {
+        var states: [String: CompanionAnimState] = [:]
+        for companion in cardCompanions.values {
+            states[companion.id] = AnimStateDeriver.derive(
+                companionId: companion.id,
+                cards: missionCards,
+                phases: cardPhases,
+                recentlyCompletedCardIds: recentlyCompleted
+            )
+        }
+        companionAnimStates = states
+    }
+
+    private func answerJson(for answer: AskUserAnswer) throws -> String {
+        let value: JSONValue
+        switch answer {
+        case .choice(let index):
+            value = ["choice": .number(Double(index))]
+        case .confirm(let confirm):
+            value = ["confirm": .bool(confirm)]
+        case .text(let text):
+            value = ["text": .string(text)]
+        }
+        return try value.encodedString()
     }
 
     private func readableError(_ error: Error) -> String {

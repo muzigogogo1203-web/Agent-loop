@@ -114,6 +114,62 @@ public struct BoardTools: Sendable {
         }
     }
 
+    public func askUser(input: JSONValue) async -> ToolOutcome {
+        guard let object = input.objectValue else {
+            return .error("ask_user 参数必须是对象")
+        }
+        let allowedKeys: Set<String> = ["kind", "prompt", "options"]
+        let extraKeys = Set(object.keys).subtracting(allowedKeys)
+        guard extraKeys.isEmpty else {
+            return .error("ask_user 不支持参数：\(extraKeys.sorted().joined(separator: ", "))")
+        }
+        guard let kindRaw = object["kind"]?.stringValue,
+              let kind = UserRequestRecord.Kind(rawValue: kindRaw) else {
+            return .error("ask_user.kind 必须是 choice / confirm / text")
+        }
+        let prompt = object["prompt"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !prompt.isEmpty else {
+            return .error("ask_user.prompt 不能为空")
+        }
+
+        let options: [String]?
+        switch kind {
+        case .choice:
+            guard let rawOptions = object["options"]?.arrayValue else {
+                return .error("ask_user.choice 必须提供 options")
+            }
+            var parsed: [String] = []
+            for option in rawOptions {
+                guard let text = option.stringValue else {
+                    return .error("ask_user.options 必须全部是字符串")
+                }
+                parsed.append(text)
+            }
+            guard (2...6).contains(parsed.count) else {
+                return .error("ask_user.choice options 必须是 2 到 6 项")
+            }
+            options = parsed
+        case .confirm, .text:
+            guard object["options"] == nil else {
+                return .error("ask_user.\(kind.rawValue) 不接受 options")
+            }
+            options = nil
+        }
+
+        do {
+            _ = try db.suspendCardForUserRequest(
+                cardId: cardId,
+                runId: runId,
+                kind: kind,
+                prompt: prompt,
+                options: options
+            )
+            return .blocked(reason: "needs_human_input", detail: prompt)
+        } catch {
+            return .error("提问落库失败：\(error)")
+        }
+    }
+
     private func artifactDestination(for relativePath: String) -> URL {
         artifactStoreRoot
             .appendingPathComponent(cardId)
@@ -127,6 +183,7 @@ public struct BoardToolHandler: ToolHandler {
         case complete
         case block
         case note
+        case askUser
     }
 
     let tools: BoardTools
@@ -145,6 +202,8 @@ public struct BoardToolHandler: ToolHandler {
             return await tools.block(input: input)
         case .note:
             return await tools.progressNote(input: input)
+        case .askUser:
+            return await tools.askUser(input: input)
         }
     }
 }

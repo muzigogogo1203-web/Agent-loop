@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import os
 
 public enum KernelEvent: Sendable {
     case planningStarted(missionId: String)
@@ -25,7 +26,7 @@ public actor Orchestrator {
     private let db: AppDatabase
     private let makeProvider: @Sendable (String) -> any LLMProvider
     private let artifactStoreRoot: URL
-    private var running: [String: Task<Void, Never>] = [:]
+    private var running: [String: RunningEntry] = [:]
     private var planningTasks: [String: Task<Void, Never>] = [:]
     private var continuations: [UUID: AsyncStream<KernelEvent>.Continuation] = [:]
     private let tickInterval: Duration?
@@ -33,6 +34,7 @@ public actor Orchestrator {
     private var reconciling = false
     private var reconcilePending = false
     private var cancelling: Set<String> = []
+    private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "orchestrator")
 
     public init(
         db: AppDatabase,
@@ -79,7 +81,9 @@ public actor Orchestrator {
                 await reconcile()
             } catch is CancellationError {
             } catch {
-                await emitFromTask(.kernelError(missionId: missionId, message: String(describing: error)))
+                let message = String(describing: error)
+                db.appendKernelErrorEvent(missionId: missionId, message: message)
+                await emitFromTask(.kernelError(missionId: missionId, message: message))
             }
             await finishPlanning(missionId)
         }
@@ -103,12 +107,12 @@ public actor Orchestrator {
     }
 
     private func reconcileOnce() async {
-        let action: ReconcileAction
-        let hasRunning = !running.isEmpty
+        let plan: ReconcilePlan
         do {
-            action = try await db.pool.write { database in
+            plan = try await db.pool.write { database in
                 let missions = try MissionRecord
                     .filter(Column("status") == MissionStatus.executing.rawValue)
+                    .order(Column("createdAt"), Column.rowID)
                     .fetchAll(database)
                 for mission in missions {
                     let cards = try CardRecord
@@ -130,58 +134,74 @@ public actor Orchestrator {
                     }
                 }
 
-                guard !hasRunning else { return .none }
-                guard let ready = try CardRecord
-                    .fetchOne(
-                        database,
-                        sql: """
-                            SELECT card.*
-                            FROM card
-                            JOIN mission ON mission.id = card.missionId
-                            WHERE mission.status = ? AND card.status = ?
-                            ORDER BY card.stage
-                            LIMIT 1
+                let readyCards = try CardRecord.fetchAll(
+                    database,
+                    sql: """
+                        SELECT card.*
+                        FROM card
+                        JOIN mission ON mission.id = card.missionId
+                        WHERE mission.status = ? AND card.status = ?
+                        ORDER BY mission.createdAt, mission.rowid, card.stage, card.createdAt, card.rowid
                         """,
-                        arguments: [MissionStatus.executing.rawValue, CardStatus.ready.rawValue]
-                    ) else {
-                    return .none
-                }
-                guard let assigneeId = ready.assigneeId,
-                      let companion = try CompanionRecord.fetchOne(database, key: assigneeId) else {
-                    try db.blockCard(
-                        database,
-                        id: ready.id,
-                        runId: nil,
-                        reason: "other",
-                        detail: "负责伙伴不存在或未指派"
+                    arguments: [MissionStatus.executing.rawValue, CardStatus.ready.rawValue]
+                )
+                var candidates: [DispatchCandidate] = []
+                var errors: [KernelErrorRecord] = []
+                for ready in readyCards {
+                    guard let assigneeId = ready.assigneeId,
+                          let companion = try CompanionRecord.fetchOne(database, key: assigneeId) else {
+                        let message = "负责伙伴不存在或未指派"
+                        try db.blockCard(
+                            database,
+                            id: ready.id,
+                            runId: nil,
+                            reason: "other",
+                            detail: message
+                        )
+                        errors.append(KernelErrorRecord(missionId: ready.missionId, message: message))
+                        continue
+                    }
+                    candidates.append(
+                        DispatchCandidate(
+                            card: ready,
+                            assigneeId: assigneeId,
+                            companionName: companion.name,
+                            rolePrompt: companion.rolePrompt,
+                            model: companion.model
+                        )
                     )
-                    return .kernelError(missionId: ready.missionId, message: "负责伙伴不存在或未指派")
                 }
-                return .dispatch(DispatchCandidate(
-                    card: ready,
-                    companionName: companion.name,
-                    rolePrompt: companion.rolePrompt,
-                    model: companion.model
-                ))
+                return ReconcilePlan(candidates: candidates, kernelErrors: errors)
             }
         } catch {
             emit(.kernelError(missionId: "", message: String(describing: error)))
             return
         }
 
-        guard case .dispatch(let candidate) = action else {
-            if case .kernelError(let missionId, let message) = action {
-                emit(.kernelError(missionId: missionId, message: message))
-                emit(.missionChanged(missionId: missionId))
+        for error in plan.kernelErrors {
+            db.appendKernelErrorEvent(missionId: error.missionId, message: error.message)
+            emit(.kernelError(missionId: error.missionId, message: error.message))
+            emit(.missionChanged(missionId: error.missionId))
+        }
+
+        var busy = Set(running.values.map(\.assigneeId))
+        for candidate in plan.candidates {
+            guard !busy.contains(candidate.assigneeId),
+                  !cancelling.contains(candidate.card.missionId),
+                  running[candidate.card.id] == nil else {
+                continue
             }
-            return
+            let provider = makeProvider(candidate.model)
+            let task = Task {
+                await self.run(candidate: candidate, provider: provider)
+            }
+            running[candidate.card.id] = RunningEntry(
+                task: task,
+                assigneeId: candidate.assigneeId,
+                missionId: candidate.card.missionId
+            )
+            busy.insert(candidate.assigneeId)
         }
-        guard !cancelling.contains(candidate.card.missionId) else { return }
-        let provider = makeProvider(candidate.model)
-        let task = Task {
-            await self.run(candidate: candidate, provider: provider)
-        }
-        running[candidate.card.id] = task
     }
 
     public func cancelMission(_ missionId: String) async {
@@ -198,15 +218,15 @@ public actor Orchestrator {
             await planning.value
         }
 
-        let missionCardIds = (try? db.cards(missionId: missionId).map(\.id)) ?? []
-        let runningForMission = running.filter { missionCardIds.contains($0.key) }
-        for (_, task) in runningForMission {
-            task.cancel()
+        let runningForMission = running.filter { $0.value.missionId == missionId }
+        for (_, entry) in runningForMission {
+            entry.task.cancel()
         }
-        for (cardId, task) in runningForMission {
-            await task.value
+        for (cardId, entry) in runningForMission {
+            await entry.task.value
             running.removeValue(forKey: cardId)
         }
+        await markOpenRunsCanceled(missionId: missionId)
 
         do {
             try await db.pool.write { database in
@@ -250,8 +270,45 @@ public actor Orchestrator {
             }
             emit(.missionChanged(missionId: missionId))
         } catch {
-            emit(.kernelError(missionId: missionId, message: String(describing: error)))
+            let message = String(describing: error)
+            db.appendKernelErrorEvent(missionId: missionId, message: message)
+            emit(.kernelError(missionId: missionId, message: message))
         }
+    }
+
+    private func markOpenRunsCanceled(missionId: String) async {
+        try? await db.pool.write { database in
+            let runs = try RunRecord.fetchAll(
+                database,
+                sql: """
+                    SELECT r.*
+                    FROM run r
+                    JOIN card c ON c.id = r.cardId
+                    WHERE c.missionId = ? AND r.outcome IS NULL
+                    """,
+                arguments: [missionId]
+            )
+            for var run in runs {
+                run.outcome = "canceled"
+                run.endedAt = Date()
+                try run.update(database)
+            }
+        }
+    }
+
+    public func answerUserRequest(requestId: String, answerJson: String) async throws {
+        try db.answerUserRequest(requestId: requestId, answerJson: answerJson)
+        let missionId = try? await db.pool.read { database -> String in
+            guard let request = try UserRequestRecord.fetchOne(database, key: requestId),
+                  let card = try CardRecord.fetchOne(database, key: request.cardId) else {
+                throw RecordNotFoundError(table: "user_request/card", id: requestId)
+            }
+            return card.missionId
+        }
+        if let missionId {
+            emit(.missionChanged(missionId: missionId))
+        }
+        await reconcile()
     }
 
     public func retryCard(_ cardId: String) async throws {
@@ -299,14 +356,14 @@ public actor Orchestrator {
         for (_, task) in planningTasks {
             task.cancel()
         }
-        for (_, task) in running {
-            task.cancel()
+        for (_, entry) in running {
+            entry.task.cancel()
         }
         for (_, task) in planningTasks {
             await task.value
         }
-        for (_, task) in running {
-            await task.value
+        for (_, entry) in running {
+            await entry.task.value
         }
         planningTasks.removeAll()
         running.removeAll()
@@ -319,6 +376,8 @@ public actor Orchestrator {
     private func run(candidate: DispatchCandidate, provider: any LLMProvider) async {
         do {
             let upstream = try loadUpstreamHandoffs(for: candidate.card)
+            let answeredRequests = try db.answeredRequests(cardId: candidate.card.id)
+                .map { (prompt: $0.prompt, answer: $0.humanAnswer()) }
             let stream = try CardRunner(
                 db: db,
                 provider: provider,
@@ -327,14 +386,21 @@ public actor Orchestrator {
                 cardId: candidate.card.id,
                 companionName: candidate.companionName,
                 rolePrompt: candidate.rolePrompt,
-                upstreamHandoffs: upstream
+                upstreamHandoffs: upstream,
+                answeredRequests: answeredRequests
             )
             for try await event in stream {
                 await emitFromTask(.cardEvent(cardId: candidate.card.id, event))
             }
         } catch is CancellationError {
+        } catch let error as CardTransitionError where error.to == .running {
+            Self.logger.debug(
+                "ignored stale dispatch candidate for card \(candidate.card.id, privacy: .public): \(String(describing: error), privacy: .public)"
+            )
         } catch {
-            await emitFromTask(.kernelError(missionId: candidate.card.missionId, message: String(describing: error)))
+            let message = String(describing: error)
+            db.appendKernelErrorEvent(missionId: candidate.card.missionId, message: message)
+            await emitFromTask(.kernelError(missionId: candidate.card.missionId, message: message))
         }
         await runnerFinished(cardId: candidate.card.id, missionId: candidate.card.missionId)
     }
@@ -408,14 +474,27 @@ public actor Orchestrator {
 
     private struct DispatchCandidate: Sendable {
         let card: CardRecord
+        let assigneeId: String
         let companionName: String
         let rolePrompt: String
         let model: String
     }
 
-    private enum ReconcileAction: Sendable {
-        case none
-        case dispatch(DispatchCandidate)
-        case kernelError(missionId: String, message: String)
+    private struct RunningEntry: Sendable {
+        // Single in-memory dispatch authority for M3. The DB transition guard remains the
+        // persistence backstop; M5 can revisit crash recovery for this registry.
+        let task: Task<Void, Never>
+        let assigneeId: String
+        let missionId: String
+    }
+
+    private struct KernelErrorRecord: Sendable {
+        let missionId: String
+        let message: String
+    }
+
+    private struct ReconcilePlan: Sendable {
+        let candidates: [DispatchCandidate]
+        let kernelErrors: [KernelErrorRecord]
     }
 }

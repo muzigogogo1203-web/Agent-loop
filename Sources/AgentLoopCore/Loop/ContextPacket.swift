@@ -30,7 +30,8 @@ public struct ContextPacket: Sendable {
         cardDescription: String,
         expectedOutput: String,
         workspacePath: String?,
-        upstreamHandoffs: [UpstreamHandoff]
+        upstreamHandoffs: [UpstreamHandoff],
+        answeredRequests: [(prompt: String, answer: String)] = []
     ) {
         self.system = """
         你的名字是\(companionName)。\(rolePrompt)
@@ -57,6 +58,15 @@ public struct ContextPacket: Sendable {
         }
         if !upstreamHandoffs.isEmpty {
             user += "\n\n# 上游交接\n" + upstreamHandoffs.map(Self.render).joined(separator: "\n---\n")
+        }
+        if !answeredRequests.isEmpty {
+            let rendered = answeredRequests.enumerated().map { index, item in
+                """
+                \(index + 1). 问：\(item.prompt)
+                   答：\(item.answer)
+                """
+            }.joined(separator: "\n")
+            user += "\n\n# 此前你向用户提问的记录\n" + rendered
         }
         user += "\n\n现在开始工作。"
 

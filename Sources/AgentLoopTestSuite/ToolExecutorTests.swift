@@ -1,11 +1,11 @@
 import Testing
 import AgentLoopCore
 
-@Test func m1ToolDefsComplete() {
-    let names = ToolDef.m1Tools.map(\.name)
+@Test func agentToolDefsComplete() {
+    let names = ToolDef.agentTools.map(\.name)
     #expect(names == ["complete_card", "block_card", "add_progress_note",
-                      "list_dir", "read_file", "write_file", "web_fetch"])
-    for def in ToolDef.m1Tools {
+                      "ask_user", "list_dir", "read_file", "write_file", "web_fetch"])
+    for def in ToolDef.agentTools {
         #expect(def.inputSchema["type"]?.stringValue == "object")
         #expect(def.inputSchema["additionalProperties"]?.boolValue == false)
         #expect(!def.description.isEmpty)

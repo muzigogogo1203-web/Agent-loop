@@ -144,3 +144,103 @@ private func tempDB() throws -> AppDatabase {
     #expect(decoded == handoff)
     #expect(card.stage == 1)
 }
+
+@Test func eventsByMissionOrdered() throws {
+    let db = try tempDB()
+    let ids = try db.createSingleCardMission(
+        campName: "c", squadName: "s", goal: "g",
+        cardTitle: "t", cardDescription: "d", expectedOutput: "e",
+        assigneeId: nil, maxTurns: KernelDefaults.maxTurns)
+    try db.transitionCard(id: ids.cardId, to: .running, eventKind: "card_started", payload: ["n": 1])
+    try db.blockCard(id: ids.cardId, runId: nil, reason: "other", detail: "blocked")
+
+    let events = try db.events(missionId: ids.missionId, limit: 2)
+    #expect(events.map(\.kind) == ["card_started", "card_blocked"])
+}
+
+@Test func missionsListOrderedDesc() throws {
+    let db = try tempDB()
+    let first = try db.createMissionShell(goal: "first", companionIds: [], workspacePath: nil)
+    let second = try db.createMissionShell(goal: "second", companionIds: [], workspacePath: nil)
+
+    let missions = try db.missions(limit: 2)
+    #expect(missions.map(\.id) == [second, first])
+}
+
+@Test func suspendAndAnswerRoundTrip() throws {
+    let db = try tempDB()
+    let ids = try db.createSingleCardMission(
+        campName: "c", squadName: "s", goal: "g",
+        cardTitle: "t", cardDescription: "d", expectedOutput: "e",
+        assigneeId: nil, maxTurns: KernelDefaults.maxTurns)
+    let runId = "run-1"
+    try db.startRun(cardId: ids.cardId, runId: runId)
+
+    let requestId = try db.suspendCardForUserRequest(
+        cardId: ids.cardId,
+        runId: runId,
+        kind: .choice,
+        prompt: "选哪个？",
+        options: ["A", "B"]
+    )
+
+    let blocked = try #require(try db.card(id: ids.cardId))
+    #expect(blocked.status == .blocked)
+    #expect(blocked.blockedReasonJson?.contains(requestId) == true)
+
+    let pending = try db.pendingUserRequests(missionId: ids.missionId)
+    #expect(pending.map(\.id) == [requestId])
+    #expect(pending[0].humanAnswer() == "")
+
+    try db.answerUserRequest(requestId: requestId, answerJson: #"{"choice":1}"#)
+
+    let ready = try #require(try db.card(id: ids.cardId))
+    #expect(ready.status == .ready)
+    #expect(ready.blockedReasonJson == nil)
+    #expect(try db.pendingUserRequests(missionId: ids.missionId).isEmpty)
+
+    let answered = try db.answeredRequests(cardId: ids.cardId)
+    #expect(answered.count == 1)
+    #expect(answered[0].humanAnswer() == "B")
+
+    let events = try db.events(missionId: ids.missionId, limit: 20)
+    #expect(events.contains { $0.kind == "user_request_created" && $0.payloadJson.contains(requestId) })
+    #expect(events.contains { $0.kind == "card_ready" && $0.payloadJson.contains("answeredRequest") })
+    #expect(events.contains { $0.kind == "user_request_answered" && $0.payloadJson.contains(requestId) })
+}
+
+@Test func pendingRequestsAcrossCards() throws {
+    let db = try tempDB()
+    let camp = try db.ensureDefaultCamp()
+    let companion = CompanionRecord.new(name: "甲", color: "blue", rolePrompt: "r", model: "m", campId: camp.id)
+    try db.saveCompanion(companion)
+    let missionId = try db.createMissionShell(goal: "g", companionIds: [companion.id], workspacePath: nil)
+    try db.planMission(missionId: missionId, goalRefined: "g", drafts: [
+        .init(title: "A", description: "a", expectedOutput: "oa", assignee: 0, dependsOn: []),
+        .init(title: "B", description: "b", expectedOutput: "ob", assignee: 0, dependsOn: []),
+    ])
+    let cards = try db.cards(missionId: missionId)
+    try db.transitionCard(id: cards[0].id, to: .ready, eventKind: "card_ready", payload: .object([:]))
+    try db.startRun(cardId: cards[0].id, runId: "run-a")
+    let first = try db.suspendCardForUserRequest(
+        cardId: cards[0].id,
+        runId: "run-a",
+        kind: .confirm,
+        prompt: "确认 A？",
+        options: nil
+    )
+    try db.transitionCard(id: cards[1].id, to: .ready, eventKind: "card_ready", payload: .object([:]))
+    try db.startRun(cardId: cards[1].id, runId: "run-b")
+    let second = try db.suspendCardForUserRequest(
+        cardId: cards[1].id,
+        runId: "run-b",
+        kind: .text,
+        prompt: "补充 B",
+        options: nil
+    )
+
+    #expect(try db.pendingUserRequests(missionId: missionId).map(\.id) == [first, second])
+    try db.answerUserRequest(requestId: first, answerJson: #"{"confirm":true}"#)
+    #expect(try db.pendingUserRequests(missionId: missionId).map(\.id) == [second])
+    #expect(try db.answeredRequests(cardId: cards[0].id).first?.humanAnswer() == "确认")
+}

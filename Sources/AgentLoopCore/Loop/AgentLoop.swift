@@ -6,6 +6,8 @@ public enum LoopOutcome: Sendable {
     case blocked(reason: String, detail: String)
 }
 
+public struct TurnTimeoutError: Error, Sendable, Equatable {}
+
 public enum AgentEvent: Sendable {
     /// Emitted before every provider attempt, including retried attempts for the same turn.
     case turnStarted
@@ -26,6 +28,7 @@ public struct AgentLoop: Sendable {
     let tokenBudget: Int
     let maxTokensPerTurn: Int
     let retryDelays: [Duration]
+    let turnTimeout: Duration
     private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "loop")
 
     public init(
@@ -36,7 +39,8 @@ public struct AgentLoop: Sendable {
         maxTurns: Int,
         tokenBudget: Int,
         maxTokensPerTurn: Int,
-        retryDelays: [Duration] = [.seconds(2), .seconds(4)]
+        retryDelays: [Duration] = [.seconds(2), .seconds(4)],
+        turnTimeout: Duration = KernelDefaults.turnTimeout
     ) {
         self.provider = provider
         self.executor = executor
@@ -46,6 +50,7 @@ public struct AgentLoop: Sendable {
         self.tokenBudget = tokenBudget
         self.maxTokensPerTurn = maxTokensPerTurn
         self.retryDelays = retryDelays
+        self.turnTimeout = turnTimeout
     }
 
     public func run() -> AsyncThrowingStream<AgentEvent, Error> {
@@ -77,11 +82,16 @@ public struct AgentLoop: Sendable {
             turns += 1
             try Task.checkCancellation()
 
-            let result = try await providerTurnWithRetry(
-                history: history,
-                turnNumber: turns,
-                continuation: continuation
-            )
+            let result: TurnResult
+            do {
+                result = try await providerTurnWithRetry(
+                    history: history,
+                    turnNumber: turns,
+                    continuation: continuation
+                )
+            } catch is TurnTimeoutError {
+                return .blocked(reason: "tool_failure", detail: "本轮连续两次超时，已暂停等待处理")
+            }
             history.append(.assistant(result.content))
             spentTokens = Self.saturatingTokenSum(
                 spentTokens,
@@ -171,31 +181,21 @@ public struct AgentLoop: Sendable {
         continuation: AsyncThrowingStream<AgentEvent, Error>.Continuation
     ) async throws -> TurnResult {
         var retryCount = 0
+        // Counts idle timeouts within this provider turn only; transport retries stay separate.
+        var timeoutCount = 0
         while true {
             continuation.yield(.turnStarted)
             Self.logger.info("turn \(turnNumber, privacy: .public) started")
             do {
-                var turn: TurnResult?
-                for try await event in provider.streamTurn(
-                    system: packet.system,
-                    history: history,
-                    tools: tools,
-                    toolChoice: .auto,
-                    maxTokens: maxTokensPerTurn
-                ) {
-                    switch event {
-                    case .textDelta(let text):
-                        continuation.yield(.textDelta(text))
-                    case .turn(let result):
-                        turn = result
-                    }
+                return try await providerTurnAttempt(history: history, continuation: continuation)
+            } catch is TurnTimeoutError {
+                try Task.checkCancellation()
+                timeoutCount += 1
+                guard timeoutCount < 2 else {
+                    throw TurnTimeoutError()
                 }
-
-                guard let result = turn else {
-                    try Task.checkCancellation()
-                    throw ProviderError.malformedStream("no turn result")
-                }
-                return result
+                continuation.yield(.turnRetrying(attempt: timeoutCount, reason: "本轮超时"))
+                Self.logger.info("turn \(turnNumber, privacy: .public) idle timeout retry \(timeoutCount, privacy: .public)")
             } catch {
                 if error is CancellationError {
                     throw error
@@ -211,6 +211,55 @@ public struct AgentLoop: Sendable {
                 Self.logger.info("turn \(turnNumber, privacy: .public) retry \(retryCount, privacy: .public): \(reason, privacy: .public)")
                 try Task.checkCancellation()
                 try await Task.sleep(for: retryDelays[retryCount - 1])
+            }
+        }
+    }
+
+    private func providerTurnAttempt(
+        history: [APIMessage],
+        continuation: AsyncThrowingStream<AgentEvent, Error>.Continuation
+    ) async throws -> TurnResult {
+        let watchdog = IdleWatchdog(timeout: turnTimeout)
+        return try await withThrowingTaskGroup(of: TurnResult.self) { group in
+            group.addTask {
+                var turn: TurnResult?
+                for try await event in provider.streamTurn(
+                    system: packet.system,
+                    history: history,
+                    tools: tools,
+                    toolChoice: .auto,
+                    maxTokens: maxTokensPerTurn
+                ) {
+                    await watchdog.beat(timeout: turnTimeout)
+                    switch event {
+                    case .textDelta(let text):
+                        continuation.yield(.textDelta(text))
+                    case .turn(let result):
+                        turn = result
+                    }
+                }
+
+                guard let result = turn else {
+                    try Task.checkCancellation()
+                    throw ProviderError.malformedStream("no turn result")
+                }
+                return result
+            }
+            group.addTask {
+                try await watchdog.waitForTimeout()
+                throw TurnTimeoutError()
+            }
+
+            do {
+                guard let result = try await group.next() else {
+                    throw ProviderError.malformedStream("no turn result")
+                }
+                group.cancelAll()
+                return result
+            } catch {
+                group.cancelAll()
+                try Task.checkCancellation()
+                throw error
             }
         }
     }
@@ -239,5 +288,31 @@ public struct AgentLoop: Sendable {
             return urlError.localizedDescription
         }
         return String(describing: error)
+    }
+}
+
+private actor IdleWatchdog {
+    private let clock: ContinuousClock
+    private var deadline: ContinuousClock.Instant
+
+    init(timeout: Duration) {
+        let clock = ContinuousClock()
+        self.clock = clock
+        deadline = clock.now.advanced(by: timeout)
+    }
+
+    func beat(timeout: Duration) {
+        deadline = clock.now.advanced(by: timeout)
+    }
+
+    func waitForTimeout() async throws {
+        while !Task.isCancelled {
+            let target = deadline
+            try await clock.sleep(until: target)
+            try Task.checkCancellation()
+            if clock.now >= deadline {
+                throw TurnTimeoutError()
+            }
+        }
     }
 }

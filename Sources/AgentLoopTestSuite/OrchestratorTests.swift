@@ -15,13 +15,22 @@ private func artifactRoot() throws -> URL {
     return dir
 }
 
-private func orchestrationCompanions(_ db: AppDatabase) throws -> [CompanionRecord] {
+private func orchestrationCompanions(_ db: AppDatabase, count: Int = 2) throws -> [CompanionRecord] {
     let camp = try db.ensureDefaultCamp()
-    let a = CompanionRecord.new(name: "甲", color: "blue", rolePrompt: "整理", model: "model-a", campId: camp.id)
-    let b = CompanionRecord.new(name: "乙", color: "green", rolePrompt: "写作", model: "model-b", campId: camp.id)
-    try db.saveCompanion(a)
-    try db.saveCompanion(b)
-    return [a, b]
+    let names = ["甲", "乙", "丙", "丁", "戊", "己"]
+    var companions: [CompanionRecord] = []
+    for index in 0..<count {
+        let companion = CompanionRecord.new(
+            name: names[index],
+            color: "blue",
+            rolePrompt: "执行",
+            model: "model-\(index)",
+            campId: camp.id
+        )
+        try db.saveCompanion(companion)
+        companions.append(companion)
+    }
+    return companions
 }
 
 private func orchestrationMissionEvents(_ db: AppDatabase, missionId: String) throws -> [EventRecord] {
@@ -33,8 +42,12 @@ private func orchestrationMissionEvents(_ db: AppDatabase, missionId: String) th
     }
 }
 
-private func plannedMission(_ db: AppDatabase, drafts: [PlanProposal.CardDraft]) throws -> (missionId: String, companions: [CompanionRecord]) {
-    let companions = try orchestrationCompanions(db)
+private func plannedMission(
+    _ db: AppDatabase,
+    companionCount: Int = 2,
+    drafts: [PlanProposal.CardDraft]
+) throws -> (missionId: String, companions: [CompanionRecord]) {
+    let companions = try orchestrationCompanions(db, count: companionCount)
     let missionId = try db.createMissionShell(goal: "g", companionIds: companions.map(\.id), workspacePath: nil)
     try db.planMission(missionId: missionId, goalRefined: "g", drafts: drafts)
     return (missionId, companions)
@@ -107,6 +120,94 @@ private actor HangingProvider: LLMProvider {
     }
 }
 
+private actor GatedProvider: LLMProvider {
+    private struct Pending {
+        let id: UUID
+        let continuation: AsyncThrowingStream<ProviderEvent, Error>.Continuation
+    }
+
+    private var script: [TurnResult]
+    private var pending: [Pending] = []
+    private var waiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
+    private(set) var callCount = 0
+
+    init(script: [TurnResult]) {
+        self.script = script
+    }
+
+    nonisolated func streamTurn(
+        system: String,
+        history: [APIMessage],
+        tools: [ToolDef],
+        toolChoice: ToolChoice,
+        maxTokens: Int
+    ) -> AsyncThrowingStream<ProviderEvent, Error> {
+        let id = UUID()
+        return AsyncThrowingStream { continuation in
+            Task {
+                await self.enqueue(id: id, continuation: continuation)
+            }
+            continuation.onTermination = { _ in
+                Task { await self.cancel(id: id) }
+            }
+        }
+    }
+
+    func waitUntilStarted(count: Int = 1) async {
+        if callCount >= count { return }
+        await withCheckedContinuation { continuation in
+            waiters.append((count, continuation))
+        }
+    }
+
+    func release() {
+        guard !pending.isEmpty else { return }
+        let next = pending.removeFirst()
+        guard !script.isEmpty else {
+            next.continuation.finish(throwing: ProviderError.malformedStream("gated script exhausted"))
+            return
+        }
+        let turn = script.removeFirst()
+        for block in turn.content {
+            if case .text(let text) = block {
+                next.continuation.yield(.textDelta(text))
+            }
+        }
+        next.continuation.yield(.turn(turn))
+        next.continuation.finish()
+    }
+
+    private func enqueue(
+        id: UUID,
+        continuation: AsyncThrowingStream<ProviderEvent, Error>.Continuation
+    ) {
+        callCount += 1
+        pending.append(Pending(id: id, continuation: continuation))
+        resumeReadyWaiters()
+    }
+
+    private func cancel(id: UUID) {
+        pending.removeAll { $0.id == id }
+    }
+
+    private func resumeReadyWaiters() {
+        let ready = waiters.filter { callCount >= $0.count }
+        waiters.removeAll { callCount >= $0.count }
+        for waiter in ready {
+            waiter.continuation.resume()
+        }
+    }
+}
+
+private func orchestrationRuns(_ db: AppDatabase, missionId: String) throws -> [RunRecord] {
+    try db.pool.read { database in
+        try RunRecord
+            .filter(sql: "cardId IN (SELECT id FROM card WHERE missionId = ?)", arguments: [missionId])
+            .order(Column("startedAt"))
+            .fetchAll(database)
+    }
+}
+
 @Test func dependentCardStaysTodoUntilUpstreamDone() async throws {
     let db = try orchestratorTempDB()
     let (missionId, _) = try plannedMission(db, drafts: [
@@ -141,25 +242,163 @@ private actor HangingProvider: LLMProvider {
     await orch.shutdown()
 }
 
-@Test func serialGateNeverRunsTwoCards() async throws {
+@Test func sameCompanionCardsStaySerial() async throws {
+    let db = try orchestratorTempDB()
+    let (missionId, _) = try plannedMission(db, drafts: [
+        .init(title: "A", description: "a", expectedOutput: "oa", assignee: 0, dependsOn: []),
+        .init(title: "B", description: "b", expectedOutput: "ob", assignee: 0, dependsOn: []),
+    ])
+    let provider = GatedProvider(script: [doneTurn(summary: "A"), doneTurn(summary: "B")])
+    let orch = try orchestrator(db: db, provider: provider)
+    await orch.reconcile()
+    await provider.waitUntilStarted()
+    #expect(await provider.callCount == 1)
+    await provider.release()
+    await provider.waitUntilStarted(count: 2)
+    await provider.release()
+    await orch.waitUntilIdle()
+    let runs = try orchestrationRuns(db, missionId: missionId)
+    #expect(runs.count == 2)
+    let firstEnd = try #require(runs[0].endedAt)
+    #expect(firstEnd <= runs[1].startedAt)
+    await orch.shutdown()
+}
+
+@Test func distinctCompanionsRunConcurrently() async throws {
+    let db = try orchestratorTempDB()
+    let (missionId, _) = try plannedMission(db, companionCount: 3, drafts: [
+        .init(title: "A", description: "a", expectedOutput: "oa", assignee: 0, dependsOn: []),
+        .init(title: "B", description: "b", expectedOutput: "ob", assignee: 1, dependsOn: []),
+        .init(title: "C", description: "c", expectedOutput: "oc", assignee: 2, dependsOn: []),
+    ])
+    let providers = [
+        GatedProvider(script: [doneTurn(summary: "A")]),
+        GatedProvider(script: [doneTurn(summary: "B")]),
+        GatedProvider(script: [doneTurn(summary: "C")]),
+    ]
+    let orch = try Orchestrator(
+        db: db,
+        makeProvider: { model in
+            switch model {
+            case "model-0": providers[0]
+            case "model-1": providers[1]
+            default: providers[2]
+            }
+        },
+        artifactStoreRoot: artifactRoot(),
+        tickInterval: nil
+    )
+
+    await orch.reconcile()
+    await providers[0].waitUntilStarted()
+    await providers[1].waitUntilStarted()
+    await providers[2].waitUntilStarted()
+    #expect(await providers[0].callCount == 1)
+    #expect(await providers[1].callCount == 1)
+    #expect(await providers[2].callCount == 1)
+
+    await providers[0].release()
+    await providers[1].release()
+    await providers[2].release()
+    await orch.waitUntilIdle()
+
+    let runs = try orchestrationRuns(db, missionId: missionId)
+    #expect(runs.count == 3)
+    let latestStart = try #require(runs.map(\.startedAt).max())
+    let earliestEnd = try #require(runs.compactMap(\.endedAt).min())
+    #expect(latestStart <= earliestEnd)
+    await orch.shutdown()
+}
+
+@Test func mixedGatingDispatchesEagerly() async throws {
+    let db = try orchestratorTempDB()
+    let (missionId, _) = try plannedMission(db, drafts: [
+        .init(title: "A1", description: "a", expectedOutput: "oa", assignee: 0, dependsOn: []),
+        .init(title: "A2", description: "a", expectedOutput: "oa", assignee: 0, dependsOn: []),
+        .init(title: "B1", description: "b", expectedOutput: "ob", assignee: 1, dependsOn: []),
+    ])
+    let providerA = GatedProvider(script: [doneTurn(summary: "A1"), doneTurn(summary: "A2")])
+    let providerB = GatedProvider(script: [doneTurn(summary: "B1")])
+    let orch = try Orchestrator(
+        db: db,
+        makeProvider: { model in model == "model-0" ? providerA : providerB },
+        artifactStoreRoot: artifactRoot(),
+        tickInterval: nil
+    )
+
+    await orch.reconcile()
+    await providerA.waitUntilStarted()
+    await providerB.waitUntilStarted()
+    #expect(await providerA.callCount == 1)
+    #expect(await providerB.callCount == 1)
+
+    await providerB.release()
+    await orch.reconcile()
+    #expect(await providerA.callCount == 1)
+
+    await providerA.release()
+    await providerA.waitUntilStarted(count: 2)
+    await providerA.release()
+    await orch.waitUntilIdle()
+    #expect(try db.cards(missionId: missionId).map(\.status) == [.done, .done, .done])
+    await orch.shutdown()
+}
+
+@Test func busyCompanionSkippedNotStarved() async throws {
+    let db = try orchestratorTempDB()
+    let (missionId, _) = try plannedMission(db, drafts: [
+        .init(title: "A1", description: "a", expectedOutput: "oa", assignee: 0, dependsOn: []),
+        .init(title: "A2", description: "a", expectedOutput: "oa", assignee: 0, dependsOn: []),
+        .init(title: "B1", description: "b", expectedOutput: "ob", assignee: 1, dependsOn: []),
+    ])
+    let providerA = GatedProvider(script: [doneTurn(summary: "A1"), doneTurn(summary: "A2")])
+    let providerB = GatedProvider(script: [doneTurn(summary: "B1")])
+    let orch = try Orchestrator(
+        db: db,
+        makeProvider: { model in model == "model-0" ? providerA : providerB },
+        artifactStoreRoot: artifactRoot(),
+        tickInterval: nil
+    )
+
+    await orch.reconcile()
+    await providerA.waitUntilStarted()
+    await providerB.waitUntilStarted()
+    await providerB.release()
+    await orch.reconcile()
+    #expect(await providerA.callCount == 1)
+
+    await providerA.release()
+    await providerA.waitUntilStarted(count: 2)
+    await providerA.release()
+    await orch.waitUntilIdle()
+    #expect(try db.cards(missionId: missionId).map(\.status) == [.done, .done, .done])
+    await orch.shutdown()
+}
+
+@Test func cancelDuringConcurrentRunsTerminalizesAll() async throws {
     let db = try orchestratorTempDB()
     let (missionId, _) = try plannedMission(db, drafts: [
         .init(title: "A", description: "a", expectedOutput: "oa", assignee: 0, dependsOn: []),
         .init(title: "B", description: "b", expectedOutput: "ob", assignee: 1, dependsOn: []),
     ])
-    let provider = MockProvider(script: [doneTurn(summary: "A"), doneTurn(summary: "B")])
-    let orch = try orchestrator(db: db, provider: provider)
+    let providerA = GatedProvider(script: [doneTurn(summary: "A")])
+    let providerB = GatedProvider(script: [doneTurn(summary: "B")])
+    let orch = try Orchestrator(
+        db: db,
+        makeProvider: { model in model == "model-0" ? providerA : providerB },
+        artifactStoreRoot: artifactRoot(),
+        tickInterval: nil
+    )
+
     await orch.reconcile()
-    await orch.waitUntilIdle()
-    let runs = try await db.pool.read { database in
-        try RunRecord
-            .filter(sql: "cardId IN (SELECT id FROM card WHERE missionId = ?)", arguments: [missionId])
-            .order(Column("startedAt"))
-            .fetchAll(database)
-    }
-    #expect(runs.count == 2)
-    let firstEnd = try #require(runs[0].endedAt)
-    #expect(firstEnd <= runs[1].startedAt)
+    await providerA.waitUntilStarted()
+    await providerB.waitUntilStarted()
+    await orch.cancelMission(missionId)
+
+    #expect(try db.cards(missionId: missionId).map(\.status) == [.canceled, .canceled])
+    let outcomes = try orchestrationRuns(db, missionId: missionId).map(\.outcome)
+    #expect(outcomes == ["canceled", "canceled"])
+    #expect(try db.mission(id: missionId)?.status == .failed)
     await orch.shutdown()
 }
 
@@ -218,7 +457,7 @@ private actor HangingProvider: LLMProvider {
     let db = try orchestratorTempDB()
     let (missionId, _) = try plannedMission(db, drafts: [
         .init(title: "Slow", description: "d", expectedOutput: "o", assignee: 0, dependsOn: []),
-        .init(title: "Ready", description: "d", expectedOutput: "o", assignee: 1, dependsOn: []),
+        .init(title: "Ready", description: "d", expectedOutput: "o", assignee: 0, dependsOn: []),
     ])
     let provider = HangingProvider()
     let orch = try orchestrator(db: db, provider: provider)
