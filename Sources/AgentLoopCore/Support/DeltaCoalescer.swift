@@ -42,4 +42,10 @@ public actor DeltaCoalescer {
             isDelivering = false
         }
     }
+
+    public func discard() {
+        flusher?.cancel()
+        flusher = nil
+        buffer = ""
+    }
 }

@@ -64,6 +64,22 @@ import AgentLoopCore
     }
 }
 
+@Test func coalescerDiscardDropsPendingDeltas() async throws {
+    let collected = Collected()
+    let coalescer = DeltaCoalescer(interval: .milliseconds(50)) { batch in
+        await collected.append(batch)
+    }
+
+    await coalescer.push("stale")
+    await coalescer.discard()
+    try await Task.sleep(for: .milliseconds(120))
+    #expect(await collected.values.isEmpty)
+
+    await coalescer.push("fresh")
+    await coalescer.flush()
+    #expect(await collected.values == ["fresh"])
+}
+
 actor Collected {
     var values: [String] = []
 

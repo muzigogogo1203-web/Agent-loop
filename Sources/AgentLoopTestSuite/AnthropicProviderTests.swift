@@ -159,3 +159,11 @@ func stubbedSession() -> URLSession {
 }
 
 }
+
+@Test func normalizesBaseURL() {
+    #expect(AnthropicProvider.normalizedBaseURL(" https://api.z.ai/api/anthropic/ ")?.absoluteString == "https://api.z.ai/api/anthropic")
+    #expect(AnthropicProvider.normalizedBaseURL("http://127.0.0.1:8080")?.absoluteString == "http://127.0.0.1:8080")
+    #expect(AnthropicProvider.normalizedBaseURL("api.anthropic.com") == nil)
+    #expect(AnthropicProvider.normalizedBaseURL("ftp://x.com") == nil)
+    #expect(AnthropicProvider.normalizedBaseURL("https://") == nil)
+}

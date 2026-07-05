@@ -125,3 +125,17 @@ public struct AnthropicProvider: LLMProvider {
         }
     }
 }
+
+public extension AnthropicProvider {
+    /// 规范化用户输入的 API 端点：去空白、去尾部斜杠；仅接受带主机的 http/https。
+    /// 支持官方端点、Anthropic Messages API 兼容的中转网关与本地代理。
+    static func normalizedBaseURL(_ raw: String) -> URL? {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        while s.hasSuffix("/") { s.removeLast() }
+        guard let url = URL(string: s),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https",
+              url.host() != nil else { return nil }
+        return url
+    }
+}

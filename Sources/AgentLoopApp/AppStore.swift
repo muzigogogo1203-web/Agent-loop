@@ -12,6 +12,12 @@ final class AppStore {
     var defaultModel = "claude-sonnet-4-6"
     static let modelChoices = ["claude-sonnet-4-6", "claude-fable-5", "claude-haiku-4-5-20251001"]
 
+    static let defaultBaseURL = "https://api.anthropic.com"
+    var apiBaseURL: String = AppStore.defaultBaseURL {
+        didSet { UserDefaults.standard.set(apiBaseURL, forKey: "apiBaseURL") }
+    }
+    var apiBaseURLValid: Bool { AnthropicProvider.normalizedBaseURL(apiBaseURL) != nil }
+
     enum RunPhase: Equatable {
         case idle
         case thinking
@@ -30,6 +36,8 @@ final class AppStore {
     var chatMessages: [(role: String, text: String)] = []
     var chatStreaming = false
     private var chatTask: Task<Void, Never>?
+    private var chatCoalescer: DeltaCoalescer?
+    private var chatStreamID = 0
 
     init() {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -38,6 +46,7 @@ final class AppStore {
         artifactStoreRoot = appSupport.appendingPathComponent("artifacts")
         db = try! AppDatabase(path: appSupport.appendingPathComponent("agentloop.sqlite").path)
         try! db.ensureDefaultCamp()
+        apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
         reload()
     }
 
@@ -55,7 +64,9 @@ final class AppStore {
         guard let key = try? keychain.get(account: "anthropic-api-key") else {
             return nil
         }
-        return AnthropicProvider(apiKey: key, model: model)
+        let base = AnthropicProvider.normalizedBaseURL(apiBaseURL)
+            ?? URL(string: Self.defaultBaseURL)!
+        return AnthropicProvider(apiKey: key, model: model, baseURL: base)
     }
 
     func startRun(
@@ -133,43 +144,69 @@ final class AppStore {
     }
 
     func sendChat(companion: CompanionRecord, text: String) {
+        guard !text.isEmpty, !chatStreaming else {
+            return
+        }
         guard let provider = provider(model: companion.model) else {
             return
         }
+        chatStreamID += 1
+        let streamID = chatStreamID
         chatMessages.append((role: "user", text: text))
         chatMessages.append((role: "companion", text: ""))
+        let companionMessageIndex = chatMessages.count - 1
         chatStreaming = true
         let chat = ChatService(db: db, provider: provider)
+        let coalescer = DeltaCoalescer { [weak self] batch in
+            await MainActor.run {
+                guard let self,
+                      self.chatStreamID == streamID,
+                      self.chatMessages.indices.contains(companionMessageIndex) else {
+                    return
+                }
+                self.chatMessages[companionMessageIndex].text += batch
+            }
+        }
+        chatCoalescer = coalescer
         chatTask = Task {
             do {
-                let coalescer = DeltaCoalescer { [weak self] batch in
-                    await MainActor.run {
-                        guard let self, !self.chatMessages.isEmpty else {
-                            return
-                        }
-                        self.chatMessages[self.chatMessages.count - 1].text += batch
-                    }
-                }
                 for try await event in try chat.send(companionId: companion.id, userText: text) {
                     if case .textDelta(let text) = event {
                         await coalescer.push(text)
                     }
                 }
-                await coalescer.flush()
+                if Task.isCancelled {
+                    await coalescer.discard()
+                } else {
+                    await coalescer.flush()
+                }
+            } catch is CancellationError {
+                await coalescer.discard()
             } catch {
-                if !chatMessages.isEmpty {
-                    chatMessages[chatMessages.count - 1].text = "（出错了：\(error)）"
+                await coalescer.discard()
+                if chatStreamID == streamID, chatMessages.indices.contains(companionMessageIndex) {
+                    chatMessages[companionMessageIndex].text = "（出错了：\(error)）"
                 }
             }
-            chatStreaming = false
+            if chatStreamID == streamID {
+                chatStreaming = false
+                chatCoalescer = nil
+                chatTask = nil
+            }
         }
     }
 
     func loadChatHistory(companion: CompanionRecord) {
         // 切换伙伴时终止在途流，防止上一位伙伴的增量写进新伙伴的气泡
+        chatStreamID += 1
         chatTask?.cancel()
         chatTask = nil
+        let coalescer = chatCoalescer
+        chatCoalescer = nil
         chatStreaming = false
+        Task {
+            await coalescer?.discard()
+        }
         let thread = try? db.findOrCreateDMThread(companionId: companion.id)
         chatMessages = (thread.flatMap { try? db.messages(threadId: $0.id) } ?? [])
             .map { (role: $0.role, text: $0.text) }
