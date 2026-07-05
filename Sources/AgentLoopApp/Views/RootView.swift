@@ -13,6 +13,7 @@ struct RootView: View {
     @Environment(AppStore.self) private var store
     @State private var selection: Destination? = .newMission
     @State private var historyExpanded = false
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     private var activeMissions: [MissionRecord] {
         store.missionList.filter { $0.status != .accepted && $0.status != .failed }
@@ -23,7 +24,7 @@ struct RootView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             VStack(spacing: 0) {
                 newMissionButton
                     .padding(.horizontal, 12)
@@ -83,8 +84,15 @@ struct RootView: View {
             }
             .background(Camp.canvas)
             .navigationSplitViewColumnWidth(min: 200, ideal: 230)
+            .toolbar(removing: .sidebarToggle)
             .onAppear {
                 store.reload()
+            }
+            // 侧栏是常驻导航，任何宽度压力/误触都不允许把它收起
+            .onChange(of: columnVisibility) { _, value in
+                if value != .all {
+                    columnVisibility = .all
+                }
             }
             .onChange(of: selection) { _, value in
                 if case .mission(let id) = value {

@@ -30,6 +30,19 @@ struct FeedView: View {
 
             ScrollViewReader { proxy in
                 ScrollView {
+                    if entries.isEmpty {
+                        VStack(spacing: 8) {
+                            Image(systemName: "tent")
+                                .font(.title2)
+                                .foregroundStyle(Camp.stone)
+                            Text("行动开始后，小队的一举一动都会出现在这里")
+                                .font(.caption)
+                                .foregroundStyle(Camp.inkSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                    }
                     LazyVStack(alignment: .leading, spacing: 12) {
                         ForEach(entries) { entry in
                             feedRow(entry)
@@ -91,11 +104,6 @@ struct FeedView: View {
             .padding(12)
         }
         .background(Camp.surface)
-        .overlay(alignment: .leading) {
-            Rectangle()
-                .fill(Camp.line)
-                .frame(width: 1)
-        }
     }
 
     // MARK: - 气泡

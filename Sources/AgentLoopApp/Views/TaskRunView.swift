@@ -32,12 +32,11 @@ struct TaskRunView: View {
             }
         }
         .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: store.missionCards.map(\.status))
-        .inspector(isPresented: inspectorBinding) {
+        .sheet(isPresented: inspectorBinding) {
             if let card = selectedCard {
-                CardDetailInspector(card: card)
-                    .frame(minWidth: 320)
-            } else {
-                ContentUnavailableView("未选择小目标", systemImage: "rectangle.and.text.magnifyingglass")
+                CardDetailInspector(card: card) {
+                    store.selectedCardId = nil
+                }
             }
         }
     }
@@ -193,7 +192,7 @@ struct TaskRunView: View {
     // MARK: - 行动视图
 
     private var missionView: some View {
-        HSplitView {
+        HStack(alignment: .top, spacing: 14) {
             VStack(alignment: .leading, spacing: 14) {
                 missionHeader
                 viewToggle
@@ -215,8 +214,7 @@ struct TaskRunView: View {
 
                 artifactsView
             }
-            .padding(.trailing, 12)
-            .frame(minWidth: 470)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
 
             FeedView(
                 entries: store.feedEntries,
@@ -232,7 +230,12 @@ struct TaskRunView: View {
                 onCloseout: { store.closeoutCurrentMission() },
                 onInteract: { recordInteraction() }
             )
-            .frame(minWidth: 300, idealWidth: 360)
+            .frame(width: 330)
+            .clipShape(RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                    .stroke(Camp.line, lineWidth: 1)
+            )
         }
     }
 

@@ -1,124 +1,249 @@
 import SwiftUI
 import AgentLoopCore
 
+/// 小目标详情弹层（sheet 呈现，营地风）。
 struct CardDetailInspector: View {
     @Environment(AppStore.self) private var store
     let card: CardRecord
+    var onClose: () -> Void = {}
     @State private var timelineEntries: [FeedEntry] = []
     @State private var runRecords: [RunRecord] = []
     @State private var cardArtifacts: [ArtifactRecord] = []
     @State private var handoffPayload: HandoffPayload?
+    @State private var developerExpanded = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                header
-                timeline
-                handoff
-                runs
-                artifacts
-                developer
+        VStack(spacing: 0) {
+            header
+                .padding(16)
+            Divider().overlay(Camp.line)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if let handoffPayload {
+                        handoffSection(handoffPayload)
+                    }
+                    timelineSection
+                    if !cardArtifacts.isEmpty {
+                        artifactsSection
+                    }
+                    runsSection
+                    developerSection
+                }
+                .padding(16)
             }
-            .padding()
         }
-        .navigationTitle("小目标详情")
+        .frame(width: 620, height: 640)
+        .background(Camp.canvas)
+        .fontDesign(.rounded)
         .task(id: card.id) {
             loadDetails()
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(card.title)
-                .font(.title3.weight(.semibold))
-            Text(card.descriptionText)
-                .foregroundStyle(.secondary)
-            Label(statusText, systemImage: statusIcon)
-                .foregroundStyle(statusColor)
-        }
-    }
+    // MARK: - 头部
 
-    private var timeline: some View {
-        GroupBox("时间线") {
-            if timelineEntries.isEmpty {
-                Text("暂无事件")
-                    .foregroundStyle(.secondary)
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(timelineEntries) { entry in
-                        Label(entry.text, systemImage: icon(for: entry.kind))
-                            .font(.caption)
-                    }
+    private var header: some View {
+        HStack(alignment: .top, spacing: 12) {
+            if let companion = card.assigneeId.flatMap({ store.cardCompanions[$0] }) {
+                CompanionAvatarView(name: companion.name, colorName: companion.color, size: 38)
+            }
+            VStack(alignment: .leading, spacing: 5) {
+                Text(card.title)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Camp.ink)
+                Text(card.descriptionText)
+                    .font(.callout)
+                    .foregroundStyle(Camp.inkSecondary)
+                    .lineLimit(3)
+                HStack(spacing: 8) {
+                    CampChip(text: statusText, color: statusColor, icon: statusIcon)
+                    Text("预期产出：\(card.expectedOutput)")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                        .lineLimit(1)
                 }
             }
+            Spacer()
+            Button {
+                onClose()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(Camp.stone)
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.cancelAction)
         }
     }
 
-    @ViewBuilder private var handoff: some View {
-        GroupBox("交接包") {
-            if let handoff = handoffPayload {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("结果：\(handoff.outcome)")
-                    Text("摘要：\(handoff.summary)")
-                    if let next = handoff.next, !next.isEmpty {
-                        Text("下一步：\(next)")
-                    }
+    // MARK: - 交接包
+
+    private func handoffSection(_ handoff: HandoffPayload) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            CampSectionTitle("交接包")
+            VStack(alignment: .leading, spacing: 6) {
+                detailLine("结果", handoff.outcome)
+                detailLine("摘要", handoff.summary)
+                if let next = handoff.next, !next.isEmpty {
+                    detailLine("建议下一步", next)
+                }
+                if !handoff.verification.isEmpty {
                     Text("验证")
                         .font(.caption.weight(.semibold))
+                        .foregroundStyle(Camp.inkSecondary)
                     ForEach(Array(handoff.verification.enumerated()), id: \.offset) { _, item in
-                        Label("\(item.method)：\(item.note)", systemImage: item.passed ? "checkmark.circle" : "xmark.circle")
-                    }
-                    if !handoff.risks.isEmpty {
-                        Text("风险：\(handoff.risks.joined(separator: "、"))")
+                        HStack(spacing: 6) {
+                            Image(systemName: item.passed ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .foregroundStyle(item.passed ? Camp.moss : Camp.charcoalRed)
+                            Text("\(item.method)：\(item.note)")
+                                .foregroundStyle(Camp.ink)
+                        }
+                        .font(.caption)
                     }
                 }
-                .font(.caption)
-            } else {
-                Text("暂无交接包")
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var runs: some View {
-        GroupBox("Run 历史") {
-            if runRecords.isEmpty {
-                Text("暂无运行记录")
-                    .foregroundStyle(.secondary)
-            } else {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(runRecords, id: \.id) { run in
-                        Text("#\(run.attempt) \(run.outcome ?? "running") · \(run.tokensIn + run.tokensOut) tokens")
-                            .font(.caption)
-                    }
+                if !handoff.risks.isEmpty {
+                    detailLine("风险", handoff.risks.joined(separator: "、"))
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .campCard()
     }
 
-    private var artifacts: some View {
-        GroupBox("产物") {
-            if cardArtifacts.isEmpty {
-                Text("暂无产物")
-                    .foregroundStyle(.secondary)
+    private func detailLine(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Camp.inkSecondary)
+            Text(value)
+                .font(.callout)
+                .foregroundStyle(Camp.ink)
+                .textSelection(.enabled)
+        }
+    }
+
+    // MARK: - 时间线
+
+    private var timelineSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            CampSectionTitle("时间线")
+            if timelineEntries.isEmpty {
+                Text("还没有动静")
+                    .font(.caption)
+                    .foregroundStyle(Camp.inkSecondary)
             } else {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(cardArtifacts, id: \.id) { artifact in
-                        HStack {
-                            Label(artifact.label, systemImage: "doc")
-                            Spacer()
-                            Button {
-                                store.revealArtifact(artifact)
-                            } label: {
-                                Image(systemName: "folder")
-                            }
-                            .help("在 Finder 中显示")
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(timelineEntries) { entry in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: icon(for: entry.kind))
+                                .font(.caption)
+                                .foregroundStyle(iconColor(for: entry.kind))
+                                .frame(width: 16)
+                            Text(entry.text)
+                                .font(.caption)
+                                .foregroundStyle(Camp.ink)
+                                .textSelection(.enabled)
                         }
                     }
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .campCard()
     }
+
+    // MARK: - 产物
+
+    private var artifactsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            CampSectionTitle("产物")
+            ForEach(cardArtifacts, id: \.id) { artifact in
+                Button {
+                    store.revealArtifact(artifact)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "doc.fill")
+                            .foregroundStyle(Camp.moss)
+                        Text(artifact.label)
+                            .font(.callout)
+                            .foregroundStyle(Camp.ink)
+                        Spacer()
+                        Image(systemName: "arrow.up.forward.square")
+                            .font(.caption)
+                            .foregroundStyle(Camp.inkSecondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                            .stroke(Camp.line, lineWidth: 1)
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("在 Finder 中显示")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .campCard()
+    }
+
+    // MARK: - Run 历史
+
+    private var runsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            CampSectionTitle("运行记录")
+            if runRecords.isEmpty {
+                Text("暂无运行记录")
+                    .font(.caption)
+                    .foregroundStyle(Camp.inkSecondary)
+            } else {
+                VStack(alignment: .leading, spacing: 5) {
+                    ForEach(runRecords, id: \.id) { run in
+                        HStack(spacing: 8) {
+                            Text("#\(run.attempt)")
+                                .font(.caption.weight(.bold).monospacedDigit())
+                                .foregroundStyle(Camp.inkSecondary)
+                            CampChip(text: outcomeText(run.outcome), color: outcomeColor(run.outcome))
+                            Text("\(run.turns) 轮 · \(run.tokensIn + run.tokensOut) tokens")
+                                .font(.caption)
+                                .foregroundStyle(Camp.inkSecondary)
+                            Spacer()
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .campCard()
+    }
+
+    // MARK: - 开发者视角
+
+    private var developerSection: some View {
+        DisclosureGroup(isExpanded: $developerExpanded) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("id: \(card.id)")
+                Text("idemKey: \(card.idemKey)")
+                Text("stage: \(card.stage) · maxTurns: \(card.maxTurns) · tokenBudget: \(card.tokenBudget)")
+                if let blocked = card.blockedReasonJson {
+                    Text("blockedReasonJson: \(blocked)")
+                }
+            }
+            .font(.caption.monospaced())
+            .foregroundStyle(Camp.inkSecondary)
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 6)
+        } label: {
+            CampSectionTitle("开发者视角")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .campCard()
+    }
+
+    // MARK: - 数据
 
     private func loadDetails() {
         let events = (try? store.db.events(cardId: card.id)) ?? []
@@ -129,23 +254,6 @@ struct CardDetailInspector: View {
             handoffPayload = try? JSONDecoder().decode(HandoffPayload.self, from: Data(handoffJson.utf8))
         } else {
             handoffPayload = nil
-        }
-    }
-
-    private var developer: some View {
-        GroupBox("开发者视角") {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("id: \(card.id)")
-                Text("idemKey: \(card.idemKey)")
-                Text("stage: \(card.stage)")
-                Text("maxTurns: \(card.maxTurns)")
-                Text("tokenBudget: \(card.tokenBudget)")
-                if let blocked = card.blockedReasonJson {
-                    Text("blockedReasonJson: \(blocked)")
-                }
-            }
-            .font(.caption.monospaced())
-            .textSelection(.enabled)
         }
     }
 
@@ -163,36 +271,68 @@ struct CardDetailInspector: View {
     private var statusIcon: String {
         switch card.status {
         case .todo: "clock"
-        case .ready: "play.circle"
-        case .running: "bolt.circle"
-        case .blocked: "hand.raised"
-        case .done: "checkmark.circle"
-        case .canceled: "xmark.circle"
+        case .ready: "play.fill"
+        case .running: "bolt.fill"
+        case .blocked: "hand.raised.fill"
+        case .done: "checkmark"
+        case .canceled: "xmark"
         }
     }
 
     private var statusColor: Color {
         switch card.status {
-        case .done: .green
-        case .running: .blue
-        case .blocked: .orange
-        case .canceled: .secondary
-        default: .secondary
+        case .done: Camp.moss
+        case .running: Camp.creek
+        case .blocked: Camp.amber
+        case .canceled: Camp.stone
+        default: Camp.stone
+        }
+    }
+
+    private func outcomeText(_ outcome: String?) -> String {
+        switch outcome {
+        case "completed": "完成"
+        case "blocked": "受阻"
+        case "failed": "失败"
+        case "canceled": "取消"
+        case nil: "进行中"
+        default: outcome ?? "未知"
+        }
+    }
+
+    private func outcomeColor(_ outcome: String?) -> Color {
+        switch outcome {
+        case "completed": Camp.moss
+        case "blocked": Camp.amber
+        case "failed": Camp.charcoalRed
+        case "canceled": Camp.stone
+        case nil: Camp.creek
+        default: Camp.stone
         }
     }
 
     private func icon(for kind: FeedEntry.Kind) -> String {
         switch kind {
-        case .directive: "flag"
-        case .planned: "list.bullet"
+        case .directive: "flag.fill"
+        case .planned: "map"
         case .claimed: "hand.tap"
         case .progress: "ellipsis.message"
         case .question: "questionmark.bubble"
-        case .blocked: "exclamationmark.triangle"
-        case .delivered: "shippingbox"
+        case .blocked: "exclamationmark.triangle.fill"
+        case .delivered: "shippingbox.fill"
         case .canceled: "xmark.circle"
         case .statusChange: "arrow.triangle.2.circlepath"
-        case .error: "exclamationmark.octagon"
+        case .error: "exclamationmark.octagon.fill"
+        }
+    }
+
+    private func iconColor(for kind: FeedEntry.Kind) -> Color {
+        switch kind {
+        case .delivered: Camp.moss
+        case .question, .blocked: Camp.amber
+        case .error: Camp.charcoalRed
+        case .claimed, .progress: Camp.creek
+        default: Camp.inkSecondary
         }
     }
 }

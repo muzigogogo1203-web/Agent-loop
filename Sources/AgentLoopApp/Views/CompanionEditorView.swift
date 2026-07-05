@@ -22,43 +22,146 @@ struct CompanionEditorView: View {
             : modelChoice
     }
 
+    private var canSave: Bool {
+        !name.isEmpty && !rolePrompt.isEmpty && !resolvedModel.isEmpty
+    }
+
     var body: some View {
-        Form {
-            TextField("名字（比如：阿规）", text: $name)
-            Picker("颜色", selection: $color) {
-                ForEach(Self.colors, id: \.self) { color in
-                    Text(color).tag(color)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                // 头部：实时预览
+                HStack(spacing: 16) {
+                    CompanionAvatarView(
+                        name: name.isEmpty ? "伙" : name,
+                        colorName: color,
+                        size: 64
+                    )
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(companionId == nil ? "招募新伙伴" : "编辑伙伴")
+                            .font(.largeTitle.weight(.bold))
+                            .foregroundStyle(Camp.ink)
+                        Text(companionId == nil ? "起个名字、挑个颜色、写清职责，就能一起出发。" : "改动会即时用于之后的行动与私聊。")
+                            .font(.callout)
+                            .foregroundStyle(Camp.inkSecondary)
+                    }
                 }
-            }
-            Picker("模型", selection: $modelChoice) {
-                ForEach(AppStore.modelChoices, id: \.self) { model in
-                    Text(model).tag(model)
+                .padding(.top, 8)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    CampSectionTitle("名字")
+                    TextField("比如：阿规", text: $name)
+                        .textFieldStyle(.plain)
+                        .font(.body)
+                        .padding(11)
+                        .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                .stroke(Camp.line, lineWidth: 1)
+                        )
+
+                    CampSectionTitle("颜色")
+                    HStack(spacing: 12) {
+                        ForEach(Self.colors, id: \.self) { colorName in
+                            colorSwatch(colorName)
+                        }
+                    }
                 }
-                Text("自定义…").tag(Self.customTag)
+                .campCard()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    CampSectionTitle("模型")
+                    Picker("模型", selection: $modelChoice) {
+                        ForEach(AppStore.modelChoices, id: \.self) { model in
+                            Text(model).tag(model)
+                        }
+                        Text("自定义…").tag(Self.customTag)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    if modelChoice == Self.customTag {
+                        TextField("模型 id（网关提供的名字，如 glm-5.1）", text: $customModel)
+                            .textFieldStyle(.plain)
+                            .autocorrectionDisabled()
+                            .padding(11)
+                            .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                    .stroke(Camp.line, lineWidth: 1)
+                            )
+                    }
+                }
+                .campCard()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    CampSectionTitle("职责")
+                    Text("它决定这位伙伴擅长什么、以什么口吻做事（system prompt）。")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                    TextEditor(text: $rolePrompt)
+                        .font(.body)
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 140)
+                        .padding(8)
+                        .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                .stroke(Camp.line, lineWidth: 1)
+                        )
+                }
+                .campCard()
+
+                if let saveError {
+                    Label(saveError, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(Camp.charcoalRed)
+                }
+
+                Button {
+                    save()
+                } label: {
+                    HStack {
+                        Spacer()
+                        Label(companionId == nil ? "入册" : "保存", systemImage: "checkmark")
+                        Spacer()
+                    }
+                }
+                .buttonStyle(CampPrimaryButtonStyle())
+                .keyboardShortcut(.defaultAction)
+                .disabled(!canSave)
+                .opacity(canSave ? 1 : 0.5)
             }
-            if modelChoice == Self.customTag {
-                TextField("模型 id（网关提供的名字，如 glm-5.1）", text: $customModel)
-                    .autocorrectionDisabled()
-            }
-            Section("职责（system prompt）") {
-                TextEditor(text: $rolePrompt)
-                    .frame(minHeight: 120)
-            }
-            Button("保存伙伴") {
-                save()
-            }
-            .disabled(name.isEmpty || rolePrompt.isEmpty || resolvedModel.isEmpty)
-            if let saveError {
-                Text(saveError)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
+            .frame(maxWidth: 560)
+            .padding(24)
+            .frame(maxWidth: .infinity)
         }
-        .formStyle(.grouped)
-        .navigationTitle(companionId == nil ? "新伙伴" : "编辑伙伴")
+        .background(Camp.canvas)
         .task(id: companionId) {
             load()
         }
+    }
+
+    private func colorSwatch(_ colorName: String) -> some View {
+        let swatch = CompanionAvatarView.palette[colorName] ?? .gray
+        return Button {
+            color = colorName
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(swatch.opacity(0.85))
+                    .frame(width: 30, height: 30)
+                if color == colorName {
+                    Circle()
+                        .stroke(Camp.ink, lineWidth: 2)
+                        .frame(width: 38, height: 38)
+                    Image(systemName: "checkmark")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .frame(width: 40, height: 40)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func load() {
