@@ -45,7 +45,8 @@ struct DMChatView: View {
     }
 
     private func send() {
-        guard !input.isEmpty else {
+        // 回车键不经过按钮的 disabled 状态，这里同样要挡住流式中的重复发送
+        guard !input.isEmpty, !store.chatStreaming else {
             return
         }
         store.sendChat(companion: companion, text: input)

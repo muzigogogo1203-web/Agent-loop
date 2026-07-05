@@ -319,16 +319,6 @@ public final class AppDatabase: Sendable {
         }
     }
 
-    public func insertRun(id: String, cardId: String) throws {
-        try pool.write { db in
-            let attempt = try RunRecord.filter(Column("cardId") == cardId).fetchCount(db)
-            try RunRecord(
-                id: id, cardId: cardId, attempt: attempt + 1, outcome: nil,
-                turns: 0, tokensIn: 0, tokensOut: 0, startedAt: Date(), endedAt: nil
-            ).insert(db)
-        }
-    }
-
     /// Atomically inserts a run row AND transitions the card ready→running in one write transaction.
     /// A failed transition (e.g. card not ready) rolls back the run insert, preventing orphaned run rows.
     public func startRun(cardId: String, runId: String) throws {

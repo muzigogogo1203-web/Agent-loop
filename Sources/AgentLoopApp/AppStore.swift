@@ -166,6 +166,10 @@ final class AppStore {
     }
 
     func loadChatHistory(companion: CompanionRecord) {
+        // 切换伙伴时终止在途流，防止上一位伙伴的增量写进新伙伴的气泡
+        chatTask?.cancel()
+        chatTask = nil
+        chatStreaming = false
         let thread = try? db.findOrCreateDMThread(companionId: companion.id)
         chatMessages = (thread.flatMap { try? db.messages(threadId: $0.id) } ?? [])
             .map { (role: $0.role, text: $0.text) }
