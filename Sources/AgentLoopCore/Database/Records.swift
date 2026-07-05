@@ -416,6 +416,131 @@ public struct ChatMessageRecord: Codable, Sendable, FetchableRecord, Persistable
         else { return contentJson }
         return json["text"] ?? contentJson
     }
+
+    /// contentJson 为类型化组队提案块时解析（{"type":"squad_proposal",...}），否则 nil。
+    public var proposal: SquadProposalBlock? {
+        guard contentJson.contains("squad_proposal"),
+              let block = try? JSONDecoder().decode(SquadProposalBlock.self, from: Data(contentJson.utf8)),
+              block.type == SquadProposalBlock.typeName
+        else { return nil }
+        return block
+    }
 }
 
-// MARK: - camp_note and user_request are schema-only in M1 (no Swift records needed yet)
+// MARK: - Squad Proposal Block（向导组队提案，存于 chat_message.contentJson，spec §10.2）
+
+public struct SquadProposalBlock: Codable, Sendable, Equatable {
+    public static let typeName = "squad_proposal"
+
+    public enum Status: String, Codable, Sendable {
+        case pending, confirmed, dismissed
+    }
+
+    public var type: String
+    public var proposalId: String
+    public var name: String
+    public var memberIds: [String]
+    public var goal: String
+    public var budget: Int?
+    public var status: Status
+    public var missionId: String?
+
+    public init(proposalId: String, name: String, memberIds: [String], goal: String,
+                budget: Int?, status: Status, missionId: String? = nil) {
+        self.type = Self.typeName
+        self.proposalId = proposalId
+        self.name = name
+        self.memberIds = memberIds
+        self.goal = goal
+        self.budget = budget
+        self.status = status
+        self.missionId = missionId
+    }
+
+    /// 持久化编码（sortedKeys——写库字节确定性纪律）。
+    public func encodedString() throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        guard let json = String(data: try encoder.encode(self), encoding: .utf8) else {
+            throw EncodingError.invalidValue(self, .init(codingPath: [], debugDescription: "UTF-8 encoding failed"))
+        }
+        return json
+    }
+
+    /// 提案块进对话历史（发给 LLM）时的占位文本。
+    public var historyPlaceholder: String {
+        let statusText: String
+        switch status {
+        case .pending: statusText = "等待用户确认"
+        case .confirmed: statusText = "用户已确认并开工"
+        case .dismissed: statusText = "用户已驳回"
+        }
+        return "[组队提案「\(name)」：\(goal)（\(statusText)）]"
+    }
+}
+
+// MARK: - Camp Note（营地笔记，spec §9）
+
+public struct CampNoteRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "camp_note"
+    public var id: String
+    public var campId: String
+    public var missionId: String?
+    public var title: String
+    public var bodyMd: String
+    public var pinned: Bool
+    public var createdAt: Date
+    public var updatedAt: Date
+
+    public init(id: String, campId: String, missionId: String?, title: String,
+                bodyMd: String, pinned: Bool, createdAt: Date, updatedAt: Date) {
+        self.id = id
+        self.campId = campId
+        self.missionId = missionId
+        self.title = title
+        self.bodyMd = bodyMd
+        self.pinned = pinned
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    public static func new(campId: String, missionId: String? = nil,
+                           title: String, bodyMd: String) -> CampNoteRecord {
+        let now = Date()
+        return .init(id: UUID().uuidString, campId: campId, missionId: missionId,
+                     title: title, bodyMd: bodyMd, pinned: false, createdAt: now, updatedAt: now)
+    }
+}
+
+// MARK: - Companion Note（伙伴记忆，spec §10.1）
+
+public struct CompanionNoteRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "companion_note"
+    public var id: String
+    public var companionId: String
+    public var sourceThreadId: String?
+    public var title: String
+    public var bodyMd: String
+    public var pinned: Bool
+    public var createdAt: Date
+    public var updatedAt: Date
+
+    public init(id: String, companionId: String, sourceThreadId: String?, title: String,
+                bodyMd: String, pinned: Bool, createdAt: Date, updatedAt: Date) {
+        self.id = id
+        self.companionId = companionId
+        self.sourceThreadId = sourceThreadId
+        self.title = title
+        self.bodyMd = bodyMd
+        self.pinned = pinned
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    public static func new(companionId: String, sourceThreadId: String? = nil,
+                           title: String, bodyMd: String) -> CompanionNoteRecord {
+        let now = Date()
+        return .init(id: UUID().uuidString, companionId: companionId, sourceThreadId: sourceThreadId,
+                     title: title, bodyMd: bodyMd, pinned: false, createdAt: now, updatedAt: now)
+    }
+}

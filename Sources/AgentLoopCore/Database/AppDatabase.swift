@@ -171,6 +171,20 @@ public final class AppDatabase: Sendable {
                 WHERE status NOT IN ('planning','executing','delivering','accepted','failed')
                 """)
         }
+        // M4: 伙伴记忆表（v1 只建了 camp_note；companion_note 是 M4 补齐的缺口）
+        m.registerMigration("v3") { db in
+            try db.create(table: "companion_note") { t in
+                t.primaryKey("id", .text)
+                t.column("companionId", .text).notNull().references("companion").indexed()
+                t.column("sourceThreadId", .text).references("chat_thread")
+                t.column("title", .text).notNull()
+                t.column("bodyMd", .text).notNull()
+                t.column("pinned", .boolean).notNull().defaults(to: false)
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull()
+            }
+            try db.create(index: "camp_note_campId", on: "camp_note", columns: ["campId"])
+        }
         return m
     }
 
