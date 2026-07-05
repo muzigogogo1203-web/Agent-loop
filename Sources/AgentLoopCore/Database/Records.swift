@@ -11,12 +11,42 @@ public enum CardStatus: String, Sendable, Codable, CaseIterable {
         switch (self, next) {
         case (.todo, .ready), (.ready, .running), (.running, .done),
              (.running, .blocked), (.blocked, .ready), (.blocked, .canceled),
-             (.todo, .canceled), (.ready, .canceled),
+             (.todo, .canceled), (.ready, .canceled), (.ready, .blocked),
              (.running, .ready),    // §14 crash-recovery: interrupt returns card to ready
              (.running, .canceled): // §13 budget-exhausted early-close terminalization
             return true
         default: return false
         }
+    }
+}
+
+public enum MissionStatus: String, Sendable, Codable {
+    case planning, executing, delivering, accepted, failed
+}
+
+extension MissionStatus {
+    public static func rollup(current: MissionStatus, cards: [CardStatus]) -> MissionStatus {
+        switch current {
+        case .accepted, .failed:
+            return current
+        case .planning, .executing, .delivering:
+            break
+        }
+
+        guard !cards.isEmpty else {
+            return .planning
+        }
+
+        let terminal: Set<CardStatus> = [.done, .canceled]
+        if cards.contains(where: { !terminal.contains($0) }) {
+            return .executing
+        }
+
+        if cards.contains(.done) {
+            return .delivering
+        }
+
+        return .failed
     }
 }
 
@@ -122,14 +152,14 @@ public struct MissionRecord: Codable, Sendable, FetchableRecord, PersistableReco
     public var squadId: String
     public var goalRaw: String
     public var goalRefined: String
-    public var status: String
+    public var status: MissionStatus
     public var budgetTokens: Int
     public var spentTokens: Int
     public var revision: Int
     public var createdAt: Date
 
     public init(id: String, squadId: String, goalRaw: String, goalRefined: String,
-                status: String, budgetTokens: Int, spentTokens: Int, revision: Int, createdAt: Date) {
+                status: MissionStatus, budgetTokens: Int, spentTokens: Int, revision: Int, createdAt: Date) {
         self.id = id
         self.squadId = squadId
         self.goalRaw = goalRaw
@@ -156,6 +186,8 @@ public struct CardRecord: Codable, Sendable, FetchableRecord, PersistableRecord 
     public var status: CardStatus
     public var blockedReasonJson: String?
     public var dependsOnJson: String
+    public var handoffJson: String?
+    public var stage: Int
     public var maxTurns: Int
     public var tokenBudget: Int
     public var createdAt: Date
@@ -163,6 +195,7 @@ public struct CardRecord: Codable, Sendable, FetchableRecord, PersistableRecord 
     public init(id: String, missionId: String, idemKey: String, title: String,
                 descriptionText: String, expectedOutput: String, assigneeId: String?,
                 status: CardStatus, blockedReasonJson: String?, dependsOnJson: String,
+                handoffJson: String?, stage: Int,
                 maxTurns: Int, tokenBudget: Int, createdAt: Date) {
         self.id = id
         self.missionId = missionId
@@ -174,6 +207,8 @@ public struct CardRecord: Codable, Sendable, FetchableRecord, PersistableRecord 
         self.status = status
         self.blockedReasonJson = blockedReasonJson
         self.dependsOnJson = dependsOnJson
+        self.handoffJson = handoffJson
+        self.stage = stage
         self.maxTurns = maxTurns
         self.tokenBudget = tokenBudget
         self.createdAt = createdAt

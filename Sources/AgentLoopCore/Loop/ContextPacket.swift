@@ -1,3 +1,24 @@
+import Foundation
+
+public struct UpstreamHandoff: Sendable {
+    public let cardTitle: String
+    public let handoff: HandoffPayload
+    public let workspaceRelativePaths: [String]
+    public let durablePaths: [String]
+
+    public init(
+        cardTitle: String,
+        handoff: HandoffPayload,
+        workspaceRelativePaths: [String],
+        durablePaths: [String]
+    ) {
+        self.cardTitle = cardTitle
+        self.handoff = handoff
+        self.workspaceRelativePaths = workspaceRelativePaths
+        self.durablePaths = durablePaths
+    }
+}
+
 public struct ContextPacket: Sendable {
     public let system: String
     public let firstUserMessage: APIMessage
@@ -9,7 +30,7 @@ public struct ContextPacket: Sendable {
         cardDescription: String,
         expectedOutput: String,
         workspacePath: String?,
-        upstreamHandoffs: [String]
+        upstreamHandoffs: [UpstreamHandoff]
     ) {
         self.system = """
         你的名字是\(companionName)。\(rolePrompt)
@@ -35,10 +56,64 @@ public struct ContextPacket: Sendable {
             user += "\n（本任务未绑定工作目录，文件工具不可用）"
         }
         if !upstreamHandoffs.isEmpty {
-            user += "\n\n# 上游交接\n" + upstreamHandoffs.joined(separator: "\n---\n")
+            user += "\n\n# 上游交接\n" + upstreamHandoffs.map(Self.render).joined(separator: "\n---\n")
         }
         user += "\n\n现在开始工作。"
 
         self.firstUserMessage = .user(user)
+    }
+
+    private static func render(_ upstream: UpstreamHandoff) -> String {
+        var lines: [String] = [
+            "## \(upstream.cardTitle)",
+            "结果：\(upstream.handoff.outcome)",
+            "摘要：\(upstream.handoff.summary)",
+        ]
+
+        if upstream.handoff.verification.isEmpty {
+            lines.append("验证：未提供")
+        } else {
+            lines.append("验证：")
+            for item in upstream.handoff.verification {
+                lines.append("- \(item.method)：\(item.passed ? "✓" : "✗") \(item.note)")
+            }
+        }
+
+        if upstream.handoff.risks.isEmpty {
+            lines.append("风险：无")
+        } else {
+            lines.append("风险：")
+            for risk in upstream.handoff.risks {
+                lines.append("- \(risk)")
+            }
+        }
+
+        if let next = upstream.handoff.next, !next.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            lines.append("建议下一步：\(next)")
+        }
+
+        if upstream.workspaceRelativePaths.isEmpty && upstream.durablePaths.isEmpty {
+            lines.append("无文件产物：\(upstream.handoff.noArtifactReason ?? "未说明")")
+        } else {
+            lines.append("产物：")
+            lines.append("工作目录内路径可直接用 read_file 读取：")
+            if upstream.workspaceRelativePaths.isEmpty {
+                lines.append("- 无")
+            } else {
+                for path in upstream.workspaceRelativePaths {
+                    lines.append("- \(path)")
+                }
+            }
+            lines.append("耐久备份绝对路径（信息性）：")
+            if upstream.durablePaths.isEmpty {
+                lines.append("- 无")
+            } else {
+                for path in upstream.durablePaths {
+                    lines.append("- \(path)")
+                }
+            }
+        }
+
+        return lines.joined(separator: "\n")
     }
 }

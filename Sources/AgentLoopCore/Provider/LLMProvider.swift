@@ -22,6 +22,11 @@ public enum ProviderEvent: Sendable {
     case turn(TurnResult)
 }
 
+public enum ToolChoice: Sendable, Equatable {
+    case auto
+    case tool(name: String)
+}
+
 public enum ProviderError: Error, Sendable, Equatable {
     case http(status: Int, body: String)
     case unauthorized
@@ -49,6 +54,7 @@ extension ProviderError: CustomStringConvertible {
 }
 
 public protocol LLMProvider: Sendable {
-    func streamTurn(system: String, history: [APIMessage], tools: [ToolDef], maxTokens: Int)
+    func streamTurn(system: String, history: [APIMessage], tools: [ToolDef],
+                    toolChoice: ToolChoice, maxTokens: Int)
         -> AsyncThrowingStream<ProviderEvent, Error>
 }

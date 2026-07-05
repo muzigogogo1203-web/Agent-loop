@@ -34,6 +34,7 @@ public struct ChatService: Sendable {
                         system: system,
                         history: history,
                         tools: [],
+                        toolChoice: .auto,
                         maxTokens: 4096
                     ) {
                         if case .textDelta(let text) = event {

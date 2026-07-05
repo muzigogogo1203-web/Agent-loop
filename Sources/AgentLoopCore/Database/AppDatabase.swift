@@ -10,12 +10,12 @@ public final class AppDatabase: Sendable {
         var cfg = Configuration()
         cfg.journalMode = .wal
         pool = try DatabasePool(path: path, configuration: cfg)
-        try migrator.migrate(pool)
+        try Self.migrator.migrate(pool)
     }
 
     // MARK: Migration v1 — all spec §4.2 tables (forward-compatible; M1 uses a subset)
 
-    private var migrator: DatabaseMigrator {
+    public static var migrator: DatabaseMigrator {
         var m = DatabaseMigrator()
         m.registerMigration("v1") { db in
             // camp
@@ -161,6 +161,16 @@ public final class AppDatabase: Sendable {
                 END
                 """)
         }
+        m.registerMigration("v2") { db in
+            try db.alter(table: "card") { t in
+                t.add(column: "handoffJson", .text)
+                t.add(column: "stage", .integer).notNull().defaults(to: 1)
+            }
+            try db.execute(sql: """
+                UPDATE mission SET status = 'executing'
+                WHERE status NOT IN ('planning','executing','delivering','accepted','failed')
+                """)
+        }
         return m
     }
 
@@ -169,17 +179,21 @@ public final class AppDatabase: Sendable {
     @discardableResult
     public func ensureDefaultCamp() throws -> CampRecord {
         try pool.write { db in
-            if let camp = try CampRecord.fetchOne(db) { return camp }
-            let camp = CampRecord(id: UUID().uuidString, name: "我的营地", createdAt: Date())
-            try camp.insert(db)
-            var guide = CompanionRecord.new(
-                name: "向导", color: "amber",
-                rolePrompt: "你是这个营地的向导，熟悉营地里的一切。",
-                model: "claude-sonnet-4-6", kind: .guide, campId: camp.id)
-            guide.toolsJson = "[]"
-            try guide.insert(db)
-            return camp
+            try Self.ensureDefaultCamp(db)
         }
+    }
+
+    private static func ensureDefaultCamp(_ db: Database) throws -> CampRecord {
+        if let camp = try CampRecord.fetchOne(db) { return camp }
+        let camp = CampRecord(id: UUID().uuidString, name: "我的营地", createdAt: Date())
+        try camp.insert(db)
+        var guide = CompanionRecord.new(
+            name: "向导", color: "amber",
+            rolePrompt: "你是这个营地的向导，熟悉营地里的一切。",
+            model: "claude-sonnet-4-6", kind: .guide, campId: camp.id)
+        guide.toolsJson = "[]"
+        try guide.insert(db)
+        return camp
     }
 
     public func guide(campId: String) throws -> CompanionRecord? {
@@ -227,7 +241,7 @@ public final class AppDatabase: Sendable {
         assigneeId: String?,
         maxTurns: Int,
         workspacePath: String? = nil,
-        tokenBudget: Int = 200_000
+        tokenBudget: Int = KernelDefaults.cardTokenBudget
     ) throws -> SingleCardIds {
         let camp = try ensureDefaultCamp()
         return try pool.write { db in
@@ -238,7 +252,7 @@ public final class AppDatabase: Sendable {
 
             let mission = MissionRecord(
                 id: UUID().uuidString, squadId: squad.id, goalRaw: goal,
-                goalRefined: goal, status: "executing",
+                goalRefined: goal, status: .executing,
                 budgetTokens: tokenBudget, spentTokens: 0, revision: 1, createdAt: Date())
             try mission.insert(db)
 
@@ -248,6 +262,7 @@ public final class AppDatabase: Sendable {
                 title: cardTitle, descriptionText: cardDescription,
                 expectedOutput: expectedOutput, assigneeId: assigneeId,
                 status: .ready, blockedReasonJson: nil, dependsOnJson: "[]",
+                handoffJson: nil, stage: 1,
                 maxTurns: maxTurns, tokenBudget: tokenBudget, createdAt: Date())
             try card.insert(db)
 
@@ -255,6 +270,115 @@ public final class AppDatabase: Sendable {
                                  kind: "mission_created", payload: ["goal": .string(goal)])
 
             return SingleCardIds(missionId: mission.id, cardId: card.id, squadId: squad.id)
+        }
+    }
+
+    public func createMissionShell(goal: String, companionIds: [String], workspacePath: String?) throws -> String {
+        try pool.write { db in
+            let camp = try Self.ensureDefaultCamp(db)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            let memberIdsJson = String(data: try encoder.encode(companionIds), encoding: .utf8)!
+            let squad = SquadRecord(
+                id: UUID().uuidString,
+                campId: camp.id,
+                name: Self.truncatedFirstLine(goal, max: 30),
+                memberIdsJson: memberIdsJson,
+                workspacePath: workspacePath,
+                createdAt: Date()
+            )
+            try squad.insert(db)
+
+            let mission = MissionRecord(
+                id: UUID().uuidString,
+                squadId: squad.id,
+                goalRaw: goal,
+                goalRefined: "",
+                status: .planning,
+                budgetTokens: KernelDefaults.missionBudget,
+                spentTokens: 0,
+                revision: 1,
+                createdAt: Date()
+            )
+            try mission.insert(db)
+            try Self.appendEvent(db, missionId: mission.id, cardId: nil, runId: nil,
+                                 kind: "mission_created", payload: ["goal": .string(goal)])
+            try Self.appendEvent(db, missionId: mission.id, cardId: nil, runId: nil,
+                                 kind: "plan_started", payload: .object([:]))
+            return mission.id
+        }
+    }
+
+    public func recordPlanFallback(missionId: String, reason: String) throws {
+        try pool.write { db in
+            try Self.appendEvent(db, missionId: missionId, cardId: nil, runId: nil,
+                                 kind: "plan_fallback", payload: ["reason": .string(reason)])
+        }
+    }
+
+    public func planMission(missionId: String, goalRefined: String, drafts: [PlanProposal.CardDraft]) throws {
+        try pool.write { db in
+            guard var mission = try MissionRecord.fetchOne(db, key: missionId) else {
+                throw RecordNotFoundError(table: "mission", id: missionId)
+            }
+            let existingCount = try CardRecord
+                .filter(Column("missionId") == missionId)
+                .fetchCount(db)
+            if existingCount > 0 {
+                try Self.appendEvent(db, missionId: missionId, cardId: nil, runId: nil,
+                                     kind: "plan_noop", payload: ["reason": "cards_exist"])
+                return
+            }
+            guard mission.status == .planning else {
+                try Self.appendEvent(db, missionId: missionId, cardId: nil, runId: nil,
+                                     kind: "plan_noop", payload: ["reason": "not_planning"])
+                return
+            }
+            guard let squad = try SquadRecord.fetchOne(db, key: mission.squadId) else {
+                throw RecordNotFoundError(table: "squad", id: mission.squadId)
+            }
+            let memberIds = try JSONDecoder().decode([String].self, from: Data(squad.memberIdsJson.utf8))
+            let cardIds = drafts.map { _ in UUID().uuidString }
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            for (index, draft) in drafts.enumerated() {
+                let dependencyIds = draft.dependsOn.map { cardIds[$0] }
+                let dependsOnJson = String(data: try encoder.encode(dependencyIds), encoding: .utf8)!
+                let card = CardRecord(
+                    id: cardIds[index],
+                    missionId: missionId,
+                    idemKey: "mission:\(missionId):stage-\(index + 1)",
+                    title: draft.title,
+                    descriptionText: draft.description,
+                    expectedOutput: draft.expectedOutput,
+                    assigneeId: memberIds[draft.assignee],
+                    status: .todo,
+                    blockedReasonJson: nil,
+                    dependsOnJson: dependsOnJson,
+                    handoffJson: nil,
+                    stage: index + 1,
+                    maxTurns: KernelDefaults.maxTurns,
+                    tokenBudget: KernelDefaults.cardTokenBudget,
+                    createdAt: Date()
+                )
+                try card.insert(db)
+            }
+
+            mission.goalRefined = goalRefined
+            try mission.update(db)
+            try Self.appendEvent(
+                db,
+                missionId: missionId,
+                cardId: nil,
+                runId: nil,
+                kind: "plan_completed",
+                payload: [
+                    "goalRefined": .string(goalRefined),
+                    "cardIds": .array(cardIds.map(JSONValue.string)),
+                    "titles": .array(drafts.map { .string($0.title) }),
+                ]
+            )
+            try rollupMission(db, missionId: missionId)
         }
     }
 
@@ -272,22 +396,112 @@ public final class AppDatabase: Sendable {
         }
     }
 
+    public func squad(forMission missionId: String) throws -> SquadRecord? {
+        try pool.read { db in
+            guard let mission = try MissionRecord.fetchOne(db, key: missionId) else { return nil }
+            return try SquadRecord.fetchOne(db, key: mission.squadId)
+        }
+    }
+
+    public func mission(id: String) throws -> MissionRecord? {
+        try pool.read { db in try MissionRecord.fetchOne(db, key: id) }
+    }
+
+    public func cards(missionId: String) throws -> [CardRecord] {
+        try pool.read { db in
+            try CardRecord
+                .filter(Column("missionId") == missionId)
+                .order(Column("stage"))
+                .fetchAll(db)
+        }
+    }
+
+    public func companions(ids: [String]) throws -> [CompanionRecord] {
+        try pool.read { db in
+            var companions: [CompanionRecord] = []
+            for id in ids {
+                guard let companion = try CompanionRecord.fetchOne(db, key: id) else {
+                    throw RecordNotFoundError(table: "companion", id: id)
+                }
+                companions.append(companion)
+            }
+            return companions
+        }
+    }
+
+    public func missionArtifacts(missionId: String) throws -> [ArtifactRecord] {
+        try pool.read { db in
+            try ArtifactRecord
+                .fetchAll(
+                    db,
+                    sql: """
+                        SELECT artifact.*
+                        FROM artifact
+                        JOIN card ON card.id = artifact.cardId
+                        WHERE card.missionId = ?
+                        ORDER BY card.stage, artifact.createdAt
+                        """,
+                    arguments: [missionId]
+                )
+        }
+    }
+
     // MARK: Card state machine (exhaustive; event appended in SAME transaction — spec §4.2/§5.1)
 
     public func transitionCard(id: String, to next: CardStatus, eventKind: String,
                                payload: JSONValue, blockedReasonJson: String? = nil) throws {
         try pool.write { db in
-            guard var card = try CardRecord.fetchOne(db, key: id) else {
-                throw RecordNotFoundError(table: "card", id: id)
-            }
-            guard card.status.canTransition(to: next) else {
-                throw CardTransitionError(from: card.status, to: next)
-            }
-            card.status = next
-            card.blockedReasonJson = (next == .blocked) ? blockedReasonJson : nil
-            try card.update(db)
-            try Self.appendEvent(db, missionId: card.missionId, cardId: card.id, runId: nil,
-                                 kind: eventKind, payload: payload)
+            try transitionCard(db, id: id, to: next, eventKind: eventKind,
+                               payload: payload, blockedReasonJson: blockedReasonJson)
+        }
+    }
+
+    func transitionCard(_ db: Database, id: String, to next: CardStatus, eventKind: String,
+                        payload: JSONValue, blockedReasonJson: String? = nil) throws {
+        guard var card = try CardRecord.fetchOne(db, key: id) else {
+            throw RecordNotFoundError(table: "card", id: id)
+        }
+        guard card.status.canTransition(to: next) else {
+            throw CardTransitionError(from: card.status, to: next)
+        }
+        card.status = next
+        card.blockedReasonJson = (next == .blocked) ? blockedReasonJson : nil
+        try card.update(db)
+        try Self.appendEvent(db, missionId: card.missionId, cardId: card.id, runId: nil,
+                             kind: eventKind, payload: payload)
+        try rollupMission(db, missionId: card.missionId)
+    }
+
+    func rollupMission(_ db: Database, missionId: String) throws {
+        guard var mission = try MissionRecord.fetchOne(db, key: missionId) else {
+            throw RecordNotFoundError(table: "mission", id: missionId)
+        }
+        let statuses = try CardRecord
+            .filter(Column("missionId") == missionId)
+            .fetchAll(db)
+            .map(\.status)
+        let next = MissionStatus.rollup(current: mission.status, cards: statuses)
+        guard next != mission.status else { return }
+        let previous = mission.status
+        mission.status = next
+        try mission.update(db)
+        try Self.appendEvent(
+            db,
+            missionId: missionId,
+            cardId: nil,
+            runId: nil,
+            kind: "mission_status_changed",
+            payload: ["from": .string(previous.rawValue), "to": .string(next.rawValue)]
+        )
+        if next == .failed && previous != .accepted && previous != .failed {
+            try Self.appendEvent(
+                db,
+                missionId: missionId,
+                cardId: nil,
+                runId: nil,
+                kind: "mission_failed",
+                payload: ["reason": "defensive_rollup"]
+            )
         }
     }
 
@@ -370,6 +584,13 @@ public final class AppDatabase: Sendable {
             run.tokensOut = tokensOut
             run.endedAt = Date()
             try run.update(db)
+            if let card = try CardRecord.fetchOne(db, key: run.cardId),
+               var mission = try MissionRecord.fetchOne(db, key: card.missionId) {
+                let total = max(0, tokensIn) + max(0, tokensOut)
+                let (newSpent, overflow) = mission.spentTokens.addingReportingOverflow(total)
+                mission.spentTokens = overflow ? Int.max : newSpent
+                try mission.update(db)
+            }
         }
     }
 
@@ -419,5 +640,10 @@ public final class AppDatabase: Sendable {
                 contentJson: contentJson, distilled: false, createdAt: Date()
             ).insert(db)
         }
+    }
+
+    private static func truncatedFirstLine(_ text: String, max: Int) -> String {
+        let first = text.split(whereSeparator: \.isNewline).first.map(String.init) ?? text
+        return String(first.prefix(max))
     }
 }

@@ -20,7 +20,8 @@ public struct AnthropicProvider: LLMProvider {
     /// Pure function — directly unit-testable.
     /// system is encoded as a block array with cache_control (spec §6.3 cache-first design).
     public static func requestBody(model: String, system: String, history: [APIMessage],
-                                   tools: [ToolDef], maxTokens: Int) -> JSONValue {
+                                   tools: [ToolDef], toolChoice: ToolChoice = .auto,
+                                   maxTokens: Int) -> JSONValue {
         var body: [String: JSONValue] = [
             "model": .string(model),
             "max_tokens": .number(Double(maxTokens)),
@@ -40,16 +41,22 @@ public struct AnthropicProvider: LLMProvider {
                  "input_schema": $0.inputSchema]
             })
         }
+        switch toolChoice {
+        case .auto:
+            break
+        case .tool(let name):
+            body["tool_choice"] = ["type": "tool", "name": .string(name)]
+        }
         return .object(body)
     }
 
     public func streamTurn(system: String, history: [APIMessage], tools: [ToolDef],
-                           maxTokens: Int) -> AsyncThrowingStream<ProviderEvent, Error> {
+                           toolChoice: ToolChoice, maxTokens: Int) -> AsyncThrowingStream<ProviderEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
                     try await run(system: system, history: history, tools: tools,
-                                  maxTokens: maxTokens, continuation: continuation)
+                                  toolChoice: toolChoice, maxTokens: maxTokens, continuation: continuation)
                     continuation.finish()
                 } catch {
                     Self.logger.error("provider final error: \(Self.readableError(error), privacy: .public)")
@@ -60,7 +67,8 @@ public struct AnthropicProvider: LLMProvider {
         }
     }
 
-    private func run(system: String, history: [APIMessage], tools: [ToolDef], maxTokens: Int,
+    private func run(system: String, history: [APIMessage], tools: [ToolDef],
+                     toolChoice: ToolChoice, maxTokens: Int,
                      continuation: AsyncThrowingStream<ProviderEvent, Error>.Continuation) async throws {
         var request = URLRequest(url: baseURL.appending(path: "/v1/messages"))
         request.httpMethod = "POST"
@@ -73,7 +81,7 @@ public struct AnthropicProvider: LLMProvider {
         encoder.outputFormatting = [.sortedKeys]
         request.httpBody = try encoder.encode(
             Self.requestBody(model: model, system: system, history: history,
-                             tools: tools, maxTokens: maxTokens))
+                             tools: tools, toolChoice: toolChoice, maxTokens: maxTokens))
 
         var attempt = 0
         while true {

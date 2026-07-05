@@ -17,7 +17,7 @@ struct RootView: View {
             List(selection: $selection) {
                 Section("行动") {
                     NavigationLink(value: Destination.newTask) {
-                        Label("单卡试运行", systemImage: "flag")
+                        Label("新行动", systemImage: "flag")
                     }
                 }
                 Section("伙伴") {

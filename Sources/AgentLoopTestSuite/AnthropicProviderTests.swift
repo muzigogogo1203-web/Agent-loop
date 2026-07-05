@@ -41,6 +41,42 @@ final class Counter: @unchecked Sendable {
     #expect(a.range(of: #""additionalProperties":false"#) != nil)
 }
 
+@Test func requestBodyToolChoiceForcesNamedTool() throws {
+    let body = AnthropicProvider.requestBody(
+        model: "m",
+        system: "s",
+        history: [.user("hi")],
+        tools: [ToolDef(name: "propose_plan", description: "d", inputSchema: ["type": "object"])],
+        toolChoice: .tool(name: "propose_plan"),
+        maxTokens: 10
+    )
+    #expect(body["tool_choice"]?["type"]?.stringValue == "tool")
+    #expect(body["tool_choice"]?["name"]?.stringValue == "propose_plan")
+}
+
+@Test func requestBodyAutoOmitsToolChoice() throws {
+    let defaultBody = AnthropicProvider.requestBody(
+        model: "m",
+        system: "s",
+        history: [.user("hi")],
+        tools: [ToolDef(name: "t", description: "d", inputSchema: ["type": "object"])],
+        maxTokens: 10
+    )
+    let explicitAuto = AnthropicProvider.requestBody(
+        model: "m",
+        system: "s",
+        history: [.user("hi")],
+        tools: [ToolDef(name: "t", description: "d", inputSchema: ["type": "object"])],
+        toolChoice: .auto,
+        maxTokens: 10
+    )
+    #expect(explicitAuto["tool_choice"] == nil)
+
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    #expect(try encoder.encode(defaultBody) == encoder.encode(explicitAuto))
+}
+
 // URLProtocol stub
 final class StubProtocol: URLProtocol {
     nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (Int, Data, [String: String]))?
@@ -86,7 +122,7 @@ func stubbedSession() -> URLSession {
     }
     let p = AnthropicProvider(apiKey: "sk-test", model: "claude-sonnet-4-6", session: stubbedSession())
     var deltas = ""; var turn: TurnResult?
-    for try await ev in p.streamTurn(system: "s", history: [.user("hi")], tools: [], maxTokens: 100) {
+    for try await ev in p.streamTurn(system: "s", history: [.user("hi")], tools: [], toolChoice: .auto, maxTokens: 100) {
         switch ev {
         case .textDelta(let t): deltas += t
         case .turn(let t): turn = t
@@ -102,7 +138,7 @@ func stubbedSession() -> URLSession {
     StubProtocol.handler = { _ in counter.bump(); return (401, Data(#"{"error":{"message":"bad key"}}"#.utf8), [:]) }
     let p = AnthropicProvider(apiKey: "bad", model: "m", session: stubbedSession())
     await #expect(throws: ProviderError.unauthorized) {
-        for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], maxTokens: 10) {}
+        for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], toolChoice: .auto, maxTokens: 10) {}
     }
     #expect(counter.value == 1)
 }
@@ -116,7 +152,7 @@ func stubbedSession() -> URLSession {
     }
     let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(),
                               retryBaseDelay: .milliseconds(1)) // test acceleration
-    for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], maxTokens: 10) {}
+    for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], toolChoice: .auto, maxTokens: 10) {}
     #expect(counter.value == 3)
 }
 
@@ -130,7 +166,7 @@ func stubbedSession() -> URLSession {
     let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(), retryBaseDelay: .seconds(30))
     // base delay 30s: if Retry-After: 0 is not honoured the test would be extremely slow; honouring it completes instantly
     let start = ContinuousClock.now
-    for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], maxTokens: 10) {}
+    for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], toolChoice: .auto, maxTokens: 10) {}
     #expect(ContinuousClock.now - start < .seconds(5))
     #expect(counter.value == 2)
 }
@@ -143,7 +179,7 @@ func stubbedSession() -> URLSession {
         return n == 1 ? (429, Data(), ["Retry-After": "inf"]) : (200, Data(okSSE.utf8), [:])
     }
     let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(), retryBaseDelay: .milliseconds(1))
-    for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], maxTokens: 10) {}
+    for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], toolChoice: .auto, maxTokens: 10) {}
     #expect(counter.value == 2)  // does not crash; falls back to exponential backoff
 }
 
@@ -153,7 +189,7 @@ func stubbedSession() -> URLSession {
     let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(),
                               retryBaseDelay: .milliseconds(1), maxRetries: 2)
     await #expect(throws: ProviderError.overloadedRetriesExhausted) {
-        for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], maxTokens: 10) {}
+        for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], toolChoice: .auto, maxTokens: 10) {}
     }
     #expect(counter.value == 3)  // initial attempt + 2 retries
 }

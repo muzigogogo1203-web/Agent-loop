@@ -21,7 +21,8 @@ public struct CardRunner: Sendable {
     public func run(
         cardId: String,
         companionName: String,
-        rolePrompt: String
+        rolePrompt: String,
+        upstreamHandoffs: [UpstreamHandoff] = []
     ) throws -> AsyncThrowingStream<AgentEvent, Error> {
         guard let card = try db.card(id: cardId) else {
             throw RecordNotFoundError(table: "card", id: cardId)
@@ -56,7 +57,7 @@ public struct CardRunner: Sendable {
             cardDescription: card.descriptionText,
             expectedOutput: card.expectedOutput,
             workspacePath: workspace?.path,
-            upstreamHandoffs: []
+            upstreamHandoffs: upstreamHandoffs
         )
         let loop = AgentLoop(
             provider: provider,
@@ -64,7 +65,8 @@ public struct CardRunner: Sendable {
             packet: packet,
             tools: ToolDef.m1Tools,
             maxTurns: card.maxTurns,
-            maxTokensPerTurn: 8192,
+            tokenBudget: card.tokenBudget,
+            maxTokensPerTurn: KernelDefaults.maxTokensPerTurn,
             retryDelays: retryDelays
         )
 

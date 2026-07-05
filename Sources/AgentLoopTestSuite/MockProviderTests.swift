@@ -8,7 +8,7 @@ import AgentLoopCore
     ])
     var turns: [TurnResult] = []
     for _ in 0..<2 {
-        for try await ev in mock.streamTurn(system: "", history: [], tools: [], maxTokens: 1) {
+        for try await ev in mock.streamTurn(system: "", history: [], tools: [], toolChoice: .auto, maxTokens: 1) {
             if case .turn(let t) = ev { turns.append(t) }
         }
     }

@@ -54,6 +54,7 @@ private actor FlakyProvider: LLMProvider {
         system: String,
         history: [APIMessage],
         tools: [ToolDef],
+        toolChoice: ToolChoice,
         maxTokens: Int
     ) -> AsyncThrowingStream<ProviderEvent, Error> {
         AsyncThrowingStream { continuation in
@@ -90,6 +91,7 @@ private func runLoop(
     provider: any LLMProvider,
     handlers: [String: any ToolHandler],
     maxTurns: Int = 10,
+    tokenBudget: Int = Int.max,
     retryDelays: [Duration] = [.seconds(2), .seconds(4)]
 ) async throws -> (outcome: LoopOutcome, events: [AgentEvent]) {
     let loop = AgentLoop(
@@ -106,6 +108,7 @@ private func runLoop(
         ),
         tools: ToolDef.m1Tools,
         maxTurns: maxTurns,
+        tokenBudget: tokenBudget,
         maxTokensPerTurn: 4096,
         retryDelays: retryDelays
     )
@@ -124,6 +127,7 @@ private func runLoop(
     script: [TurnResult],
     handlers: [String: any ToolHandler],
     maxTurns: Int = 10,
+    tokenBudget: Int = Int.max,
     retryDelays: [Duration] = [.seconds(2), .seconds(4)]
 ) async throws -> (outcome: LoopOutcome, events: [AgentEvent], mock: MockProvider) {
     let mock = MockProvider(script: script)
@@ -131,6 +135,7 @@ private func runLoop(
         provider: mock,
         handlers: handlers,
         maxTurns: maxTurns,
+        tokenBudget: tokenBudget,
         retryDelays: retryDelays
     )
     return (result.outcome, result.events, mock)
@@ -237,6 +242,27 @@ private let doneHandoff: JSONValue = [
     #expect(reason == "budget_exhausted")
 }
 
+@Test func tokenBudgetExhaustionBlocks() async throws {
+    let note = StubHandler(Array(repeating: ToolOutcome.result("ok"), count: 10))
+    let makeTurn = {
+        TurnResult(
+            content: [.toolUse(id: UUID().uuidString, name: "add_progress_note", input: ["text": "..."])],
+            stopReason: .toolUse,
+            usage: Usage(inputTokens: 8, outputTokens: 9)
+        )
+    }
+    let result = try await runLoop(
+        script: (0..<10).map { _ in makeTurn() },
+        handlers: ["add_progress_note": note],
+        maxTurns: 10,
+        tokenBudget: 25
+    )
+    guard case .blocked(let reason, let detail) = result.outcome else { return }
+    #expect(reason == "budget_exhausted")
+    #expect(detail.contains("已用"))
+    #expect(await result.mock.callCount < 10)
+}
+
 @Test func refusalBlocksImmediately() async throws {
     let result = try await runLoop(
         script: [TurnResult(content: [], stopReason: .refusal)],
@@ -266,6 +292,7 @@ private let doneHandoff: JSONValue = [
         ),
         tools: ToolDef.m1Tools,
         maxTurns: 10,
+        tokenBudget: Int.max,
         maxTokensPerTurn: 4096
     )
     var threw = false
@@ -407,6 +434,7 @@ private let doneHandoff: JSONValue = [
         ),
         tools: ToolDef.m1Tools,
         maxTurns: 10,
+        tokenBudget: Int.max,
         maxTokensPerTurn: 4096,
         retryDelays: [.milliseconds(1), .milliseconds(1)]
     )
@@ -443,6 +471,7 @@ private let doneHandoff: JSONValue = [
         ),
         tools: ToolDef.m1Tools,
         maxTurns: 10,
+        tokenBudget: Int.max,
         maxTokensPerTurn: 4096
     )
     var events: [AgentEvent] = []

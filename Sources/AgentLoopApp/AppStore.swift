@@ -14,8 +14,9 @@ final class AppStore {
     }
 
     let db: AppDatabase
-    let keychain = KeychainStore()
+    let keychain: KeychainStore
     let artifactStoreRoot: URL
+    let orchestrator: Orchestrator
 
     var companions: [CompanionRecord] = []
     var apiKeyPresent = false
@@ -28,22 +29,25 @@ final class AppStore {
     }
     var apiBaseURLValid: Bool { AnthropicProvider.normalizedBaseURL(apiBaseURL) != nil }
 
-    enum RunPhase: Equatable {
+    enum MissionPhase: Equatable {
         case idle
-        case thinking
-        case streaming
-        case toolRunning(String)
-        case finished(String)
-        case failed(String)
+        case planning
+        case executing
+        case delivering
+        case accepted
+        case failed
+        case error(String)
     }
 
-    var runPhase: RunPhase = .idle
-    var transcript = ""
-    var progressNotes: [String] = []
-    var activityLog: [ActivityItem] = []
-    var artifacts: [ArtifactRecord] = []
-    private var runTask: Task<Void, Never>?
-    private var turnStartTranscriptCount = 0
+    var missionPhase: MissionPhase = .idle
+    var currentMissionId: String?
+    var missionCards: [CardRecord] = []
+    var missionArtifacts: [ArtifactRecord] = []
+    var cardCompanions: [String: CompanionRecord] = [:]
+    var cardLatest: [String: String] = [:]
+    var cardActivity: [String: [ActivityItem]] = [:]
+    private var missionTask: Task<Void, Never>?
+    private var kernelEventsTask: Task<Void, Never>?
 
     var chatMessages: [(role: String, text: String)] = []
     var chatStreaming = false
@@ -52,14 +56,28 @@ final class AppStore {
     private var chatStreamID = 0
 
     init() {
+        let keychainStore = KeychainStore()
+        keychain = keychainStore
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("AgentLoop")
         try! FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
         artifactStoreRoot = appSupport.appendingPathComponent("artifacts")
         db = try! AppDatabase(path: appSupport.appendingPathComponent("agentloop.sqlite").path)
+        let defaultBaseURL = Self.defaultBaseURL
+        orchestrator = Orchestrator(
+            db: db,
+            makeProvider: { model in
+                let key = (try? keychainStore.get(account: "anthropic-api-key")) ?? ""
+                let rawBase = UserDefaults.standard.string(forKey: "apiBaseURL") ?? defaultBaseURL
+                let base = AnthropicProvider.normalizedBaseURL(rawBase) ?? URL(string: defaultBaseURL)!
+                return AnthropicProvider(apiKey: key, model: model, baseURL: base)
+            },
+            artifactStoreRoot: artifactStoreRoot
+        )
         try! db.ensureDefaultCamp()
         apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
         reload()
+        startKernelEventListener()
     }
 
     func reload() {
@@ -81,105 +99,173 @@ final class AppStore {
         return AnthropicProvider(apiKey: key, model: model, baseURL: base)
     }
 
-    func startRun(
-        companion: CompanionRecord,
-        title: String,
-        description: String,
-        expectedOutput: String,
-        workspacePath: String
-    ) {
-        transcript = ""
-        progressNotes = []
-        activityLog = []
-        artifacts = []
-        turnStartTranscriptCount = 0
-        guard let provider = provider(model: companion.model) else {
-            runPhase = .failed("请先在设置里填入 API key")
+    func startMission(goal: String, companionIds: [String], workspacePath: String?) {
+        guard ((try? keychain.get(account: "anthropic-api-key")) ?? nil) != nil else {
+            missionPhase = .error("请先在设置里填入 API key")
             return
         }
-        runPhase = .thinking
-        runTask = Task {
+        currentMissionId = nil
+        missionCards = []
+        missionArtifacts = []
+        cardCompanions = [:]
+        cardLatest = [:]
+        cardActivity = [:]
+        missionPhase = .planning
+        missionTask?.cancel()
+        missionTask = Task { [weak self] in
+            guard let self else { return }
             do {
-                let ids = try db.createSingleCardMission(
-                    campName: "我的营地",
-                    squadName: "试营小队",
-                    goal: title,
-                    cardTitle: title,
-                    cardDescription: description,
-                    expectedOutput: expectedOutput,
-                    assigneeId: companion.id,
-                    maxTurns: 30,
-                    workspacePath: workspacePath
+                let missionId = try await orchestrator.startMission(
+                    goal: goal,
+                    companionIds: companionIds,
+                    workspacePath: workspacePath,
+                    plannerModel: defaultModel
                 )
-                let coalescer = DeltaCoalescer { [weak self] batch in
-                    await MainActor.run {
-                        self?.transcript += batch
-                        self?.runPhase = .streaming
-                    }
-                }
-                let runner = CardRunner(db: db, provider: provider, artifactStoreRoot: artifactStoreRoot)
-                activityLog.append(ActivityItem(text: "\(companion.name)开工了", kind: .start))
-                for try await event in try runner.run(
-                    cardId: ids.cardId,
-                    companionName: companion.name,
-                    rolePrompt: companion.rolePrompt
-                ) {
-                    switch event {
-                    case .turnStarted:
-                        await coalescer.flush()
-                        turnStartTranscriptCount = transcript.count
-                    case .textDelta(let text):
-                        await coalescer.push(text)
-                    case .toolStarted(let name):
-                        await coalescer.flush()
-                        activityLog.append(ActivityItem(text: "正在\(humanToolName(name))…", kind: .tool))
-                        runPhase = .toolRunning(name)
-                    case .toolFinished(let name, let isError):
-                        markToolActivityFinished(name: name, isError: isError)
-                        if name == "add_progress_note", !isError {
-                            progressNotes = loadProgressNotes(cardId: ids.cardId)
-                        }
-                        runPhase = .thinking
-                    case .turnRetrying(let attempt, let reason):
-                        await coalescer.flush()
-                        transcript = String(transcript.prefix(turnStartTranscriptCount))
-                        activityLog.append(ActivityItem(
-                            text: "网络波动，正在重试（\(attempt)/2）：\(reason)",
-                            kind: .retry
-                        ))
-                    case .turnEnded:
-                        break
-                    case .finished(let outcome):
-                        await coalescer.flush()
-                        artifacts = (try? db.artifacts(cardId: ids.cardId)) ?? []
-                        progressNotes = loadProgressNotes(cardId: ids.cardId)
-                        activityLog.append(ActivityItem(text: "运行结束", kind: .finish))
-                        switch outcome {
-                        case .completed(let handoff):
-                            runPhase = .finished(handoff.summary)
-                        case .blocked(let reason, let detail):
-                            runPhase = .failed("受阻(\(reason))：\(detail)")
-                        }
-                    }
-                }
+                currentMissionId = missionId
+                reloadMission(missionId: missionId)
             } catch {
-                runPhase = .failed(readableError(error))
+                missionPhase = .error(readableError(error))
             }
         }
     }
 
-    private func loadProgressNotes(cardId: String) -> [String] {
-        (try? db.events(cardId: cardId))?
-            .filter { $0.kind == "progress_note" }
-            .compactMap { try? JSONValue.decoded(from: $0.payloadJson)["text"]?.stringValue } ?? []
+    func closeoutCurrentMission() {
+        guard let currentMissionId else { return }
+        missionTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await orchestrator.closeout(currentMissionId)
+                reloadMission(missionId: currentMissionId)
+            } catch {
+                missionPhase = .error(readableError(error))
+            }
+        }
     }
 
-    private func markToolActivityFinished(name: String, isError: Bool) {
+    func cancelCurrentMission() {
+        guard let currentMissionId else { return }
+        missionTask = Task { [weak self] in
+            guard let self else { return }
+            await orchestrator.cancelMission(currentMissionId)
+            reloadMission(missionId: currentMissionId)
+        }
+    }
+
+    func retryCard(_ cardId: String) {
+        missionTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await orchestrator.retryCard(cardId)
+                if let currentMissionId {
+                    reloadMission(missionId: currentMissionId)
+                }
+            } catch {
+                missionPhase = .error(readableError(error))
+            }
+        }
+    }
+
+    func resetMission() {
+        currentMissionId = nil
+        missionPhase = .idle
+        missionCards = []
+        missionArtifacts = []
+        cardCompanions = [:]
+        cardLatest = [:]
+        cardActivity = [:]
+    }
+
+    private func startKernelEventListener() {
+        kernelEventsTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let stream = await orchestrator.events()
+            for await event in stream {
+                handleKernelEvent(event)
+            }
+        }
+    }
+
+    private func handleKernelEvent(_ event: KernelEvent) {
+        switch event {
+        case .planningStarted(let missionId):
+            currentMissionId = currentMissionId ?? missionId
+            missionPhase = .planning
+        case .planCompleted(let missionId, _), .missionChanged(let missionId):
+            currentMissionId = currentMissionId ?? missionId
+            reloadMission(missionId: missionId)
+        case .cardEvent(let cardId, let agentEvent):
+            handleCardEvent(cardId: cardId, event: agentEvent)
+        case .kernelError(let missionId, let message):
+            if currentMissionId == nil || currentMissionId == missionId || missionId.isEmpty {
+                missionPhase = .error(message)
+            }
+        }
+    }
+
+    private func reloadMission(missionId: String) {
+        guard let mission = try? db.mission(id: missionId) else { return }
+        missionCards = (try? db.cards(missionId: missionId)) ?? []
+        missionArtifacts = (try? db.missionArtifacts(missionId: missionId)) ?? []
+        let assigneeIds = missionCards.compactMap(\.assigneeId)
+        let companions = (try? db.companions(ids: assigneeIds)) ?? []
+        cardCompanions = Dictionary(uniqueKeysWithValues: companions.map { ($0.id, $0) })
+        switch mission.status {
+        case .planning:
+            missionPhase = .planning
+        case .executing:
+            missionPhase = .executing
+        case .delivering:
+            missionPhase = .delivering
+        case .accepted:
+            missionPhase = .accepted
+        case .failed:
+            missionPhase = .failed
+        }
+    }
+
+    private func handleCardEvent(cardId: String, event: AgentEvent) {
+        switch event {
+        case .turnStarted:
+            setCardLatest(cardId: cardId, "正在思考")
+            cardActivity[cardId, default: []].append(ActivityItem(text: "开始新一轮", kind: .start))
+        case .textDelta:
+            setCardLatest(cardId: cardId, "正在生成")
+        case .toolStarted(let name):
+            setCardLatest(cardId: cardId, "正在\(humanToolName(name))")
+            cardActivity[cardId, default: []].append(ActivityItem(text: "正在\(humanToolName(name))…", kind: .tool))
+        case .toolFinished(let name, let isError):
+            markToolActivityFinished(cardId: cardId, name: name, isError: isError)
+            setCardLatest(cardId: cardId, isError ? "\(humanToolName(name))失败" : "\(humanToolName(name))完成")
+        case .turnRetrying(let attempt, let reason):
+            setCardLatest(cardId: cardId, "网络重试 \(attempt)")
+            cardActivity[cardId, default: []].append(ActivityItem(text: "网络波动，正在重试（\(attempt)/2）：\(reason)", kind: .retry))
+        case .turnEnded:
+            break
+        case .finished(let outcome):
+            switch outcome {
+            case .completed(let handoff):
+                setCardLatest(cardId: cardId, handoff.summary)
+            case .blocked(_, let detail):
+                setCardLatest(cardId: cardId, detail)
+            }
+            cardActivity[cardId, default: []].append(ActivityItem(text: "运行结束", kind: .finish))
+            if let currentMissionId {
+                reloadMission(missionId: currentMissionId)
+            }
+        }
+    }
+
+    private func setCardLatest(cardId: String, _ value: String) {
+        guard cardLatest[cardId] != value else { return }
+        cardLatest[cardId] = value
+    }
+
+    private func markToolActivityFinished(cardId: String, name: String, isError: Bool) {
         let label = humanToolName(name)
         let pendingText = "正在\(label)…"
-        if let index = activityLog.lastIndex(where: { $0.kind == .tool && $0.text == pendingText }) {
-            activityLog[index].text = isError ? "\(label)失败" : "\(label)完成"
-            activityLog[index].kind = isError ? .toolError : .toolDone
+        if let index = cardActivity[cardId, default: []].lastIndex(where: { $0.kind == .tool && $0.text == pendingText }) {
+            cardActivity[cardId, default: []][index].text = isError ? "\(label)失败" : "\(label)完成"
+            cardActivity[cardId, default: []][index].kind = isError ? .toolError : .toolDone
         }
     }
 

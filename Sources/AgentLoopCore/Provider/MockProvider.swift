@@ -3,14 +3,15 @@ public actor MockProvider: LLMProvider {
     private var script: [TurnResult]
     public private(set) var callCount = 0
     public private(set) var recordedHistories: [[APIMessage]] = []
+    public private(set) var recordedToolChoices: [ToolChoice] = []
 
     public init(script: [TurnResult]) { self.script = script }
 
     public nonisolated func streamTurn(system: String, history: [APIMessage], tools: [ToolDef],
-                                       maxTokens: Int) -> AsyncThrowingStream<ProviderEvent, Error> {
+                                       toolChoice: ToolChoice, maxTokens: Int) -> AsyncThrowingStream<ProviderEvent, Error> {
         AsyncThrowingStream { continuation in
             Task {
-                let turn = await self.next(history: history)
+                let turn = await self.next(history: history, toolChoice: toolChoice)
                 guard let turn else {
                     continuation.finish(throwing: ProviderError.malformedStream("mock script exhausted"))
                     return
@@ -24,9 +25,10 @@ public actor MockProvider: LLMProvider {
         }
     }
 
-    private func next(history: [APIMessage]) -> TurnResult? {
+    private func next(history: [APIMessage], toolChoice: ToolChoice) -> TurnResult? {
         callCount += 1
         recordedHistories.append(history)
+        recordedToolChoices.append(toolChoice)
         return script.isEmpty ? nil : script.removeFirst()
     }
 }

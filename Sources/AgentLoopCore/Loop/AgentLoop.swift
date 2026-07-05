@@ -23,6 +23,7 @@ public struct AgentLoop: Sendable {
     let packet: ContextPacket
     let tools: [ToolDef]
     let maxTurns: Int
+    let tokenBudget: Int
     let maxTokensPerTurn: Int
     let retryDelays: [Duration]
     private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "loop")
@@ -33,6 +34,7 @@ public struct AgentLoop: Sendable {
         packet: ContextPacket,
         tools: [ToolDef],
         maxTurns: Int,
+        tokenBudget: Int,
         maxTokensPerTurn: Int,
         retryDelays: [Duration] = [.seconds(2), .seconds(4)]
     ) {
@@ -41,6 +43,7 @@ public struct AgentLoop: Sendable {
         self.packet = packet
         self.tools = tools
         self.maxTurns = maxTurns
+        self.tokenBudget = tokenBudget
         self.maxTokensPerTurn = maxTokensPerTurn
         self.retryDelays = retryDelays
     }
@@ -68,8 +71,9 @@ public struct AgentLoop: Sendable {
         var pauseTurnCount = 0
         var strikes: [String: Int] = [:]
         var turns = 0
+        var spentTokens = 0
 
-        while turns < maxTurns {
+        while turns < maxTurns && spentTokens < tokenBudget {
             turns += 1
             try Task.checkCancellation()
 
@@ -79,6 +83,11 @@ public struct AgentLoop: Sendable {
                 continuation: continuation
             )
             history.append(.assistant(result.content))
+            spentTokens = Self.saturatingTokenSum(
+                spentTokens,
+                result.usage.inputTokens,
+                result.usage.outputTokens
+            )
             continuation.yield(.turnEnded(usage: result.usage))
             Self.logger.info("turn \(turns, privacy: .public) stop_reason \(String(describing: result.stopReason), privacy: .public)")
 
@@ -142,7 +151,18 @@ public struct AgentLoop: Sendable {
             }
         }
 
+        if spentTokens >= tokenBudget {
+            return .blocked(reason: "budget_exhausted", detail: "已用 \(spentTokens)/\(tokenBudget) tokens")
+        }
         return .blocked(reason: "budget_exhausted", detail: "达到最大轮数 \(maxTurns)")
+    }
+
+    private static func saturatingTokenSum(_ current: Int, _ input: Int, _ output: Int) -> Int {
+        let safeInput = max(0, input)
+        let safeOutput = max(0, output)
+        let (partial, overflowA) = current.addingReportingOverflow(safeInput)
+        let (total, overflowB) = partial.addingReportingOverflow(safeOutput)
+        return (overflowA || overflowB) ? Int.max : total
     }
 
     private func providerTurnWithRetry(
@@ -160,6 +180,7 @@ public struct AgentLoop: Sendable {
                     system: packet.system,
                     history: history,
                     tools: tools,
+                    toolChoice: .auto,
                     maxTokens: maxTokensPerTurn
                 ) {
                     switch event {

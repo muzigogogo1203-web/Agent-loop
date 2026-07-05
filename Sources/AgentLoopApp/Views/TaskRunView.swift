@@ -4,51 +4,39 @@ import AgentLoopCore
 struct TaskRunView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var title = ""
-    @State private var description = ""
-    @State private var expected = ""
+    @State private var goal = ""
     @State private var workspace = ""
-    @State private var companionId: String?
+    @State private var selectedCompanionIds: [String] = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if isIdle {
+        VStack(alignment: .leading, spacing: 14) {
+            if store.currentMissionId == nil && store.missionPhase == .idle {
                 form
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .leading).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ))
+                    .transition(.opacity)
             } else {
-                runView
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .trailing).combined(with: .opacity)
-                    ))
+                missionView
+                    .transition(.opacity)
             }
         }
-        .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: isIdle)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: store.currentMissionId)
         .padding()
-        .navigationTitle("单卡试运行")
-    }
-
-    private var isIdle: Bool {
-        if case .idle = store.runPhase {
-            return true
-        }
-        return false
+        .navigationTitle("行动")
     }
 
     private var form: some View {
         Form {
-            Picker("伙伴", selection: $companionId) {
-                Text("选择伙伴").tag(String?.none)
+            TextField("行动目标", text: $goal, axis: .vertical)
+                .lineLimit(3...6)
+            Section("伙伴") {
                 ForEach(store.companions, id: \.id) { companion in
-                    Text(companion.name).tag(String?(companion.id))
+                    Toggle(isOn: companionBinding(companion.id)) {
+                        HStack {
+                            CompanionAvatarView(name: companion.name, colorName: companion.color, size: 22)
+                            Text(companion.name)
+                        }
+                    }
                 }
             }
-            TextField("小目标标题", text: $title)
-            TextField("说明", text: $description, axis: .vertical)
-            TextField("预期产出（必填）", text: $expected)
             HStack {
                 TextField("工作目录", text: $workspace)
                 Button("选择...") {
@@ -60,54 +48,37 @@ struct TaskRunView: View {
                     }
                 }
             }
-            Button("开工") {
-                guard let companionId,
-                      let companion = store.companions.first(where: { $0.id == companionId }) else {
-                    return
-                }
-                store.startRun(
-                    companion: companion,
-                    title: title,
-                    description: description,
-                    expectedOutput: expected,
-                    workspacePath: workspace
+            Button("开始行动") {
+                store.startMission(
+                    goal: goal,
+                    companionIds: selectedCompanionIds,
+                    workspacePath: workspace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : workspace
                 )
             }
             .keyboardShortcut(.defaultAction)
-            .disabled(companionId == nil || title.isEmpty || expected.isEmpty || workspace.isEmpty)
+            .disabled(goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedCompanionIds.isEmpty)
         }
         .formStyle(.grouped)
     }
 
-    private var runView: some View {
-        VStack(alignment: .leading, spacing: 10) {
+    private var missionView: some View {
+        VStack(alignment: .leading, spacing: 12) {
             statusHeader
-            if !store.activityLog.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(store.activityLog) { item in
-                        HStack(spacing: 6) {
-                            Image(systemName: activityIcon(item.kind))
-                                .frame(width: 14)
-                            Text(item.text)
-                                .font(.caption)
-                        }
-                        .foregroundStyle(activityColor(item.kind))
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 8) {
+                    ForEach(store.missionCards, id: \.id) { card in
+                        CardRowView(
+                            card: card,
+                            companion: card.assigneeId.flatMap { store.cardCompanions[$0] },
+                            latest: store.cardLatest[card.id],
+                            onRetry: { store.retryCard(card.id) }
+                        )
                     }
                 }
             }
-            ScrollView {
-                Text(store.transcript)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            if !store.progressNotes.isEmpty {
-                ForEach(store.progressNotes, id: \.self) { note in
-                    Label(note, systemImage: "text.bubble")
-                }
-            }
-            if !store.artifacts.isEmpty {
+            if !store.missionArtifacts.isEmpty {
                 GroupBox("交付物") {
-                    ForEach(store.artifacts, id: \.id) { artifact in
+                    ForEach(store.missionArtifacts, id: \.id) { artifact in
                         HStack {
                             Label(artifact.label, systemImage: "doc")
                             Spacer()
@@ -118,56 +89,69 @@ struct TaskRunView: View {
                     }
                 }
             }
-            if case .finished = store.runPhase {
-                Button("再来一单") { store.runPhase = .idle }
-            }
-            if case .failed = store.runPhase {
-                Button("返回") { store.runPhase = .idle }
+            HStack {
+                switch store.missionPhase {
+                case .delivering:
+                    Button("收营") { store.closeoutCurrentMission() }
+                        .buttonStyle(.borderedProminent)
+                    Button("放弃") { store.cancelCurrentMission() }
+                case .planning, .executing:
+                    Button("放弃") { store.cancelCurrentMission() }
+                case .accepted, .failed, .error:
+                    Button("新行动") {
+                        goal = ""
+                        workspace = ""
+                        selectedCompanionIds = []
+                        store.resetMission()
+                    }
+                case .idle:
+                    EmptyView()
+                }
             }
         }
     }
 
     @ViewBuilder private var statusHeader: some View {
-        switch store.runPhase {
-        case .thinking:
-            HStack { TypingIndicatorView(); Text("在想...") }
-        case .streaming:
-            HStack { TypingIndicatorView(); Text("在写...") }
-        case .toolRunning(let name):
-            Label("正在用工具：\(name)", systemImage: "wrench.adjustable")
-        case .finished(let summary):
-            Label(summary, systemImage: "checkmark.circle")
+        switch store.missionPhase {
+        case .planning:
+            HStack(spacing: 8) {
+                CompanionAvatarView(name: "向导", colorName: "amber", state: .thinking, size: 28)
+                TypingIndicatorView()
+                Text("规划中")
+                    .foregroundStyle(.secondary)
+            }
+        case .executing:
+            Label("进行中", systemImage: "bolt.circle")
+                .foregroundStyle(.blue)
+        case .delivering:
+            Label("可收营", systemImage: "flag.checkered")
                 .foregroundStyle(.green)
-        case .failed(let message):
-            Label(message, systemImage: "hand.raised")
+        case .accepted:
+            Label("已收营", systemImage: "checkmark.circle")
+                .foregroundStyle(.green)
+        case .failed:
+            Label("已放弃", systemImage: "xmark.circle")
+                .foregroundStyle(.secondary)
+        case .error(let message):
+            Label(message, systemImage: "exclamationmark.triangle")
                 .foregroundStyle(.orange)
         case .idle:
             EmptyView()
         }
     }
 
-    private func activityIcon(_ kind: AppStore.ActivityItem.Kind) -> String {
-        switch kind {
-        case .start: return "play.circle"
-        case .tool: return "wrench.adjustable"
-        case .toolDone: return "checkmark.circle"
-        case .toolError: return "xmark.circle"
-        case .note: return "text.bubble"
-        case .retry: return "arrow.clockwise"
-        case .finish: return "flag.checkered"
-        }
-    }
-
-    private func activityColor(_ kind: AppStore.ActivityItem.Kind) -> Color {
-        switch kind {
-        case .toolDone, .finish:
-            return .green
-        case .toolError:
-            return .red
-        case .retry:
-            return .orange
-        default:
-            return .secondary
-        }
+    private func companionBinding(_ id: String) -> Binding<Bool> {
+        Binding(
+            get: { selectedCompanionIds.contains(id) },
+            set: { isOn in
+                if isOn {
+                    if !selectedCompanionIds.contains(id) {
+                        selectedCompanionIds.append(id)
+                    }
+                } else {
+                    selectedCompanionIds.removeAll { $0 == id }
+                }
+            }
+        )
     }
 }
