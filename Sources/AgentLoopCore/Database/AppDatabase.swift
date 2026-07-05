@@ -417,9 +417,11 @@ public final class AppDatabase: Sendable {
     }
 
     public func companions(ids: [String]) throws -> [CompanionRecord] {
-        try pool.read { db in
+        var seen = Set<String>()
+        let uniqueIds = ids.filter { seen.insert($0).inserted }
+        return try pool.read { db in
             var companions: [CompanionRecord] = []
-            for id in ids {
+            for id in uniqueIds {
                 guard let companion = try CompanionRecord.fetchOne(db, key: id) else {
                     throw RecordNotFoundError(table: "companion", id: id)
                 }

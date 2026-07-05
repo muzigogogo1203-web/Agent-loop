@@ -206,9 +206,10 @@ final class AppStore {
         guard let mission = try? db.mission(id: missionId) else { return }
         missionCards = (try? db.cards(missionId: missionId)) ?? []
         missionArtifacts = (try? db.missionArtifacts(missionId: missionId)) ?? []
-        let assigneeIds = missionCards.compactMap(\.assigneeId)
+        var seenAssigneeIds = Set<String>()
+        let assigneeIds = missionCards.compactMap(\.assigneeId).filter { seenAssigneeIds.insert($0).inserted }
         let companions = (try? db.companions(ids: assigneeIds)) ?? []
-        cardCompanions = Dictionary(uniqueKeysWithValues: companions.map { ($0.id, $0) })
+        cardCompanions = Dictionary(companions.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         switch mission.status {
         case .planning:
             missionPhase = .planning

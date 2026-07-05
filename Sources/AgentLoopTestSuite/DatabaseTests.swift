@@ -36,6 +36,17 @@ private func tempDB() throws -> AppDatabase {
     }
 }
 
+@Test func companionsDedupesDuplicateIds() throws {
+    let db = try tempDB()
+    let a = CompanionRecord.new(name: "甲", color: "blue", rolePrompt: "r", model: "model-a")
+    let b = CompanionRecord.new(name: "乙", color: "green", rolePrompt: "r", model: "model-b")
+    try db.saveCompanion(a)
+    try db.saveCompanion(b)
+
+    let companions = try db.companions(ids: [a.id, b.id, a.id])
+    #expect(companions.map(\.id) == [a.id, b.id])
+}
+
 @Test func eventAppendAndProjectionSameTransaction() throws {
     let db = try tempDB()
     let ids = try db.createSingleCardMission(
