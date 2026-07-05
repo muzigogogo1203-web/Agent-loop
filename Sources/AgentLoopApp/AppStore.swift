@@ -87,12 +87,20 @@ final class AppStore {
         apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
         reload()
         startKernelEventListener()
-        Task { await orchestrator.reconcile() }
+        // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
+        if !Self.isUIPreview {
+            Task { await orchestrator.reconcile() }
+        }
     }
+
+    /// 环境变量 AGENTLOOP_UI_PREVIEW=1 时为 UI 预览模式：不读钥匙串、不调度任务
+    static let isUIPreview = ProcessInfo.processInfo.environment["AGENTLOOP_UI_PREVIEW"] == "1"
 
     func reload() {
         companions = (try? db.regularCompanions()) ?? []
-        apiKeyPresent = ((try? keychain.get(account: "anthropic-api-key")) ?? nil) != nil
+        apiKeyPresent = Self.isUIPreview
+            ? false
+            : ((try? keychain.get(account: "anthropic-api-key")) ?? nil) != nil
         reloadMissionList()
     }
 

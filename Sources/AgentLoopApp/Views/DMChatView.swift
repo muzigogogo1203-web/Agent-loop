@@ -29,16 +29,27 @@ struct DMChatView: View {
                     proxy.scrollTo(newValue - 1)
                 }
             }
-            Divider()
-            HStack {
-                TextField("跟\(companion.name)说点什么...", text: $input)
-                    .textFieldStyle(.roundedBorder)
+            Divider().overlay(Camp.line)
+            HStack(spacing: 8) {
+                TextField("跟\(companion.name)说点什么…", text: $input)
+                    .textFieldStyle(.plain)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 7)
+                    .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                            .stroke(Camp.line, lineWidth: 1)
+                    )
                     .onSubmit(send)
                 Button("发送", action: send)
+                    .buttonStyle(CampPrimaryButtonStyle(size: .small))
                     .disabled(input.isEmpty || store.chatStreaming)
+                    .opacity(input.isEmpty || store.chatStreaming ? 0.5 : 1)
             }
             .padding(10)
+            .background(Camp.surface)
         }
+        .background(Camp.canvas)
         .navigationTitle(companion.name)
         .toolbar {
             Button("编辑伙伴", action: onEdit)
@@ -82,12 +93,30 @@ struct ChatBubble: View {
                 } else {
                     Text(message.text)
                         .textSelection(.enabled)
+                        .foregroundStyle(Camp.ink)
                 }
             }
-            .padding(10)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 8)
             .background(
-                message.role == "user" ? Color.accentColor.opacity(0.15) : Color.gray.opacity(0.12),
-                in: RoundedRectangle(cornerRadius: 8)
+                message.role == "user" ? Camp.ember.opacity(0.14) : Camp.surface,
+                in: UnevenRoundedRectangle(
+                    topLeadingRadius: message.role == "user" ? 12 : 4,
+                    bottomLeadingRadius: 12,
+                    bottomTrailingRadius: message.role == "user" ? 4 : 12,
+                    topTrailingRadius: 12,
+                    style: .continuous
+                )
+            )
+            .overlay(
+                UnevenRoundedRectangle(
+                    topLeadingRadius: message.role == "user" ? 12 : 4,
+                    bottomLeadingRadius: 12,
+                    bottomTrailingRadius: message.role == "user" ? 4 : 12,
+                    topTrailingRadius: 12,
+                    style: .continuous
+                )
+                .stroke(Camp.line, lineWidth: message.role == "user" ? 0 : 1)
             )
 
             if message.role != "user" {

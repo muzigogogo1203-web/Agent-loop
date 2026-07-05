@@ -5,6 +5,7 @@ struct FeedView: View {
     let entries: [FeedEntry]
     let pendingRequests: [UserRequestRecord]
     let cardTitles: [String: String]
+    var companionColors: [String: String] = [:]
     let phase: AppStore.MissionPhase
     let notice: String?
     var onAnswer: (String, AskUserAnswer) -> Void
@@ -14,16 +15,24 @@ struct FeedView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("小队动态")
-                .font(.headline)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-            Divider()
+            HStack(spacing: 6) {
+                Image(systemName: "bubble.left.and.bubble.right.fill")
+                    .font(.caption)
+                    .foregroundStyle(Camp.ember)
+                Text("小队动态")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Camp.ink)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+
+            Divider().overlay(Camp.line)
+
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 10) {
+                    LazyVStack(alignment: .leading, spacing: 12) {
                         ForEach(entries) { entry in
-                            feedBubble(entry)
+                            feedRow(entry)
                                 .id(entry.id)
                                 .transition(.opacity.combined(with: .move(edge: .bottom)))
                         }
@@ -38,21 +47,23 @@ struct FeedView: View {
                     }
                 }
             }
-            Divider()
+
+            Divider().overlay(Camp.line)
+
             VStack(alignment: .leading, spacing: 10) {
                 if let notice {
                     Label(notice, systemImage: "info.circle")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Camp.inkSecondary)
                 }
                 if !pendingRequests.isEmpty {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 10) {
                             ForEach(pendingRequests, id: \.id) { request in
-                                VStack(alignment: .leading, spacing: 4) {
+                                VStack(alignment: .leading, spacing: 5) {
                                     Text(cardTitles[request.cardId] ?? "小目标")
                                         .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Camp.inkSecondary)
                                     AskUserPromptView(request: request) { answer in
                                         onInteract()
                                         onAnswer(request.id, answer)
@@ -62,68 +73,126 @@ struct FeedView: View {
                         }
                     }
                     .simultaneousGesture(DragGesture(minimumDistance: 1).onChanged { _ in onInteract() })
-                    .frame(maxHeight: 220)
+                    .frame(maxHeight: 230)
                 }
                 if case .delivering = phase {
                     Button {
                         onCloseout()
                     } label: {
-                        Label("收营", systemImage: "checkmark.circle")
+                        HStack {
+                            Spacer()
+                            Label("收营", systemImage: "flag.checkered")
+                            Spacer()
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(CampPrimaryButtonStyle(size: .small))
                 }
             }
             .padding(12)
         }
-        .background(Color(nsColor: .textBackgroundColor))
-    }
-
-    private func feedBubble(_ entry: FeedEntry) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            actorIcon(entry.actor)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(actorName(entry.actor))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(entry.text)
-                    .textSelection(.enabled)
-                    .font(.callout)
-            }
-            .padding(9)
-            .background(background(for: entry.kind), in: RoundedRectangle(cornerRadius: 8))
-            Spacer(minLength: 0)
+        .background(Camp.surface)
+        .overlay(alignment: .leading) {
+            Rectangle()
+                .fill(Camp.line)
+                .frame(width: 1)
         }
     }
 
-    @ViewBuilder private func actorIcon(_ actor: FeedEntry.Actor) -> some View {
-        switch actor {
-        case .companion(_, let name):
-            CompanionAvatarView(name: name, colorName: "blue", size: 24)
+    // MARK: - 气泡
+
+    @ViewBuilder private func feedRow(_ entry: FeedEntry) -> some View {
+        switch entry.actor {
         case .system:
-            Image(systemName: "gearshape")
-                .frame(width: 24, height: 24)
-                .foregroundStyle(.secondary)
+            HStack {
+                Spacer()
+                systemLine(entry)
+                Spacer()
+            }
         case .user:
-            Image(systemName: "person.crop.circle")
-                .frame(width: 24, height: 24)
-                .foregroundStyle(Color.accentColor)
+            HStack(alignment: .top, spacing: 8) {
+                Spacer(minLength: 30)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text("你")
+                        .font(.caption2)
+                        .foregroundStyle(Camp.inkSecondary)
+                    Text(entry.text)
+                        .textSelection(.enabled)
+                        .font(.callout)
+                        .foregroundStyle(Camp.ink)
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 8)
+                        .background(Camp.ember.opacity(0.14), in: UnevenRoundedRectangle(
+                            topLeadingRadius: 12, bottomLeadingRadius: 12,
+                            bottomTrailingRadius: 4, topTrailingRadius: 12, style: .continuous
+                        ))
+                }
+            }
+        case .companion(let id, let name):
+            HStack(alignment: .top, spacing: 8) {
+                CompanionAvatarView(
+                    name: name,
+                    colorName: companionColors[id] ?? "blue",
+                    size: 26
+                )
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(name)
+                        .font(.caption2)
+                        .foregroundStyle(Camp.inkSecondary)
+                    Text(displayText(entry))
+                        .textSelection(.enabled)
+                        .font(.callout)
+                        .foregroundStyle(Camp.ink)
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 8)
+                        .background(bubbleColor(for: entry.kind), in: UnevenRoundedRectangle(
+                            topLeadingRadius: 4, bottomLeadingRadius: 12,
+                            bottomTrailingRadius: 12, topTrailingRadius: 12, style: .continuous
+                        ))
+                }
+                Spacer(minLength: 30)
+            }
         }
     }
 
-    private func actorName(_ actor: FeedEntry.Actor) -> String {
-        switch actor {
-        case .companion(_, let name): name
-        case .system: "系统"
-        case .user: "你"
+    private func systemLine(_ entry: FeedEntry) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: systemIcon(for: entry.kind))
+                .font(.caption2)
+            Text(displayText(entry))
+                .font(.caption)
+                .multilineTextAlignment(.center)
+        }
+        .foregroundStyle(entry.kind == .error ? Camp.charcoalRed : Camp.inkSecondary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Camp.canvas, in: Capsule())
+    }
+
+    private func displayText(_ entry: FeedEntry) -> String {
+        switch entry.kind {
+        case .blocked, .error:
+            return CampCopy.humanizeBlockedDetail(entry.text)
+        default:
+            return entry.text
         }
     }
 
-    private func background(for kind: FeedEntry.Kind) -> Color {
+    private func systemIcon(for kind: FeedEntry.Kind) -> String {
         switch kind {
-        case .question: Color.orange.opacity(0.14)
-        case .blocked, .error: Color.red.opacity(0.10)
-        case .delivered, .statusChange: Color.green.opacity(0.10)
-        default: Color.gray.opacity(0.10)
+        case .planned: "map"
+        case .statusChange: "flag.checkered"
+        case .canceled: "xmark.circle"
+        case .error: "exclamationmark.triangle.fill"
+        default: "sparkle"
+        }
+    }
+
+    private func bubbleColor(for kind: FeedEntry.Kind) -> Color {
+        switch kind {
+        case .question: Camp.amber.opacity(0.16)
+        case .blocked, .error: Camp.charcoalRed.opacity(0.12)
+        case .delivered: Camp.moss.opacity(0.14)
+        default: Camp.canvas
         }
     }
 }

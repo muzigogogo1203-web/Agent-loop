@@ -41,7 +41,25 @@ struct CampfireTheaterView: View {
                 .frame(minHeight: sortedCompanions.count > 6 ? 360 : 280)
             }
         }
-        .background(Color.orange.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+        .background(theaterBackground)
+    }
+
+    private var theaterBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                .fill(Camp.surface)
+            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                .fill(
+                    RadialGradient(
+                        colors: [Camp.ember.opacity(0.12), .clear],
+                        center: .center,
+                        startRadius: 10,
+                        endRadius: 260
+                    )
+                )
+            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                .stroke(Camp.line, lineWidth: 1)
+        }
     }
 
     private var sortedCompanions: [CompanionRecord] {
@@ -102,14 +120,20 @@ struct CampfireTheaterView: View {
                 let flip = !paused && Int(context.date.timeIntervalSinceReferenceDate * 3) % 2 == 0
                 let spark = paused ? 1 : Int(context.date.timeIntervalSinceReferenceDate * 3) % 3
                 ZStack(alignment: .top) {
+                    Ellipse()
+                        .fill(Camp.ember.opacity(0.18))
+                        .frame(width: 74, height: 16)
+                        .offset(y: 58)
                     Image(systemName: flip ? "flame.fill" : "flame")
                         .font(.system(size: 48))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(
+                            LinearGradient(colors: [Camp.amber, Camp.emberDeep], startPoint: .top, endPoint: .bottom)
+                        )
                         .padding(.top, 16)
                     HStack(spacing: 7) {
                         ForEach(0..<3, id: \.self) { index in
                             Circle()
-                                .fill(Color.orange.opacity(index == spark ? 0.95 : 0.28))
+                                .fill(Camp.amber.opacity(index == spark ? 0.95 : 0.28))
                                 .frame(width: index == spark ? 5 : 4, height: index == spark ? 5 : 4)
                                 .offset(y: index == spark && !paused ? -4 : 0)
                         }
@@ -118,7 +142,7 @@ struct CampfireTheaterView: View {
             }
             Text("篝火")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Camp.inkSecondary)
         }
         .frame(width: 110)
     }
@@ -129,7 +153,7 @@ struct CampfireTheaterView: View {
         return Button {
             if let card { onSelectCard(card.id) }
         } label: {
-            VStack(spacing: 8) {
+            VStack(spacing: 7) {
                 CompanionAvatarView(
                     name: companion.name,
                     colorName: companion.color,
@@ -137,14 +161,16 @@ struct CampfireTheaterView: View {
                     size: 58
                 )
                 Text(companion.name)
-                    .font(.headline)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(Camp.ink)
                 Text(label(for: state))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Camp.inkSecondary)
                     .lineLimit(1)
             }
             .frame(width: 120)
             .padding(10)
+            .contentShape(RoundedRectangle(cornerRadius: Camp.smallRadius))
         }
         .buttonStyle(.plain)
         .disabled(card == nil)

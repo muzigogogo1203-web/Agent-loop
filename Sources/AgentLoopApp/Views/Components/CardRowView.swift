@@ -13,67 +13,69 @@ struct CardRowView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: icon)
-                    .foregroundStyle(color)
-                    .frame(width: 18, height: 18)
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 8) {
-                        Text(card.title)
-                            .font(.headline)
-                        Text(statusText)
-                            .font(.caption)
-                            .foregroundStyle(color)
-                    }
+        HStack(alignment: .top, spacing: 0) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(color)
+                .frame(width: 4)
+                .padding(.vertical, 2)
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 10) {
                     if let companion {
-                        HStack(spacing: 6) {
-                            CompanionAvatarView(
-                                name: companion.name,
-                                colorName: companion.color,
-                                state: animState,
-                                size: 20
-                            )
+                        CompanionAvatarView(
+                            name: companion.name,
+                            colorName: companion.color,
+                            state: card.status == .running || card.status == .blocked ? animState : .idle,
+                            size: 30
+                        )
+                        .padding(.top, 1)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 8) {
+                            Text(card.title)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(card.status == .canceled ? Camp.inkSecondary : Camp.ink)
+                                .strikethrough(card.status == .canceled)
+                            CampChip(text: statusText, color: color, icon: statusIcon)
+                        }
+                        if let companion {
                             Text(companion.name)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Camp.inkSecondary)
                         }
+                        Text(detailText)
+                            .font(.caption)
+                            .foregroundStyle(Camp.inkSecondary)
+                            .lineLimit(2)
                     }
-                    Text(detailText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                    Spacer()
+                    if card.status == .blocked && pendingRequest == nil {
+                        Button {
+                            onRetry()
+                        } label: {
+                            Label("重试", systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(CampSecondaryButtonStyle(tint: Camp.amber))
+                    }
                 }
-                Spacer()
-                if card.status == .blocked && pendingRequest == nil {
-                    Button {
-                        onRetry()
-                    } label: {
-                        Label("重试", systemImage: "arrow.clockwise")
+                if let pendingRequest {
+                    AskUserPromptView(request: pendingRequest) { answer in
+                        onAnswer(pendingRequest.id, answer)
                     }
-                    .buttonStyle(.bordered)
                 }
             }
-            if let pendingRequest {
-                AskUserPromptView(request: pendingRequest) { answer in
-                    onAnswer(pendingRequest.id, answer)
-                }
-            }
+            .padding(.leading, 10)
         }
-        .padding(10)
-        .background(background, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(pendingRequest == nil ? Color.clear : Color.orange.opacity(0.6), lineWidth: 1)
-        )
+        .campCard(padding: 12, highlighted: pendingRequest != nil)
+        .opacity(card.status == .canceled ? 0.65 : 1)
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
         .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: card.status)
     }
 
     private var detailText: String {
-        if card.status == .blocked, let detail = blockedDetail {
-            return detail
+        if card.status == .blocked, pendingRequest == nil, let detail = blockedDetail {
+            return CampCopy.humanizeBlockedDetail(detail)
         }
         if let latest, !latest.isEmpty {
             return latest
@@ -94,34 +96,30 @@ struct CardRowView: View {
         case .todo: return "排队中"
         case .ready: return "待启动"
         case .running: return "进行中"
-        case .blocked: return pendingRequest == nil ? "等你处理" : "待回答"
+        case .blocked: return pendingRequest == nil ? "等你处理" : "等你回答"
         case .done: return "已完成"
         case .canceled: return "已取消"
         }
     }
 
-    private var icon: String {
+    private var statusIcon: String {
         switch card.status {
         case .todo: return "clock"
-        case .ready: return "play.circle"
-        case .running: return "bolt.circle"
-        case .blocked: return pendingRequest == nil ? "exclamationmark.triangle" : "hand.raised"
-        case .done: return "checkmark.circle"
-        case .canceled: return "xmark.circle"
+        case .ready: return "play.fill"
+        case .running: return "bolt.fill"
+        case .blocked: return pendingRequest == nil ? "exclamationmark.triangle.fill" : "hand.raised.fill"
+        case .done: return "checkmark"
+        case .canceled: return "xmark"
         }
     }
 
     private var color: Color {
         switch card.status {
-        case .done: return .green
-        case .blocked: return .orange
-        case .canceled: return .secondary
-        case .running: return .blue
-        default: return .secondary
+        case .done: return Camp.moss
+        case .blocked: return Camp.amber
+        case .canceled: return Camp.stone
+        case .running: return Camp.creek
+        case .todo, .ready: return Camp.stone
         }
-    }
-
-    private var background: Color {
-        pendingRequest == nil ? Color.gray.opacity(0.10) : Color.orange.opacity(0.16)
     }
 }

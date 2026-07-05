@@ -8,40 +8,80 @@ struct AskUserPromptView: View {
     @State private var submitted = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(request.prompt)
-                .font(.callout.weight(.medium))
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 6) {
+                Image(systemName: "hand.raised.fill")
+                    .font(.caption)
+                    .foregroundStyle(Camp.amber)
+                Text(request.prompt)
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(Camp.ink)
+            }
             switch request.kind {
             case .choice:
-                ForEach(Array(options.enumerated()), id: \.offset) { index, option in
-                    Button(option) {
-                        submit(.choice(index))
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(options.enumerated()), id: \.offset) { index, option in
+                        Button {
+                            submit(.choice(index))
+                        } label: {
+                            HStack {
+                                Text(option)
+                                    .foregroundStyle(Camp.ink)
+                                Spacer()
+                                Image(systemName: "arrow.forward.circle")
+                                    .foregroundStyle(Camp.amber)
+                            }
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 7)
+                            .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                    .stroke(Camp.line, lineWidth: 1)
+                            )
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(submitted)
                     }
-                    .disabled(submitted)
                 }
             case .confirm:
-                HStack {
+                HStack(spacing: 8) {
                     Button("确认") { submit(.confirm(true)) }
+                        .buttonStyle(CampPrimaryButtonStyle(size: .small))
                     Button("取消") { submit(.confirm(false)) }
+                        .buttonStyle(CampSecondaryButtonStyle())
                 }
                 .disabled(submitted)
             case .text:
-                HStack {
-                    TextField("输入回复", text: $text, axis: .vertical)
+                HStack(spacing: 8) {
+                    TextField("输入回复…", text: $text, axis: .vertical)
+                        .textFieldStyle(.plain)
                         .lineLimit(1...4)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                .stroke(Camp.line, lineWidth: 1)
+                        )
                         .disabled(submitted)
                     Button {
                         submit(.text(text))
                     } label: {
                         Image(systemName: "paperplane.fill")
                     }
+                    .buttonStyle(CampPrimaryButtonStyle(size: .small))
                     .help("提交回复")
                     .disabled(submitted || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
-        .padding(10)
-        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+        .padding(11)
+        .background(Camp.amber.opacity(0.10), in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                .stroke(Camp.amber.opacity(0.45), lineWidth: 1)
+        )
     }
 
     private var options: [String] {
