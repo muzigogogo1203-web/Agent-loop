@@ -101,6 +101,29 @@ extension ToolDef {
         ], required: ["kind", "prompt"])
     )
 
+    public static let searchCampNotes = ToolDef(
+        name: "search_camp_notes",
+        description: "按关键词检索营地笔记（往期行动的经验复盘、沉淀结论），返回最相关几条的标题与摘要。",
+        inputSchema: objectSchema(["query": ["type": "string"]], required: ["query"])
+    )
+
+    public static let campStatus = ToolDef(
+        name: "camp_status",
+        description: "查看营地全景（只读）：各行动的状态与小目标完成比、最近的交付物。",
+        inputSchema: objectSchema([:], required: [])
+    )
+
+    public static let proposeSquad = ToolDef(
+        name: "propose_squad",
+        description: "提出组队开工提案：小队名、从名册选的成员 id、行动目标、可选 token 预算。提案会渲染为确认卡片，用户确认后才会真正建队开工——绝不能替用户做决定。",
+        inputSchema: objectSchema([
+            "name": ["type": "string"],
+            "memberIds": ["type": "array", "items": ["type": "string"], "minItems": 1, "maxItems": 6],
+            "goal": ["type": "string"],
+            "budget": ["type": "integer", "description": "可选，行动 token 预算；缺省用系统默认值"],
+        ], required: ["name", "memberIds", "goal"])
+    )
+
     public static let agentTools: [ToolDef] = [
         completeCard,
         blockCard,
@@ -110,5 +133,13 @@ extension ToolDef {
         readFile,
         writeFile,
         webFetch,
+        searchCampNotes,
+    ]
+
+    /// 向导工具固定三件（spec §8：读知识 + 读状态 + 提案组队），不参与勾选。
+    public static let guideTools: [ToolDef] = [
+        searchCampNotes,
+        campStatus,
+        proposeSquad,
     ]
 }

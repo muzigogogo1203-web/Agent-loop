@@ -65,10 +65,13 @@ public actor Orchestrator {
         goal: String,
         companionIds: [String],
         workspacePath: String?,
-        plannerModel: String
+        plannerModel: String,
+        budgetTokens: Int = KernelDefaults.missionBudget
     ) async throws -> String {
         ensureTickStarted()
-        let missionId = try db.createMissionShell(goal: goal, companionIds: companionIds, workspacePath: workspacePath)
+        let missionId = try db.createMissionShell(
+            goal: goal, companionIds: companionIds,
+            workspacePath: workspacePath, budgetTokens: budgetTokens)
         emit(.planningStarted(missionId: missionId))
         let task = Task {
             do {
@@ -320,6 +323,36 @@ public actor Orchestrator {
     public func retryCard(_ cardId: String) async throws {
         try db.transitionCard(id: cardId, to: .ready, eventKind: "card_ready", payload: .object([:]))
         await reconcile()
+    }
+
+    /// 提案确认（spec §10.2，plan D5/D10）：先 CAS（pending→confirmed）再建队；
+    /// 建队失败补偿回滚 pending。重复确认在 CAS 处抛 StaleProposalError——宁可回滚，绝不重复建队。
+    public func confirmSquadProposal(messageId: String, plannerModel: String) async throws -> String {
+        let block = try db.confirmProposalBlock(messageId: messageId)
+        do {
+            let missionId = try await startMission(
+                goal: block.goal,
+                companionIds: block.memberIds,
+                workspacePath: nil,
+                plannerModel: plannerModel,
+                budgetTokens: block.budget ?? KernelDefaults.missionBudget
+            )
+            try db.attachMissionToProposal(messageId: messageId, missionId: missionId)
+            try? await db.pool.write { database in
+                try AppDatabase.appendEvent(
+                    database, missionId: missionId, cardId: nil, runId: nil,
+                    kind: "squad_proposal_confirmed",
+                    payload: [
+                        "proposalId": .string(block.proposalId),
+                        "missionId": .string(missionId),
+                    ]
+                )
+            }
+            return missionId
+        } catch {
+            try? db.revertProposalToPending(messageId: messageId)
+            throw error
+        }
     }
 
     public func closeout(_ missionId: String, distillModel: String) async throws {

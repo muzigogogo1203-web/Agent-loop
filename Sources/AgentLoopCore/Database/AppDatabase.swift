@@ -287,7 +287,12 @@ public final class AppDatabase: Sendable {
         }
     }
 
-    public func createMissionShell(goal: String, companionIds: [String], workspacePath: String?) throws -> String {
+    public func createMissionShell(
+        goal: String,
+        companionIds: [String],
+        workspacePath: String?,
+        budgetTokens: Int = KernelDefaults.missionBudget
+    ) throws -> String {
         try pool.write { db in
             let camp = try Self.ensureDefaultCamp(db)
             let encoder = JSONEncoder()
@@ -309,7 +314,7 @@ public final class AppDatabase: Sendable {
                 goalRaw: goal,
                 goalRefined: "",
                 status: .planning,
-                budgetTokens: KernelDefaults.missionBudget,
+                budgetTokens: max(1, budgetTokens),
                 spentTokens: 0,
                 revision: 1,
                 createdAt: Date()

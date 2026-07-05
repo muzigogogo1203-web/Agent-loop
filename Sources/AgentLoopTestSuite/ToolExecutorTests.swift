@@ -4,12 +4,22 @@ import AgentLoopCore
 @Test func agentToolDefsComplete() {
     let names = ToolDef.agentTools.map(\.name)
     #expect(names == ["complete_card", "block_card", "add_progress_note",
-                      "ask_user", "list_dir", "read_file", "write_file", "web_fetch"])
+                      "ask_user", "list_dir", "read_file", "write_file", "web_fetch",
+                      "search_camp_notes"])
     for def in ToolDef.agentTools {
         #expect(def.inputSchema["type"]?.stringValue == "object")
         #expect(def.inputSchema["additionalProperties"]?.boolValue == false)
         #expect(!def.description.isEmpty)
     }
+}
+
+@Test func guideToolDefsFixedTrio() {
+    // 向导工具固定三件（spec §8），普通伙伴不可用向导专属工具
+    #expect(ToolDef.guideTools.map(\.name) == ["search_camp_notes", "camp_status", "propose_squad"])
+    #expect(!ToolDef.agentTools.contains { $0.name == "camp_status" })
+    #expect(!ToolDef.agentTools.contains { $0.name == "propose_squad" })
+    let proposeRequired = ToolDef.proposeSquad.inputSchema["required"]?.arrayValue?.compactMap(\.stringValue)
+    #expect(proposeRequired == ["name", "memberIds", "goal"])
 }
 
 @Test func writeFileSchemaHasOptionalAppend() {

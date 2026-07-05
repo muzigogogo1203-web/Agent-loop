@@ -56,6 +56,7 @@ public struct CardRunner: Sendable {
             "read_file": FileToolHandler(tools: files, op: .read),
             "write_file": FileToolHandler(tools: files, op: .write),
             "web_fetch": WebFetchTool(),
+            "search_camp_notes": CampNotesSearchTool(db: db, campId: squad?.campId),
         ])
         let packet = ContextPacket(
             companionName: companionName,
