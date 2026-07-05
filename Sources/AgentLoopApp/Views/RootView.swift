@@ -33,6 +33,11 @@ struct RootView: View {
                                 Text(companion.name)
                             }
                         }
+                        .contextMenu {
+                            Button("编辑…") {
+                                selection = .editCompanion(companion.id)
+                            }
+                        }
                     }
                     NavigationLink(value: Destination.editCompanion(nil)) {
                         Label("新伙伴...", systemImage: "plus")
@@ -53,13 +58,19 @@ struct RootView: View {
                 SettingsView()
             case .chat(let id):
                 if let companion = store.companions.first(where: { $0.id == id }) {
-                    DMChatView(companion: companion)
+                    DMChatView(companion: companion) {
+                        selection = .editCompanion(companion.id)
+                    }
                 } else {
                     ContentUnavailableView("伙伴不在名册里", systemImage: "person.crop.circle.badge.questionmark")
                 }
             case .editCompanion(let id):
                 CompanionEditorView(companionId: id) {
-                    selection = .newTask
+                    if let id {
+                        selection = .chat(id)
+                    } else {
+                        selection = .newTask
+                    }
                 }
             }
         }

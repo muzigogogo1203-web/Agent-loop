@@ -5,6 +5,7 @@ struct DMChatView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let companion: CompanionRecord
+    var onEdit: () -> Void
     @State private var input = ""
 
     var body: some View {
@@ -39,6 +40,9 @@ struct DMChatView: View {
             .padding(10)
         }
         .navigationTitle(companion.name)
+        .toolbar {
+            Button("编辑伙伴", action: onEdit)
+        }
         .task(id: companion.id) {
             store.loadChatHistory(companion: companion)
         }

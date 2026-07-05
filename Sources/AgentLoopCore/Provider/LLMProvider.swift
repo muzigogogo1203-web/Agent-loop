@@ -30,6 +30,24 @@ public enum ProviderError: Error, Sendable, Equatable {
     case malformedStream(String)
 }
 
+extension ProviderError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .unauthorized:
+            return "API key 无效或无权限（401/403）"
+        case .http(let status, let body):
+            let preview = String(body.prefix(120))
+            return preview.isEmpty ? "服务端返回 \(status)" : "服务端返回 \(status)：\(preview)"
+        case .overloadedRetriesExhausted:
+            return "服务持续过载，已多次重试"
+        case .apiError(let type, let message):
+            return "API 错误 \(type)：\(message)"
+        case .malformedStream(let detail):
+            return "响应流异常中断：\(detail)"
+        }
+    }
+}
+
 public protocol LLMProvider: Sendable {
     func streamTurn(system: String, history: [APIMessage], tools: [ToolDef], maxTokens: Int)
         -> AsyncThrowingStream<ProviderEvent, Error>

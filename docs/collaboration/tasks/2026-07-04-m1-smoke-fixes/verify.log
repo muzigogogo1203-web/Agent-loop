@@ -1,0 +1,495 @@
+warning: /Users/muzi/Library/org.swift.swiftpm/configuration is not accessible or not writable, disabling user-level cache features.
+warning: /Users/muzi/Library/org.swift.swiftpm/security is not accessible or not writable, disabling user-level cache features.
+warning: /Users/muzi/Library/Caches/org.swift.swiftpm is not accessible or not writable, disabling user-level cache features.
+warning: 'agent-loop': failed storing manifest for 'agent-loop' in cache: attempt to write a readonly database
+warning: 'grdb.swift': failed storing manifest for 'grdb.swift' in cache: attempt to write a readonly database
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite AnthropicProviderStubTests started.
+◇ Test escapeAttemptsRejected() started.
+◇ Test unknownBlockRoundTripsVerbatim() started.
+◇ Test unknownToolReturnsError() started.
+◇ Test missingArtifactKeepsCardRunning() started.
+◇ Test turnRetriesTransientErrorThenCompletes() started.
+◇ Test multiToolUseOrderPreservedInHistory() started.
+◇ Test symlinkEscapeRejected() started.
+◇ Test packetContainsContractAndCard() started.
+◇ Test providerErrorDescriptionsAreHuman() started.
+◇ Test jsonLiterals() started.
+◇ Test packageBuilds() started.
+◇ Test ignoresCommentsAndPings() started.
+◇ Test runnerTransportErrorSetsFailedAndBlocked() started.
+◇ Test coalescerDiscardDropsPendingDeltas() started.
+◇ Test maxTurnsExhaustionBlocks() started.
+◇ Test systemIsStableAcrossCards() started.
+◇ Test malformedToolInputThrows() started.
+◇ Test handoffRequiresArtifactsOrReason() started.
+◇ Test turnRetryExhaustionSurfacesLastError() started.
+◇ Test handoffRequiresNonEmptyCoreFields() started.
+◇ Test missingWorkspaceExplains() started.
+◇ Test normalizesBaseURL() started.
+◇ Test unknownBlocksPreservedInHistory() started.
+◇ Test emptyToolInputBecomesEmptyObject() started.
+◇ Test unknownBlockDeltaThrows() started.
+◇ Test runnerCancellationLeavesCardReady() started.
+◇ Test illegalTransitionThrows() started.
+◇ Test requestBodyEncodesDeterministically() started.
+◇ Test fetchesAndStripsHTML() started.
+◇ Test handoffParsesWithoutArtifactsKey() started.
+◇ Test writeReadListRoundTrip() started.
+◇ Test turnStartedPrecedesEachTurn() started.
+◇ Test jsonWireSafety() started.
+◇ Test pauseTurnCappedAtFiveContinuations() started.
+◇ Test completeCopiesArtifactBeforeDone() started.
+◇ Test runnerBlocksCardWhenLoopBlocksItself() started.
+◇ Test parsesEventDataPairs() started.
+◇ Test keychainRoundTrip() started.
+◇ Test runnerDrivesCardToDoneWithRunRecord() started.
+◇ Test progressNoteAppendsEvent() started.
+◇ Test secondSendIncludesFirstExchangeInHistory() started.
+◇ Test toolErrorSelfHealsButThreeStrikesBlocks() started.
+◇ Test m1ToolDefsComplete() started.
+◇ Test toolUseStopWithZeroBlocksThrowsMalformed() started.
+◇ Test invalidHandoffKeepsCardRunning() started.
+◇ Test jsonRoundTrip() started.
+◇ Test messageStopWithUnfinishedBlocksThrows() started.
+◇ Test accumulatesTextAndToolUse() started.
+◇ Test migratesAndBootstraps() started.
+◇ Test eventAppendAndProjectionSameTransaction() started.
+◇ Test endTurnWithoutTerminatorRemindsOnceThenBlocks() started.
+◇ Test coalescerPreservesOrderUnderReentrancy() started.
+◇ Test unauthorizedNotRetried() started.
+◇ Test companionCRUD() started.
+◇ Test happyPathToolThenComplete() started.
+◇ Test toolResultArrayContentFallsBackToUnknown() started.
+◇ Test dmPersistsBothSidesAndFindsThread() started.
+◇ Test refusalBlocksImmediately() started.
+◇ Test toolResultEncoding() started.
+◇ Test coalescerBatchesDeltas() started.
+◇ Test finishUnknownRunThrows() started.
+◇ Test apiErrorEventThrows() started.
+◇ Test blockRecordsTypedReason() started.
+◇ Test rejectsNonHTTPS() started.
+◇ Test mockReplaysScriptInOrder() started.
+◇ Test transitionUnknownCardThrows() started.
+◇ Test decodeKnownBlocks() started.
+◇ Test handoffParsesFromToolInput() started.
+◇ Test requestBodyShape() started.
+◇ Test streamsTextTurnEndToEnd() started.
+✘ Test keychainRoundTrip() recorded an issue at SupportTests.swift:5:2: Caught error: KeychainError(status: -50)
+✔ Test unknownToolReturnsError() passed after 0.110 seconds.
+✔ Test providerErrorDescriptionsAreHuman() passed after 0.110 seconds.
+✔ Test packageBuilds() passed after 0.110 seconds.
+✔ Test jsonLiterals() passed after 0.110 seconds.
+✔ Test packetContainsContractAndCard() passed after 0.110 seconds.
+✔ Test ignoresCommentsAndPings() passed after 0.110 seconds.
+✔ Test unknownBlockRoundTripsVerbatim() passed after 0.111 seconds.
+✔ Test systemIsStableAcrossCards() passed after 0.110 seconds.
+✔ Test handoffRequiresNonEmptyCoreFields() passed after 0.110 seconds.
+✔ Test handoffRequiresArtifactsOrReason() passed after 0.110 seconds.
+✔ Test missingWorkspaceExplains() passed after 0.110 seconds.
+✔ Test emptyToolInputBecomesEmptyObject() passed after 0.110 seconds.
+✔ Test requestBodyEncodesDeterministically() passed after 0.110 seconds.
+✔ Test handoffParsesWithoutArtifactsKey() passed after 0.110 seconds.
+✔ Test normalizesBaseURL() passed after 0.110 seconds.
+✔ Test malformedToolInputThrows() passed after 0.111 seconds.
+✔ Test unknownBlockDeltaThrows() passed after 0.110 seconds.
+✔ Test jsonWireSafety() passed after 0.110 seconds.
+✔ Test parsesEventDataPairs() passed after 0.110 seconds.
+✔ Test escapeAttemptsRejected() passed after 0.111 seconds.
+✔ Test symlinkEscapeRejected() passed after 0.111 seconds.
+✔ Test m1ToolDefsComplete() passed after 0.110 seconds.
+✘ Test keychainRoundTrip() failed after 0.110 seconds with 1 issue.
+✔ Test jsonRoundTrip() passed after 0.110 seconds.
+✔ Test writeReadListRoundTrip() passed after 0.110 seconds.
+✔ Test messageStopWithUnfinishedBlocksThrows() passed after 0.110 seconds.
+✔ Test accumulatesTextAndToolUse() passed after 0.110 seconds.
+✔ Test toolResultEncoding() passed after 0.115 seconds.
+✔ Test toolResultArrayContentFallsBackToUnknown() passed after 0.115 seconds.
+✔ Test apiErrorEventThrows() passed after 0.115 seconds.
+✔ Test illegalTransitionThrows() passed after 0.116 seconds.
+✔ Test rejectsNonHTTPS() passed after 0.118 seconds.
+✔ Test invalidHandoffKeepsCardRunning() passed after 0.121 seconds.
+✔ Test missingArtifactKeepsCardRunning() passed after 0.122 seconds.
+✔ Test handoffParsesFromToolInput() passed after 0.120 seconds.
+✔ Test decodeKnownBlocks() passed after 0.120 seconds.
+✔ Test requestBodyShape() passed after 0.120 seconds.
+✔ Test completeCopiesArtifactBeforeDone() passed after 0.121 seconds.
+✔ Test fetchesAndStripsHTML() passed after 0.122 seconds.
+✔ Test toolUseStopWithZeroBlocksThrowsMalformed() passed after 0.127 seconds.
+✔ Test unauthorizedNotRetried() passed after 0.131 seconds.
+✔ Test refusalBlocksImmediately() passed after 0.132 seconds.
+✔ Test mockReplaysScriptInOrder() passed after 0.132 seconds.
+✔ Test multiToolUseOrderPreservedInHistory() passed after 0.135 seconds.
+✔ Test turnStartedPrecedesEachTurn() passed after 0.134 seconds.
+✔ Test endTurnWithoutTerminatorRemindsOnceThenBlocks() passed after 0.135 seconds.
+✔ Test happyPathToolThenComplete() passed after 0.134 seconds.
+✔ Test coalescerDiscardDropsPendingDeltas() passed after 0.135 seconds.
+✔ Test streamsTextTurnEndToEnd() passed after 0.134 seconds.
+✔ Test companionCRUD() passed after 0.135 seconds.
+✔ Test maxTurnsExhaustionBlocks() passed after 0.136 seconds.
+✔ Test unknownBlocksPreservedInHistory() passed after 0.136 seconds.
+✔ Test toolErrorSelfHealsButThreeStrikesBlocks() passed after 0.136 seconds.
+✔ Test migratesAndBootstraps() passed after 0.136 seconds.
+◇ Test unauthorizedFailsFastNoRetry() started.
+✔ Test finishUnknownRunThrows() passed after 0.137 seconds.
+✔ Test pauseTurnCappedAtFiveContinuations() passed after 0.137 seconds.
+✔ Test progressNoteAppendsEvent() passed after 0.138 seconds.
+✔ Test unauthorizedFailsFastNoRetry() passed after 0.001 seconds.
+◇ Test overloadedRetriesThenSucceeds() started.
+✔ Test overloadedRetriesThenSucceeds() passed after 0.006 seconds.
+◇ Test honorsRetryAfterHeader() started.
+✔ Test honorsRetryAfterHeader() passed after 0.002 seconds.
+◇ Test malformedRetryAfterFallsBackAndCaps() started.
+✔ Test malformedRetryAfterFallsBackAndCaps() passed after 0.003 seconds.
+◇ Test retriesExhaustedThrows() started.
+✔ Test eventAppendAndProjectionSameTransaction() passed after 0.151 seconds.
+✔ Test blockRecordsTypedReason() passed after 0.151 seconds.
+✔ Test secondSendIncludesFirstExchangeInHistory() passed after 0.154 seconds.
+✔ Test transitionUnknownCardThrows() passed after 0.154 seconds.
+✔ Test runnerDrivesCardToDoneWithRunRecord() passed after 0.155 seconds.
+✔ Test dmPersistsBothSidesAndFindsThread() passed after 0.154 seconds.
+✔ Test runnerBlocksCardWhenLoopBlocksItself() passed after 0.155 seconds.
+✔ Test retriesExhaustedThrows() passed after 0.005 seconds.
+✔ Suite AnthropicProviderStubTests passed after 0.157 seconds.
+✔ Test runnerCancellationLeavesCardReady() passed after 0.185 seconds.
+✔ Test coalescerBatchesDeltas() passed after 0.247 seconds.
+✔ Test coalescerPreservesOrderUnderReentrancy() passed after 0.397 seconds.
+✔ Test turnRetriesTransientErrorThenCompletes() passed after 2.215 seconds.
+✔ Test turnRetryExhaustionSurfacesLastError() passed after 6.476 seconds.
+✔ Test runnerTransportErrorSetsFailedAndBlocked() passed after 6.497 seconds.
+✘ Test run with 75 tests in 1 suite failed after 6.498 seconds with 1 issue.
+warning: /Users/muzi/Library/org.swift.swiftpm/configuration is not accessible or not writable, disabling user-level cache features.
+warning: /Users/muzi/Library/org.swift.swiftpm/security is not accessible or not writable, disabling user-level cache features.
+warning: /Users/muzi/Library/Caches/org.swift.swiftpm is not accessible or not writable, disabling user-level cache features.
+warning: 'agent-loop': failed storing manifest for 'agent-loop' in cache: attempt to write a readonly database
+warning: 'grdb.swift': failed storing manifest for 'grdb.swift' in cache: attempt to write a readonly database
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.12s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test keychainRoundTrip() started.
+◇ Test unknownBlockRoundTripsVerbatim() started.
+◇ Test handoffRequiresArtifactsOrReason() started.
+◇ Test jsonWireSafety() started.
+◇ Test accumulatesTextAndToolUse() started.
+◇ Test finishUnknownRunThrows() started.
+◇ Test toolErrorSelfHealsButThreeStrikesBlocks() started.
+◇ Test runnerTransportErrorSetsFailedAndBlocked() started.
+◇ Test progressNoteAppendsEvent() started.
+◇ Test decodeKnownBlocks() started.
+◇ Test requestBodyEncodesDeterministically() started.
+◇ Test escapeAttemptsRejected() started.
+◇ Test coalescerBatchesDeltas() started.
+◇ Test normalizesBaseURL() started.
+◇ Suite AnthropicProviderStubTests started.
+◇ Test unknownToolReturnsError() started.
+◇ Test unknownBlockDeltaThrows() started.
+◇ Test jsonLiterals() started.
+◇ Test secondSendIncludesFirstExchangeInHistory() started.
+◇ Test turnStartedPrecedesEachTurn() started.
+◇ Test toolResultEncoding() started.
+◇ Test systemIsStableAcrossCards() started.
+◇ Test pauseTurnCappedAtFiveContinuations() started.
+◇ Test requestBodyShape() started.
+◇ Test illegalTransitionThrows() started.
+◇ Test endTurnWithoutTerminatorRemindsOnceThenBlocks() started.
+◇ Test coalescerPreservesOrderUnderReentrancy() started.
+◇ Test completeCopiesArtifactBeforeDone() started.
+◇ Test runnerBlocksCardWhenLoopBlocksItself() started.
+◇ Test maxTurnsExhaustionBlocks() started.
+◇ Test mockReplaysScriptInOrder() started.
+◇ Test migratesAndBootstraps() started.
+◇ Test messageStopWithUnfinishedBlocksThrows() started.
+◇ Test turnRetryExhaustionSurfacesLastError() started.
+◇ Test eventAppendAndProjectionSameTransaction() started.
+◇ Test handoffParsesWithoutArtifactsKey() started.
+◇ Test apiErrorEventThrows() started.
+◇ Test toolUseStopWithZeroBlocksThrowsMalformed() started.
+◇ Test packetContainsContractAndCard() started.
+◇ Test companionCRUD() started.
+◇ Test transitionUnknownCardThrows() started.
+◇ Test symlinkEscapeRejected() started.
+◇ Test rejectsNonHTTPS() started.
+◇ Test packageBuilds() started.
+◇ Test parsesEventDataPairs() started.
+◇ Test refusalBlocksImmediately() started.
+◇ Test runnerCancellationLeavesCardReady() started.
+◇ Test happyPathToolThenComplete() started.
+◇ Test emptyToolInputBecomesEmptyObject() started.
+◇ Test jsonRoundTrip() started.
+◇ Test missingArtifactKeepsCardRunning() started.
+◇ Test multiToolUseOrderPreservedInHistory() started.
+◇ Test runnerDrivesCardToDoneWithRunRecord() started.
+◇ Test handoffParsesFromToolInput() started.
+◇ Test dmPersistsBothSidesAndFindsThread() started.
+◇ Test fetchesAndStripsHTML() started.
+◇ Test providerErrorDescriptionsAreHuman() started.
+◇ Test toolResultArrayContentFallsBackToUnknown() started.
+◇ Test handoffRequiresNonEmptyCoreFields() started.
+◇ Test turnRetriesTransientErrorThenCompletes() started.
+◇ Test blockRecordsTypedReason() started.
+◇ Test ignoresCommentsAndPings() started.
+◇ Test invalidHandoffKeepsCardRunning() started.
+◇ Test unauthorizedNotRetried() started.
+◇ Test m1ToolDefsComplete() started.
+◇ Test missingWorkspaceExplains() started.
+◇ Test malformedToolInputThrows() started.
+◇ Test unknownBlocksPreservedInHistory() started.
+◇ Test writeReadListRoundTrip() started.
+◇ Test coalescerDiscardDropsPendingDeltas() started.
+✘ Test keychainRoundTrip() recorded an issue at SupportTests.swift:5:2: Caught error: KeychainError(status: -50)
+✔ Test handoffRequiresArtifactsOrReason() passed after 0.066 seconds.
+✔ Test unknownBlockRoundTripsVerbatim() passed after 0.067 seconds.
+✔ Test jsonWireSafety() passed after 0.067 seconds.
+✔ Test decodeKnownBlocks() passed after 0.067 seconds.
+✔ Test normalizesBaseURL() passed after 0.067 seconds.
+✔ Test unknownToolReturnsError() passed after 0.068 seconds.
+◇ Test streamsTextTurnEndToEnd() started.
+✔ Test jsonLiterals() passed after 0.068 seconds.
+✔ Test requestBodyEncodesDeterministically() passed after 0.068 seconds.
+✔ Test toolResultEncoding() passed after 0.068 seconds.
+✔ Test systemIsStableAcrossCards() passed after 0.068 seconds.
+✔ Test unknownBlockDeltaThrows() passed after 0.068 seconds.
+✔ Test accumulatesTextAndToolUse() passed after 0.068 seconds.
+✔ Test escapeAttemptsRejected() passed after 0.068 seconds.
+✔ Test requestBodyShape() passed after 0.068 seconds.
+✔ Test messageStopWithUnfinishedBlocksThrows() passed after 0.068 seconds.
+✘ Test keychainRoundTrip() failed after 0.069 seconds with 1 issue.
+✔ Test apiErrorEventThrows() passed after 0.068 seconds.
+✔ Test handoffParsesWithoutArtifactsKey() passed after 0.068 seconds.
+✔ Test packetContainsContractAndCard() passed after 0.068 seconds.
+✔ Test migratesAndBootstraps() passed after 0.068 seconds.
+✔ Test symlinkEscapeRejected() passed after 0.068 seconds.
+✔ Test packageBuilds() passed after 0.068 seconds.
+✔ Test parsesEventDataPairs() passed after 0.068 seconds.
+✔ Test illegalTransitionThrows() passed after 0.068 seconds.
+✔ Test rejectsNonHTTPS() passed after 0.068 seconds.
+✔ Test handoffParsesFromToolInput() passed after 0.068 seconds.
+✔ Test jsonRoundTrip() passed after 0.068 seconds.
+✔ Test emptyToolInputBecomesEmptyObject() passed after 0.068 seconds.
+✔ Test providerErrorDescriptionsAreHuman() passed after 0.068 seconds.
+✔ Test toolResultArrayContentFallsBackToUnknown() passed after 0.068 seconds.
+✔ Test finishUnknownRunThrows() passed after 0.069 seconds.
+✔ Test handoffRequiresNonEmptyCoreFields() passed after 0.068 seconds.
+✔ Test companionCRUD() passed after 0.069 seconds.
+✔ Test ignoresCommentsAndPings() passed after 0.068 seconds.
+✔ Test m1ToolDefsComplete() passed after 0.068 seconds.
+✔ Test missingWorkspaceExplains() passed after 0.068 seconds.
+✔ Test malformedToolInputThrows() passed after 0.068 seconds.
+✔ Test writeReadListRoundTrip() passed after 0.068 seconds.
+✔ Test completeCopiesArtifactBeforeDone() passed after 0.070 seconds.
+✔ Test eventAppendAndProjectionSameTransaction() passed after 0.071 seconds.
+✔ Test fetchesAndStripsHTML() passed after 0.074 seconds.
+✔ Test progressNoteAppendsEvent() passed after 0.076 seconds.
+✔ Test mockReplaysScriptInOrder() passed after 0.075 seconds.
+✔ Test refusalBlocksImmediately() passed after 0.075 seconds.
+✔ Test unauthorizedNotRetried() passed after 0.075 seconds.
+✔ Test toolUseStopWithZeroBlocksThrowsMalformed() passed after 0.075 seconds.
+✔ Test transitionUnknownCardThrows() passed after 0.076 seconds.
+✔ Test endTurnWithoutTerminatorRemindsOnceThenBlocks() passed after 0.076 seconds.
+✔ Test happyPathToolThenComplete() passed after 0.075 seconds.
+✔ Test multiToolUseOrderPreservedInHistory() passed after 0.076 seconds.
+✔ Test toolErrorSelfHealsButThreeStrikesBlocks() passed after 0.077 seconds.
+✔ Test maxTurnsExhaustionBlocks() passed after 0.077 seconds.
+✔ Test unknownBlocksPreservedInHistory() passed after 0.076 seconds.
+✔ Test turnStartedPrecedesEachTurn() passed after 0.078 seconds.
+✔ Test turnRetriesTransientErrorThenCompletes() passed after 0.077 seconds.
+✔ Test pauseTurnCappedAtFiveContinuations() passed after 0.078 seconds.
+✔ Test streamsTextTurnEndToEnd() passed after 0.010 seconds.
+◇ Test unauthorizedFailsFastNoRetry() started.
+✔ Test turnRetryExhaustionSurfacesLastError() passed after 0.079 seconds.
+✔ Test unauthorizedFailsFastNoRetry() passed after 0.001 seconds.
+◇ Test overloadedRetriesThenSucceeds() started.
+✔ Test overloadedRetriesThenSucceeds() passed after 0.007 seconds.
+◇ Test honorsRetryAfterHeader() started.
+✔ Test honorsRetryAfterHeader() passed after 0.002 seconds.
+◇ Test malformedRetryAfterFallsBackAndCaps() started.
+✔ Test missingArtifactKeepsCardRunning() passed after 0.094 seconds.
+✔ Test secondSendIncludesFirstExchangeInHistory() passed after 0.095 seconds.
+✔ Test malformedRetryAfterFallsBackAndCaps() passed after 0.003 seconds.
+◇ Test retriesExhaustedThrows() started.
+✔ Test runnerBlocksCardWhenLoopBlocksItself() passed after 0.095 seconds.
+✔ Test blockRecordsTypedReason() passed after 0.094 seconds.
+✔ Test invalidHandoffKeepsCardRunning() passed after 0.095 seconds.
+✔ Test dmPersistsBothSidesAndFindsThread() passed after 0.100 seconds.
+✔ Test retriesExhaustedThrows() passed after 0.006 seconds.
+✔ Suite AnthropicProviderStubTests passed after 0.102 seconds.
+✔ Test runnerDrivesCardToDoneWithRunRecord() passed after 0.102 seconds.
+✔ Test runnerCancellationLeavesCardReady() passed after 0.188 seconds.
+✔ Test coalescerBatchesDeltas() passed after 0.194 seconds.
+✔ Test coalescerDiscardDropsPendingDeltas() passed after 0.192 seconds.
+✔ Test coalescerPreservesOrderUnderReentrancy() passed after 0.335 seconds.
+✔ Test runnerTransportErrorSetsFailedAndBlocked() passed after 6.457 seconds.
+✘ Test run with 75 tests in 1 suite failed after 6.458 seconds with 1 issue.
+warning: /Users/muzi/Library/org.swift.swiftpm/configuration is not accessible or not writable, disabling user-level cache features.
+warning: /Users/muzi/Library/org.swift.swiftpm/security is not accessible or not writable, disabling user-level cache features.
+warning: /Users/muzi/Library/Caches/org.swift.swiftpm is not accessible or not writable, disabling user-level cache features.
+warning: 'agent-loop': failed storing manifest for 'agent-loop' in cache: attempt to write a readonly database
+warning: 'grdb.swift': failed storing manifest for 'grdb.swift' in cache: attempt to write a readonly database
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test refusalBlocksImmediately() started.
+◇ Test jsonWireSafety() started.
+◇ Suite AnthropicProviderStubTests started.
+◇ Test writeReadListRoundTrip() started.
+◇ Test turnRetryExhaustionSurfacesLastError() started.
+◇ Test illegalTransitionThrows() started.
+◇ Test unknownBlocksPreservedInHistory() started.
+◇ Test systemIsStableAcrossCards() started.
+◇ Test runnerBlocksCardWhenLoopBlocksItself() started.
+◇ Test missingArtifactKeepsCardRunning() started.
+◇ Test keychainRoundTrip() started.
+◇ Test messageStopWithUnfinishedBlocksThrows() started.
+◇ Test decodeKnownBlocks() started.
+◇ Test providerErrorDescriptionsAreHuman() started.
+◇ Test secondSendIncludesFirstExchangeInHistory() started.
+◇ Test requestBodyShape() started.
+◇ Test pauseTurnCappedAtFiveContinuations() started.
+◇ Test packageBuilds() started.
+◇ Test completeCopiesArtifactBeforeDone() started.
+◇ Test handoffParsesWithoutArtifactsKey() started.
+◇ Test parsesEventDataPairs() started.
+◇ Test fetchesAndStripsHTML() started.
+◇ Test toolErrorSelfHealsButThreeStrikesBlocks() started.
+◇ Test jsonLiterals() started.
+◇ Test multiToolUseOrderPreservedInHistory() started.
+◇ Test coalescerBatchesDeltas() started.
+◇ Test malformedToolInputThrows() started.
+◇ Test apiErrorEventThrows() started.
+◇ Test normalizesBaseURL() started.
+◇ Test accumulatesTextAndToolUse() started.
+◇ Test migratesAndBootstraps() started.
+◇ Test runnerCancellationLeavesCardReady() started.
+◇ Test ignoresCommentsAndPings() started.
+◇ Test companionCRUD() started.
+◇ Test unauthorizedNotRetried() started.
+◇ Test endTurnWithoutTerminatorRemindsOnceThenBlocks() started.
+◇ Test turnStartedPrecedesEachTurn() started.
+◇ Test unknownBlockRoundTripsVerbatim() started.
+◇ Test m1ToolDefsComplete() started.
+◇ Test coalescerPreservesOrderUnderReentrancy() started.
+◇ Test unknownToolReturnsError() started.
+◇ Test eventAppendAndProjectionSameTransaction() started.
+◇ Test invalidHandoffKeepsCardRunning() started.
+◇ Test rejectsNonHTTPS() started.
+◇ Test blockRecordsTypedReason() started.
+◇ Test escapeAttemptsRejected() started.
+◇ Test handoffRequiresNonEmptyCoreFields() started.
+◇ Test finishUnknownRunThrows() started.
+◇ Test emptyToolInputBecomesEmptyObject() started.
+◇ Test happyPathToolThenComplete() started.
+◇ Test turnRetriesTransientErrorThenCompletes() started.
+◇ Test transitionUnknownCardThrows() started.
+◇ Test coalescerDiscardDropsPendingDeltas() started.
+◇ Test runnerTransportErrorSetsFailedAndBlocked() started.
+◇ Test jsonRoundTrip() started.
+◇ Test progressNoteAppendsEvent() started.
+◇ Test runnerDrivesCardToDoneWithRunRecord() started.
+◇ Test toolResultArrayContentFallsBackToUnknown() started.
+◇ Test unknownBlockDeltaThrows() started.
+◇ Test maxTurnsExhaustionBlocks() started.
+◇ Test packetContainsContractAndCard() started.
+◇ Test mockReplaysScriptInOrder() started.
+◇ Test requestBodyEncodesDeterministically() started.
+◇ Test symlinkEscapeRejected() started.
+◇ Test handoffRequiresArtifactsOrReason() started.
+◇ Test toolUseStopWithZeroBlocksThrowsMalformed() started.
+◇ Test toolResultEncoding() started.
+◇ Test missingWorkspaceExplains() started.
+◇ Test dmPersistsBothSidesAndFindsThread() started.
+◇ Test handoffParsesFromToolInput() started.
+✘ Test keychainRoundTrip() recorded an issue at SupportTests.swift:5:2: Caught error: KeychainError(status: -50)
+◇ Test streamsTextTurnEndToEnd() started.
+✔ Test jsonWireSafety() passed after 0.070 seconds.
+✔ Test systemIsStableAcrossCards() passed after 0.079 seconds.
+✔ Test providerErrorDescriptionsAreHuman() passed after 0.080 seconds.
+✔ Test packageBuilds() passed after 0.081 seconds.
+✔ Test messageStopWithUnfinishedBlocksThrows() passed after 0.082 seconds.
+✔ Test parsesEventDataPairs() passed after 0.082 seconds.
+✔ Test requestBodyShape() passed after 0.082 seconds.
+✔ Test jsonLiterals() passed after 0.082 seconds.
+✔ Test handoffParsesWithoutArtifactsKey() passed after 0.082 seconds.
+✔ Test decodeKnownBlocks() passed after 0.083 seconds.
+✔ Test apiErrorEventThrows() passed after 0.082 seconds.
+✔ Test malformedToolInputThrows() passed after 0.082 seconds.
+✔ Test normalizesBaseURL() passed after 0.082 seconds.
+✔ Test accumulatesTextAndToolUse() passed after 0.082 seconds.
+✘ Test keychainRoundTrip() failed after 0.083 seconds with 1 issue.
+✔ Test ignoresCommentsAndPings() passed after 0.085 seconds.
+✔ Test m1ToolDefsComplete() passed after 0.085 seconds.
+✔ Test unknownBlockRoundTripsVerbatim() passed after 0.085 seconds.
+✔ Test writeReadListRoundTrip() passed after 0.086 seconds.
+✔ Test unknownToolReturnsError() passed after 0.085 seconds.
+✔ Test rejectsNonHTTPS() passed after 0.086 seconds.
+✔ Test escapeAttemptsRejected() passed after 0.086 seconds.
+✔ Test handoffRequiresNonEmptyCoreFields() passed after 0.086 seconds.
+✔ Test emptyToolInputBecomesEmptyObject() passed after 0.086 seconds.
+✔ Test missingArtifactKeepsCardRunning() passed after 0.087 seconds.
+✔ Test companionCRUD() passed after 0.086 seconds.
+✔ Test illegalTransitionThrows() passed after 0.087 seconds.
+✔ Test jsonRoundTrip() passed after 0.086 seconds.
+✔ Test migratesAndBootstraps() passed after 0.087 seconds.
+✔ Test toolResultArrayContentFallsBackToUnknown() passed after 0.087 seconds.
+✔ Test unknownBlockDeltaThrows() passed after 0.087 seconds.
+✔ Test requestBodyEncodesDeterministically() passed after 0.087 seconds.
+✔ Test completeCopiesArtifactBeforeDone() passed after 0.088 seconds.
+✔ Test handoffRequiresArtifactsOrReason() passed after 0.088 seconds.
+✔ Test packetContainsContractAndCard() passed after 0.087 seconds.
+✔ Test toolResultEncoding() passed after 0.088 seconds.
+✔ Test missingWorkspaceExplains() passed after 0.088 seconds.
+✔ Test symlinkEscapeRejected() passed after 0.088 seconds.
+✔ Test handoffParsesFromToolInput() passed after 0.088 seconds.
+✔ Test invalidHandoffKeepsCardRunning() passed after 0.089 seconds.
+✔ Test finishUnknownRunThrows() passed after 0.088 seconds.
+✔ Test eventAppendAndProjectionSameTransaction() passed after 0.089 seconds.
+✔ Test transitionUnknownCardThrows() passed after 0.089 seconds.
+✔ Test fetchesAndStripsHTML() passed after 0.091 seconds.
+✔ Test refusalBlocksImmediately() passed after 0.092 seconds.
+✔ Test mockReplaysScriptInOrder() passed after 0.090 seconds.
+✔ Test unauthorizedNotRetried() passed after 0.091 seconds.
+✔ Test toolUseStopWithZeroBlocksThrowsMalformed() passed after 0.090 seconds.
+✔ Test turnStartedPrecedesEachTurn() passed after 0.091 seconds.
+✔ Test endTurnWithoutTerminatorRemindsOnceThenBlocks() passed after 0.091 seconds.
+✔ Test multiToolUseOrderPreservedInHistory() passed after 0.092 seconds.
+✔ Test happyPathToolThenComplete() passed after 0.091 seconds.
+✔ Test toolErrorSelfHealsButThreeStrikesBlocks() passed after 0.093 seconds.
+✔ Test blockRecordsTypedReason() passed after 0.092 seconds.
+✔ Test maxTurnsExhaustionBlocks() passed after 0.092 seconds.
+✔ Test unknownBlocksPreservedInHistory() passed after 0.093 seconds.
+✔ Test turnRetriesTransientErrorThenCompletes() passed after 0.092 seconds.
+✔ Test streamsTextTurnEndToEnd() passed after 0.047 seconds.
+◇ Test unauthorizedFailsFastNoRetry() started.
+✔ Test pauseTurnCappedAtFiveContinuations() passed after 0.094 seconds.
+✔ Test unauthorizedFailsFastNoRetry() passed after 0.001 seconds.
+◇ Test overloadedRetriesThenSucceeds() started.
+✔ Test turnRetryExhaustionSurfacesLastError() passed after 0.096 seconds.
+✔ Test overloadedRetriesThenSucceeds() passed after 0.007 seconds.
+◇ Test honorsRetryAfterHeader() started.
+✔ Test honorsRetryAfterHeader() passed after 0.001 seconds.
+◇ Test malformedRetryAfterFallsBackAndCaps() started.
+✔ Test runnerBlocksCardWhenLoopBlocksItself() passed after 0.110 seconds.
+✔ Test secondSendIncludesFirstExchangeInHistory() passed after 0.110 seconds.
+✔ Test progressNoteAppendsEvent() passed after 0.111 seconds.
+✔ Test malformedRetryAfterFallsBackAndCaps() passed after 0.002 seconds.
+◇ Test retriesExhaustedThrows() started.
+✔ Test runnerTransportErrorSetsFailedAndBlocked() passed after 0.117 seconds.
+✔ Test retriesExhaustedThrows() passed after 0.006 seconds.
+✔ Suite AnthropicProviderStubTests passed after 0.120 seconds.
+✔ Test runnerDrivesCardToDoneWithRunRecord() passed after 0.119 seconds.
+✔ Test dmPersistsBothSidesAndFindsThread() passed after 0.120 seconds.
+✔ Test runnerCancellationLeavesCardReady() passed after 0.148 seconds.
+✔ Test coalescerDiscardDropsPendingDeltas() passed after 0.184 seconds.
+✔ Test coalescerBatchesDeltas() passed after 0.217 seconds.
+✔ Test coalescerPreservesOrderUnderReentrancy() passed after 0.360 seconds.
+✘ Test run with 75 tests in 1 suite failed after 0.362 seconds with 1 issue.

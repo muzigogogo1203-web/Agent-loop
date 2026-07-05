@@ -3,6 +3,16 @@ import AgentLoopCore
 
 @MainActor @Observable
 final class AppStore {
+    struct ActivityItem: Identifiable, Equatable {
+        let id = UUID()
+        var text: String
+        var kind: Kind
+
+        enum Kind {
+            case start, tool, toolDone, toolError, note, retry, finish
+        }
+    }
+
     let db: AppDatabase
     let keychain = KeychainStore()
     let artifactStoreRoot: URL
@@ -30,8 +40,10 @@ final class AppStore {
     var runPhase: RunPhase = .idle
     var transcript = ""
     var progressNotes: [String] = []
+    var activityLog: [ActivityItem] = []
     var artifacts: [ArtifactRecord] = []
     private var runTask: Task<Void, Never>?
+    private var turnStartTranscriptCount = 0
 
     var chatMessages: [(role: String, text: String)] = []
     var chatStreaming = false
@@ -76,13 +88,15 @@ final class AppStore {
         expectedOutput: String,
         workspacePath: String
     ) {
+        transcript = ""
+        progressNotes = []
+        activityLog = []
+        artifacts = []
+        turnStartTranscriptCount = 0
         guard let provider = provider(model: companion.model) else {
             runPhase = .failed("请先在设置里填入 API key")
             return
         }
-        transcript = ""
-        progressNotes = []
-        artifacts = []
         runPhase = .thinking
         runTask = Task {
             do {
@@ -104,27 +118,42 @@ final class AppStore {
                     }
                 }
                 let runner = CardRunner(db: db, provider: provider, artifactStoreRoot: artifactStoreRoot)
+                activityLog.append(ActivityItem(text: "\(companion.name)开工了", kind: .start))
                 for try await event in try runner.run(
                     cardId: ids.cardId,
                     companionName: companion.name,
                     rolePrompt: companion.rolePrompt
                 ) {
                     switch event {
+                    case .turnStarted:
+                        await coalescer.flush()
+                        turnStartTranscriptCount = transcript.count
                     case .textDelta(let text):
                         await coalescer.push(text)
                     case .toolStarted(let name):
                         await coalescer.flush()
+                        activityLog.append(ActivityItem(text: "正在\(humanToolName(name))…", kind: .tool))
                         runPhase = .toolRunning(name)
-                    case .toolFinished:
+                    case .toolFinished(let name, let isError):
+                        markToolActivityFinished(name: name, isError: isError)
+                        if name == "add_progress_note", !isError {
+                            progressNotes = loadProgressNotes(cardId: ids.cardId)
+                        }
                         runPhase = .thinking
+                    case .turnRetrying(let attempt, let reason):
+                        await coalescer.flush()
+                        transcript = String(transcript.prefix(turnStartTranscriptCount))
+                        activityLog.append(ActivityItem(
+                            text: "网络波动，正在重试（\(attempt)/2）：\(reason)",
+                            kind: .retry
+                        ))
                     case .turnEnded:
                         break
                     case .finished(let outcome):
                         await coalescer.flush()
                         artifacts = (try? db.artifacts(cardId: ids.cardId)) ?? []
-                        progressNotes = (try? db.events(cardId: ids.cardId))?
-                            .filter { $0.kind == "progress_note" }
-                            .compactMap { try? JSONValue.decoded(from: $0.payloadJson)["text"]?.stringValue } ?? []
+                        progressNotes = loadProgressNotes(cardId: ids.cardId)
+                        activityLog.append(ActivityItem(text: "运行结束", kind: .finish))
                         switch outcome {
                         case .completed(let handoff):
                             runPhase = .finished(handoff.summary)
@@ -134,9 +163,44 @@ final class AppStore {
                     }
                 }
             } catch {
-                runPhase = .failed("\(error)")
+                runPhase = .failed(readableError(error))
             }
         }
+    }
+
+    private func loadProgressNotes(cardId: String) -> [String] {
+        (try? db.events(cardId: cardId))?
+            .filter { $0.kind == "progress_note" }
+            .compactMap { try? JSONValue.decoded(from: $0.payloadJson)["text"]?.stringValue } ?? []
+    }
+
+    private func markToolActivityFinished(name: String, isError: Bool) {
+        let label = humanToolName(name)
+        let pendingText = "正在\(label)…"
+        if let index = activityLog.lastIndex(where: { $0.kind == .tool && $0.text == pendingText }) {
+            activityLog[index].text = isError ? "\(label)失败" : "\(label)完成"
+            activityLog[index].kind = isError ? .toolError : .toolDone
+        }
+    }
+
+    private func humanToolName(_ name: String) -> String {
+        switch name {
+        case "write_file": return "写文件"
+        case "read_file": return "读文件"
+        case "list_dir": return "查看目录"
+        case "web_fetch": return "查网页"
+        case "complete_card": return "提交交接包"
+        case "block_card": return "报告受阻"
+        case "add_progress_note": return "汇报进展"
+        default: return name
+        }
+    }
+
+    private func readableError(_ error: Error) -> String {
+        if let urlError = error as? URLError {
+            return urlError.localizedDescription
+        }
+        return String(describing: error)
     }
 
     func revealArtifact(_ artifact: ArtifactRecord) {

@@ -311,6 +311,22 @@ public final class AppDatabase: Sendable {
         }
     }
 
+    public func appendDiagnosticEvent(cardId: String, runId: String, kind: String, payload: JSONValue) throws {
+        try pool.write { db in
+            guard let card = try CardRecord.fetchOne(db, key: cardId) else {
+                throw RecordNotFoundError(table: "card", id: cardId)
+            }
+            try Self.appendEvent(
+                db,
+                missionId: card.missionId,
+                cardId: cardId,
+                runId: runId,
+                kind: kind,
+                payload: payload
+            )
+        }
+    }
+
     // MARK: Run lifecycle
 
     public func runs(cardId: String) throws -> [RunRecord] {

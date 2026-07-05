@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public enum LoopOutcome: Sendable {
     case completed(HandoffPayload)
@@ -6,10 +7,13 @@ public enum LoopOutcome: Sendable {
 }
 
 public enum AgentEvent: Sendable {
+    /// Emitted before every provider attempt, including retried attempts for the same turn.
+    case turnStarted
     case textDelta(String)
     case toolStarted(name: String)
     case toolFinished(name: String, isError: Bool)
     case turnEnded(usage: Usage)
+    case turnRetrying(attempt: Int, reason: String)
     case finished(LoopOutcome)
 }
 
@@ -20,6 +24,8 @@ public struct AgentLoop: Sendable {
     let tools: [ToolDef]
     let maxTurns: Int
     let maxTokensPerTurn: Int
+    let retryDelays: [Duration]
+    private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "loop")
 
     public init(
         provider: any LLMProvider,
@@ -27,7 +33,8 @@ public struct AgentLoop: Sendable {
         packet: ContextPacket,
         tools: [ToolDef],
         maxTurns: Int,
-        maxTokensPerTurn: Int
+        maxTokensPerTurn: Int,
+        retryDelays: [Duration] = [.seconds(2), .seconds(4)]
     ) {
         self.provider = provider
         self.executor = executor
@@ -35,6 +42,7 @@ public struct AgentLoop: Sendable {
         self.tools = tools
         self.maxTurns = maxTurns
         self.maxTokensPerTurn = maxTokensPerTurn
+        self.retryDelays = retryDelays
     }
 
     public func run() -> AsyncThrowingStream<AgentEvent, Error> {
@@ -65,27 +73,14 @@ public struct AgentLoop: Sendable {
             turns += 1
             try Task.checkCancellation()
 
-            var turn: TurnResult?
-            for try await event in provider.streamTurn(
-                system: packet.system,
+            let result = try await providerTurnWithRetry(
                 history: history,
-                tools: tools,
-                maxTokens: maxTokensPerTurn
-            ) {
-                switch event {
-                case .textDelta(let text):
-                    continuation.yield(.textDelta(text))
-                case .turn(let result):
-                    turn = result
-                }
-            }
-
-            guard let result = turn else {
-                try Task.checkCancellation()
-                throw ProviderError.malformedStream("no turn result")
-            }
+                turnNumber: turns,
+                continuation: continuation
+            )
             history.append(.assistant(result.content))
             continuation.yield(.turnEnded(usage: result.usage))
+            Self.logger.info("turn \(turns, privacy: .public) stop_reason \(String(describing: result.stopReason), privacy: .public)")
 
             switch result.stopReason {
             case .toolUse:
@@ -148,5 +143,80 @@ public struct AgentLoop: Sendable {
         }
 
         return .blocked(reason: "budget_exhausted", detail: "达到最大轮数 \(maxTurns)")
+    }
+
+    private func providerTurnWithRetry(
+        history: [APIMessage],
+        turnNumber: Int,
+        continuation: AsyncThrowingStream<AgentEvent, Error>.Continuation
+    ) async throws -> TurnResult {
+        var retryCount = 0
+        while true {
+            continuation.yield(.turnStarted)
+            Self.logger.info("turn \(turnNumber, privacy: .public) started")
+            do {
+                var turn: TurnResult?
+                for try await event in provider.streamTurn(
+                    system: packet.system,
+                    history: history,
+                    tools: tools,
+                    maxTokens: maxTokensPerTurn
+                ) {
+                    switch event {
+                    case .textDelta(let text):
+                        continuation.yield(.textDelta(text))
+                    case .turn(let result):
+                        turn = result
+                    }
+                }
+
+                guard let result = turn else {
+                    try Task.checkCancellation()
+                    throw ProviderError.malformedStream("no turn result")
+                }
+                return result
+            } catch {
+                if error is CancellationError {
+                    throw error
+                }
+                guard retryCount < retryDelays.count, Self.isRetryable(error) else {
+                    Self.logger.error("turn \(turnNumber, privacy: .public) final error: \(Self.readableError(error), privacy: .public)")
+                    throw error
+                }
+
+                retryCount += 1
+                let reason = Self.readableError(error)
+                continuation.yield(.turnRetrying(attempt: retryCount, reason: reason))
+                Self.logger.info("turn \(turnNumber, privacy: .public) retry \(retryCount, privacy: .public): \(reason, privacy: .public)")
+                try Task.checkCancellation()
+                try await Task.sleep(for: retryDelays[retryCount - 1])
+            }
+        }
+    }
+
+    private static func isRetryable(_ error: Error) -> Bool {
+        if error is URLError {
+            return true
+        }
+        guard let providerError = error as? ProviderError else {
+            return false
+        }
+        switch providerError {
+        case .http(let status, _):
+            return (500...599).contains(status)
+        case .overloadedRetriesExhausted, .malformedStream:
+            return true
+        case .apiError(let type, _):
+            return type == "overloaded_error" || type == "api_error"
+        case .unauthorized:
+            return false
+        }
+    }
+
+    private static func readableError(_ error: Error) -> String {
+        if let urlError = error as? URLError {
+            return urlError.localizedDescription
+        }
+        return String(describing: error)
     }
 }

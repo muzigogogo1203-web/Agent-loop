@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public struct AnthropicProvider: LLMProvider {
     let apiKey: String
@@ -7,6 +8,7 @@ public struct AnthropicProvider: LLMProvider {
     let baseURL: URL
     let retryBaseDelay: Duration
     let maxRetries: Int
+    private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "provider")
 
     public init(apiKey: String, model: String, session: URLSession = .shared,
                 baseURL: URL = URL(string: "https://api.anthropic.com")!,
@@ -50,6 +52,7 @@ public struct AnthropicProvider: LLMProvider {
                                   maxTokens: maxTokens, continuation: continuation)
                     continuation.finish()
                 } catch {
+                    Self.logger.error("provider final error: \(Self.readableError(error), privacy: .public)")
                     continuation.finish(throwing: error)
                 }
             }
@@ -95,6 +98,7 @@ public struct AnthropicProvider: LLMProvider {
                     // the components-decomposition approach traps for base delays >= ~9.3s).
                     delay = retryBaseDelay * (1 << (attempt - 1))
                 }
+                Self.logger.info("provider retry status \(status, privacy: .public), attempt \(attempt, privacy: .public)")
                 try await Task.sleep(for: delay)
             default:
                 var body = ""
@@ -115,6 +119,7 @@ public struct AnthropicProvider: LLMProvider {
             guard let raw = parser.consume(line: line) else { continue }
             try acc.consume(raw) { continuation.yield(.textDelta($0)) }
             if let turn = acc.finishedTurn {
+                Self.logger.info("provider stop_reason \(String(describing: turn.stopReason), privacy: .public)")
                 continuation.yield(.turn(turn))
                 return
             }
@@ -123,6 +128,13 @@ public struct AnthropicProvider: LLMProvider {
         if acc.finishedTurn == nil {
             throw ProviderError.malformedStream("stream ended without message_stop")
         }
+    }
+
+    private static func readableError(_ error: Error) -> String {
+        if let urlError = error as? URLError {
+            return urlError.localizedDescription
+        }
+        return String(describing: error)
     }
 }
 

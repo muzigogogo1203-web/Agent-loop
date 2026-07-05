@@ -111,7 +111,12 @@ import AgentLoopCore
         assigneeId: nil, maxTurns: 10, workspacePath: workspace.path
     )
     let mock = MockProvider(script: [])  // exhausted immediately → malformedStream
-    let runner = CardRunner(db: db, provider: mock, artifactStoreRoot: base.appendingPathComponent("store"))
+    let runner = CardRunner(
+        db: db,
+        provider: mock,
+        artifactStoreRoot: base.appendingPathComponent("store"),
+        retryDelays: [.milliseconds(1), .milliseconds(1)]
+    )
 
     var threw = false
     do {

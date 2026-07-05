@@ -82,6 +82,19 @@ struct TaskRunView: View {
     private var runView: some View {
         VStack(alignment: .leading, spacing: 10) {
             statusHeader
+            if !store.activityLog.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(store.activityLog) { item in
+                        HStack(spacing: 6) {
+                            Image(systemName: activityIcon(item.kind))
+                                .frame(width: 14)
+                            Text(item.text)
+                                .font(.caption)
+                        }
+                        .foregroundStyle(activityColor(item.kind))
+                    }
+                }
+            }
             ScrollView {
                 Text(store.transcript)
                     .textSelection(.enabled)
@@ -130,6 +143,31 @@ struct TaskRunView: View {
                 .foregroundStyle(.orange)
         case .idle:
             EmptyView()
+        }
+    }
+
+    private func activityIcon(_ kind: AppStore.ActivityItem.Kind) -> String {
+        switch kind {
+        case .start: return "play.circle"
+        case .tool: return "wrench.adjustable"
+        case .toolDone: return "checkmark.circle"
+        case .toolError: return "xmark.circle"
+        case .note: return "text.bubble"
+        case .retry: return "arrow.clockwise"
+        case .finish: return "flag.checkered"
+        }
+    }
+
+    private func activityColor(_ kind: AppStore.ActivityItem.Kind) -> Color {
+        switch kind {
+        case .toolDone, .finish:
+            return .green
+        case .toolError:
+            return .red
+        case .retry:
+            return .orange
+        default:
+            return .secondary
         }
     }
 }

@@ -4,11 +4,18 @@ public struct CardRunner: Sendable {
     let db: AppDatabase
     let provider: any LLMProvider
     let artifactStoreRoot: URL
+    let retryDelays: [Duration]
 
-    public init(db: AppDatabase, provider: any LLMProvider, artifactStoreRoot: URL) {
+    public init(
+        db: AppDatabase,
+        provider: any LLMProvider,
+        artifactStoreRoot: URL,
+        retryDelays: [Duration] = [.seconds(2), .seconds(4)]
+    ) {
         self.db = db
         self.provider = provider
         self.artifactStoreRoot = artifactStoreRoot
+        self.retryDelays = retryDelays
     }
 
     public func run(
@@ -57,7 +64,8 @@ public struct CardRunner: Sendable {
             packet: packet,
             tools: ToolDef.m1Tools,
             maxTurns: card.maxTurns,
-            maxTokensPerTurn: 8192
+            maxTokensPerTurn: 8192,
+            retryDelays: retryDelays
         )
 
         return AsyncThrowingStream { continuation in
@@ -139,6 +147,7 @@ public struct CardRunner: Sendable {
                 } catch {
                     if !finalized {
                         finalized = true
+                        let detail = Self.readableError(error)
                         try? db.finishRun(
                             id: runId,
                             outcome: "failed",
@@ -146,11 +155,17 @@ public struct CardRunner: Sendable {
                             tokensIn: totalIn,
                             tokensOut: totalOut
                         )
+                        try? db.appendDiagnosticEvent(
+                            cardId: cardId,
+                            runId: runId,
+                            kind: "run_error",
+                            payload: ["error": .string(detail), "turns": .number(Double(turns))]
+                        )
                         try? blockCardIfStillRunning(
                             cardId: cardId,
                             runId: runId,
                             reason: "other",
-                            detail: "运行错误：\(error)"
+                            detail: "运行错误：\(detail)"
                         )
                     }
                     continuation.finish(throwing: error)
@@ -178,5 +193,12 @@ public struct CardRunner: Sendable {
             eventKind: "card_interrupted",
             payload: ["runId": .string(runId), "reason": "canceled"]
         )
+    }
+
+    private static func readableError(_ error: Error) -> String {
+        if let urlError = error as? URLError {
+            return urlError.localizedDescription
+        }
+        return String(describing: error)
     }
 }

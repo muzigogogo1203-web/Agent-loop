@@ -19,14 +19,81 @@ final class StubHandler: ToolHandler, @unchecked Sendable {
     }
 }
 
+private actor FlakyProvider: LLMProvider {
+    enum Failure: Sendable {
+        case url(URLError.Code)
+        case provider(ProviderError)
+
+        var error: Error {
+            switch self {
+            case .url(let code):
+                return URLError(code)
+            case .provider(let error):
+                return error
+            }
+        }
+    }
+
+    private enum Next: Sendable {
+        case failure(Failure)
+        case turn(TurnResult)
+        case exhausted
+    }
+
+    private var failures: [Failure]
+    private var script: [TurnResult]
+    private(set) var callCount = 0
+    private(set) var recordedHistories: [[APIMessage]] = []
+
+    init(failures: [Failure], script: [TurnResult]) {
+        self.failures = failures
+        self.script = script
+    }
+
+    nonisolated func streamTurn(
+        system: String,
+        history: [APIMessage],
+        tools: [ToolDef],
+        maxTokens: Int
+    ) -> AsyncThrowingStream<ProviderEvent, Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                switch await self.next(history: history) {
+                case .failure(let failure):
+                    continuation.finish(throwing: failure.error)
+                case .turn(let turn):
+                    for block in turn.content {
+                        if case .text(let text) = block {
+                            continuation.yield(.textDelta(text))
+                        }
+                    }
+                    continuation.yield(.turn(turn))
+                    continuation.finish()
+                case .exhausted:
+                    continuation.finish(throwing: ProviderError.malformedStream("flaky script exhausted"))
+                }
+            }
+        }
+    }
+
+    private func next(history: [APIMessage]) -> Next {
+        callCount += 1
+        recordedHistories.append(history)
+        if !failures.isEmpty {
+            return .failure(failures.removeFirst())
+        }
+        return script.isEmpty ? .exhausted : .turn(script.removeFirst())
+    }
+}
+
 private func runLoop(
-    script: [TurnResult],
+    provider: any LLMProvider,
     handlers: [String: any ToolHandler],
-    maxTurns: Int = 10
-) async throws -> (outcome: LoopOutcome, events: [AgentEvent], mock: MockProvider) {
-    let mock = MockProvider(script: script)
+    maxTurns: Int = 10,
+    retryDelays: [Duration] = [.seconds(2), .seconds(4)]
+) async throws -> (outcome: LoopOutcome, events: [AgentEvent]) {
     let loop = AgentLoop(
-        provider: mock,
+        provider: provider,
         executor: ToolExecutor(handlers: handlers),
         packet: ContextPacket(
             companionName: "T",
@@ -39,7 +106,8 @@ private func runLoop(
         ),
         tools: ToolDef.m1Tools,
         maxTurns: maxTurns,
-        maxTokensPerTurn: 4096
+        maxTokensPerTurn: 4096,
+        retryDelays: retryDelays
     )
     var events: [AgentEvent] = []
     var final: LoopOutcome?
@@ -49,7 +117,23 @@ private func runLoop(
             final = outcome
         }
     }
-    return (try #require(final), events, mock)
+    return (try #require(final), events)
+}
+
+private func runLoop(
+    script: [TurnResult],
+    handlers: [String: any ToolHandler],
+    maxTurns: Int = 10,
+    retryDelays: [Duration] = [.seconds(2), .seconds(4)]
+) async throws -> (outcome: LoopOutcome, events: [AgentEvent], mock: MockProvider) {
+    let mock = MockProvider(script: script)
+    let result = try await runLoop(
+        provider: mock,
+        handlers: handlers,
+        maxTurns: maxTurns,
+        retryDelays: retryDelays
+    )
+    return (result.outcome, result.events, mock)
 }
 
 private let doneHandoff: JSONValue = [
@@ -276,4 +360,165 @@ private let doneHandoff: JSONValue = [
     )
     let second = await result.mock.recordedHistories[1]
     #expect(second[1].content.first == thinking)
+}
+
+@Test func turnRetriesTransientErrorThenCompletes() async throws {
+    let handoff = try HandoffPayload.parse(from: doneHandoff).get()
+    let provider = FlakyProvider(
+        failures: [.url(.networkConnectionLost)],
+        script: [
+            TurnResult(
+                content: [.toolUse(id: "t1", name: "complete_card", input: doneHandoff)],
+                stopReason: .toolUse
+            ),
+        ]
+    )
+    let result = try await runLoop(
+        provider: provider,
+        handlers: ["complete_card": StubHandler([.completed(handoff)])],
+        retryDelays: [.milliseconds(1), .milliseconds(1)]
+    )
+
+    guard case .completed = result.outcome else {
+        Issue.record("expected completed")
+        return
+    }
+    let retryEvents = retryAttempts(in: result.events)
+    #expect(retryEvents == [1])
+    #expect(await provider.callCount == 2)
+}
+
+@Test func turnRetryExhaustionSurfacesLastError() async throws {
+    let provider = FlakyProvider(
+        failures: [.url(.networkConnectionLost), .url(.networkConnectionLost), .url(.networkConnectionLost)],
+        script: []
+    )
+    let loop = AgentLoop(
+        provider: provider,
+        executor: ToolExecutor(handlers: [:]),
+        packet: ContextPacket(
+            companionName: "T",
+            rolePrompt: "r",
+            cardTitle: "t",
+            cardDescription: "d",
+            expectedOutput: "e",
+            workspacePath: nil,
+            upstreamHandoffs: []
+        ),
+        tools: ToolDef.m1Tools,
+        maxTurns: 10,
+        maxTokensPerTurn: 4096,
+        retryDelays: [.milliseconds(1), .milliseconds(1)]
+    )
+    var events: [AgentEvent] = []
+    var caughtNetworkLost = false
+    do {
+        for try await event in loop.run() {
+            events.append(event)
+        }
+    } catch let error as URLError {
+        caughtNetworkLost = error.code == .networkConnectionLost
+    } catch {
+        Issue.record("expected URLError, got \(error)")
+    }
+
+    #expect(caughtNetworkLost)
+    #expect(retryAttempts(in: events) == [1, 2])
+    #expect(await provider.callCount == 3)
+}
+
+@Test func unauthorizedNotRetried() async throws {
+    let provider = FlakyProvider(failures: [.provider(.unauthorized)], script: [])
+    let loop = AgentLoop(
+        provider: provider,
+        executor: ToolExecutor(handlers: [:]),
+        packet: ContextPacket(
+            companionName: "T",
+            rolePrompt: "r",
+            cardTitle: "t",
+            cardDescription: "d",
+            expectedOutput: "e",
+            workspacePath: nil,
+            upstreamHandoffs: []
+        ),
+        tools: ToolDef.m1Tools,
+        maxTurns: 10,
+        maxTokensPerTurn: 4096
+    )
+    var events: [AgentEvent] = []
+    var caughtUnauthorized = false
+    do {
+        for try await event in loop.run() {
+            events.append(event)
+        }
+    } catch let error as ProviderError {
+        caughtUnauthorized = error == .unauthorized
+    } catch {
+        Issue.record("expected ProviderError.unauthorized, got \(error)")
+    }
+
+    #expect(caughtUnauthorized)
+    #expect(retryAttempts(in: events).isEmpty)
+    #expect(await provider.callCount == 1)
+}
+
+@Test func turnStartedPrecedesEachTurn() async throws {
+    let write = StubHandler([.result("已写入")])
+    let complete = StubHandler([.completed(try HandoffPayload.parse(from: doneHandoff).get())])
+    let result = try await runLoop(
+        script: [
+            TurnResult(
+                content: [
+                    .text("第一轮"),
+                    .toolUse(id: "t1", name: "write_file", input: ["path": "a.md", "content": "x"]),
+                ],
+                stopReason: .toolUse
+            ),
+            TurnResult(
+                content: [
+                    .text("第二轮"),
+                    .toolUse(id: "t2", name: "complete_card", input: doneHandoff),
+                ],
+                stopReason: .toolUse
+            ),
+        ],
+        handlers: ["write_file": write, "complete_card": complete]
+    )
+
+    let starts = result.events.indices.filter { index in
+        if case .turnStarted = result.events[index] {
+            return true
+        }
+        return false
+    }
+    let deltas = result.events.indices.filter { index in
+        if case .textDelta = result.events[index] {
+            return true
+        }
+        return false
+    }
+
+    let callCount = await result.mock.callCount
+    #expect(starts.count == callCount)
+    #expect(starts.count == 2)
+    #expect(deltas.count == 2)
+    #expect(starts[0] < deltas[0])
+    #expect(starts[1] < deltas[1])
+}
+
+@Test func providerErrorDescriptionsAreHuman() {
+    #expect(String(describing: ProviderError.unauthorized).contains("401"))
+    #expect(String(describing: ProviderError.http(status: 503, body: "gateway unavailable")).contains("503"))
+    #expect(String(describing: ProviderError.overloadedRetriesExhausted).contains("过载"))
+    #expect(String(describing: ProviderError.apiError(type: "api_error", message: "bad")).contains("api_error"))
+    #expect(String(describing: ProviderError.malformedStream("lost")).contains("响应流异常中断"))
+}
+
+private func retryAttempts(in events: [AgentEvent]) -> [Int] {
+    events.compactMap { event in
+        if case .turnRetrying(let attempt, _) = event {
+            return attempt
+        }
+        return nil
+    }
 }
