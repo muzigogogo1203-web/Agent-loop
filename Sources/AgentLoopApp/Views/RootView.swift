@@ -3,6 +3,7 @@ import AgentLoopCore
 
 enum Destination: Hashable {
     case newMission
+    case camp
     case mission(String)
     case settings
     case chat(String)
@@ -29,6 +30,10 @@ struct RootView: View {
                 newMissionButton
                     .padding(.horizontal, 12)
                     .padding(.top, 10)
+                    .padding(.bottom, 6)
+
+                campRow
+                    .padding(.horizontal, 12)
                     .padding(.bottom, 6)
 
                 List(selection: $selection) {
@@ -87,9 +92,13 @@ struct RootView: View {
             .onAppear {
                 store.reload()
             }
-            .onChange(of: selection) { _, value in
+            .onChange(of: selection) { previous, value in
                 if case .mission(let id) = value {
                     store.selectMission(id)
+                }
+                // 切走 DM 线程 → 未蒸馏增量达阈值时后台自动沉淀（D7）
+                if case .chat(let companionId) = previous, previous != value {
+                    store.autoDistillOnLeave(companionId: companionId)
                 }
             }
             .onChange(of: store.currentMissionId) { _, missionId in
@@ -97,11 +106,24 @@ struct RootView: View {
                     selection = .mission(missionId)
                 }
             }
+            .onChange(of: store.navigateToMissionId) { _, missionId in
+                // 提案确认后直达新行动
+                if let missionId {
+                    selection = .mission(missionId)
+                    store.navigateToMissionId = nil
+                }
+            }
         } detail: {
             Group {
                 switch selection {
                 case .newMission, nil:
                     TaskRunView(mode: .newMission, onNewMission: { selection = .newMission })
+                case .camp:
+                    CampHomeView(onEditGuide: {
+                        if let guideId = store.guideCompanion?.id {
+                            selection = .editCompanion(guideId)
+                        }
+                    })
                 case .mission(let id):
                     TaskRunView(mode: .mission(id), onNewMission: { selection = .newMission })
                 case .settings:
@@ -116,7 +138,9 @@ struct RootView: View {
                     }
                 case .editCompanion(let id):
                     CompanionEditorView(companionId: id) {
-                        if let id {
+                        if let id, id == store.guideCompanion?.id {
+                            selection = .camp
+                        } else if let id {
                             selection = .chat(id)
                         } else {
                             selection = .newMission
@@ -128,6 +152,29 @@ struct RootView: View {
         }
         .fontDesign(.rounded)
         .tint(Camp.ember)
+    }
+
+    private var campRow: some View {
+        Button {
+            selection = .camp
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "tent.fill")
+                Text("营地")
+                    .fontWeight(selection == .camp ? .semibold : .regular)
+                Spacer()
+            }
+            .font(.callout)
+            .foregroundStyle(selection == .camp ? Camp.ember : Camp.ink)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(
+                selection == .camp ? Camp.ember.opacity(0.14) : .clear,
+                in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private var newMissionButton: some View {

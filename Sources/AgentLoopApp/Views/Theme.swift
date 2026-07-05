@@ -171,6 +171,35 @@ enum CampStatusStyle {
     }
 }
 
+// MARK: - 底部 toast（知识层沉淀/提案反馈用）
+
+struct CampToast: ViewModifier {
+    let message: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .bottom) {
+            if let message {
+                Text(message)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Camp.canvas)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 7)
+                    .background(Camp.ink.opacity(0.92), in: Capsule())
+                    .padding(.bottom, 18)
+                    .transition(.opacity)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: message)
+            }
+        }
+    }
+}
+
+extension View {
+    func campToast(_ message: String?) -> some View {
+        modifier(CampToast(message: message))
+    }
+}
+
 // MARK: - 受阻原因人话化（原始网关/工具错误不直接见人）
 
 enum CampCopy {

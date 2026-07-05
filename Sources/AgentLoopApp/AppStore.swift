@@ -66,11 +66,48 @@ final class AppStore {
     private var chatCoalescer: DeltaCoalescer?
     private var chatStreamID = 0
 
+    // MARK: 营地首页（M4）
+
+    struct GuideMessage: Identifiable, Equatable {
+        let id: String
+        let role: String
+        let text: String
+        let proposal: SquadProposalBlock?
+    }
+
+    var campId: String?
+    var campName = "我的营地"
+    var guideCompanion: CompanionRecord?
+    var campNotes: [CampNoteRecord] = []
+    var guideMessages: [GuideMessage] = []
+    var guideStreamingText: String?
+    var guideStreaming = false
+    var guideToolActivity: String?
+    var confirmingProposals: Set<String> = []
+    var distillingGuideChat = false
+    /// 统一知识层 toast（沉淀反馈/提案过期提示），自动消失
+    var knowledgeToast: String?
+    /// 提案确认后要跳转的行动（RootView 消费后置回 nil）
+    var navigateToMissionId: String?
+    private var guideTask: Task<Void, Never>?
+    private var guideCoalescer: DeltaCoalescer?
+    private var guideStreamID = 0
+    private var toastTask: Task<Void, Never>?
+
+    // MARK: DM 记忆（M4）
+
+    var memoryNotes: [CompanionNoteRecord] = []
+    var memoryDrawerVisible = false
+    var distillingMemory = false
+
     init() {
         let keychainStore = KeychainStore()
         keychain = keychainStore
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("AgentLoop")
+        // 开发用状态目录覆盖（UI 预览时指向临时库，避免污染真实数据）
+        let appSupport = ProcessInfo.processInfo.environment["AGENTLOOP_STATE_DIR"]
+            .map { URL(fileURLWithPath: $0) }
+            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("AgentLoop")
         try! FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
         artifactStoreRoot = appSupport.appendingPathComponent("artifacts")
         db = try! AppDatabase(path: appSupport.appendingPathComponent("agentloop.sqlite").path)
@@ -112,7 +149,8 @@ final class AppStore {
     }
 
     func provider(model: String) -> AnthropicProvider? {
-        guard let key = try? keychain.get(account: "anthropic-api-key") else {
+        // 预览模式语义 = 不读钥匙串（避免系统授权弹窗）；LLM 动作统一得到「请先填 key」提示
+        guard !Self.isUIPreview, let key = try? keychain.get(account: "anthropic-api-key") else {
             return nil
         }
         let base = AnthropicProvider.normalizedBaseURL(apiBaseURL)
@@ -292,13 +330,14 @@ final class AppStore {
                 missionPhase = .error(message)
             }
         case .campNoteCreated:
-            // 收营蒸馏产出笔记；营地首页状态在 M4-6 接入后由此刷新
             reloadCampKnowledge()
         }
     }
 
-    /// M4-6 营地首页接入点（先占位，保持事件处理穷尽）
+    /// 收营蒸馏/沉淀产出笔记后刷新营地首页数据
     func reloadCampKnowledge() {
+        guard let campId else { return }
+        campNotes = (try? db.campNotes(campId: campId)) ?? []
     }
 
     private func reloadMission(missionId: String, clearNotice: Bool = true) {
@@ -405,6 +444,7 @@ final class AppStore {
         case "block_card": return "报告受阻"
         case "add_progress_note": return "汇报进展"
         case "ask_user": return "提问"
+        case "search_camp_notes": return "翻营地笔记"
         default: return name
         }
     }
@@ -529,5 +569,238 @@ final class AppStore {
         let thread = try? db.findOrCreateDMThread(companionId: companion.id)
         chatMessages = (thread.flatMap { try? db.messages(threadId: $0.id) } ?? [])
             .map { (role: $0.role, text: $0.text) }
+        reloadMemoryNotes(companionId: companion.id)
+    }
+
+    // MARK: - 营地首页（M4）
+
+    func loadCampHome() {
+        guard let camp = try? db.ensureDefaultCamp() else { return }
+        campId = camp.id
+        campName = camp.name
+        guideCompanion = try? db.guide(campId: camp.id)
+        reloadCampKnowledge()
+        reloadGuideMessages()
+    }
+
+    private func reloadGuideMessages() {
+        guard let campId, let thread = try? db.findOrCreateGuideThread(campId: campId) else { return }
+        guideMessages = ((try? db.messages(threadId: thread.id)) ?? []).map {
+            GuideMessage(id: $0.id, role: $0.role, text: $0.text, proposal: $0.proposal)
+        }
+    }
+
+    func sendGuideChat(text: String) {
+        guard !text.isEmpty, !guideStreaming, let campId else { return }
+        guard let provider = provider(model: defaultModel) else {
+            showToast("请先在设置里填入 API key")
+            return
+        }
+        guideStreamID += 1
+        let streamID = guideStreamID
+        guideStreaming = true
+        guideStreamingText = ""
+        guideToolActivity = nil
+        // 乐观呈现用户消息；后续 reload 时以落库消息为准（全量替换，不会重复）
+        guideMessages.append(GuideMessage(id: "local-user-\(streamID)", role: "user", text: text, proposal: nil))
+        let service = GuideChatService(db: db, provider: provider)
+        let coalescer = DeltaCoalescer { [weak self] batch in
+            await MainActor.run {
+                guard let self, self.guideStreamID == streamID else { return }
+                self.guideStreamingText = (self.guideStreamingText ?? "") + batch
+                self.guideToolActivity = nil
+            }
+        }
+        guideCoalescer = coalescer
+        guideTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                for try await event in try service.send(campId: campId, userText: text) {
+                    switch event {
+                    case .textDelta(let delta):
+                        await coalescer.push(delta)
+                    case .toolActivity(let name):
+                        await coalescer.flush()
+                        if guideStreamID == streamID {
+                            guideToolActivity = Self.humanGuideToolName(name)
+                        }
+                    case .proposalCreated:
+                        await coalescer.flush()
+                        if guideStreamID == streamID {
+                            reloadGuideMessages()
+                        }
+                    case .finished:
+                        break
+                    }
+                }
+                await coalescer.flush()
+            } catch {
+                await coalescer.discard()
+                if guideStreamID == streamID {
+                    showToast("向导这会儿联系不上：\(readableError(error))")
+                }
+            }
+            if guideStreamID == streamID {
+                guideStreaming = false
+                guideStreamingText = nil
+                guideToolActivity = nil
+                guideCoalescer = nil
+                guideTask = nil
+                reloadGuideMessages()
+            }
+        }
+    }
+
+    func confirmProposal(messageId: String) {
+        guard !confirmingProposals.contains(messageId) else { return }
+        guard provider(model: defaultModel) != nil else {
+            showToast("请先在设置里填入 API key")
+            return
+        }
+        confirmingProposals.insert(messageId)
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let missionId = try await orchestrator.confirmSquadProposal(
+                    messageId: messageId, plannerModel: defaultModel)
+                reloadGuideMessages()
+                reloadMissionList()
+                navigateToMissionId = missionId
+            } catch is StaleProposalError {
+                reloadGuideMessages()
+                showToast("这个提案已经处理过了")
+            } catch {
+                reloadGuideMessages()
+                showToast("建队失败：\(readableError(error))")
+            }
+            confirmingProposals.remove(messageId)
+        }
+    }
+
+    func dismissProposal(messageId: String) {
+        do {
+            try db.dismissProposalBlock(messageId: messageId)
+        } catch is StaleProposalError {
+            showToast("这个提案已经处理过了")
+        } catch {
+            showToast("操作失败：\(readableError(error))")
+        }
+        reloadGuideMessages()
+    }
+
+    func distillGuideChatNow() {
+        guard let campId, !distillingGuideChat else { return }
+        guard let provider = provider(model: defaultModel) else {
+            showToast("请先在设置里填入 API key")
+            return
+        }
+        distillingGuideChat = true
+        Task { [weak self] in
+            guard let self else { return }
+            let note = await MemoryDistillService(db: db, provider: provider).distillGuideChat(campId: campId)
+            distillingGuideChat = false
+            reloadCampKnowledge()
+            showToast(note != nil ? "已沉淀 1 条营地笔记" : "这段对话暂时没什么可记的")
+        }
+    }
+
+    // MARK: - 营地笔记 CRUD（M4）
+
+    func saveCampNoteEdits(_ note: CampNoteRecord) {
+        var updated = note
+        updated.updatedAt = Date()
+        try? db.saveCampNote(updated)
+        reloadCampKnowledge()
+    }
+
+    func deleteCampNote(id: String) {
+        try? db.deleteCampNote(id: id)
+        reloadCampKnowledge()
+    }
+
+    func toggleCampNotePin(_ note: CampNoteRecord) {
+        var updated = note
+        updated.pinned.toggle()
+        updated.updatedAt = Date()
+        try? db.saveCampNote(updated)
+        reloadCampKnowledge()
+    }
+
+    // MARK: - 伙伴记忆（M4）
+
+    func reloadMemoryNotes(companionId: String) {
+        memoryNotes = (try? db.companionNotes(companionId: companionId)) ?? []
+    }
+
+    func distillMemoryNow(companion: CompanionRecord) {
+        guard !distillingMemory else { return }
+        guard let provider = provider(model: defaultModel) else {
+            showToast("请先在设置里填入 API key")
+            return
+        }
+        distillingMemory = true
+        Task { [weak self] in
+            guard let self else { return }
+            let note = await MemoryDistillService(db: db, provider: provider)
+                .distillDM(companionId: companion.id, minMessages: 1)
+            distillingMemory = false
+            reloadMemoryNotes(companionId: companion.id)
+            showToast(note != nil ? "已记住这段对话" : "暂时没什么要记的")
+        }
+    }
+
+    /// 切走 DM 线程时的自动沉淀（D7：未蒸馏增量 ≥4 条才触发，后台静默）
+    func autoDistillOnLeave(companionId: String) {
+        // 预览模式不触发（避免钥匙串弹窗）；正常模式无 key 时静默跳过
+        guard !Self.isUIPreview, let provider = provider(model: defaultModel) else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            let note = await MemoryDistillService(db: db, provider: provider)
+                .distillDM(companionId: companionId, minMessages: MemoryDistillService.autoMinMessages)
+            if note != nil {
+                showToast("这段私聊已沉淀为记忆")
+            }
+        }
+    }
+
+    func saveMemoryEdits(_ note: CompanionNoteRecord) {
+        var updated = note
+        updated.updatedAt = Date()
+        try? db.saveCompanionNote(updated)
+        reloadMemoryNotes(companionId: note.companionId)
+    }
+
+    func deleteMemoryNote(id: String, companionId: String) {
+        try? db.deleteCompanionNote(id: id)
+        reloadMemoryNotes(companionId: companionId)
+    }
+
+    func toggleMemoryPin(_ note: CompanionNoteRecord) {
+        var updated = note
+        updated.pinned.toggle()
+        updated.updatedAt = Date()
+        try? db.saveCompanionNote(updated)
+        reloadMemoryNotes(companionId: note.companionId)
+    }
+
+    // MARK: - Toast
+
+    func showToast(_ message: String) {
+        knowledgeToast = message
+        toastTask?.cancel()
+        toastTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            self?.knowledgeToast = nil
+        }
+    }
+
+    private static func humanGuideToolName(_ name: String) -> String {
+        switch name {
+        case "search_camp_notes": return "向导翻了翻笔记本…"
+        case "camp_status": return "向导看了看营地各处…"
+        case "propose_squad": return "向导在拟组队提案…"
+        default: return "向导在忙…"
+        }
     }
 }

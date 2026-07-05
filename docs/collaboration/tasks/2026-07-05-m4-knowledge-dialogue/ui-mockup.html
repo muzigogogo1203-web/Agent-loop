@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>AgentLoop M4 UI 设计稿 — 营地首页 / 提案卡片 / 记忆抽屉</title>
+<style>
+  :root{
+    --canvas:#F7F1E6; --surface:#FFFCF5; --raised:#FFFFFF; --line:#E9DFCC;
+    --ink:#3B3128; --ink2:#8B7C6A;
+    --ember:#DE7738; --ember-deep:#C4602A; --moss:#6F8F4F; --amber:#DD9F35;
+    --stone:#A79B8A; --creek:#4A7FA6; --red:#B9553F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#EDE4D3;color:var(--ink);font-family:"SF Pro Rounded",ui-rounded,"PingFang SC",sans-serif;padding:28px;display:flex;flex-direction:column;gap:36px;align-items:center}
+  h1{font-size:20px} h1 small{color:var(--ink2);font-weight:400;font-size:13px;margin-left:10px}
+  .screen{width:1080px;background:var(--canvas);border-radius:16px;border:1px solid var(--line);box-shadow:0 10px 30px rgba(59,49,40,.12);overflow:hidden}
+  .titlebar{height:34px;display:flex;align-items:center;gap:7px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .dot{width:11px;height:11px;border-radius:50%;background:#dcd2bf}
+  .dot:first-child{background:#eb897c}.dot:nth-child(2){background:#ecc06b}.dot:nth-child(3){background:#a6c78a}
+  .titlebar span{color:var(--ink2);font-size:12px;margin-left:8px}
+  .layout{display:flex;min-height:620px}
+  /* 侧栏 */
+  .sidebar{width:210px;border-right:1px solid var(--line);padding:12px 10px;display:flex;flex-direction:column;gap:4px;background:var(--canvas)}
+  .newbtn{background:linear-gradient(#DE7738,#C4602A);color:#fff;font-weight:600;font-size:13px;border-radius:10px;padding:8px 12px;display:flex;gap:7px;align-items:center;margin-bottom:8px}
+  .navrow{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);padding:7px 10px;border-radius:8px}
+  .navrow.sel{background:rgba(222,119,56,.14);color:var(--ember);font-weight:600}
+  .navsec{font-size:11px;color:var(--ink2);margin:10px 10px 2px;font-weight:600}
+  .mini{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+  /* 营地首页 */
+  .camphome{flex:1;display:flex;flex-direction:column}
+  .campheader{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 10px}
+  .campheader .t{font-size:17px;font-weight:600}
+  .campheader .s{font-size:12px;color:var(--ink2);margin-top:3px}
+  .cols{flex:1;display:flex;gap:14px;padding:0 16px 16px}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 5px rgba(0,0,0,.05)}
+  /* 笔记本 */
+  .notes{width:340px;display:flex;flex-direction:column;overflow:hidden}
+  .notes .head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600}
+  .count{font-size:11px;color:var(--ink2);font-weight:400}
+  .search{margin:10px 12px;background:var(--raised);border:1px solid var(--line);border-radius:9px;padding:6px 10px;font-size:12px;color:var(--ink2)}
+  .grouplabel{font-size:11px;color:var(--ink2);margin:6px 14px 2px;font-weight:600}
+  .noterow{margin:3px 8px;padding:8px 10px;border-radius:9px;font-size:13px}
+  .noterow:hover,.noterow.sel{background:rgba(222,119,56,.08)}
+  .noterow .nt{display:flex;align-items:center;gap:6px;font-weight:500}
+  .noterow .nb{color:var(--ink2);font-size:11.5px;margin-top:3px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .chip{font-size:10px;padding:1.5px 7px;border-radius:99px;font-weight:600}
+  .chip.moss{color:var(--moss);background:rgba(111,143,79,.14)}
+  .chip.stone{color:var(--stone);background:rgba(167,155,138,.16)}
+  .chip.amberc{color:var(--amber);background:rgba(221,159,53,.15)}
+  .pin{color:var(--ember);font-size:11px}
+  /* 向导对话 */
+  .guide{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .chat{flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow:auto}
+  .msg{display:flex;gap:8px;align-items:flex-start}
+  .avatar{width:28px;height:28px;border-radius:50%;background:rgba(221,159,53,.22);border:1px solid rgba(221,159,53,.55);color:var(--amber);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+  .bubble{background:var(--surface);border:1px solid var(--line);border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:13px;line-height:1.55;max-width:78%}
+  .msg.user{justify-content:flex-end}
+  .msg.user .bubble{background:rgba(222,119,56,.14);border:none;border-radius:12px 4px 12px 12px}
+  .toolline{display:flex;gap:7px;align-items:center;color:var(--ink2);font-size:11.5px;margin-left:36px}
+  .dots i{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--amber);margin-right:2px;animation:b 1s infinite}
+  .dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
+  @keyframes b{0%,100%{opacity:.25}50%{opacity:1}}
+  /* 提案卡片 */
+  .proposal{margin-left:36px;width:78%;background:var(--surface);border:1.5px solid rgba(221,159,53,.75);border-radius:14px;padding:13px 14px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+  .proposal .ph{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600}
+  .proposal .ph .tag{font-size:10px;color:var(--amber);background:rgba(221,159,53,.15);padding:1.5px 7px;border-radius:99px}
+  .proposal .goal{font-size:12.5px;color:var(--ink);margin:8px 0;line-height:1.5}
+  .members{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);margin-bottom:11px}
+  .avgroup{display:flex}
+  .avgroup .mini{border:2px solid var(--surface);margin-left:-6px}
+  .avgroup .mini:first-child{margin-left:0}
+  .btnrow{display:flex;gap:8px}
+  .pbtn{background:linear-gradient(#DE7738,#C4602A);color:#fff;font-size:12.5px;font-weight:600;border-radius:9px;padding:6px 16px}
+  .sbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink2);font-size:12.5px;border-radius:9px;padding:6px 14px}
+  .proposal.ok{border-color:rgba(111,143,79,.65)}
+  .proposal.ok .ph .tag{color:var(--moss);background:rgba(111,143,79,.14)}
+  .oklink{color:var(--moss);font-size:12.5px;font-weight:600}
+  .inputbar{border-top:1px solid var(--line);background:var(--surface);padding:10px;display:flex;gap:8px;align-items:center;border-radius:0 0 14px 14px}
+  .field{flex:1;background:var(--raised);border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:12.5px;color:var(--ink2)}
+  .iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:6px 10px;font-size:12px;color:var(--ink2)}
+  .toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(59,49,40,.92);color:#F0E6D4;font-size:12px;border-radius:99px;padding:7px 16px}
+  .rel{position:relative}
+  .note-annot{font-size:12px;color:var(--ink2);padding:10px 16px 16px;line-height:1.7}
+  .kbd{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:11px}
+</style>
+</head>
+<body>
+
+<h1>屏幕一 · 营地首页<small>侧栏「营地」入口 → 左笔记本 340pt + 右向导对话；提案卡片两种状态</small></h1>
+<div class="screen">
+  <div class="titlebar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span>AgentLoop</span></div>
+  <div class="layout rel">
+    <div class="sidebar">
+      <div class="newbtn">⚑ 新行动</div>
+      <div class="navrow sel">⛺ 营地</div>
+      <div class="navsec">进行中的行动</div>
+      <div class="navrow"><span style="color:var(--creek)">●</span> 修桥备料</div>
+      <div class="navsec">伙伴</div>
+      <div class="navrow"><span class="mini" style="background:rgba(74,127,166,.2);color:var(--creek)">甲</span> 阿岭</div>
+      <div class="navrow"><span class="mini" style="background:rgba(212,84,125,.15);color:#d4547d">乙</span> 细细</div>
+      <div style="flex:1"></div>
+      <div class="navrow">⚙ 设置</div>
+    </div>
+    <div class="camphome">
+      <div class="campheader">
+        <div><div class="t">⛺ 我的营地</div><div class="s">行动的经验和向导都在这儿</div></div>
+        <div class="avatar" style="width:34px;height:34px">导</div>
+      </div>
+      <div class="cols">
+        <div class="panel notes">
+          <div class="head">营地笔记 <span class="count">4 条</span></div>
+          <div class="search">🔍 搜索笔记…</div>
+          <div class="grouplabel">置顶</div>
+          <div class="noterow"><div class="nt"><span class="pin">📌</span>北岭探索复盘 <span class="chip moss">收营</span></div><div class="nb">先看等高线再定路线；雨天路滑，装备要带防滑链…</div></div>
+          <div class="grouplabel">全部</div>
+          <div class="noterow sel"><div class="nt">营地决策：桥优先 <span class="chip amberc">向导</span></div><div class="nb">先修桥再探岭，物料从东坡运</div></div>
+          <div class="noterow"><div class="nt">装备采购清单经验 <span class="chip moss">收营</span></div><div class="nb">供应商 A 交期稳定；帐篷选双层的</div></div>
+          <div class="noterow"><div class="nt">给新伙伴的注意事项 <span class="chip stone">手记</span></div><div class="nb">工作目录里的 drafts/ 是草稿区，别直接交付</div></div>
+        </div>
+        <div class="panel guide">
+          <div class="chat">
+            <div class="msg user"><div class="bubble">营地最近情况怎么样？帮我组个队把北岭的地图画完。</div></div>
+            <div class="toolline"><span class="dots"><i></i><i></i><i></i></span> 向导看了看营地各处…</div>
+            <div class="msg"><div class="avatar">导</div><div class="bubble">修桥的行动正在收尾，2/3 个小目标完成。北岭那边上次探了一半——我记得笔记里说要先看等高线。我拟了个队：</div></div>
+            <div class="proposal">
+              <div class="ph">🏕 组队提案 · 北岭测绘队 <span class="tag">等你拿主意</span></div>
+              <div class="goal">目标：按上次复盘的路线经验，完成北岭等高线地图并交付 PDF</div>
+              <div class="members"><span class="avgroup"><span class="mini" style="background:rgba(74,127,166,.25);color:var(--creek)">甲</span><span class="mini" style="background:rgba(212,84,125,.2);color:#d4547d">乙</span></span> 阿岭、细细 <span class="chip stone">预算 66k</span></div>
+              <div class="btnrow"><span class="pbtn">就这么办 🔥</span><span class="sbtn">先不</span></div>
+            </div>
+            <div class="msg"><div class="avatar">导</div><div class="bubble" style="max-width:60%">上一次的提案已经出发了，进展我盯着呢：</div></div>
+            <div class="proposal ok">
+              <div class="ph">🏕 组队提案 · 修桥小队 <span class="tag">已开工</span></div>
+              <div class="goal">目标：修好东坡的桥，物料清单先行</div>
+              <div class="members"><span class="avgroup"><span class="mini" style="background:rgba(74,127,166,.25);color:var(--creek)">甲</span></span> 阿岭</div>
+              <div class="oklink">✓ 已开工 · 去看看 →</div>
+            </div>
+          </div>
+          <div class="inputbar"><span class="iconbtn">✨ 沉淀笔记</span><div class="field">跟向导说点什么…</div><span class="pbtn" style="padding:6px 14px">发送</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="toast">已沉淀 1 条营地笔记</div>
+  </div>
+  <div class="note-annot">
+    要点：窗口 &lt; 860pt 时笔记本自动收起（保留 <span class="kbd">📖</span> 切换钮）；提案卡片 pending=琥珀边框 / confirmed=苔绿边框+跳转 / dismissed=60% 透明；
+    向导头像随事件流呼吸（idle）/ 冒泡（流式）/ 敲打（工具中）；Reduce Motion 全部静态替代。
+  </div>
+</div>
+
+<h1>屏幕二 · 伙伴私聊 + 记忆抽屉<small>沉淀记忆按钮 + 右侧 330pt 记忆抽屉（NoteListPane 复用）</small></h1>
+<div class="screen">
+  <div class="titlebar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span>AgentLoop — 细细</span></div>
+  <div class="layout rel" style="min-height:430px">
+    <div class="sidebar">
+      <div class="newbtn">⚑ 新行动</div>
+      <div class="navrow">⛺ 营地</div>
+      <div class="navsec">伙伴</div>
+      <div class="navrow"><span class="mini" style="background:rgba(74,127,166,.2);color:var(--creek)">甲</span> 阿岭</div>
+      <div class="navrow sel"><span class="mini" style="background:rgba(212,84,125,.15);color:#d4547d">乙</span> 细细</div>
+      <div style="flex:1"></div>
+      <div class="navrow">⚙ 设置</div>
+    </div>
+    <div class="camphome">
+      <div class="campheader" style="border-bottom:1px solid var(--line);padding-bottom:12px">
+        <div class="t">细细</div>
+        <div style="display:flex;gap:8px">
+          <span class="iconbtn">✨ 沉淀记忆</span><span class="iconbtn" style="color:var(--ember);border-color:rgba(222,119,56,.4)">📖 记忆</span><span class="iconbtn">编辑伙伴</span>
+        </div>
+      </div>
+      <div class="cols" style="padding-top:12px">
+        <div class="panel guide">
+          <div class="chat">
+            <div class="msg user"><div class="bubble">以后交付物都用 markdown，标题层级别超过三级。</div></div>
+            <div class="msg"><div class="avatar" style="background:rgba(212,84,125,.15);border-color:rgba(212,84,125,.5);color:#d4547d">乙</div><div class="bubble">记住了，之后所有交付一律 markdown、控制在三级标题以内。</div></div>
+          </div>
+          <div class="inputbar"><div class="field">跟细细说点什么…</div><span class="pbtn" style="padding:6px 14px">发送</span></div>
+        </div>
+        <div class="panel notes" style="width:330px">
+          <div class="head">细细的记忆 <span class="count">2 条</span></div>
+          <div class="grouplabel">置顶</div>
+          <div class="noterow"><div class="nt"><span class="pin">📌</span>交付物格式偏好 <span class="chip amberc">私聊</span></div><div class="nb">交付一律 markdown；标题不超过三级</div></div>
+          <div class="grouplabel">全部</div>
+          <div class="noterow"><div class="nt">术语表约定 <span class="chip amberc">私聊</span></div><div class="nb">「行动」不译成 task，保留远征风命名</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note-annot">
+    要点：「沉淀记忆」手动触发（无门槛）；切走线程时未蒸馏增量 ≥4 条自动沉淀（后台静默，产出时 toast）；记忆严格按伙伴隔离，注入该伙伴的私聊与卡片执行上下文。
+  </div>
+</div>
+
+</body>
+</html>

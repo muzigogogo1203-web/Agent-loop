@@ -9,6 +9,71 @@ struct DMChatView: View {
     @State private var input = ""
 
     var body: some View {
+        GeometryReader { proxy in
+            // 记忆抽屉宽度自适应（m3.3 规则）：窄窗口锁定收起
+            let tooNarrowForDrawer = proxy.size.width < 820
+            let showDrawer = store.memoryDrawerVisible && !tooNarrowForDrawer
+
+            HStack(spacing: 0) {
+                chatColumn
+                if showDrawer {
+                    Divider().overlay(Camp.line)
+                    NoteListPane(
+                        title: "\(companion.name)的记忆",
+                        items: store.memoryNotes.map(NoteItem.init),
+                        emptyText: "还没有记忆——聊出值得记住的内容后，点「沉淀记忆」。",
+                        onSave: { id, title, body in
+                            guard var record = store.memoryNotes.first(where: { $0.id == id }) else { return }
+                            record.title = title
+                            record.bodyMd = body
+                            store.saveMemoryEdits(record)
+                        },
+                        onTogglePin: { id in
+                            guard let record = store.memoryNotes.first(where: { $0.id == id }) else { return }
+                            store.toggleMemoryPin(record)
+                        },
+                        onDelete: { store.deleteMemoryNote(id: $0, companionId: companion.id) }
+                    )
+                    .frame(width: 330)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+            }
+            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: showDrawer)
+            .background(Camp.canvas)
+            .navigationTitle(companion.name)
+            .toolbar {
+                Button {
+                    store.distillMemoryNow(companion: companion)
+                } label: {
+                    if store.distillingMemory {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label("沉淀记忆", systemImage: "sparkles")
+                    }
+                }
+                .disabled(store.distillingMemory)
+                .help("把这段对话里值得记住的内容沉淀为\(companion.name)的记忆")
+
+                Button {
+                    store.memoryDrawerVisible.toggle()
+                } label: {
+                    Label("记忆", systemImage: "book.closed")
+                        .foregroundStyle(showDrawer ? Camp.ember : Camp.inkSecondary)
+                }
+                .disabled(tooNarrowForDrawer)
+                .help(tooNarrowForDrawer ? "窗口太窄，加宽窗口后可查看记忆" : (showDrawer ? "收起记忆" : "查看记忆"))
+
+                Button("编辑伙伴", action: onEdit)
+            }
+        }
+        .campToast(store.knowledgeToast)
+        .task(id: companion.id) {
+            store.loadChatHistory(companion: companion)
+        }
+    }
+
+    private var chatColumn: some View {
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -48,14 +113,6 @@ struct DMChatView: View {
             }
             .padding(10)
             .background(Camp.surface)
-        }
-        .background(Camp.canvas)
-        .navigationTitle(companion.name)
-        .toolbar {
-            Button("编辑伙伴", action: onEdit)
-        }
-        .task(id: companion.id) {
-            store.loadChatHistory(companion: companion)
         }
     }
 
