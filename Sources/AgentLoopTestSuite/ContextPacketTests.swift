@@ -20,6 +20,20 @@ import AgentLoopCore
     #expect(user.contains("/tmp/ws"))
 }
 
+@Test func contractMentionsChunkedWrites() {
+    let packet = ContextPacket(
+        companionName: "阿规",
+        rolePrompt: "r",
+        cardTitle: "A",
+        cardDescription: "a",
+        expectedOutput: "x",
+        workspacePath: nil,
+        upstreamHandoffs: []
+    )
+    #expect(packet.system.contains("append"))
+    #expect(packet.system.contains("3000"))
+}
+
 @Test func systemIsStableAcrossCards() {
     let first = ContextPacket(
         companionName: "阿规",

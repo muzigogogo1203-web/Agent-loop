@@ -77,10 +77,11 @@ extension ToolDef {
 
     public static let writeFile = ToolDef(
         name: "write_file",
-        description: "把文本写入工作目录内的相对路径（自动创建中间目录，覆盖已有文件）。",
+        description: "把文本写入工作目录内的相对路径（自动创建中间目录）。默认覆盖已有文件；append 为 true 时在文件末尾追加（文件不存在时等同新建）。写长文件时分多次调用，用 append 续写。",
         inputSchema: objectSchema([
             "path": ["type": "string"],
             "content": ["type": "string"],
+            "append": ["type": "boolean", "description": "true 时追加到文件末尾；缺省 false 覆盖写"],
         ], required: ["path", "content"])
     )
 

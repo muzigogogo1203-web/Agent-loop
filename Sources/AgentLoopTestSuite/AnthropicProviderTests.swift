@@ -100,6 +100,24 @@ final class StubProtocol: URLProtocol {
         client?.urlProtocolDidFinishLoading(self)
     }
     override func stopLoading() {}
+
+    /// URLSession 把 httpBody 转成 bodyStream 后再交给 URLProtocol，读回完整 body 供断言用。
+    static func bodyData(of request: URLRequest) -> Data {
+        if let body = request.httpBody { return body }
+        guard let stream = request.httpBodyStream else { return Data() }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        let bufferSize = 4096
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        defer { buffer.deallocate() }
+        while stream.hasBytesAvailable {
+            let read = stream.read(buffer, maxLength: bufferSize)
+            guard read > 0 else { break }
+            data.append(buffer, count: read)
+        }
+        return data
+    }
 }
 
 func stubbedSession() -> URLSession {
@@ -191,6 +209,70 @@ func stubbedSession() -> URLSession {
     let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(), retryBaseDelay: .milliseconds(1))
     for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], toolChoice: .auto, maxTokens: 10) {}
     #expect(counter.value == 2)  // does not crash; falls back to exponential backoff
+}
+
+@Test func fallsBackToNonStreamingAfterMalformedStream() async throws {
+    let counter = Counter()
+    // 第一次：截断的 SSE（无 message_stop）→ malformedStream；
+    // 第二次：断言请求体 stream==false，返回完整 message JSON。
+    let truncatedSSE = """
+    event: message_start
+    data: {"type":"message_start","message":{"usage":{"input_tokens":5}}}
+    event: content_block_start
+    data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+    event: content_block_delta
+    data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"写到一半"}}
+    """
+    let fullMessage = """
+    {"type":"message","content":[{"type":"text","text":"完整回复"}],"stop_reason":"end_turn","usage":{"input_tokens":5,"output_tokens":9}}
+    """
+    StubProtocol.handler = { req in
+        let n = counter.bump()
+        let body = try? JSONValue.decoded(from: String(data: StubProtocol.bodyData(of: req), encoding: .utf8) ?? "")
+        if n == 1 {
+            #expect(body?["stream"]?.boolValue == true)
+            return (200, Data(truncatedSSE.utf8), ["Content-Type": "text/event-stream"])
+        }
+        #expect(body?["stream"]?.boolValue == false)
+        return (200, Data(fullMessage.utf8), ["Content-Type": "application/json"])
+    }
+    let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(), retryBaseDelay: .milliseconds(1))
+    var deltas: [String] = []; var turn: TurnResult?
+    for try await ev in p.streamTurn(system: "s", history: [.user("hi")], tools: [], toolChoice: .auto, maxTokens: 100) {
+        switch ev {
+        case .textDelta(let t): deltas.append(t)
+        case .turn(let t): turn = t
+        }
+    }
+    #expect(counter.value == 2)
+    #expect(deltas.contains("完整回复"))
+    #expect(turn?.content == [.text("完整回复")])
+    #expect(turn?.stopReason == .endTurn)
+    #expect(turn?.usage.inputTokens == 5)
+    #expect(turn?.usage.outputTokens == 9)
+}
+
+@Test func nonStreamingParsesToolUse() async throws {
+    let counter = Counter()
+    let truncatedSSE = "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":1}}}"
+    let fullMessage = """
+    {"type":"message","content":[{"type":"tool_use","id":"tu_1","name":"write_file","input":{"path":"a.md","content":"x"}}],"stop_reason":"tool_use","usage":{"input_tokens":3,"output_tokens":4}}
+    """
+    StubProtocol.handler = { _ in
+        let n = counter.bump()
+        return n == 1
+            ? (200, Data(truncatedSSE.utf8), ["Content-Type": "text/event-stream"])
+            : (200, Data(fullMessage.utf8), ["Content-Type": "application/json"])
+    }
+    let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(), retryBaseDelay: .milliseconds(1))
+    var turn: TurnResult?
+    for try await ev in p.streamTurn(system: "s", history: [.user("hi")], tools: [], toolChoice: .auto, maxTokens: 100) {
+        if case .turn(let t) = ev { turn = t }
+    }
+    #expect(turn?.stopReason == .toolUse)
+    #expect(turn?.toolUses.count == 1)
+    #expect(turn?.toolUses.first?.name == "write_file")
+    #expect(turn?.toolUses.first?.input["path"]?.stringValue == "a.md")
 }
 
 @Test func retriesExhaustedThrows() async {

@@ -43,6 +43,7 @@ public struct ContextPacket: Sendable {
         3. 工作完成并自查后，必须调用 complete_card 提交交接包（outcome/summary/artifacts/verification/risks）收尾；artifacts 必须是已写入工作目录的真实文件。
         4. 确定无法继续时调用 block_card 说明原因。
         5. complete_card 或 block_card 是仅有的两种结束方式；不要用普通文本宣布完成。
+        6. 写长文件（约超过 3000 字）时分多次 write_file：第一次不带 append 建立文件，之后每次 append: true 续写一段，每段控制在 3000 字以内。
         """
 
         var user = """

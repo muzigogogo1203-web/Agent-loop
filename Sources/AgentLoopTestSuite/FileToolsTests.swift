@@ -21,6 +21,31 @@ private func makeWorkspace() throws -> URL {
     #expect(listing.contains("清单.md"))
 }
 
+@Test func appendModeAppends() async throws {
+    let ws = try makeWorkspace()
+    let tools = FileTools(workspaceRoot: ws)
+    // 覆盖写建立文件 → 两段 append → 读回全文顺序正确
+    _ = await tools.write(input: ["path": "长文.md", "content": "第一段。"])
+    _ = await tools.write(input: ["path": "长文.md", "content": "第二段。", "append": true])
+    _ = await tools.write(input: ["path": "长文.md", "content": "第三段。", "append": true])
+    let read = await tools.read(input: ["path": "长文.md"])
+    guard case .result(let content) = read else { Issue.record("read failed"); return }
+    #expect(content == "第一段。第二段。第三段。")
+
+    // append 到不存在的文件 = 新建
+    let fresh = await tools.write(input: ["path": "新文件.md", "content": "开头", "append": true])
+    guard case .result = fresh else { Issue.record("append-to-new should succeed"); return }
+    let readFresh = await tools.read(input: ["path": "新文件.md"])
+    guard case .result(let freshContent) = readFresh else { return }
+    #expect(freshContent == "开头")
+
+    // 不带 append 仍是覆盖语义
+    _ = await tools.write(input: ["path": "长文.md", "content": "重来"])
+    let overwritten = await tools.read(input: ["path": "长文.md"])
+    guard case .result(let final) = overwritten else { return }
+    #expect(final == "重来")
+}
+
 @Test func escapeAttemptsRejected() async throws {
     let ws = try makeWorkspace()
     let tools = FileTools(workspaceRoot: ws)

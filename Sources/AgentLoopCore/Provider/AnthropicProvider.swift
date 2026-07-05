@@ -36,11 +36,11 @@ public struct AnthropicProvider: LLMProvider {
     /// system is encoded as a block array with cache_control (spec §6.3 cache-first design).
     public static func requestBody(model: String, system: String, history: [APIMessage],
                                    tools: [ToolDef], toolChoice: ToolChoice = .auto,
-                                   maxTokens: Int) -> JSONValue {
+                                   maxTokens: Int, stream: Bool = true) -> JSONValue {
         var body: [String: JSONValue] = [
             "model": .string(model),
             "max_tokens": .number(Double(maxTokens)),
-            "stream": .bool(true),
+            "stream": .bool(stream),
             "system": .array([[
                 "type": "text", "text": .string(system),
                 "cache_control": ["type": "ephemeral"],
@@ -94,19 +94,35 @@ public struct AnthropicProvider: LLMProvider {
         // Dictionary iteration order is per-process seeded.
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        request.httpBody = try encoder.encode(
-            Self.requestBody(model: model, system: system, history: history,
-                             tools: tools, toolChoice: toolChoice, maxTokens: maxTokens))
 
         var attempt = 0
+        // 网关对大体积生成频繁掐断 SSE 流；断流后本轮剩余尝试切换非流式，
+        // 避免「重试→再断流→全量重生成」恶性循环。首选路径永远是流式。
+        var useNonStreaming = false
         while true {
             attempt += 1
+            request.httpBody = try encoder.encode(
+                Self.requestBody(model: model, system: system, history: history,
+                                 tools: tools, toolChoice: toolChoice, maxTokens: maxTokens,
+                                 stream: !useNonStreaming))
             let (bytes, response) = try await session.bytes(for: request)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             switch status {
             case 200:
-                try await consumeStream(bytes, continuation: continuation)
-                return
+                if useNonStreaming {
+                    var data = Data()
+                    for try await byte in bytes { data.append(byte) }
+                    try consumeNonStreaming(data, continuation: continuation)
+                    return
+                }
+                do {
+                    try await consumeStream(bytes, continuation: continuation)
+                    return
+                } catch let error as ProviderError {
+                    guard case .malformedStream = error, attempt <= maxRetries else { throw error }
+                    useNonStreaming = true
+                    Self.logger.info("stream malformed at attempt \(attempt, privacy: .public), falling back to non-streaming")
+                }
             case 401, 403:
                 throw ProviderError.unauthorized
             case 429, 500...599:
@@ -132,6 +148,46 @@ public struct AnthropicProvider: LLMProvider {
                 throw ProviderError.http(status: status, body: body)
             }
         }
+    }
+
+    /// 非流式兜底：解析完整 message JSON。先把全部 text 块合并 yield 一次 textDelta（UI 连续性），
+    /// 再 yield .turn。仅在流式断流后作为同轮兜底使用。
+    package func consumeNonStreaming(_ data: Data,
+                                     continuation: AsyncThrowingStream<ProviderEvent, Error>.Continuation) throws {
+        guard let text = String(data: data, encoding: .utf8),
+              let v = try? JSONValue.decoded(from: text) else {
+            throw ProviderError.malformedStream("non-streaming response is not valid JSON")
+        }
+        if v["type"]?.stringValue == "error" {
+            throw ProviderError.apiError(type: v["error"]?["type"]?.stringValue ?? "unknown",
+                                         message: v["error"]?["message"]?.stringValue ?? "")
+        }
+        guard let contentArray = v["content"]?.arrayValue else {
+            throw ProviderError.malformedStream("non-streaming response missing content")
+        }
+        let decoder = JSONDecoder()
+        let encoder = JSONEncoder()
+        let blocks: [ContentBlock] = try contentArray.map {
+            try decoder.decode(ContentBlock.self, from: try encoder.encode($0))
+        }
+        var usage = Usage()
+        usage.inputTokens = v["usage"]?["input_tokens"]?.intValue ?? 0
+        usage.outputTokens = v["usage"]?["output_tokens"]?.intValue ?? 0
+        usage.cacheReadTokens = v["usage"]?["cache_read_input_tokens"]?.intValue ?? 0
+        // 缺省对齐 TurnAccumulator 的 `stopReason ?? .endTurn`
+        let turn = TurnResult(
+            content: blocks,
+            stopReason: v["stop_reason"]?.stringValue.map { StopReason(apiValue: $0) } ?? .endTurn,
+            usage: usage)
+        let mergedText = blocks.compactMap { block -> String? in
+            if case .text(let t) = block { return t }
+            return nil
+        }.joined()
+        if !mergedText.isEmpty {
+            continuation.yield(.textDelta(mergedText))
+        }
+        Self.logger.info("non-streaming fallback stop_reason \(String(describing: turn.stopReason), privacy: .public)")
+        continuation.yield(.turn(turn))
     }
 
     private func consumeStream(_ bytes: URLSession.AsyncBytes,

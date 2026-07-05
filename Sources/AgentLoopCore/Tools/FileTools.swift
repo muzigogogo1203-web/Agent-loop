@@ -83,6 +83,7 @@ public struct FileTools: Sendable {
               let content = input["content"]?.stringValue else {
             return .error("需要 path 与 content 两个参数")
         }
+        let append = input["append"]?.boolValue ?? false
         switch resolve(relative, forWrite: true) {
         case .failure(let message):
             return .error(message)
@@ -92,6 +93,13 @@ public struct FileTools: Sendable {
                     at: url.deletingLastPathComponent(),
                     withIntermediateDirectories: true
                 )
+                if append, FileManager.default.fileExists(atPath: url.path) {
+                    let handle = try FileHandle(forWritingTo: url)
+                    defer { try? handle.close() }
+                    try handle.seekToEnd()
+                    try handle.write(contentsOf: Data(content.utf8))
+                    return .result("已追加到 \(relative)（+\(content.utf8.count) 字节）")
+                }
                 try content.write(to: url, atomically: true, encoding: .utf8)
                 return .result("已写入 \(relative)（\(content.utf8.count) 字节）")
             } catch {

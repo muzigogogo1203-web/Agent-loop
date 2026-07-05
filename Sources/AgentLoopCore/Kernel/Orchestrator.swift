@@ -381,7 +381,8 @@ public actor Orchestrator {
             let stream = try CardRunner(
                 db: db,
                 provider: provider,
-                artifactStoreRoot: artifactStoreRoot
+                artifactStoreRoot: artifactStoreRoot,
+                retryDelays: KernelDefaults.transportRetryDelays
             ).run(
                 cardId: candidate.card.id,
                 companionName: candidate.companionName,

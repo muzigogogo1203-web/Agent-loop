@@ -12,6 +12,15 @@ import AgentLoopCore
     }
 }
 
+@Test func writeFileSchemaHasOptionalAppend() {
+    let schema = ToolDef.writeFile.inputSchema
+    #expect(schema["properties"]?["append"]?["type"]?.stringValue == "boolean")
+    // append 是可选参数：不在 required 里
+    let required = schema["required"]?.arrayValue?.compactMap(\.stringValue) ?? []
+    #expect(required == ["path", "content"])
+    #expect(ToolDef.writeFile.description.contains("append"))
+}
+
 @Test func unknownToolReturnsError() async {
     let exec = ToolExecutor(handlers: [:])
     let outcome = await exec.execute(name: "no_such_tool", input: .object([:]))
