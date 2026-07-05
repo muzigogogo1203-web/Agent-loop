@@ -21,12 +21,10 @@ struct CardDetailInspector: View {
                 VStack(alignment: .leading, spacing: 12) {
                     if let handoffPayload {
                         handoffSection(handoffPayload)
-                    }
-                    timelineSection
-                    if !cardArtifacts.isEmpty {
+                    } else if !cardArtifacts.isEmpty {
                         artifactsSection
                     }
-                    runsSection
+                    timelineSection
                     developerSection
                 }
                 .padding(16)
@@ -79,31 +77,36 @@ struct CardDetailInspector: View {
     // MARK: - 交接包
 
     private func handoffSection(_ handoff: HandoffPayload) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            CampSectionTitle("交接包")
-            VStack(alignment: .leading, spacing: 6) {
-                detailLine("结果", handoff.outcome)
-                detailLine("摘要", handoff.summary)
-                if let next = handoff.next, !next.isEmpty {
-                    detailLine("建议下一步", next)
-                }
-                if !handoff.verification.isEmpty {
-                    Text("验证")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Camp.inkSecondary)
+        VStack(alignment: .leading, spacing: 10) {
+            CampSectionTitle("成果")
+            Text(handoff.outcome)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Camp.ink)
+            Text(handoff.summary)
+                .font(.callout)
+                .foregroundStyle(Camp.ink)
+                .textSelection(.enabled)
+            if !cardArtifacts.isEmpty {
+                artifactRows
+            }
+            if !handoff.verification.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
                     ForEach(Array(handoff.verification.enumerated()), id: \.offset) { _, item in
                         HStack(spacing: 6) {
                             Image(systemName: item.passed ? "checkmark.circle.fill" : "xmark.circle.fill")
                                 .foregroundStyle(item.passed ? Camp.moss : Camp.charcoalRed)
                             Text("\(item.method)：\(item.note)")
-                                .foregroundStyle(Camp.ink)
+                                .foregroundStyle(Camp.inkSecondary)
                         }
                         .font(.caption)
                     }
                 }
-                if !handoff.risks.isEmpty {
-                    detailLine("风险", handoff.risks.joined(separator: "、"))
-                }
+            }
+            if let next = handoff.next, !next.isEmpty {
+                detailLine("建议下一步", next)
+            }
+            if !handoff.risks.isEmpty {
+                detailLine("风险", handoff.risks.joined(separator: "、"))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -124,26 +127,41 @@ struct CardDetailInspector: View {
 
     // MARK: - 时间线
 
+    /// 时间线只保留关键节拍（认领/进展/提问/受阻/交付），错误一律人话化；完整原始事件在开发者视角。
+    private var keyBeats: [FeedEntry] {
+        let kinds: Set<FeedEntry.Kind> = [.claimed, .progress, .question, .blocked, .delivered, .canceled]
+        let filtered = timelineEntries.filter { kinds.contains($0.kind) }
+        return Array(filtered.suffix(12))
+    }
+
     private var timelineSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            CampSectionTitle("时间线")
-            if timelineEntries.isEmpty {
+            CampSectionTitle("经过")
+            if keyBeats.isEmpty {
                 Text("还没有动静")
                     .font(.caption)
                     .foregroundStyle(Camp.inkSecondary)
             } else {
                 VStack(alignment: .leading, spacing: 7) {
-                    ForEach(timelineEntries) { entry in
+                    ForEach(keyBeats) { entry in
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: icon(for: entry.kind))
                                 .font(.caption)
                                 .foregroundStyle(iconColor(for: entry.kind))
                                 .frame(width: 16)
-                            Text(entry.text)
+                            Text(entry.kind == .blocked || entry.kind == .error
+                                 ? CampCopy.humanizeBlockedDetail(entry.text)
+                                 : entry.text)
                                 .font(.caption)
                                 .foregroundStyle(Camp.ink)
+                                .lineLimit(3)
                                 .textSelection(.enabled)
                         }
+                    }
+                    if timelineEntries.count > keyBeats.count {
+                        Text("更早的经过与完整事件在「开发者视角」里")
+                            .font(.caption2)
+                            .foregroundStyle(Camp.stone)
                     }
                 }
             }
@@ -157,83 +175,101 @@ struct CardDetailInspector: View {
     private var artifactsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             CampSectionTitle("产物")
-            ForEach(cardArtifacts, id: \.id) { artifact in
-                Button {
-                    store.revealArtifact(artifact)
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "doc.fill")
-                            .foregroundStyle(Camp.moss)
-                        Text(artifact.label)
-                            .font(.callout)
-                            .foregroundStyle(Camp.ink)
-                        Spacer()
-                        Image(systemName: "arrow.up.forward.square")
-                            .font(.caption)
-                            .foregroundStyle(Camp.inkSecondary)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
-                            .stroke(Camp.line, lineWidth: 1)
-                    )
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help("在 Finder 中显示")
-            }
+            artifactRows
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .campCard()
+    }
+
+    private var artifactRows: some View {
+        ForEach(cardArtifacts, id: \.id) { artifact in
+            Button {
+                store.revealArtifact(artifact)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.fill")
+                        .foregroundStyle(Camp.moss)
+                    Text(artifact.label)
+                        .font(.callout)
+                        .foregroundStyle(Camp.ink)
+                    Spacer()
+                    Image(systemName: "arrow.up.forward.square")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                        .stroke(Camp.line, lineWidth: 1)
+                )
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("在 Finder 中显示")
+        }
     }
 
     // MARK: - Run 历史
 
-    private var runsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            CampSectionTitle("运行记录")
-            if runRecords.isEmpty {
-                Text("暂无运行记录")
-                    .font(.caption)
-                    .foregroundStyle(Camp.inkSecondary)
-            } else {
-                VStack(alignment: .leading, spacing: 5) {
-                    ForEach(runRecords, id: \.id) { run in
-                        HStack(spacing: 8) {
-                            Text("#\(run.attempt)")
-                                .font(.caption.weight(.bold).monospacedDigit())
-                                .foregroundStyle(Camp.inkSecondary)
-                            CampChip(text: outcomeText(run.outcome), color: outcomeColor(run.outcome))
-                            Text("\(run.turns) 轮 · \(run.tokensIn + run.tokensOut) tokens")
-                                .font(.caption)
-                                .foregroundStyle(Camp.inkSecondary)
-                            Spacer()
-                        }
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .campCard()
-    }
-
-    // MARK: - 开发者视角
+    // MARK: - 开发者视角（后台细节全部收在这里）
 
     private var developerSection: some View {
         DisclosureGroup(isExpanded: $developerExpanded) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("id: \(card.id)")
-                Text("idemKey: \(card.idemKey)")
-                Text("stage: \(card.stage) · maxTurns: \(card.maxTurns) · tokenBudget: \(card.tokenBudget)")
-                if let blocked = card.blockedReasonJson {
-                    Text("blockedReasonJson: \(blocked)")
+            VStack(alignment: .leading, spacing: 10) {
+                if !runRecords.isEmpty {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("运行记录")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Camp.inkSecondary)
+                        ForEach(runRecords, id: \.id) { run in
+                            HStack(spacing: 8) {
+                                Text("#\(run.attempt)")
+                                    .font(.caption.weight(.bold).monospacedDigit())
+                                    .foregroundStyle(Camp.inkSecondary)
+                                CampChip(text: outcomeText(run.outcome), color: outcomeColor(run.outcome))
+                                Text("\(run.turns) 轮 · \(run.tokensIn + run.tokensOut) tokens")
+                                    .font(.caption)
+                                    .foregroundStyle(Camp.inkSecondary)
+                                Spacer()
+                            }
+                        }
+                    }
                 }
+
+                if !timelineEntries.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("完整事件（原始）")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Camp.inkSecondary)
+                        ForEach(timelineEntries) { entry in
+                            HStack(alignment: .top, spacing: 6) {
+                                Image(systemName: icon(for: entry.kind))
+                                    .font(.caption2)
+                                    .foregroundStyle(iconColor(for: entry.kind))
+                                    .frame(width: 14)
+                                Text(entry.text)
+                                    .font(.caption2.monospaced())
+                                    .foregroundStyle(Camp.inkSecondary)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("id: \(card.id)")
+                    Text("idemKey: \(card.idemKey)")
+                    Text("stage: \(card.stage) · maxTurns: \(card.maxTurns) · tokenBudget: \(card.tokenBudget)")
+                    if let blocked = card.blockedReasonJson {
+                        Text("blockedReasonJson: \(blocked)")
+                    }
+                }
+                .font(.caption2.monospaced())
+                .foregroundStyle(Camp.inkSecondary)
+                .textSelection(.enabled)
             }
-            .font(.caption.monospaced())
-            .foregroundStyle(Camp.inkSecondary)
-            .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 6)
         } label: {

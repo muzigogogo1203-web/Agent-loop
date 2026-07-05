@@ -53,6 +53,8 @@ final class AppStore {
     var recentlyCompleted: Set<String> = []
     var companionAnimStates: [String: CompanionAnimState] = [:]
     var theaterMode = false
+    /// 右栏（小队动态）用户偏好：是否展开
+    var feedPanelVisible = true
     var feedNotice: String?
     var selectedCardId: String?
     private var missionTask: Task<Void, Never>?

@@ -12,6 +12,7 @@ struct FeedView: View {
     var onCloseout: () -> Void
     var onInteract: () -> Void = {}
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var expandedIds: Set<String> = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -143,22 +144,74 @@ struct FeedView: View {
                     size: 26
                 )
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(name)
-                        .font(.caption2)
-                        .foregroundStyle(Camp.inkSecondary)
-                    Text(displayText(entry))
-                        .textSelection(.enabled)
-                        .font(.callout)
-                        .foregroundStyle(Camp.ink)
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, 8)
-                        .background(bubbleColor(for: entry.kind), in: UnevenRoundedRectangle(
-                            topLeadingRadius: 4, bottomLeadingRadius: 12,
-                            bottomTrailingRadius: 12, topTrailingRadius: 12, style: .continuous
-                        ))
+                    HStack(spacing: 6) {
+                        Text(name)
+                            .font(.caption2)
+                            .foregroundStyle(Camp.inkSecondary)
+                        if let tag = kindTag(entry.kind) {
+                            HStack(spacing: 3) {
+                                Image(systemName: tag.icon)
+                                    .font(.system(size: 8, weight: .bold))
+                                Text(tag.label)
+                                    .font(.caption2.weight(.semibold))
+                            }
+                            .foregroundStyle(tag.color)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 1.5)
+                            .background(tag.color.opacity(0.13), in: Capsule())
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 5) {
+                        expandableText(entry)
+                    }
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 8)
+                    .background(bubbleColor(for: entry.kind), in: UnevenRoundedRectangle(
+                        topLeadingRadius: 4, bottomLeadingRadius: 12,
+                        bottomTrailingRadius: 12, topTrailingRadius: 12, style: .continuous
+                    ))
                 }
                 Spacer(minLength: 30)
             }
+        }
+    }
+
+    /// 长消息折叠：默认 4 行，超长的可展开/收起
+    @ViewBuilder private func expandableText(_ entry: FeedEntry) -> some View {
+        let text = displayText(entry)
+        let isLong = text.count > 100
+        let expanded = expandedIds.contains(entry.id)
+
+        Text(text)
+            .textSelection(.enabled)
+            .font(.callout)
+            .foregroundStyle(Camp.ink)
+            .fontWeight(entry.kind == .delivered ? .medium : .regular)
+            .lineLimit(isLong && !expanded ? 4 : nil)
+
+        if isLong {
+            Button(expanded ? "收起" : "展开全文") {
+                onInteract()
+                if expanded {
+                    expandedIds.remove(entry.id)
+                } else {
+                    expandedIds.insert(entry.id)
+                }
+            }
+            .buttonStyle(.plain)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Camp.ember)
+        }
+    }
+
+    private func kindTag(_ kind: FeedEntry.Kind) -> (icon: String, label: String, color: Color)? {
+        switch kind {
+        case .claimed: ("hand.tap.fill", "认领", Camp.creek)
+        case .question: ("hand.raised.fill", "提问", Camp.amber)
+        case .blocked: ("exclamationmark.triangle.fill", "受阻", Camp.charcoalRed)
+        case .delivered: ("shippingbox.fill", "交付", Camp.moss)
+        case .progress: nil
+        default: nil
         }
     }
 

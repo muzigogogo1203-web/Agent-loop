@@ -192,50 +192,60 @@ struct TaskRunView: View {
     // MARK: - 行动视图
 
     private var missionView: some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 14) {
-                missionHeader
-                viewToggle
+        GeometryReader { proxy in
+            // 窄窗口自动收起右栏，避免各栏互相挤压错乱；用户偏好与自动收起互不覆盖
+            let tooNarrowForFeed = proxy.size.width < 820
+            let showFeed = store.feedPanelVisible && !tooNarrowForFeed
 
-                if store.theaterMode {
-                    CampfireTheaterView(
-                        phase: store.missionPhase,
-                        cards: store.missionCards,
-                        companions: store.cardCompanions,
-                        states: store.companionAnimStates,
-                        onSelectCard: {
-                            recordInteraction()
-                            store.selectedCardId = $0
-                        }
-                    )
-                } else {
-                    cardList
+            HStack(alignment: .top, spacing: 14) {
+                VStack(alignment: .leading, spacing: 14) {
+                    missionHeader
+                    viewToggle(feedVisible: showFeed, feedLocked: tooNarrowForFeed)
+
+                    if store.theaterMode {
+                        CampfireTheaterView(
+                            phase: store.missionPhase,
+                            cards: store.missionCards,
+                            companions: store.cardCompanions,
+                            states: store.companionAnimStates,
+                            onSelectCard: {
+                                recordInteraction()
+                                store.selectedCardId = $0
+                            }
+                        )
+                    } else {
+                        cardList
+                    }
+
+                    artifactsView
                 }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
 
-                artifactsView
+                if showFeed {
+                    FeedView(
+                        entries: store.feedEntries,
+                        pendingRequests: visiblePendingRequests,
+                        cardTitles: cardTitles,
+                        companionColors: companionColors,
+                        phase: store.missionPhase,
+                        notice: store.feedNotice,
+                        onAnswer: { requestId, answer in
+                            recordInteraction()
+                            store.answerRequest(requestId: requestId, answer: answer)
+                        },
+                        onCloseout: { store.closeoutCurrentMission() },
+                        onInteract: { recordInteraction() }
+                    )
+                    .frame(width: 330)
+                    .clipShape(RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                            .stroke(Camp.line, lineWidth: 1)
+                    )
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-
-            FeedView(
-                entries: store.feedEntries,
-                pendingRequests: visiblePendingRequests,
-                cardTitles: cardTitles,
-                companionColors: companionColors,
-                phase: store.missionPhase,
-                notice: store.feedNotice,
-                onAnswer: { requestId, answer in
-                    recordInteraction()
-                    store.answerRequest(requestId: requestId, answer: answer)
-                },
-                onCloseout: { store.closeoutCurrentMission() },
-                onInteract: { recordInteraction() }
-            )
-            .frame(width: 330)
-            .clipShape(RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
-                    .stroke(Camp.line, lineWidth: 1)
-            )
+            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: showFeed)
         }
     }
 
@@ -336,7 +346,7 @@ struct TaskRunView: View {
         .buttonStyle(CampSecondaryButtonStyle())
     }
 
-    private var viewToggle: some View {
+    private func viewToggle(feedVisible: Bool, feedLocked: Bool) -> some View {
         HStack(spacing: 8) {
             Picker("视图", selection: theaterBinding) {
                 Label("清单", systemImage: "checklist").tag(false)
@@ -350,6 +360,15 @@ struct TaskRunView: View {
                 .opacity(theaterPulse ? 1 : 0)
                 .symbolEffect(.pulse, options: .repeat(2), value: theaterPulseToken)
             Spacer()
+            Button {
+                store.feedPanelVisible.toggle()
+            } label: {
+                Image(systemName: feedVisible ? "sidebar.trailing" : "text.bubble")
+                    .foregroundStyle(feedVisible ? Camp.inkSecondary : Camp.ember)
+            }
+            .buttonStyle(CampSecondaryButtonStyle())
+            .disabled(feedLocked)
+            .help(feedLocked ? "窗口太窄，加宽窗口后可展开小队动态" : (feedVisible ? "收起小队动态" : "展开小队动态"))
         }
         .task(id: pulseTaskKey) {
             theaterPulse = false

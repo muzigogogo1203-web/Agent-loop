@@ -84,15 +84,8 @@ struct RootView: View {
             }
             .background(Camp.canvas)
             .navigationSplitViewColumnWidth(min: 200, ideal: 230)
-            .toolbar(removing: .sidebarToggle)
             .onAppear {
                 store.reload()
-            }
-            // 侧栏是常驻导航，任何宽度压力/误触都不允许把它收起
-            .onChange(of: columnVisibility) { _, value in
-                if value != .all {
-                    columnVisibility = .all
-                }
             }
             .onChange(of: selection) { _, value in
                 if case .mission(let id) = value {
