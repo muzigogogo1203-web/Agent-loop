@@ -51,6 +51,81 @@ import AgentLoopCore
     #expect(runs[0].endedAt != nil)
 }
 
+@Test func runnerCancellationLeavesCardReady() async throws {
+    let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    let workspace = base.appendingPathComponent("ws")
+    try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+    let db = try AppDatabase(path: base.appendingPathComponent("t.sqlite").path)
+    let ids = try db.createSingleCardMission(
+        campName: "c", squadName: "s", goal: "g",
+        cardTitle: "t", cardDescription: "d", expectedOutput: "e",
+        assigneeId: nil, maxTurns: 20, workspacePath: workspace.path
+    )
+    // Long script — 20 progress-note turns so it never finishes on its own
+    let script: [TurnResult] = (0..<20).map { i in
+        TurnResult(
+            content: [.toolUse(id: "n\(i)", name: "add_progress_note", input: ["text": .string("step \(i)")])],
+            stopReason: .toolUse,
+            usage: Usage(inputTokens: 10, outputTokens: 5)
+        )
+    }
+    let mock = MockProvider(script: script)
+    let runner = CardRunner(db: db, provider: mock, artifactStoreRoot: base.appendingPathComponent("store"))
+
+    let consumerTask = Task {
+        var count = 0
+        for try await _ in try runner.run(cardId: ids.cardId, companionName: "阿规", rolePrompt: "r") {
+            count += 1
+            if count >= 2 { break }   // consume a couple events then stop iterating
+        }
+    }
+
+    // Let it start, then cancel
+    try await Task.sleep(for: .milliseconds(50))
+    consumerTask.cancel()
+
+    // Poll up to 2 seconds for card to land in .ready
+    var finalStatus: CardStatus?
+    for _ in 0..<40 {
+        try await Task.sleep(for: .milliseconds(50))
+        finalStatus = try db.card(id: ids.cardId)?.status
+        if finalStatus == .ready { break }
+    }
+
+    #expect(finalStatus == .ready, "card should be .ready after cancellation, got \(String(describing: finalStatus))")
+
+    let runs = try db.runs(cardId: ids.cardId)
+    #expect(runs.count == 1)
+    #expect(runs[0].outcome == "canceled")
+}
+
+@Test func runnerTransportErrorSetsFailedAndBlocked() async throws {
+    // Empty script → MockProvider throws malformedStream on first call
+    let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    let workspace = base.appendingPathComponent("ws")
+    try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+    let db = try AppDatabase(path: base.appendingPathComponent("t.sqlite").path)
+    let ids = try db.createSingleCardMission(
+        campName: "c", squadName: "s", goal: "g",
+        cardTitle: "t", cardDescription: "d", expectedOutput: "e",
+        assigneeId: nil, maxTurns: 10, workspacePath: workspace.path
+    )
+    let mock = MockProvider(script: [])  // exhausted immediately → malformedStream
+    let runner = CardRunner(db: db, provider: mock, artifactStoreRoot: base.appendingPathComponent("store"))
+
+    var threw = false
+    do {
+        for try await _ in try runner.run(cardId: ids.cardId, companionName: "阿规", rolePrompt: "r") {}
+    } catch {
+        threw = true
+    }
+    #expect(threw, "runner should rethrow the transport error")
+    #expect(try db.card(id: ids.cardId)?.status == .blocked)
+    let runs = try db.runs(cardId: ids.cardId)
+    #expect(runs.count == 1)
+    #expect(runs[0].outcome == "failed")
+}
+
 @Test func runnerBlocksCardWhenLoopBlocksItself() async throws {
     let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     let workspace = base.appendingPathComponent("ws")

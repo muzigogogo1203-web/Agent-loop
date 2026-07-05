@@ -28,6 +28,36 @@ import AgentLoopCore
     #expect(try db.messages(threadId: thread.id).count >= 3)
 }
 
+@Test func secondSendIncludesFirstExchangeInHistory() async throws {
+    let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+    let db = try AppDatabase(path: base.appendingPathComponent("t.sqlite").path)
+    let companion = CompanionRecord.new(name: "细细", color: "coral", rolePrompt: "审校伙伴", model: "m")
+    try db.saveCompanion(companion)
+
+    let mock = MockProvider(script: [
+        TurnResult(content: [.text("回复一")], stopReason: .endTurn),
+        TurnResult(content: [.text("回复二")], stopReason: .endTurn),
+    ])
+    let chat = ChatService(db: db, provider: mock)
+
+    // First send
+    for try await _ in try chat.send(companionId: companion.id, userText: "第一条") {}
+    // Second send
+    for try await _ in try chat.send(companionId: companion.id, userText: "第二条") {}
+
+    // The second provider call should have received the first exchange in history
+    let secondHistory = await mock.recordedHistories[1]
+    // Expected: [user("第一条"), assistant("回复一"), user("第二条")]
+    #expect(secondHistory.count == 3)
+    #expect(secondHistory[0].role == .user)
+    if case .text(let t) = secondHistory[0].content.first { #expect(t == "第一条") }
+    #expect(secondHistory[1].role == .assistant)
+    if case .text(let t) = secondHistory[1].content.first { #expect(t == "回复一") }
+    #expect(secondHistory[2].role == .user)
+    if case .text(let t) = secondHistory[2].content.first { #expect(t == "第二条") }
+}
+
 private func consume(_ stream: AsyncThrowingStream<ProviderEvent, Error>) async throws {
     for try await _ in stream {}
 }

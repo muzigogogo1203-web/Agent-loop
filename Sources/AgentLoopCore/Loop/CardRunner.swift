@@ -23,13 +23,7 @@ public struct CardRunner: Sendable {
         let workspace = squad?.workspacePath.map { URL(fileURLWithPath: $0) }
         let runId = UUID().uuidString
 
-        try db.insertRun(id: runId, cardId: cardId)
-        try db.transitionCard(
-            id: cardId,
-            to: .running,
-            eventKind: "card_started",
-            payload: ["runId": .string(runId)]
-        )
+        try db.startRun(cardId: cardId, runId: runId)
 
         let board = BoardTools(
             db: db,
@@ -71,7 +65,9 @@ public struct CardRunner: Sendable {
                 var totalIn = 0
                 var totalOut = 0
                 var turns = 0
+                var finalized = false
                 do {
+                    var sawFinished = false
                     for try await event in loop.run() {
                         switch event {
                         case .turnEnded(let usage):
@@ -81,8 +77,10 @@ public struct CardRunner: Sendable {
                             continuation.yield(event)
 
                         case .finished(let outcome):
+                            sawFinished = true
                             switch outcome {
                             case .completed:
+                                finalized = true
                                 try db.finishRun(
                                     id: runId,
                                     outcome: "completed",
@@ -91,6 +89,7 @@ public struct CardRunner: Sendable {
                                     tokensOut: totalOut
                                 )
                             case .blocked(let reason, let detail):
+                                finalized = true
                                 try blockCardIfStillRunning(
                                     cardId: cardId,
                                     runId: runId,
@@ -111,21 +110,49 @@ public struct CardRunner: Sendable {
                             continuation.yield(event)
                         }
                     }
+                    // If the stream ended without a .finished event, the consumer cancelled us.
+                    if !sawFinished && !finalized {
+                        finalized = true
+                        try? db.finishRun(
+                            id: runId,
+                            outcome: "canceled",
+                            turns: turns,
+                            tokensIn: totalIn,
+                            tokensOut: totalOut
+                        )
+                        try? interruptCardIfStillRunning(cardId: cardId, runId: runId)
+                    }
+                    continuation.finish()
+                } catch is CancellationError {
+                    if !finalized {
+                        finalized = true
+                        try? db.finishRun(
+                            id: runId,
+                            outcome: "canceled",
+                            turns: turns,
+                            tokensIn: totalIn,
+                            tokensOut: totalOut
+                        )
+                        try? interruptCardIfStillRunning(cardId: cardId, runId: runId)
+                    }
                     continuation.finish()
                 } catch {
-                    try? db.finishRun(
-                        id: runId,
-                        outcome: "failed",
-                        turns: turns,
-                        tokensIn: totalIn,
-                        tokensOut: totalOut
-                    )
-                    try? blockCardIfStillRunning(
-                        cardId: cardId,
-                        runId: runId,
-                        reason: "other",
-                        detail: "运行错误：\(error)"
-                    )
+                    if !finalized {
+                        finalized = true
+                        try? db.finishRun(
+                            id: runId,
+                            outcome: "failed",
+                            turns: turns,
+                            tokensIn: totalIn,
+                            tokensOut: totalOut
+                        )
+                        try? blockCardIfStillRunning(
+                            cardId: cardId,
+                            runId: runId,
+                            reason: "other",
+                            detail: "运行错误：\(error)"
+                        )
+                    }
                     continuation.finish(throwing: error)
                 }
             }
@@ -138,5 +165,18 @@ public struct CardRunner: Sendable {
             return
         }
         try db.blockCard(id: cardId, runId: runId, reason: reason, detail: detail)
+    }
+
+    /// Transitions running→ready after a consumer cancellation (card_interrupted event).
+    private func interruptCardIfStillRunning(cardId: String, runId: String) throws {
+        guard try db.card(id: cardId)?.status == .running else {
+            return
+        }
+        try db.transitionCard(
+            id: cardId,
+            to: .ready,
+            eventKind: "card_interrupted",
+            payload: ["runId": .string(runId), "reason": "canceled"]
+        )
     }
 }

@@ -81,6 +81,7 @@ public struct AgentLoop: Sendable {
             }
 
             guard let result = turn else {
+                try Task.checkCancellation()
                 throw ProviderError.malformedStream("no turn result")
             }
             history.append(.assistant(result.content))
@@ -88,6 +89,9 @@ public struct AgentLoop: Sendable {
 
             switch result.stopReason {
             case .toolUse:
+                guard !result.toolUses.isEmpty else {
+                    throw ProviderError.malformedStream("stopReason=toolUse but no tool_use blocks in content")
+                }
                 var toolResults: [ContentBlock] = []
                 for use in result.toolUses {
                     continuation.yield(.toolStarted(name: use.name))

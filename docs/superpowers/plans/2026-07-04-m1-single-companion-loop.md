@@ -3330,4 +3330,6 @@ git tag m1
 - GRDB API 若与计划代码有出入（如 `Configuration.journalMode` 写法），以 `.build/checkouts/GRDB.swift/README.md` 为准调整——行为目标不变：WAL 池 + 事务。
 - 计划里的代码是「意图完整」的参考实现；编译器报错时修编译错误，但**不得改变测试所锁定的行为**。测试先于实现提交。
 - 测试文件一律放在 `Sources/AgentLoopTestSuite/`（计划正文中的 `Tests/AgentLoopCoreTests/` 路径按此映射）；权威测试命令是 `swift run RunTests`。
+- Task 18 的表单⇄运行转场实现为镜像方向（前进/后退语义），系有意改进并保留。
+- WebFetch 测试使用私有 stub 协议类而非共享 StubProtocol，避免跨套件并行竞态，保留。
 

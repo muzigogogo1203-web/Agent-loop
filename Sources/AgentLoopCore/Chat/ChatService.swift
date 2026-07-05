@@ -41,7 +41,10 @@ public struct ChatService: Sendable {
                         }
                         continuation.yield(event)
                     }
-                    try db.appendChatMessage(threadId: thread.id, role: "companion", text: fullReply)
+                    // Only persist when there is a full reply and we were not cancelled.
+                    if !fullReply.isEmpty && !Task.isCancelled {
+                        try db.appendChatMessage(threadId: thread.id, role: "companion", text: fullReply)
+                    }
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)

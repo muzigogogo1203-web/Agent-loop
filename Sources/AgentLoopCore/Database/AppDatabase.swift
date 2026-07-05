@@ -329,6 +329,30 @@ public final class AppDatabase: Sendable {
         }
     }
 
+    /// Atomically inserts a run row AND transitions the card ready→running in one write transaction.
+    /// A failed transition (e.g. card not ready) rolls back the run insert, preventing orphaned run rows.
+    public func startRun(cardId: String, runId: String) throws {
+        try pool.write { db in
+            let attempt = try RunRecord.filter(Column("cardId") == cardId).fetchCount(db)
+            try RunRecord(
+                id: runId, cardId: cardId, attempt: attempt + 1, outcome: nil,
+                turns: 0, tokensIn: 0, tokensOut: 0, startedAt: Date(), endedAt: nil
+            ).insert(db)
+
+            guard var card = try CardRecord.fetchOne(db, key: cardId) else {
+                throw RecordNotFoundError(table: "card", id: cardId)
+            }
+            guard card.status.canTransition(to: .running) else {
+                throw CardTransitionError(from: card.status, to: .running)
+            }
+            card.status = .running
+            card.blockedReasonJson = nil
+            try card.update(db)
+            try Self.appendEvent(db, missionId: card.missionId, cardId: cardId, runId: runId,
+                                 kind: "card_started", payload: ["runId": .string(runId)])
+        }
+    }
+
     public func finishRun(id: String, outcome: String, turns: Int, tokensIn: Int, tokensOut: Int) throws {
         try pool.write { db in
             guard var run = try RunRecord.fetchOne(db, key: id) else {

@@ -51,6 +51,18 @@ public struct HandoffPayload: Sendable, Equatable, Codable {
         self.risks = risks
     }
 
+    // Custom decode: optional keys default to [] so senders that omit them still parse.
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        outcome = try c.decode(String.self, forKey: .outcome)
+        summary = try c.decode(String.self, forKey: .summary)
+        artifacts = try c.decodeIfPresent([ArtifactDecl].self, forKey: .artifacts) ?? []
+        noArtifactReason = try c.decodeIfPresent(String.self, forKey: .noArtifactReason)
+        verification = try c.decodeIfPresent([Verification].self, forKey: .verification) ?? []
+        next = try c.decodeIfPresent(String.self, forKey: .next)
+        risks = try c.decodeIfPresent([String].self, forKey: .risks) ?? []
+    }
+
     public static func parse(from input: JSONValue) -> Result<HandoffPayload, String> {
         do {
             let data = try JSONEncoder().encode(input)

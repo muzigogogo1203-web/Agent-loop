@@ -29,6 +29,13 @@ import AgentLoopCore
     #expect(message.contains("noArtifactReason"))
 }
 
+@Test func handoffParsesWithoutArtifactsKey() throws {
+    let input: JSONValue = ["outcome": "纯讨论完成", "summary": "s", "noArtifactReason": "无文件产物",
+                            "verification": [], "risks": []]
+    let h = try HandoffPayload.parse(from: input).get()
+    #expect(h.artifacts.isEmpty)
+}
+
 @Test func handoffRequiresNonEmptyCoreFields() {
     let input: JSONValue = [
         "outcome": "",

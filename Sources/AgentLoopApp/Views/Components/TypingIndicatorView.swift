@@ -6,7 +6,7 @@ struct TypingIndicatorView: View {
 
     var body: some View {
         if reduceMotion {
-            Text("...")
+            Text("…")
                 .foregroundStyle(.secondary)
         } else {
             TimelineView(.animation(minimumInterval: 0.15)) { context in
