@@ -77,6 +77,16 @@ final class Counter: @unchecked Sendable {
     #expect(try encoder.encode(defaultBody) == encoder.encode(explicitAuto))
 }
 
+@Test func streamingSessionTimeoutDefaultsSupportSlowRelays() {
+    #expect(AnthropicProvider.streamingTimeoutIntervalForRequest == 300)
+    #expect(AnthropicProvider.streamingTimeoutIntervalForResource == 3600)
+
+    let provider = AnthropicProvider(apiKey: "k", model: "m")
+    let session = Mirror(reflecting: provider).children.first { $0.label == "session" }?.value as? URLSession
+    #expect(session?.configuration.timeoutIntervalForRequest == AnthropicProvider.streamingTimeoutIntervalForRequest)
+    #expect(session?.configuration.timeoutIntervalForResource == AnthropicProvider.streamingTimeoutIntervalForResource)
+}
+
 // URLProtocol stub
 final class StubProtocol: URLProtocol {
     nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (Int, Data, [String: String]))?

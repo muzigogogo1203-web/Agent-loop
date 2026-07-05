@@ -9,8 +9,23 @@ public struct AnthropicProvider: LLMProvider {
     let retryBaseDelay: Duration
     let maxRetries: Int
     private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "provider")
+    package static let streamingTimeoutIntervalForRequest: TimeInterval = 300
+    package static let streamingTimeoutIntervalForResource: TimeInterval = 3600
+    private static let streamingSession: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = streamingTimeoutIntervalForRequest
+        configuration.timeoutIntervalForResource = streamingTimeoutIntervalForResource
+        return URLSession(configuration: configuration)
+    }()
 
-    public init(apiKey: String, model: String, session: URLSession = .shared,
+    public init(apiKey: String, model: String,
+                baseURL: URL = URL(string: "https://api.anthropic.com")!,
+                retryBaseDelay: Duration = .seconds(1), maxRetries: Int = 3) {
+        self.init(apiKey: apiKey, model: model, session: Self.streamingSession,
+                  baseURL: baseURL, retryBaseDelay: retryBaseDelay, maxRetries: maxRetries)
+    }
+
+    public init(apiKey: String, model: String, session: URLSession,
                 baseURL: URL = URL(string: "https://api.anthropic.com")!,
                 retryBaseDelay: Duration = .seconds(1), maxRetries: Int = 3) {
         self.apiKey = apiKey; self.model = model; self.session = session
