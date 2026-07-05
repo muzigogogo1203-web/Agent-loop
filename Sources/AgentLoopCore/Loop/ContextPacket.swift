@@ -31,7 +31,9 @@ public struct ContextPacket: Sendable {
         expectedOutput: String,
         workspacePath: String?,
         upstreamHandoffs: [UpstreamHandoff],
-        answeredRequests: [(prompt: String, answer: String)] = []
+        answeredRequests: [(prompt: String, answer: String)] = [],
+        campNotes: [NoteSnippet] = [],
+        companionNotes: [NoteSnippet] = []
     ) {
         self.system = """
         你的名字是\(companionName)。\(rolePrompt)
@@ -56,6 +58,13 @@ public struct ContextPacket: Sendable {
             user += "\n工作目录：\(workspacePath)（工具中一律使用相对路径）"
         } else {
             user += "\n（本任务未绑定工作目录，文件工具不可用）"
+        }
+        // 知识注入（spec §6.2-5/6）：营地笔记 + 伙伴记忆，位置在上游交接之前；空则整段省略
+        if let campSection = NoteSnippet.renderSection(header: "营地笔记（往期经验）", snippets: campNotes) {
+            user += "\n\n" + campSection
+        }
+        if let memorySection = NoteSnippet.renderSection(header: "你的记忆", snippets: companionNotes) {
+            user += "\n\n" + memorySection
         }
         if !upstreamHandoffs.isEmpty {
             user += "\n\n# 上游交接\n" + upstreamHandoffs.map(Self.render).joined(separator: "\n---\n")

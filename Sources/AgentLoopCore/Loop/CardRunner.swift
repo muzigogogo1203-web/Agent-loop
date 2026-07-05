@@ -26,7 +26,9 @@ public struct CardRunner: Sendable {
         companionName: String,
         rolePrompt: String,
         upstreamHandoffs: [UpstreamHandoff] = [],
-        answeredRequests: [(prompt: String, answer: String)] = []
+        answeredRequests: [(prompt: String, answer: String)] = [],
+        campNotes: [NoteSnippet] = [],
+        companionNotes: [NoteSnippet] = []
     ) throws -> AsyncThrowingStream<AgentEvent, Error> {
         guard let card = try db.card(id: cardId) else {
             throw RecordNotFoundError(table: "card", id: cardId)
@@ -63,7 +65,9 @@ public struct CardRunner: Sendable {
             expectedOutput: card.expectedOutput,
             workspacePath: workspace?.path,
             upstreamHandoffs: upstreamHandoffs,
-            answeredRequests: answeredRequests
+            answeredRequests: answeredRequests,
+            campNotes: campNotes,
+            companionNotes: companionNotes
         )
         let loop = AgentLoop(
             provider: provider,

@@ -21,10 +21,14 @@ public struct ChatService: Sendable {
                 content: [.text(message.text)]
             )
         }
+        // 伙伴记忆注入（spec §10.1）：置顶全部 + 最近 3，严格按伙伴隔离
+        let (pinned, recent) = try db.pinnedAndRecentCompanionNotes(companionId: companionId)
+        let memorySection = NoteSnippet.renderSection(
+            header: "你的记忆", snippets: NoteSnippet.from(pinned: pinned, recent: recent))
         let system = """
         你的名字是\(companion.name)。\(companion.rolePrompt)
         你正在与你的用户一对一聊天，语气自然、有人情味，回答简洁。
-        """
+        """ + (memorySection.map { "\n\n" + $0 } ?? "")
 
         return AsyncThrowingStream { continuation in
             let task = Task {

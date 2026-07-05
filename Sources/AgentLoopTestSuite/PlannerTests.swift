@@ -196,3 +196,46 @@ private func persist(_ result: PlanResult, db: AppDatabase, missionId: String) t
         }
     }
 }
+
+// MARK: - 营地笔记进规划上下文（M4，spec §9-2）
+
+@Test func plannerUserPromptCarriesCampNotes() async throws {
+    let mock = MockProvider(script: [
+        TurnResult(
+            content: [.toolUse(id: "p1", name: "propose_plan", input: proposalInput(cards: [cardDraftInput(title: "A")]))],
+            stopReason: .toolUse
+        ),
+    ])
+    let planner = Planner(provider: mock, retryDelays: [])
+    _ = try await planner.propose(
+        goal: "g",
+        roster: [CompanionRecord.new(name: "甲", color: "blue", rolePrompt: "r", model: "m")],
+        workspacePath: nil,
+        campNotes: [NoteSnippet(title: "上次的教训", body: "别在雨天搭帐篷")]
+    )
+    let history = await mock.recordedHistories[0]
+    guard case .text(let user) = history.first?.content.first else {
+        Issue.record("expected text user message")
+        return
+    }
+    #expect(user.contains("# 营地笔记（往期经验）"))
+    #expect(user.contains("别在雨天搭帐篷"))
+}
+
+@Test func plannerUserPromptOmitsEmptyCampNotes() async throws {
+    let mock = MockProvider(script: [
+        TurnResult(
+            content: [.toolUse(id: "p1", name: "propose_plan", input: proposalInput(cards: [cardDraftInput(title: "A")]))],
+            stopReason: .toolUse
+        ),
+    ])
+    let planner = Planner(provider: mock, retryDelays: [])
+    _ = try await planner.propose(
+        goal: "g",
+        roster: [CompanionRecord.new(name: "甲", color: "blue", rolePrompt: "r", model: "m")],
+        workspacePath: nil
+    )
+    let history = await mock.recordedHistories[0]
+    guard case .text(let user) = history.first?.content.first else { return }
+    #expect(!user.contains("营地笔记"))
+}

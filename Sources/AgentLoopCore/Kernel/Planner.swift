@@ -86,8 +86,15 @@ public struct Planner: Sendable {
         self.retryDelays = retryDelays
     }
 
-    public func propose(goal: String, roster: [CompanionRecord], workspacePath: String?) async throws -> PlanResult {
-        var history: [APIMessage] = [.user(userPrompt(goal: goal, roster: roster, workspacePath: workspacePath))]
+    public func propose(
+        goal: String,
+        roster: [CompanionRecord],
+        workspacePath: String?,
+        campNotes: [NoteSnippet] = []
+    ) async throws -> PlanResult {
+        var history: [APIMessage] = [
+            .user(userPrompt(goal: goal, roster: roster, workspacePath: workspacePath, campNotes: campNotes)),
+        ]
         do {
             let first = try await providerTurn(history: history)
             switch parse(first, rosterCount: roster.count) {
@@ -170,12 +177,14 @@ public struct Planner: Sendable {
         }
     }
 
-    private func userPrompt(goal: String, roster: [CompanionRecord], workspacePath: String?) -> String {
+    private func userPrompt(
+        goal: String, roster: [CompanionRecord], workspacePath: String?, campNotes: [NoteSnippet]
+    ) -> String {
         let rosterText = roster.enumerated().map { index, companion in
             "\(index). \(companion.name) — \(Self.truncate(Self.firstLine(companion.rolePrompt), max: 40))"
         }.joined(separator: "\n")
         let workspace = workspacePath == nil ? "未绑定工作目录" : "工作目录：\(workspacePath!)"
-        return """
+        var prompt = """
         目标原文：
         \(goal)
 
@@ -183,9 +192,13 @@ public struct Planner: Sendable {
         \(rosterText)
 
         \(workspace)
-
-        请规划 2–4 张串行依赖的小目标卡。每卡必须有可验证的 expectedOutput，assignee 只能填名册序号，dependsOn 只能引用更早的卡序号。
         """
+        // 开工带经验（spec §9-2）：营地置顶+最近笔记进规划上下文
+        if let notesSection = NoteSnippet.renderSection(header: "营地笔记（往期经验）", snippets: campNotes) {
+            prompt += "\n\n" + notesSection
+        }
+        prompt += "\n\n请规划 2–4 张串行依赖的小目标卡。每卡必须有可验证的 expectedOutput，assignee 只能填名册序号，dependsOn 只能引用更早的卡序号。"
+        return prompt
     }
 
     private static let systemPrompt = """

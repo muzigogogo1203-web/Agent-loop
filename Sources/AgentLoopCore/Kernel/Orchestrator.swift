@@ -74,7 +74,10 @@ public actor Orchestrator {
             do {
                 let roster = try db.companions(ids: companionIds)
                 let planner = Planner(provider: makeProvider(plannerModel))
-                let result = try await planner.propose(goal: goal, roster: roster, workspacePath: workspacePath)
+                // 开工带经验（spec §9-2）：规划上下文附带营地笔记
+                let campNotes = self.loadCampNotes(campId: try db.squad(forMission: missionId)?.campId)
+                let result = try await planner.propose(
+                    goal: goal, roster: roster, workspacePath: workspacePath, campNotes: campNotes)
                 if let reason = result.fallbackReason {
                     try db.recordPlanFallback(missionId: missionId, reason: reason)
                 }
@@ -454,6 +457,9 @@ public actor Orchestrator {
             let upstream = try loadUpstreamHandoffs(for: candidate.card)
             let answeredRequests = try db.answeredRequests(cardId: candidate.card.id)
                 .map { (prompt: $0.prompt, answer: $0.humanAnswer()) }
+            // 知识注入（spec §6.2-5/6）：营地笔记 + 该伙伴的记忆
+            let campNotes = loadCampNotes(campId: try db.squad(forCard: candidate.card.id)?.campId)
+            let companionNotes = loadCompanionNotes(companionId: candidate.assigneeId)
             let stream = try CardRunner(
                 db: db,
                 provider: provider,
@@ -464,7 +470,9 @@ public actor Orchestrator {
                 companionName: candidate.companionName,
                 rolePrompt: candidate.rolePrompt,
                 upstreamHandoffs: upstream,
-                answeredRequests: answeredRequests
+                answeredRequests: answeredRequests,
+                campNotes: campNotes,
+                companionNotes: companionNotes
             )
             for try await event in stream {
                 await emitFromTask(.cardEvent(cardId: candidate.card.id, event))
@@ -480,6 +488,18 @@ public actor Orchestrator {
             await emitFromTask(.kernelError(missionId: candidate.card.missionId, message: message))
         }
         await runnerFinished(cardId: candidate.card.id, missionId: candidate.card.missionId)
+    }
+
+    /// 知识注入是旁路增强：读取失败不阻塞规划/派发，静默为空。
+    private func loadCampNotes(campId: String?) -> [NoteSnippet] {
+        guard let campId,
+              let notes = try? db.pinnedAndRecentCampNotes(campId: campId) else { return [] }
+        return NoteSnippet.from(pinned: notes.pinned, recent: notes.recent)
+    }
+
+    private func loadCompanionNotes(companionId: String) -> [NoteSnippet] {
+        guard let notes = try? db.pinnedAndRecentCompanionNotes(companionId: companionId) else { return [] }
+        return NoteSnippet.from(pinned: notes.pinned, recent: notes.recent)
     }
 
     private func loadUpstreamHandoffs(for card: CardRecord) throws -> [UpstreamHandoff] {

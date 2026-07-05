@@ -61,3 +61,41 @@ import AgentLoopCore
 private func consume(_ stream: AsyncThrowingStream<ProviderEvent, Error>) async throws {
     for try await _ in stream {}
 }
+
+// MARK: - 伙伴记忆注入 DM system（M4，spec §10.1）
+
+@Test func dmSystemCarriesCompanionMemory() async throws {
+    let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+    let db = try AppDatabase(path: base.appendingPathComponent("t.sqlite").path)
+    let companion = CompanionRecord.new(name: "细细", color: "coral", rolePrompt: "审校伙伴", model: "m")
+    let other = CompanionRecord.new(name: "别人", color: "blue", rolePrompt: "r", model: "m")
+    try db.saveCompanion(companion)
+    try db.saveCompanion(other)
+    try db.saveCompanionNote(.new(companionId: companion.id, title: "用户偏好", bodyMd: "交付物要 markdown"))
+    try db.saveCompanionNote(.new(companionId: other.id, title: "别人的记忆", bodyMd: "不该出现"))
+
+    let mock = MockProvider(script: [TurnResult(content: [.text("好")], stopReason: .endTurn)])
+    let chat = ChatService(db: db, provider: mock)
+    for try await _ in try chat.send(companionId: companion.id, userText: "在吗") {}
+
+    let system = await mock.recordedSystems[0]
+    #expect(system.contains("# 你的记忆"))
+    #expect(system.contains("交付物要 markdown"))
+    // 记忆严格按伙伴隔离
+    #expect(!system.contains("别人的记忆"))
+}
+
+@Test func dmSystemOmitsMemoryWhenNone() async throws {
+    let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+    let db = try AppDatabase(path: base.appendingPathComponent("t.sqlite").path)
+    let companion = CompanionRecord.new(name: "细细", color: "coral", rolePrompt: "审校伙伴", model: "m")
+    try db.saveCompanion(companion)
+
+    let mock = MockProvider(script: [TurnResult(content: [.text("好")], stopReason: .endTurn)])
+    let chat = ChatService(db: db, provider: mock)
+    for try await _ in try chat.send(companionId: companion.id, userText: "在吗") {}
+    let system = await mock.recordedSystems[0]
+    #expect(!system.contains("你的记忆"))
+}
