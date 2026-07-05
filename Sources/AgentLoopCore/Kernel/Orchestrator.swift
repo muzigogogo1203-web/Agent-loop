@@ -8,6 +8,8 @@ public enum KernelEvent: Sendable {
     case missionChanged(missionId: String)
     case cardEvent(cardId: String, AgentEvent)
     case kernelError(missionId: String, message: String)
+    /// 收营蒸馏产出营地笔记（source: "closeout" | "fallback"）
+    case campNoteCreated(missionId: String, noteId: String)
 }
 
 public struct MissionStateError: Error, Sendable, Equatable {
@@ -28,6 +30,7 @@ public actor Orchestrator {
     private let artifactStoreRoot: URL
     private var running: [String: RunningEntry] = [:]
     private var planningTasks: [String: Task<Void, Never>] = [:]
+    private var distillTasks: [String: Task<Void, Never>] = [:]
     private var continuations: [UUID: AsyncStream<KernelEvent>.Continuation] = [:]
     private let tickInterval: Duration?
     private var tickTask: Task<Void, Never>?
@@ -316,7 +319,7 @@ public actor Orchestrator {
         await reconcile()
     }
 
-    public func closeout(_ missionId: String) async throws {
+    public func closeout(_ missionId: String, distillModel: String) async throws {
         try await db.pool.write { database in
             guard var mission = try MissionRecord.fetchOne(database, key: missionId) else {
                 throw RecordNotFoundError(table: "mission", id: missionId)
@@ -339,11 +342,77 @@ public actor Orchestrator {
             )
         }
         emit(.missionChanged(missionId: missionId))
+        scheduleCloseoutDistillation(missionId: missionId, model: distillModel)
+    }
+
+    /// 收营蒸馏旁路（spec §9-1，plan D1）：绝不阻塞收营；任何路径都产出一张笔记。
+    private func scheduleCloseoutDistillation(missionId: String, model: String) {
+        guard distillTasks[missionId] == nil else { return }
+        let task = Task {
+            await self.runCloseoutDistillation(missionId: missionId, model: model)
+            await self.finishDistillation(missionId)
+        }
+        distillTasks[missionId] = task
+    }
+
+    private func runCloseoutDistillation(missionId: String, model: String) async {
+        do {
+            let input = try await db.pool.read { database -> (campId: String, goal: String, cards: [Distiller.CardDigest]) in
+                guard let mission = try MissionRecord.fetchOne(database, key: missionId),
+                      let squad = try SquadRecord.fetchOne(database, key: mission.squadId) else {
+                    throw RecordNotFoundError(table: "mission/squad", id: missionId)
+                }
+                let doneCards = try CardRecord
+                    .filter(Column("missionId") == missionId && Column("status") == CardStatus.done.rawValue)
+                    .order(Column("stage"))
+                    .fetchAll(database)
+                let digests = doneCards.map { card -> Distiller.CardDigest in
+                    let handoff = card.handoffJson.flatMap {
+                        try? JSONDecoder().decode(HandoffPayload.self, from: Data($0.utf8))
+                    }
+                    return Distiller.CardDigest(
+                        title: card.title,
+                        outcome: handoff?.outcome ?? "（无交接包）",
+                        summary: handoff?.summary ?? "",
+                        risks: handoff?.risks ?? []
+                    )
+                }
+                let goal = mission.goalRefined.isEmpty ? mission.goalRaw : mission.goalRefined
+                return (squad.campId, goal, digests)
+            }
+
+            let distiller = Distiller(provider: makeProvider(model))
+            let (note, fallback) = await distiller.distillCloseout(goal: input.goal, cards: input.cards)
+            let record = CampNoteRecord.new(
+                campId: input.campId, missionId: missionId,
+                title: note.title, bodyMd: note.bodyMd)
+            try await db.pool.write { database in
+                try record.insert(database)
+                try AppDatabase.appendEvent(
+                    database, missionId: missionId, cardId: nil, runId: nil,
+                    kind: "camp_note_created",
+                    payload: [
+                        "noteId": .string(record.id),
+                        "source": .string(fallback ? "fallback" : "closeout"),
+                    ]
+                )
+            }
+            emit(.campNoteCreated(missionId: missionId, noteId: record.id))
+            emit(.missionChanged(missionId: missionId))
+        } catch {
+            let message = "收营蒸馏落库失败：\(String(describing: error))"
+            db.appendKernelErrorEvent(missionId: missionId, message: message)
+            emit(.kernelError(missionId: missionId, message: message))
+        }
+    }
+
+    private func finishDistillation(_ missionId: String) {
+        distillTasks.removeValue(forKey: missionId)
     }
 
     public func waitUntilIdle() async {
         while true {
-            if running.isEmpty && planningTasks.isEmpty && !reconciling {
+            if running.isEmpty && planningTasks.isEmpty && distillTasks.isEmpty && !reconciling {
                 return
             }
             try? await Task.sleep(for: .milliseconds(10))
@@ -359,14 +428,21 @@ public actor Orchestrator {
         for (_, entry) in running {
             entry.task.cancel()
         }
+        for (_, task) in distillTasks {
+            task.cancel()
+        }
         for (_, task) in planningTasks {
             await task.value
         }
         for (_, entry) in running {
             await entry.task.value
         }
+        for (_, task) in distillTasks {
+            await task.value
+        }
         planningTasks.removeAll()
         running.removeAll()
+        distillTasks.removeAll()
         for (_, continuation) in continuations {
             continuation.finish()
         }

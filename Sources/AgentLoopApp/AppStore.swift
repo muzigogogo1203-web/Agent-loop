@@ -174,7 +174,7 @@ final class AppStore {
         missionTask = Task { [weak self] in
             guard let self else { return }
             do {
-                try await orchestrator.closeout(currentMissionId)
+                try await orchestrator.closeout(currentMissionId, distillModel: defaultModel)
                 reloadMission(missionId: currentMissionId)
                 reloadMissionList()
             } catch {
@@ -291,7 +291,14 @@ final class AppStore {
                 }
                 missionPhase = .error(message)
             }
+        case .campNoteCreated:
+            // 收营蒸馏产出笔记；营地首页状态在 M4-6 接入后由此刷新
+            reloadCampKnowledge()
         }
+    }
+
+    /// M4-6 营地首页接入点（先占位，保持事件处理穷尽）
+    func reloadCampKnowledge() {
     }
 
     private func reloadMission(missionId: String, clearNotice: Bool = true) {

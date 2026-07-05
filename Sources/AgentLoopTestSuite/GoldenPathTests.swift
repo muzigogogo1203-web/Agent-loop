@@ -154,7 +154,7 @@ private func goldenCardDraftInput(
     #expect(artifacts.count == 1)
     #expect(FileManager.default.fileExists(atPath: try #require(artifacts.first?.path)))
 
-    try await orch.closeout(missionId)
+    try await orch.closeout(missionId, distillModel: "distill-model")
     #expect(try db.mission(id: missionId)?.status == .accepted)
     #expect(modelCalls.values.contains("model-a"))
     #expect(modelCalls.values.contains("model-b"))

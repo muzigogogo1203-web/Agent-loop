@@ -532,7 +532,7 @@ private func orchestrationRuns(_ db: AppDatabase, missionId: String) throws -> [
         outcome: "done", summary: "done", artifacts: [], noArtifactReason: "none", verification: [], risks: []
     ), durableArtifacts: [])
     let orch = try orchestrator(db: db, provider: MockProvider(script: []))
-    try await orch.closeout(ids.missionId)
+    try await orch.closeout(ids.missionId, distillModel: "distill-model")
     #expect(try db.mission(id: ids.missionId)?.status == .accepted)
     await orch.shutdown()
 }
@@ -544,7 +544,64 @@ private func orchestrationRuns(_ db: AppDatabase, missionId: String) throws -> [
     ])
     let orch = try orchestrator(db: db, provider: MockProvider(script: []))
     await #expect(throws: MissionStateError.self) {
-        try await orch.closeout(missionId)
+        try await orch.closeout(missionId, distillModel: "distill-model")
     }
+    await orch.shutdown()
+}
+
+// MARK: - 收营蒸馏旁路（M4，spec §9-1）
+
+@Test func closeoutDistillsFallbackNoteOnProviderFailure() async throws {
+    let db = try orchestratorTempDB()
+    let camp = try db.ensureDefaultCamp()
+    let ids = try db.createSingleCardMission(
+        campName: "c", squadName: "s", goal: "探索北岭", cardTitle: "画地图",
+        cardDescription: "a", expectedOutput: "o", assigneeId: nil, maxTurns: KernelDefaults.maxTurns)
+    try db.transitionCard(id: ids.cardId, to: .running, eventKind: "card_started", payload: .object([:]))
+    try db.completeCard(id: ids.cardId, runId: nil, handoff: HandoffPayload(
+        outcome: "完成", summary: "地图画好了", artifacts: [], noArtifactReason: "无", verification: [], risks: []
+    ), durableArtifacts: [])
+
+    // 空脚本 → 蒸馏 LLM 必失败 → 确定性回退，任何路径都产出一张笔记
+    let orch = try orchestrator(db: db, provider: MockProvider(script: []))
+    try await orch.closeout(ids.missionId, distillModel: "distill-model")
+    await orch.waitUntilIdle() // waitUntilIdle 必须等到蒸馏旁路任务完成
+
+    let notes = try db.campNotes(campId: camp.id)
+    #expect(notes.count == 1)
+    #expect(notes.first?.missionId == ids.missionId)
+    #expect(notes.first?.bodyMd.contains("地图画好了") == true)
+
+    let events = try orchestrationMissionEvents(db, missionId: ids.missionId)
+    let noteEvent = events.first { $0.kind == "camp_note_created" }
+    #expect(noteEvent != nil)
+    #expect(noteEvent?.payloadJson.contains(#""source":"fallback""#) == true)
+    await orch.shutdown()
+}
+
+@Test func closeoutDistillsLLMNoteWhenParseable() async throws {
+    let db = try orchestratorTempDB()
+    let camp = try db.ensureDefaultCamp()
+    let ids = try db.createSingleCardMission(
+        campName: "c", squadName: "s", goal: "探索北岭", cardTitle: "画地图",
+        cardDescription: "a", expectedOutput: "o", assigneeId: nil, maxTurns: KernelDefaults.maxTurns)
+    try db.transitionCard(id: ids.cardId, to: .running, eventKind: "card_started", payload: .object([:]))
+    try db.completeCard(id: ids.cardId, runId: nil, handoff: HandoffPayload(
+        outcome: "完成", summary: "地图画好了", artifacts: [], noArtifactReason: "无", verification: [], risks: []
+    ), durableArtifacts: [])
+
+    let distillJSON = ###"{"title":"北岭复盘","body":"## 做了什么\n画了地图"}"###
+    let orch = try orchestrator(db: db, provider: MockProvider(script: [
+        TurnResult(content: [.text(distillJSON)], stopReason: .endTurn),
+    ]))
+    try await orch.closeout(ids.missionId, distillModel: "distill-model")
+    await orch.waitUntilIdle()
+
+    let notes = try db.campNotes(campId: camp.id)
+    #expect(notes.first?.title == "北岭复盘")
+
+    let events = try orchestrationMissionEvents(db, missionId: ids.missionId)
+    let noteEvent = events.first { $0.kind == "camp_note_created" }
+    #expect(noteEvent?.payloadJson.contains(#""source":"closeout""#) == true)
     await orch.shutdown()
 }
