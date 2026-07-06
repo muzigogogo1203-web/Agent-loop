@@ -27,6 +27,11 @@ final class AppStore {
     var defaultModel = "claude-sonnet-4-6"
     static let modelChoices = ["claude-sonnet-4-6", "claude-fable-5", "claude-haiku-4-5-20251001"]
 
+    /// 默认行动预算（M5-2，spec §13：设置页可改；propose_squad 缺省随之）
+    var defaultMissionBudget: Int = KernelDefaults.missionBudget {
+        didSet { UserDefaults.standard.set(defaultMissionBudget, forKey: "defaultMissionBudget") }
+    }
+
     static let defaultBaseURL = "https://api.anthropic.com"
     var apiBaseURL: String = AppStore.defaultBaseURL {
         didSet { UserDefaults.standard.set(apiBaseURL, forKey: "apiBaseURL") }
@@ -130,6 +135,10 @@ final class AppStore {
         )
         try! db.ensureDefaultCamp()
         apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
+        let storedBudget = UserDefaults.standard.integer(forKey: "defaultMissionBudget")
+        if storedBudget > 0 {
+            defaultMissionBudget = storedBudget
+        }
         reload()
         startKernelEventListener()
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
@@ -196,6 +205,7 @@ final class AppStore {
                     companionIds: companionIds,
                     workspacePath: workspacePath,
                     plannerModel: defaultModel,
+                    budgetTokens: defaultMissionBudget,
                     campId: campId
                 )
                 currentMissionId = missionId
@@ -244,6 +254,39 @@ final class AppStore {
             reloadMission(missionId: missionId)
         }
         reloadMissionList()
+    }
+
+    // MARK: - 预算三选（M5-2）
+
+    /// 当前行动是否预算见底（executing 且 spent>=budget）——UI banner 条件
+    var currentMissionBudgetExhausted: Bool {
+        guard let mission = missionList.first(where: { $0.id == currentMissionId }) else { return false }
+        return mission.status == .executing && mission.spentTokens >= mission.budgetTokens
+    }
+
+    func addBudgetToCurrentMission() {
+        guard let currentMissionId else { return }
+        let tokens = defaultMissionBudget
+        missionTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await orchestrator.addBudget(missionId: currentMissionId, tokens: tokens)
+                reloadMission(missionId: currentMissionId)
+                reloadMissionList()
+            } catch {
+                missionPhase = .error(readableError(error))
+            }
+        }
+    }
+
+    func harvestCurrentMission() {
+        guard let currentMissionId else { return }
+        missionTask = Task { [weak self] in
+            guard let self else { return }
+            await orchestrator.harvestMission(currentMissionId)
+            reloadMission(missionId: currentMissionId)
+            reloadMissionList()
+        }
     }
 
     func retryCard(_ cardId: String) {
@@ -723,7 +766,8 @@ final class AppStore {
             guard let self else { return }
             do {
                 let missionId = try await orchestrator.confirmSquadProposal(
-                    messageId: messageId, plannerModel: defaultModel)
+                    messageId: messageId, plannerModel: defaultModel,
+                    fallbackBudget: defaultMissionBudget)
                 reloadGuideMessages()
                 reloadMissionList()
                 navigateToMissionId = missionId

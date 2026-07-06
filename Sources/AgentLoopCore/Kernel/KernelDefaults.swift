@@ -7,4 +7,6 @@ public enum KernelDefaults {
     public static let turnTimeout: Duration = .seconds(120)
     /// 卡片执行的传输层重试间隔（网关抖动多给机会）；Planner 维持自己的快速失败节奏。
     public static let transportRetryDelays: [Duration] = [.seconds(2), .seconds(5), .seconds(10), .seconds(20)]
+    /// 全局同时执行的卡上限（M5-2：多营地并发失控防线）
+    public static let maxConcurrentCardRuns = 4
 }

@@ -209,6 +209,9 @@ struct TaskRunView: View {
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 14) {
                     missionHeader
+                    if store.currentMissionBudgetExhausted {
+                        budgetBanner
+                    }
                     viewToggle(feedVisible: showFeed, feedLocked: tooNarrowForFeed)
 
                     if store.theaterMode {
@@ -344,6 +347,43 @@ struct TaskRunView: View {
         case .idle:
             EmptyView()
         }
+    }
+
+    /// 预算三选（M5-2，spec §13）：加预算 / 就地收成果 / 放弃
+    private var budgetBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "flame.circle.fill")
+                .foregroundStyle(Camp.amber)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("预算见底了")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(Camp.ink)
+                Text(budgetLine)
+                    .font(.caption)
+                    .foregroundStyle(Camp.inkSecondary)
+            }
+            Spacer()
+            Button {
+                store.addBudgetToCurrentMission()
+            } label: {
+                Label("续 \(store.defaultMissionBudget / 1000)k", systemImage: "plus")
+            }
+            .buttonStyle(CampPrimaryButtonStyle(size: .small))
+            Button("就地收成果") {
+                store.harvestCurrentMission()
+            }
+            .buttonStyle(CampSecondaryButtonStyle(tint: Camp.moss))
+            .help("取消未完成的小目标，保留已完成的产出，直接进入收营")
+            abandonButton
+        }
+        .campCard(padding: 12, highlighted: true)
+    }
+
+    private var budgetLine: String {
+        guard let mission = store.missionList.first(where: { $0.id == store.currentMissionId }) else {
+            return ""
+        }
+        return "已用 \(mission.spentTokens / 1000)k / \(mission.budgetTokens / 1000)k tokens，行动已暂停派发"
     }
 
     private var abandonButton: some View {

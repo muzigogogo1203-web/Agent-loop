@@ -393,6 +393,23 @@ public final class AppDatabase: Sendable {
         return camp
     }
 
+    /// 预算追加（M5-2 三选之「加预算」）；饱和加法防溢出。
+    public func addBudget(missionId: String, tokens: Int) throws {
+        try pool.write { db in
+            guard var mission = try MissionRecord.fetchOne(db, key: missionId) else {
+                throw RecordNotFoundError(table: "mission", id: missionId)
+            }
+            let (sum, overflow) = mission.budgetTokens.addingReportingOverflow(max(0, tokens))
+            mission.budgetTokens = overflow ? Int.max : sum
+            try mission.update(db)
+            try Self.appendEvent(
+                db, missionId: missionId, cardId: nil, runId: nil,
+                kind: "budget_added",
+                payload: ["tokens": .number(Double(max(0, tokens)))]
+            )
+        }
+    }
+
     public func recordPlanFallback(missionId: String, reason: String) throws {
         try pool.write { db in
             try Self.appendEvent(db, missionId: missionId, cardId: nil, runId: nil,

@@ -1,8 +1,10 @@
 import SwiftUI
+import AgentLoopCore
 
 struct SettingsView: View {
     @Environment(AppStore.self) private var store
     @State private var key = ""
+    @State private var budgetText = ""
 
     var body: some View {
         @Bindable var store = store
@@ -79,11 +81,45 @@ struct SettingsView: View {
                     }
                 }
                 .campCard()
+                VStack(alignment: .leading, spacing: 12) {
+                    CampSectionTitle("默认预算")
+                    HStack(spacing: 10) {
+                        TextField("\(KernelDefaults.missionBudget)", text: $budgetText)
+                            .textFieldStyle(.plain)
+                            .font(.body.monospaced())
+                            .frame(width: 140)
+                            .padding(11)
+                            .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                    .stroke(Camp.line, lineWidth: 1)
+                            )
+                            .onSubmit(saveBudget)
+                        Text("tokens / 行动")
+                            .font(.callout)
+                            .foregroundStyle(Camp.inkSecondary)
+                        Button("保存", action: saveBudget)
+                            .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+                            .disabled(Int(budgetText) == nil || Int(budgetText)! <= 0)
+                    }
+                    Text("新行动与向导组队提案的缺省预算；耗尽时行动暂停派发，可续预算 / 就地收成果 / 放弃。")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                }
+                .campCard()
             }
             .frame(maxWidth: 560)
             .padding(24)
             .frame(maxWidth: .infinity)
         }
         .background(Camp.canvas)
+        .onAppear {
+            budgetText = String(store.defaultMissionBudget)
+        }
+    }
+
+    private func saveBudget() {
+        guard let value = Int(budgetText), value > 0 else { return }
+        store.defaultMissionBudget = value
     }
 }

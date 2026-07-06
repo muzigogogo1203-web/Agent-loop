@@ -103,6 +103,13 @@ public enum ActivityFeed {
                 guard payload["to"]?.stringValue == MissionStatus.delivering.rawValue else { return nil }
                 return entry(event, actor: .system, kind: .statusChange,
                              text: "全部小目标完成，等你收营")
+            case "mission_budget_exhausted":
+                return entry(event, actor: .system, kind: .statusChange,
+                             text: "预算见底了，等你拿主意：加预算、就地收成果，或放弃")
+            case "budget_added":
+                let tokens = payload["tokens"]?.intValue ?? 0
+                return entry(event, actor: .user, kind: .progress,
+                             text: "追加了 \(tokens / 1000)k 预算，继续")
             case "mission_accepted":
                 return entry(event, actor: .system, kind: .statusChange, text: "行动已收营")
             case "mission_failed":

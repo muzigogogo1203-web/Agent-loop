@@ -37,6 +37,8 @@ public actor Orchestrator {
     private var reconciling = false
     private var reconcilePending = false
     private var cancelling: Set<String> = []
+    /// 预算耗尽已通知的行动（加预算后移除，避免每次 reconcile 重复发事件）
+    private var budgetNotified: Set<String> = []
     private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "orchestrator")
 
     public init(
@@ -204,9 +206,16 @@ public actor Orchestrator {
                         """,
                     arguments: [MissionStatus.executing.rawValue, CardStatus.ready.rawValue]
                 )
+                // 预算收尾线（M5-2，spec §13）：耗尽的行动停止派发，等用户三选
+                let executingMissions = try MissionRecord
+                    .filter(keys: Set(readyCards.map(\.missionId)))
+                    .fetchAll(database)
+                let exhaustedMissionIds = Set(
+                    executingMissions.filter { $0.spentTokens >= $0.budgetTokens }.map(\.id)
+                )
                 var candidates: [DispatchCandidate] = []
                 var errors: [KernelErrorRecord] = []
-                for ready in readyCards {
+                for ready in readyCards where !exhaustedMissionIds.contains(ready.missionId) {
                     guard let assigneeId = ready.assigneeId,
                           let companion = try CompanionRecord.fetchOne(database, key: assigneeId) else {
                         let message = "负责伙伴不存在或未指派"
@@ -230,7 +239,10 @@ public actor Orchestrator {
                         )
                     )
                 }
-                return ReconcilePlan(candidates: candidates, kernelErrors: errors)
+                return ReconcilePlan(
+                    candidates: candidates,
+                    kernelErrors: errors,
+                    budgetExhaustedMissionIds: exhaustedMissionIds)
             }
         } catch {
             emit(.kernelError(missionId: "", message: String(describing: error)))
@@ -243,8 +255,20 @@ public actor Orchestrator {
             emit(.missionChanged(missionId: error.missionId))
         }
 
+        for missionId in plan.budgetExhaustedMissionIds where !budgetNotified.contains(missionId) {
+            budgetNotified.insert(missionId)
+            try? await db.pool.write { database in
+                try AppDatabase.appendEvent(
+                    database, missionId: missionId, cardId: nil, runId: nil,
+                    kind: "mission_budget_exhausted", payload: .object([:]))
+            }
+            emit(.missionChanged(missionId: missionId))
+        }
+
         var busy = Set(running.values.map(\.assigneeId))
         for candidate in plan.candidates {
+            // 全局并发节流（M5-2）
+            guard running.count < KernelDefaults.maxConcurrentCardRuns else { break }
             guard !busy.contains(candidate.assigneeId),
                   !cancelling.contains(candidate.card.missionId),
                   running[candidate.card.id] == nil else {
@@ -377,7 +401,10 @@ public actor Orchestrator {
 
     /// 提案确认（spec §10.2，plan D5/D10）：先 CAS（pending→confirmed）再建队；
     /// 建队失败补偿回滚 pending。重复确认在 CAS 处抛 StaleProposalError——宁可回滚，绝不重复建队。
-    public func confirmSquadProposal(messageId: String, plannerModel: String) async throws -> String {
+    public func confirmSquadProposal(
+        messageId: String, plannerModel: String,
+        fallbackBudget: Int = KernelDefaults.missionBudget
+    ) async throws -> String {
         let block = try db.confirmProposalBlock(messageId: messageId)
         do {
             // 提案建队归属向导所在营地（M5-0：从提案消息所在线程推导）
@@ -387,7 +414,7 @@ public actor Orchestrator {
                 companionIds: block.memberIds,
                 workspacePath: nil,
                 plannerModel: plannerModel,
-                budgetTokens: block.budget ?? KernelDefaults.missionBudget,
+                budgetTokens: block.budget ?? fallbackBudget,
                 campId: campId
             )
             try db.attachMissionToProposal(messageId: messageId, missionId: missionId)
@@ -405,6 +432,58 @@ public actor Orchestrator {
         } catch {
             try? db.revertProposalToPending(messageId: messageId)
             throw error
+        }
+    }
+
+    /// 三选之「加预算」（M5-2）：追加后解除通知去重并立刻恢复调度。
+    public func addBudget(missionId: String, tokens: Int) async throws {
+        try db.addBudget(missionId: missionId, tokens: tokens)
+        budgetNotified.remove(missionId)
+        emit(.missionChanged(missionId: missionId))
+        await reconcile()
+    }
+
+    /// 三选之「就地收成果」（M5-2）：取消未完成的卡，保留已完成的——
+    /// rollup 自然落位：有 done → delivering（可正常收营蒸馏）；全军覆没 → failed。
+    public func harvestMission(_ missionId: String) async {
+        guard let mission = try? db.mission(id: missionId),
+              mission.status == .executing else {
+            return
+        }
+        cancelling.insert(missionId)
+        defer { cancelling.remove(missionId) }
+
+        let runningForMission = running.filter { $0.value.missionId == missionId }
+        for (_, entry) in runningForMission {
+            entry.task.cancel()
+        }
+        for (cardId, entry) in runningForMission {
+            await entry.task.value
+            running.removeValue(forKey: cardId)
+        }
+        await markOpenRunsCanceled(missionId: missionId)
+
+        do {
+            try await db.pool.write { database in
+                let cards = try CardRecord
+                    .filter(Column("missionId") == missionId)
+                    .order(Column("stage"))
+                    .fetchAll(database)
+                for card in cards where card.status != .done && card.status != .canceled {
+                    try self.db.transitionCard(
+                        database,
+                        id: card.id,
+                        to: .canceled,
+                        eventKind: "card_canceled",
+                        payload: ["reason": "budget_harvest"]
+                    )
+                }
+            }
+            emit(.missionChanged(missionId: missionId))
+        } catch {
+            let message = String(describing: error)
+            db.appendKernelErrorEvent(missionId: missionId, message: message)
+            emit(.kernelError(missionId: missionId, message: message))
         }
     }
 
@@ -679,5 +758,6 @@ public actor Orchestrator {
     private struct ReconcilePlan: Sendable {
         let candidates: [DispatchCandidate]
         let kernelErrors: [KernelErrorRecord]
+        let budgetExhaustedMissionIds: Set<String>
     }
 }
