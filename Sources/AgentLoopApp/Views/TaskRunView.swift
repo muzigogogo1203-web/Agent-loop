@@ -3,7 +3,7 @@ import AgentLoopCore
 
 struct TaskRunView: View {
     enum Mode: Equatable {
-        case newMission
+        case newMission(campId: String)
         case mission(String)
     }
 
@@ -21,8 +21,8 @@ struct TaskRunView: View {
     var body: some View {
         Group {
             switch mode {
-            case .newMission:
-                newMissionForm
+            case .newMission(let campId):
+                newMissionForm(campId: campId)
             case .mission(let id):
                 missionView
                     .padding(16)
@@ -43,16 +43,24 @@ struct TaskRunView: View {
 
     // MARK: - 新行动（英雄表单）
 
-    private var newMissionForm: some View {
+    private func newMissionForm(campId: String) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("出发新行动")
                         .font(.largeTitle.weight(.bold))
                         .foregroundStyle(Camp.ink)
-                    Text("说清目标，选好伙伴，剩下的交给营地。")
-                        .font(.callout)
-                        .foregroundStyle(Camp.inkSecondary)
+                    HStack(spacing: 6) {
+                        // 行动在营地内发起（M5-0 C1）：表单锁定所属营地
+                        CampChip(
+                            text: store.camps.first { $0.id == campId }?.name ?? "营地",
+                            color: Camp.ember,
+                            icon: "tent.fill"
+                        )
+                        Text("说清目标，选好伙伴，剩下的交给营地。")
+                            .font(.callout)
+                            .foregroundStyle(Camp.inkSecondary)
+                    }
                 }
                 .padding(.top, 8)
 
@@ -132,7 +140,8 @@ struct TaskRunView: View {
                     store.startMission(
                         goal: goal,
                         companionIds: selectedCompanionIds,
-                        workspacePath: workspace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : workspace
+                        workspacePath: workspace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : workspace,
+                        campId: campId
                     )
                 } label: {
                     HStack {

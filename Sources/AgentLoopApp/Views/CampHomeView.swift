@@ -5,8 +5,13 @@ import AgentLoopCore
 struct CampHomeView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let campId: String
     var onEditGuide: () -> Void = {}
+    var onNewMission: () -> Void = {}
+    var onOpenMission: (String) -> Void = { _ in }
     @State private var notesPaneVisible = true
+    @State private var renaming = false
+    @State private var renameText = ""
 
     var body: some View {
         GeometryReader { proxy in
@@ -20,28 +25,11 @@ struct CampHomeView: View {
 
                 HStack(alignment: .top, spacing: 14) {
                     if showNotes {
-                        NoteListPane(
-                            title: "营地笔记",
-                            items: store.campNotes.map(NoteItem.init),
-                            emptyText: "还没有营地笔记——收营后会自动沉淀，或让向导帮你记。",
-                            onSave: { id, title, body in
-                                guard var record = store.campNotes.first(where: { $0.id == id }) else { return }
-                                record.title = title
-                                record.bodyMd = body
-                                store.saveCampNoteEdits(record)
-                            },
-                            onTogglePin: { id in
-                                guard let record = store.campNotes.first(where: { $0.id == id }) else { return }
-                                store.toggleCampNotePin(record)
-                            },
-                            onDelete: { store.deleteCampNote(id: $0) }
-                        )
+                        VStack(spacing: 10) {
+                            notesPane
+                            pastMissionsPane
+                        }
                         .frame(width: 340)
-                        .clipShape(RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
-                                .stroke(Camp.line, lineWidth: 1)
-                        )
                         .transition(.move(edge: .leading).combined(with: .opacity))
                     }
 
@@ -58,9 +46,99 @@ struct CampHomeView: View {
         }
         .background(Camp.canvas)
         .campToast(store.knowledgeToast)
-        .onAppear {
-            store.loadCampHome()
+        .task(id: campId) {
+            store.loadCampHome(campId: campId)
         }
+        .alert("重命名营地", isPresented: $renaming) {
+            TextField("营地名字", text: $renameText)
+            Button("取消", role: .cancel) {}
+            Button("确定") {
+                store.renameCamp(id: campId, name: renameText)
+            }
+        }
+    }
+
+    private var notesPane: some View {
+        NoteListPane(
+                            title: "营地笔记",
+                            items: store.campNotes.map(NoteItem.init),
+                            emptyText: "还没有营地笔记——收营后会自动沉淀，或让向导帮你记。",
+                            onSave: { id, title, body in
+                                guard var record = store.campNotes.first(where: { $0.id == id }) else { return }
+                                record.title = title
+                                record.bodyMd = body
+                                store.saveCampNoteEdits(record)
+                            },
+                            onTogglePin: { id in
+                                guard let record = store.campNotes.first(where: { $0.id == id }) else { return }
+                                store.toggleCampNotePin(record)
+                            },
+                            onDelete: { store.deleteCampNote(id: $0) }
+                        )
+        .clipShape(RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                .stroke(Camp.line, lineWidth: 1)
+        )
+    }
+
+    /// 往期行动收进营地首页（C1）：侧栏只留进行中
+    @ViewBuilder private var pastMissionsPane: some View {
+        let past = (store.missionsByCamp[campId] ?? [])
+            .filter { $0.status == .accepted || $0.status == .failed }
+        if !past.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "shippingbox")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                    Text("往期行动")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Camp.inkSecondary)
+                    Spacer()
+                    Text("\(past.count)")
+                        .font(.caption2)
+                        .foregroundStyle(Camp.stone)
+                }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(past, id: \.id) { mission in
+                            Button {
+                                onOpenMission(mission.id)
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .fill(mission.status == .accepted ? Camp.moss : Camp.stone)
+                                        .frame(width: 6, height: 6)
+                                    Text(Self.missionLine(mission))
+                                        .font(.caption)
+                                        .foregroundStyle(Camp.ink)
+                                        .lineLimit(1)
+                                    Spacer()
+                                }
+                                .padding(.vertical, 3)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .frame(maxHeight: 120)
+            }
+            .padding(10)
+            .background(Camp.surface, in: RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                    .stroke(Camp.line, lineWidth: 1)
+            )
+        }
+    }
+
+    private static func missionLine(_ mission: MissionRecord) -> String {
+        let refined = mission.goalRefined.trimmingCharacters(in: .whitespacesAndNewlines)
+        let raw = mission.goalRaw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = refined.isEmpty ? raw : refined
+        return String((base.split(whereSeparator: \.isNewline).first.map(String.init) ?? base).prefix(24))
     }
 
     private func header(notesVisible: Bool, notesLocked: Bool) -> some View {
@@ -73,11 +151,24 @@ struct CampHomeView: View {
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(Camp.ink)
                 }
+                .contextMenu {
+                    Button("重命名营地…") {
+                        renameText = store.campName
+                        renaming = true
+                    }
+                }
                 Text("行动的经验和向导都在这儿")
                     .font(.caption)
                     .foregroundStyle(Camp.inkSecondary)
             }
             Spacer()
+            Button {
+                onNewMission()
+            } label: {
+                Label("新行动", systemImage: "flag.fill")
+            }
+            .buttonStyle(CampPrimaryButtonStyle(size: .small))
+
             Button {
                 notesPaneVisible.toggle()
             } label: {

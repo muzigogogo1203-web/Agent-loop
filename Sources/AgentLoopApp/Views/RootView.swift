@@ -2,8 +2,8 @@ import SwiftUI
 import AgentLoopCore
 
 enum Destination: Hashable {
-    case newMission
-    case camp
+    case newMission(campId: String)
+    case camp(String)
     case mission(String)
     case settings
     case chat(String)
@@ -12,50 +12,19 @@ enum Destination: Hashable {
 
 struct RootView: View {
     @Environment(AppStore.self) private var store
-    @State private var selection: Destination? = .newMission
-    @State private var historyExpanded = false
+    @State private var selection: Destination?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
-
-    private var activeMissions: [MissionRecord] {
-        store.missionList.filter { $0.status != .accepted && $0.status != .failed }
-    }
-
-    private var historyMissions: [MissionRecord] {
-        store.missionList.filter { $0.status == .accepted || $0.status == .failed }
-    }
+    @State private var showNewCampSheet = false
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             VStack(spacing: 0) {
-                newMissionButton
-                    .padding(.horizontal, 12)
-                    .padding(.top, 10)
-                    .padding(.bottom, 6)
-
-                campRow
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 6)
-
                 List(selection: $selection) {
-                    if !activeMissions.isEmpty {
-                        Section("进行中的行动") {
-                            ForEach(activeMissions, id: \.id) { mission in
-                                missionRow(mission)
-                            }
-                        }
+                    // 营地=频道（M5-0 C1）：每营地一个分区
+                    ForEach(store.camps, id: \.id) { camp in
+                        campSection(camp)
                     }
-                    if !historyMissions.isEmpty {
-                        Section {
-                            DisclosureGroup(isExpanded: $historyExpanded) {
-                                ForEach(historyMissions, id: \.id) { mission in
-                                    missionRow(mission)
-                                }
-                            } label: {
-                                Label("往期行动", systemImage: "shippingbox")
-                                    .foregroundStyle(Camp.inkSecondary)
-                            }
-                        }
-                    }
+
                     Section("伙伴") {
                         ForEach(store.companions, id: \.id) { companion in
                             NavigationLink(value: Destination.chat(companion.id)) {
@@ -85,12 +54,16 @@ struct RootView: View {
 
                 Divider()
                     .overlay(Camp.line)
+                newCampRow
                 settingsRow
             }
             .background(Camp.canvas)
-            .navigationSplitViewColumnWidth(min: 200, ideal: 230)
+            .navigationSplitViewColumnWidth(min: 210, ideal: 240)
             .onAppear {
                 store.reload()
+                if selection == nil, let first = store.camps.first {
+                    selection = .camp(first.id)
+                }
             }
             .onChange(of: selection) { previous, value in
                 if case .mission(let id) = value {
@@ -102,7 +75,7 @@ struct RootView: View {
                 }
             }
             .onChange(of: store.currentMissionId) { _, missionId in
-                if let missionId, selection == .newMission || selection == nil {
+                if let missionId, isOnNewMission || selection == nil {
                     selection = .mission(missionId)
                 }
             }
@@ -113,19 +86,41 @@ struct RootView: View {
                     store.navigateToMissionId = nil
                 }
             }
+            .sheet(isPresented: $showNewCampSheet) {
+                NewCampSheet { name, guidePrompt in
+                    if let camp = store.createCamp(name: name, guidePrompt: guidePrompt) {
+                        selection = .camp(camp.id)
+                    }
+                    showNewCampSheet = false
+                } onCancel: {
+                    showNewCampSheet = false
+                }
+            }
         } detail: {
             Group {
                 switch selection {
-                case .newMission, nil:
-                    TaskRunView(mode: .newMission, onNewMission: { selection = .newMission })
-                case .camp:
-                    CampHomeView(onEditGuide: {
-                        if let guideId = store.guideCompanion?.id {
-                            selection = .editCompanion(guideId)
+                case .newMission(let campId):
+                    TaskRunView(mode: .newMission(campId: campId), onNewMission: {
+                        selection = .newMission(campId: campId)
+                    })
+                case .camp(let campId):
+                    CampHomeView(
+                        campId: campId,
+                        onEditGuide: {
+                            if let guideId = store.guideCompanion?.id {
+                                selection = .editCompanion(guideId)
+                            }
+                        },
+                        onNewMission: { selection = .newMission(campId: campId) },
+                        onOpenMission: { selection = .mission($0) }
+                    )
+                case .mission(let id):
+                    TaskRunView(mode: .mission(id), onNewMission: {
+                        let campId = store.camp(forMission: id) ?? store.camps.first?.id
+                        if let campId {
+                            selection = .newMission(campId: campId)
                         }
                     })
-                case .mission(let id):
-                    TaskRunView(mode: .mission(id), onNewMission: { selection = .newMission })
                 case .settings:
                     SettingsView()
                 case .chat(let id):
@@ -138,14 +133,16 @@ struct RootView: View {
                     }
                 case .editCompanion(let id):
                     CompanionEditorView(companionId: id) {
-                        if let id, id == store.guideCompanion?.id {
-                            selection = .camp
+                        if let id, id == store.guideCompanion?.id, let campId = store.campId {
+                            selection = .camp(campId)
                         } else if let id {
                             selection = .chat(id)
-                        } else {
-                            selection = .newMission
+                        } else if let first = store.camps.first {
+                            selection = .camp(first.id)
                         }
                     }
+                case nil:
+                    ContentUnavailableView("选一个营地开始", systemImage: "tent")
                 }
             }
             .background(Camp.canvas)
@@ -154,43 +151,59 @@ struct RootView: View {
         .tint(Camp.ember)
     }
 
-    private var campRow: some View {
+    private var isOnNewMission: Bool {
+        if case .newMission = selection { return true }
+        return false
+    }
+
+    // MARK: - 营地分区
+
+    @ViewBuilder private func campSection(_ camp: CampRecord) -> some View {
+        let active = (store.missionsByCamp[camp.id] ?? [])
+            .filter { $0.status != .accepted && $0.status != .failed }
+        Section {
+            NavigationLink(value: Destination.camp(camp.id)) {
+                HStack(spacing: 8) {
+                    Image(systemName: "tent.fill")
+                        .foregroundStyle(Camp.ember)
+                    Text(camp.name)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                    Spacer()
+                }
+            }
+            .contextMenu {
+                Button("新行动…") {
+                    selection = .newMission(campId: camp.id)
+                }
+            }
+            ForEach(active, id: \.id) { mission in
+                missionRow(mission)
+            }
+            NavigationLink(value: Destination.newMission(campId: camp.id)) {
+                Label("新行动…", systemImage: "flag")
+                    .foregroundStyle(Camp.inkSecondary)
+                    .font(.callout)
+            }
+        }
+    }
+
+    private var newCampRow: some View {
         Button {
-            selection = .camp
+            showNewCampSheet = true
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: "tent.fill")
-                Text("营地")
-                    .fontWeight(selection == .camp ? .semibold : .regular)
+                Image(systemName: "plus.circle.fill")
+                Text("新营地")
                 Spacer()
             }
             .font(.callout)
-            .foregroundStyle(selection == .camp ? Camp.ember : Camp.ink)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(
-                selection == .camp ? Camp.ember.opacity(0.14) : .clear,
-                in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
-            )
+            .foregroundStyle(Camp.ember)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    private var newMissionButton: some View {
-        Button {
-            selection = .newMission
-        } label: {
-            HStack {
-                Image(systemName: "flag.fill")
-                Text("新行动")
-                    .fontWeight(.semibold)
-                Spacer()
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(CampPrimaryButtonStyle(size: .small))
-        .keyboardShortcut("n", modifiers: .command)
     }
 
     private var settingsRow: some View {
@@ -260,5 +273,71 @@ struct RootView: View {
         case .accepted: "已收营"
         case .failed: "已放弃"
         }
+    }
+}
+
+// MARK: - 新营地弹窗（C2）
+
+private struct NewCampSheet: View {
+    var onCreate: (_ name: String, _ guidePrompt: String?) -> Void
+    var onCancel: () -> Void
+    @State private var name = ""
+    @State private var guidePrompt = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("扎一个新营地")
+                    .font(.headline)
+                    .foregroundStyle(Camp.ink)
+                Text("营地就像频道：行动在营地里发起，经验沉淀在营地的笔记本里。")
+                    .font(.caption)
+                    .foregroundStyle(Camp.inkSecondary)
+            }
+
+            TextField("营地名字，比如：北岭前哨", text: $name)
+                .textFieldStyle(.plain)
+                .font(.body.weight(.medium))
+                .padding(10)
+                .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                        .stroke(Camp.line, lineWidth: 1)
+                )
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("向导人设（可选）")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Camp.inkSecondary)
+                TextField("这个营地的向导是什么样的人？留空用默认。", text: $guidePrompt, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .lineLimit(2...4)
+                    .padding(10)
+                    .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                            .stroke(Camp.line, lineWidth: 1)
+                    )
+            }
+
+            HStack {
+                Spacer()
+                Button("取消", action: onCancel)
+                    .buttonStyle(CampSecondaryButtonStyle())
+                    .keyboardShortcut(.cancelAction)
+                Button {
+                    onCreate(name, guidePrompt.isEmpty ? nil : guidePrompt)
+                } label: {
+                    Label("扎营", systemImage: "tent.fill")
+                }
+                .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                .keyboardShortcut(.defaultAction)
+                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
+            }
+        }
+        .padding(18)
+        .frame(width: 420)
+        .background(Camp.canvas)
     }
 }

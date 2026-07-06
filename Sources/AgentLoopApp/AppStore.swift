@@ -19,6 +19,10 @@ final class AppStore {
     let orchestrator: Orchestrator
 
     var companions: [CompanionRecord] = []
+    /// 营地=频道（M5-0）：全部营地，创建序
+    var camps: [CampRecord] = []
+    /// 侧栏用：各营地的行动列表（含历史，UI 侧再分组）
+    var missionsByCamp: [String: [MissionRecord]] = [:]
     var apiKeyPresent = false
     var defaultModel = "claude-sonnet-4-6"
     static let modelChoices = ["claude-sonnet-4-6", "claude-fable-5", "claude-haiku-4-5-20251001"]
@@ -139,6 +143,7 @@ final class AppStore {
 
     func reload() {
         companions = (try? db.regularCompanions()) ?? []
+        camps = (try? db.camps()) ?? []
         apiKeyPresent = Self.isUIPreview
             ? false
             : ((try? keychain.get(account: "anthropic-api-key")) ?? nil) != nil
@@ -160,7 +165,7 @@ final class AppStore {
         return AnthropicProvider(apiKey: key, model: model, baseURL: base)
     }
 
-    func startMission(goal: String, companionIds: [String], workspacePath: String?) {
+    func startMission(goal: String, companionIds: [String], workspacePath: String?, campId: String? = nil) {
         guard ((try? keychain.get(account: "anthropic-api-key")) ?? nil) != nil else {
             missionPhase = .error("请先在设置里填入 API key")
             return
@@ -189,7 +194,8 @@ final class AppStore {
                     goal: goal,
                     companionIds: companionIds,
                     workspacePath: workspacePath,
-                    plannerModel: defaultModel
+                    plannerModel: defaultModel,
+                    campId: campId
                 )
                 currentMissionId = missionId
                 theaterMode = false
@@ -375,7 +381,15 @@ final class AppStore {
     }
 
     private func reloadMissionList() {
-        missionList = (try? db.missions(limit: 20)) ?? []
+        missionList = (try? db.missions(limit: 50)) ?? []
+        if camps.isEmpty {
+            camps = (try? db.camps()) ?? []
+        }
+        var byCamp: [String: [MissionRecord]] = [:]
+        for camp in camps {
+            byCamp[camp.id] = (try? db.missions(campId: camp.id)) ?? []
+        }
+        missionsByCamp = byCamp
     }
 
     private func handleCardEvent(cardId: String, event: AgentEvent) {
@@ -576,13 +590,57 @@ final class AppStore {
 
     // MARK: - 营地首页（M4）
 
-    func loadCampHome() {
-        guard let camp = try? db.ensureDefaultCamp() else { return }
+    func loadCampHome(campId targetCampId: String? = nil) {
+        let camp: CampRecord?
+        if let targetCampId {
+            camp = try? db.camp(id: targetCampId)
+        } else {
+            camp = try? db.ensureDefaultCamp()
+        }
+        guard let camp else { return }
+        // 切换营地时终止在途向导流，防串台（对齐 DM 的 streamID 语义）
+        if campId != camp.id {
+            guideStreamID += 1
+            guideTask?.cancel()
+            guideTask = nil
+            let coalescer = guideCoalescer
+            guideCoalescer = nil
+            guideStreaming = false
+            guideStreamingText = nil
+            guideToolActivity = nil
+            Task { await coalescer?.discard() }
+        }
         campId = camp.id
         campName = camp.name
         guideCompanion = try? db.guide(campId: camp.id)
         reloadCampKnowledge()
         reloadGuideMessages()
+        reloadMissionList()
+    }
+
+    /// 建营地（C2）：返回新营地供导航；失败 toast。
+    func createCamp(name: String, guidePrompt: String?) -> CampRecord? {
+        do {
+            let camp = try db.createCamp(name: name, guidePrompt: guidePrompt)
+            reload()
+            return camp
+        } catch {
+            showToast("建营地失败：\(readableError(error))")
+            return nil
+        }
+    }
+
+    /// 改名（C3）；当前正看这个营地时同步刷新 header。
+    func renameCamp(id: String, name: String) {
+        try? db.renameCamp(id: id, name: name)
+        reload()
+        if campId == id, let camp = try? db.camp(id: id) {
+            campName = camp.name
+        }
+    }
+
+    func camp(forMission missionId: String) -> String? {
+        (try? db.squad(forMission: missionId))?.campId
     }
 
     private func reloadGuideMessages() {
