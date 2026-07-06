@@ -36,3 +36,13 @@
 ## 评审
 
 五路对抗评审（并发/数据层/契约申报/LLM 卫生/UI）另附 `reviews/`；确认项修复后复跑全量。
+
+## ⚠️ 与并行会话的分叉申报（需用户裁决）
+
+本会话进行中，另一并行会话在 `feat/m3-gateway` 上提交了：
+- `80753b2` fix(m3.4)：Codex 实现的 gateway-resilience（142 测试绿）
+- `c7446f9` docs(m4)：另一版 M4 plan v2（其自审同样发现 companion_note 缺表 P0、CAS、startMission 签名缺口、向导沉淀遗漏——与本会话核对结论**完全互相印证**）
+
+本会话开工时该分支尚在 de4baa5（gateway 任务当时标记 blocked），故 feat/m4 基于 tag `m3` 并**自含**了等价的 gateway 三改动（48efe2a），且评审轮额外修复了「非流式兜底 × 聊天 delta 累积 = 文本重复」问题（80753b2 无此修复——它落地时 GuideChatService 还不存在）。
+
+**建议**：以 `feat/m4` 为唯一验收线（gateway + M4 全量，198 测试）；`feat/m3-gateway` 的 80753b2 留档不合（语义已被 feat/m4 覆盖且有增强），其 c7446f9 的 plan v2 文档可与本目录 plan.md 对照留存。两分支都合会产生同义冲突。请在正式测试前定夺。
