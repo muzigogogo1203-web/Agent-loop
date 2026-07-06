@@ -3,9 +3,11 @@ import Foundation
 
 struct TypingIndicatorView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.controlActiveState) private var controlActiveState
 
     var body: some View {
-        if reduceMotion {
+        if reduceMotion || controlActiveState != .key {
+            // 静态替代（Reduce Motion）/ 失焦暂停（不与流式渲染争主线程）
             Text("…")
                 .foregroundStyle(.secondary)
         } else {
