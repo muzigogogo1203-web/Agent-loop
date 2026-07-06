@@ -181,6 +181,14 @@ extension AppDatabase {
         }
     }
 
+    /// 消息所在线程（M5-0：提案确认时据此推导归属营地）。
+    public func chatThread(forMessage messageId: String) throws -> ChatThreadRecord? {
+        try pool.read { db in
+            guard let message = try ChatMessageRecord.fetchOne(db, key: messageId) else { return nil }
+            return try ChatThreadRecord.fetchOne(db, key: message.threadId)
+        }
+    }
+
     // MARK: - 提案块状态机（D5/D10：CAS 幂等，永不静默建队）
 
     /// 确认：事务内 pending→confirmed。已处理过（confirmed/dismissed）抛 StaleProposalError。

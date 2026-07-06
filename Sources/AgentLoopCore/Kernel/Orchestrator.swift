@@ -66,12 +66,13 @@ public actor Orchestrator {
         companionIds: [String],
         workspacePath: String?,
         plannerModel: String,
-        budgetTokens: Int = KernelDefaults.missionBudget
+        budgetTokens: Int = KernelDefaults.missionBudget,
+        campId: String? = nil
     ) async throws -> String {
         ensureTickStarted()
         let missionId = try db.createMissionShell(
             goal: goal, companionIds: companionIds,
-            workspacePath: workspacePath, budgetTokens: budgetTokens)
+            workspacePath: workspacePath, budgetTokens: budgetTokens, campId: campId)
         emit(.planningStarted(missionId: missionId))
         let task = Task {
             do {
@@ -330,12 +331,15 @@ public actor Orchestrator {
     public func confirmSquadProposal(messageId: String, plannerModel: String) async throws -> String {
         let block = try db.confirmProposalBlock(messageId: messageId)
         do {
+            // 提案建队归属向导所在营地（M5-0：从提案消息所在线程推导）
+            let campId = try db.chatThread(forMessage: messageId)?.campId
             let missionId = try await startMission(
                 goal: block.goal,
                 companionIds: block.memberIds,
                 workspacePath: nil,
                 plannerModel: plannerModel,
-                budgetTokens: block.budget ?? KernelDefaults.missionBudget
+                budgetTokens: block.budget ?? KernelDefaults.missionBudget,
+                campId: campId
             )
             try db.attachMissionToProposal(messageId: messageId, missionId: missionId)
             try? await db.pool.write { database in

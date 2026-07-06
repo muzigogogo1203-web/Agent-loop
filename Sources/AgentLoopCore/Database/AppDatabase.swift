@@ -218,6 +218,51 @@ public final class AppDatabase: Sendable {
         }
     }
 
+    // MARK: 营地 CRUD（M5-0：营地=频道，可多建）
+
+    public func camps() throws -> [CampRecord] {
+        try pool.read { db in
+            try CampRecord.order(Column("createdAt"), Column.rowID).fetchAll(db)
+        }
+    }
+
+    public func camp(id: String) throws -> CampRecord? {
+        try pool.read { db in try CampRecord.fetchOne(db, key: id) }
+    }
+
+    /// 建营地并自动配备向导（spec §10.2：每营地创建时自动配一位向导）。
+    @discardableResult
+    public func createCamp(name: String, guidePrompt: String? = nil) throws -> CampRecord {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPrompt = guidePrompt?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return try pool.write { db in
+            let camp = CampRecord(
+                id: UUID().uuidString,
+                name: trimmedName.isEmpty ? "新营地" : trimmedName,
+                createdAt: Date())
+            try camp.insert(db)
+            var guide = CompanionRecord.new(
+                name: "向导", color: "amber",
+                rolePrompt: trimmedPrompt.isEmpty ? "你是这个营地的向导，熟悉营地里的一切。" : trimmedPrompt,
+                model: "claude-sonnet-4-6", kind: .guide, campId: camp.id)
+            guide.toolsJson = "[]"
+            try guide.insert(db)
+            return camp
+        }
+    }
+
+    public func renameCamp(id: String, name: String) throws {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        try pool.write { db in
+            guard var camp = try CampRecord.fetchOne(db, key: id) else {
+                throw RecordNotFoundError(table: "camp", id: id)
+            }
+            camp.name = trimmed
+            try camp.update(db)
+        }
+    }
+
     // MARK: Companion CRUD
 
     public func saveCompanion(_ c: CompanionRecord) throws { // Fix 7: drop inout
@@ -255,9 +300,10 @@ public final class AppDatabase: Sendable {
         assigneeId: String?,
         maxTurns: Int,
         workspacePath: String? = nil,
-        tokenBudget: Int = KernelDefaults.cardTokenBudget
+        tokenBudget: Int = KernelDefaults.cardTokenBudget,
+        campId: String? = nil
     ) throws -> SingleCardIds {
-        let camp = try ensureDefaultCamp()
+        let camp = try resolveCamp(id: campId)
         return try pool.write { db in
             let squad = SquadRecord(
                 id: UUID().uuidString, campId: camp.id, name: squadName,
@@ -287,14 +333,16 @@ public final class AppDatabase: Sendable {
         }
     }
 
+    /// campId 为 nil 时落默认营地（兼容既有调用）；给定 campId 必须存在。
     public func createMissionShell(
         goal: String,
         companionIds: [String],
         workspacePath: String?,
-        budgetTokens: Int = KernelDefaults.missionBudget
+        budgetTokens: Int = KernelDefaults.missionBudget,
+        campId: String? = nil
     ) throws -> String {
-        try pool.write { db in
-            let camp = try Self.ensureDefaultCamp(db)
+        let camp = try resolveCamp(id: campId)
+        return try pool.write { db in
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.sortedKeys]
             let memberIdsJson = String(data: try encoder.encode(companionIds), encoding: .utf8)!
@@ -326,6 +374,14 @@ public final class AppDatabase: Sendable {
                                  kind: "plan_started", payload: .object([:]))
             return mission.id
         }
+    }
+
+    private func resolveCamp(id: String?) throws -> CampRecord {
+        guard let id else { return try ensureDefaultCamp() }
+        guard let camp = try camp(id: id) else {
+            throw RecordNotFoundError(table: "camp", id: id)
+        }
+        return camp
     }
 
     public func recordPlanFallback(missionId: String, reason: String) throws {
@@ -569,6 +625,24 @@ public final class AppDatabase: Sendable {
                 .order(Column("createdAt").desc, Column.rowID.desc)
                 .limit(limit)
                 .fetchAll(db)
+        }
+    }
+
+    /// 某营地的行动（M5-0：侧栏按频道分组 + 营地首页往期区）。
+    public func missions(campId: String, limit: Int = 50) throws -> [MissionRecord] {
+        try pool.read { db in
+            try MissionRecord.fetchAll(
+                db,
+                sql: """
+                    SELECT mission.*
+                    FROM mission
+                    JOIN squad ON squad.id = mission.squadId
+                    WHERE squad.campId = ?
+                    ORDER BY mission.createdAt DESC, mission.rowid DESC
+                    LIMIT ?
+                    """,
+                arguments: [campId, limit]
+            )
         }
     }
 
