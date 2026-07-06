@@ -13,7 +13,7 @@ AgentLoop 是 macOS 原生 Swift/SwiftUI 多 Agent 协作工具（awesome-hermes
 ## 项目速查
 
 - 权威测试跑法：`swift run RunTests`（本机 CLT-only，`swift test` 输出不可靠）
-- 构建/启动：`swift run AgentLoopApp`
+- 构建/启动：`scripts/run-app.sh`（本机必须打 .app 壳启动，直跑裸二进制不渲染文字；--preview/--dark 可选）
 - 测试代码位置：`Sources/AgentLoopTestSuite/`
 - 技术栈：Swift 6 严格并发、GRDB 7、actor + TaskGroup + AsyncStream、macOS 14+
 - 用户偏好中文讨论；设计讨论沿用远征风命名（营地/小队/行动/小目标/伙伴）
