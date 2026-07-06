@@ -245,11 +245,31 @@ func stubbedSession() -> URLSession {
         }
     }
     #expect(counter.value == 2)
-    #expect(deltas.contains("完整回复"))
+    // 断流前已流出「写到一半」增量 → 兜底不再重发合并全文（防 delta 累积型消费方重复拼接）
+    #expect(deltas == ["写到一半"])
+    // 权威正文以 turn 为准
     #expect(turn?.content == [.text("完整回复")])
     #expect(turn?.stopReason == .endTurn)
     #expect(turn?.usage.inputTokens == 5)
     #expect(turn?.usage.outputTokens == 9)
+}
+
+@Test func fallbackEmitsMergedTextWhenNothingStreamedYet() async throws {
+    let counter = Counter()
+    // 第一次连一个 delta 都没流出就断 → 兜底补发合并全文保 UI 连续性
+    let truncatedSSE = "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":1}}}"
+    let fullMessage = #"{"type":"message","content":[{"type":"text","text":"完整回复"}],"stop_reason":"end_turn","usage":{"input_tokens":1,"output_tokens":2}}"#
+    StubProtocol.handler = { _ in
+        counter.bump() == 1
+            ? (200, Data(truncatedSSE.utf8), ["Content-Type": "text/event-stream"])
+            : (200, Data(fullMessage.utf8), ["Content-Type": "application/json"])
+    }
+    let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(), retryBaseDelay: .milliseconds(1))
+    var deltas: [String] = []
+    for try await ev in p.streamTurn(system: "s", history: [.user("hi")], tools: [], toolChoice: .auto, maxTokens: 100) {
+        if case .textDelta(let t) = ev { deltas.append(t) }
+    }
+    #expect(deltas == ["完整回复"])
 }
 
 @Test func nonStreamingParsesToolUse() async throws {

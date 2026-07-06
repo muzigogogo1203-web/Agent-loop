@@ -53,7 +53,9 @@ public struct GuideChatService: Sendable {
             let task = Task {
                 do {
                     var history = initialHistory
-                    var fullReply = ""
+                    // 落库正文以各轮 TurnResult 为权威（delta 只管显示），
+                    // 断流兜底下 delta 序列可能不完整
+                    var replyParts: [String] = []
                     var toolRounds = 0
                     while true {
                         let forceText = toolRounds >= Self.maxToolRounds
@@ -62,13 +64,14 @@ public struct GuideChatService: Sendable {
                             history: history,
                             tools: forceText ? [] : ToolDef.guideTools,
                             continuation: continuation
-                        ) { delta in
-                            fullReply += delta
-                        }
+                        )
                         let turnText = turn.content.compactMap { block -> String? in
                             if case .text(let t) = block { return t }
                             return nil
                         }.joined()
+                        if !turnText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            replyParts.append(turnText)
+                        }
 
                         if turn.stopReason == .toolUse, !turn.toolUses.isEmpty, !forceText {
                             toolRounds += 1
@@ -92,10 +95,10 @@ public struct GuideChatService: Sendable {
                             continue
                         }
 
-                        _ = turnText
                         break
                     }
 
+                    let fullReply = replyParts.joined(separator: "\n\n")
                     if !fullReply.isEmpty && !Task.isCancelled {
                         try db.appendChatMessage(threadId: thread.id, role: "guide", text: fullReply)
                     }
@@ -115,8 +118,7 @@ public struct GuideChatService: Sendable {
         system: String,
         history: [APIMessage],
         tools: [ToolDef],
-        continuation: AsyncThrowingStream<GuideChatEvent, Error>.Continuation,
-        onDelta: (String) -> Void
+        continuation: AsyncThrowingStream<GuideChatEvent, Error>.Continuation
     ) async throws -> TurnResult {
         var turn: TurnResult?
         for try await event in provider.streamTurn(
@@ -128,7 +130,6 @@ public struct GuideChatService: Sendable {
         ) {
             switch event {
             case .textDelta(let text):
-                onDelta(text)
                 continuation.yield(.textDelta(text))
             case .turn(let result):
                 turn = result

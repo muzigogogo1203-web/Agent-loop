@@ -33,7 +33,10 @@ public struct ChatService: Sendable {
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    var fullReply = ""
+                    // 落库正文以 TurnResult 为权威（delta 只管显示）——
+                    // 传输层断流兜底可能让 delta 序列不完整或不连续，累积 delta 会失真
+                    var deltaAccum = ""
+                    var turnText: String?
                     for try await event in provider.streamTurn(
                         system: system,
                         history: history,
@@ -41,11 +44,18 @@ public struct ChatService: Sendable {
                         toolChoice: .auto,
                         maxTokens: 4096
                     ) {
-                        if case .textDelta(let text) = event {
-                            fullReply += text
+                        switch event {
+                        case .textDelta(let text):
+                            deltaAccum += text
+                        case .turn(let result):
+                            turnText = result.content.compactMap { block -> String? in
+                                if case .text(let t) = block { return t }
+                                return nil
+                            }.joined()
                         }
                         continuation.yield(event)
                     }
+                    let fullReply = turnText ?? deltaAccum
                     // Only persist when there is a full reply and we were not cancelled.
                     if !fullReply.isEmpty && !Task.isCancelled {
                         try db.appendChatMessage(threadId: thread.id, role: "companion", text: fullReply)

@@ -99,6 +99,9 @@ public struct AnthropicProvider: LLMProvider {
         // 网关对大体积生成频繁掐断 SSE 流；断流后本轮剩余尝试切换非流式，
         // 避免「重试→再断流→全量重生成」恶性循环。首选路径永远是流式。
         var useNonStreaming = false
+        // 断流前已流出过 textDelta 时，兜底不再重发合并全文（消费方按 turn 取权威正文，
+        // 重发会让「delta 累积型」消费方拼出重复文本）
+        var emittedTextDelta = false
         while true {
             attempt += 1
             request.httpBody = try encoder.encode(
@@ -112,11 +115,13 @@ public struct AnthropicProvider: LLMProvider {
                 if useNonStreaming {
                     var data = Data()
                     for try await byte in bytes { data.append(byte) }
-                    try consumeNonStreaming(data, continuation: continuation)
+                    try consumeNonStreaming(data, suppressMergedTextDelta: emittedTextDelta,
+                                            continuation: continuation)
                     return
                 }
                 do {
-                    try await consumeStream(bytes, continuation: continuation)
+                    try await consumeStream(bytes, continuation: continuation,
+                                            onTextDelta: { _ in emittedTextDelta = true })
                     return
                 } catch let error as ProviderError {
                     guard case .malformedStream = error, attempt <= maxRetries else { throw error }
@@ -150,9 +155,11 @@ public struct AnthropicProvider: LLMProvider {
         }
     }
 
-    /// 非流式兜底：解析完整 message JSON。先把全部 text 块合并 yield 一次 textDelta（UI 连续性），
+    /// 非流式兜底：解析完整 message JSON。断流前无任何增量时，先把全部 text 块合并
+    /// yield 一次 textDelta（UI 连续性）；已有部分增量则跳过（防 delta 累积型消费方重复拼接），
     /// 再 yield .turn。仅在流式断流后作为同轮兜底使用。
     package func consumeNonStreaming(_ data: Data,
+                                     suppressMergedTextDelta: Bool = false,
                                      continuation: AsyncThrowingStream<ProviderEvent, Error>.Continuation) throws {
         guard let text = String(data: data, encoding: .utf8),
               let v = try? JSONValue.decoded(from: text) else {
@@ -183,7 +190,7 @@ public struct AnthropicProvider: LLMProvider {
             if case .text(let t) = block { return t }
             return nil
         }.joined()
-        if !mergedText.isEmpty {
+        if !mergedText.isEmpty && !suppressMergedTextDelta {
             continuation.yield(.textDelta(mergedText))
         }
         Self.logger.info("non-streaming fallback stop_reason \(String(describing: turn.stopReason), privacy: .public)")
@@ -191,12 +198,16 @@ public struct AnthropicProvider: LLMProvider {
     }
 
     private func consumeStream(_ bytes: URLSession.AsyncBytes,
-                               continuation: AsyncThrowingStream<ProviderEvent, Error>.Continuation) async throws {
+                               continuation: AsyncThrowingStream<ProviderEvent, Error>.Continuation,
+                               onTextDelta: (String) -> Void = { _ in }) async throws {
         var parser = SSELineParser()
         var acc = TurnAccumulator()
         for try await line in bytes.lines {
             guard let raw = parser.consume(line: line) else { continue }
-            try acc.consume(raw) { continuation.yield(.textDelta($0)) }
+            try acc.consume(raw) { delta in
+                onTextDelta(delta)
+                continuation.yield(.textDelta(delta))
+            }
             if let turn = acc.finishedTurn {
                 Self.logger.info("provider stop_reason \(String(describing: turn.stopReason), privacy: .public)")
                 continuation.yield(.turn(turn))

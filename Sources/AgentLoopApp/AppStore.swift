@@ -99,6 +99,8 @@ final class AppStore {
     var memoryNotes: [CompanionNoteRecord] = []
     var memoryDrawerVisible = false
     var distillingMemory = false
+    /// 切走沉淀的在途防重（快速来回切换时避免同一增量重复送蒸）
+    private var autoDistillInFlight: Set<String> = []
 
     init() {
         let keychainStore = KeychainStore()
@@ -753,10 +755,12 @@ final class AppStore {
     func autoDistillOnLeave(companionId: String) {
         // 预览模式不触发（避免钥匙串弹窗）；正常模式无 key 时静默跳过
         guard !Self.isUIPreview, let provider = provider(model: defaultModel) else { return }
+        guard autoDistillInFlight.insert(companionId).inserted else { return }
         Task { [weak self] in
             guard let self else { return }
             let note = await MemoryDistillService(db: db, provider: provider)
                 .distillDM(companionId: companionId, minMessages: MemoryDistillService.autoMinMessages)
+            autoDistillInFlight.remove(companionId)
             if note != nil {
                 showToast("这段私聊已沉淀为记忆")
             }
