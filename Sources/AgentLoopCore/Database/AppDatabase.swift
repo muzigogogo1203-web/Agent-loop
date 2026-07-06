@@ -185,6 +185,12 @@ public final class AppDatabase: Sendable {
             }
             try db.create(index: "camp_note_campId", on: "camp_note", columns: ["campId"])
         }
+        // M5-1: 安全作用域书签（沙箱下重启恢复工作目录权限）
+        m.registerMigration("v4") { db in
+            try db.alter(table: "squad") { t in
+                t.add(column: "workspaceBookmark", .blob)
+            }
+        }
         return m
     }
 
@@ -307,7 +313,9 @@ public final class AppDatabase: Sendable {
         return try pool.write { db in
             let squad = SquadRecord(
                 id: UUID().uuidString, campId: camp.id, name: squadName,
-                memberIdsJson: "[]", workspacePath: workspacePath, createdAt: Date())
+                memberIdsJson: "[]", workspacePath: workspacePath,
+                workspaceBookmark: WorkspaceScopedAccess.captureBookmark(forPath: workspacePath),
+                createdAt: Date())
             try squad.insert(db)
 
             let mission = MissionRecord(
@@ -352,6 +360,7 @@ public final class AppDatabase: Sendable {
                 name: Self.truncatedFirstLine(goal, max: 30),
                 memberIdsJson: memberIdsJson,
                 workspacePath: workspacePath,
+                workspaceBookmark: WorkspaceScopedAccess.captureBookmark(forPath: workspacePath),
                 createdAt: Date()
             )
             try squad.insert(db)

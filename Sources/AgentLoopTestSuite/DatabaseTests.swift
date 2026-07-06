@@ -94,8 +94,14 @@ private func tempDB() throws -> AppDatabase {
     try migrator.migrate(pool, upTo: "v1")
     try pool.write { db in
         try CampRecord(id: "camp", name: "c", createdAt: Date()).insert(db)
-        try SquadRecord(id: "squad", campId: "camp", name: "s", memberIdsJson: "[]",
-                        workspacePath: nil, createdAt: Date()).insert(db)
+        // v1 时代还没有 workspaceBookmark 列（v4 增），按当时 schema 裸 SQL 插入
+        try db.execute(
+            sql: """
+                INSERT INTO squad (id, campId, name, memberIdsJson, workspacePath, createdAt)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+            arguments: ["squad", "camp", "s", "[]", nil, Date()]
+        )
         try db.execute(
             sql: """
                 INSERT INTO mission

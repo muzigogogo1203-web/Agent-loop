@@ -138,15 +138,18 @@ public struct SquadRecord: Codable, Sendable, FetchableRecord, PersistableRecord
     public var name: String
     public var memberIdsJson: String
     public var workspacePath: String?
+    /// 安全作用域书签（M5-1）：沙箱下重启后恢复工作目录权限；nil = 纯 path 语义
+    public var workspaceBookmark: Data?
     public var createdAt: Date
 
     public init(id: String, campId: String, name: String, memberIdsJson: String,
-                workspacePath: String?, createdAt: Date) {
+                workspacePath: String?, workspaceBookmark: Data? = nil, createdAt: Date) {
         self.id = id
         self.campId = campId
         self.name = name
         self.memberIdsJson = memberIdsJson
         self.workspacePath = workspacePath
+        self.workspaceBookmark = workspaceBookmark
         self.createdAt = createdAt
     }
 }

@@ -134,7 +134,8 @@ final class AppStore {
         startKernelEventListener()
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
         if !Self.isUIPreview {
-            Task { await orchestrator.reconcile() }
+            // M5-1 启动恢复：收编崩溃遗留的 running 孤儿卡 + 提案自愈，再照常调度
+            Task { await orchestrator.recoverAndReconcile() }
         }
     }
 

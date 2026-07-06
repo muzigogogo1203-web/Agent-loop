@@ -230,6 +230,30 @@ extension AppDatabase {
         }
     }
 
+    /// 崩溃自愈（M5-1）：confirmed 但没有 missionId 的提案 = CAS 确认后、建队前崩溃的遗留
+    /// → 回滚 pending 可重新确认（D10 语义的启动侧收口）。返回被治愈的消息 id。
+    public func healOrphanedConfirmedProposals() throws -> [String] {
+        let candidates = try pool.read { db in
+            try ChatMessageRecord.fetchAll(
+                db,
+                sql: """
+                    SELECT * FROM chat_message
+                    WHERE contentJson LIKE '%"type":"squad_proposal"%'
+                      AND contentJson LIKE '%"status":"confirmed"%'
+                    """
+            )
+        }
+        var healed: [String] = []
+        for message in candidates {
+            guard let block = message.proposal,
+                  block.status == .confirmed,
+                  block.missionId == nil else { continue }
+            try revertProposalToPending(messageId: message.id)
+            healed.append(message.id)
+        }
+        return healed
+    }
+
     private func transitionProposal(
         messageId: String, to next: SquadProposalBlock.Status
     ) throws -> SquadProposalBlock {

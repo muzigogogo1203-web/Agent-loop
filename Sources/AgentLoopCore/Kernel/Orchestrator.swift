@@ -101,6 +101,55 @@ public actor Orchestrator {
         return missionId
     }
 
+    /// 启动恢复（M5-1，spec §14/§16-M5）：先收编崩溃遗留的孤儿，再照常调度。
+    /// 杀进程重启后行动续跑的入口——替代裸 reconcile() 作为 App 启动调用。
+    public func recoverAndReconcile() async {
+        await adoptOrphans()
+        await reconcile()
+    }
+
+    /// 收编孤儿：DB 里 running 但不在内存注册表的卡（崩溃/强杀遗留）→ ready 续跑，
+    /// 其未收口的 run 标记 interrupted；confirmed-无-missionId 的提案回滚 pending 可重确认。
+    private func adoptOrphans() async {
+        let activeCardIds = Set(running.keys)
+        do {
+            let adopted = try await db.pool.write { database -> [(cardId: String, missionId: String)] in
+                let stuck = try CardRecord
+                    .filter(Column("status") == CardStatus.running.rawValue)
+                    .fetchAll(database)
+                    .filter { !activeCardIds.contains($0.id) }
+                for card in stuck {
+                    try database.execute(
+                        sql: """
+                            UPDATE run SET outcome = 'interrupted', endedAt = ?
+                            WHERE cardId = ? AND outcome IS NULL
+                            """,
+                        arguments: [Date(), card.id]
+                    )
+                    try self.db.transitionCard(
+                        database,
+                        id: card.id,
+                        to: .ready,
+                        eventKind: "card_interrupted",
+                        payload: ["reason": "crash_recovery"]
+                    )
+                }
+                return stuck.map { (cardId: $0.id, missionId: $0.missionId) }
+            }
+            for orphan in adopted {
+                Self.logger.info("adopted orphaned running card \(orphan.cardId, privacy: .public)")
+                emit(.missionChanged(missionId: orphan.missionId))
+            }
+        } catch {
+            emit(.kernelError(missionId: "", message: "启动领养失败：\(String(describing: error))"))
+        }
+
+        // 提案自愈（M4 评审遗留的崩溃窗口：CAS 确认后、建队前崩溃）
+        if let healed = try? await db.healOrphanedConfirmedProposals(), !healed.isEmpty {
+            Self.logger.info("healed \(healed.count, privacy: .public) orphaned confirmed proposals")
+        }
+    }
+
     public func reconcile() async {
         ensureTickStarted()
         guard !reconciling else {

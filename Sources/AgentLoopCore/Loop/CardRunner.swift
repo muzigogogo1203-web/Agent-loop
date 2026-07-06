@@ -34,7 +34,11 @@ public struct CardRunner: Sendable {
             throw RecordNotFoundError(table: "card", id: cardId)
         }
         let squad = try db.squad(forCard: cardId)
-        let workspace = squad?.workspacePath.map { URL(fileURLWithPath: $0) }
+        // M5-1：书签优先恢复工作目录权限（沙箱重启场景），path 兜底
+        let workspaceAccess = WorkspaceScopedAccess(
+            workspacePath: squad?.workspacePath,
+            bookmark: squad?.workspaceBookmark)
+        let workspace = workspaceAccess.url
         let runId = UUID().uuidString
 
         try db.startRun(cardId: cardId, runId: runId)
@@ -84,6 +88,7 @@ public struct CardRunner: Sendable {
 
         return AsyncThrowingStream { continuation in
             let task = Task {
+                defer { workspaceAccess.stop() }
                 var totalIn = 0
                 var totalOut = 0
                 var turns = 0
