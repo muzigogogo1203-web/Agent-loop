@@ -16,6 +16,8 @@ public enum AgentEvent: Sendable {
     case toolFinished(name: String, isError: Bool)
     case turnEnded(usage: Usage)
     case turnRetrying(attempt: Int, reason: String)
+    /// 上下文压缩完成（M5-3）：fromMessages → toMessages
+    case contextCompacted(fromMessages: Int, toMessages: Int)
     case finished(LoopOutcome)
 }
 
@@ -78,9 +80,20 @@ public struct AgentLoop: Sendable {
         var turns = 0
         var spentTokens = 0
 
+        var lastInputTokens = 0
         while turns < maxTurns && spentTokens < tokenBudget {
             turns += 1
             try Task.checkCancellation()
+
+            // 上下文压缩（M5-3，spec §6.3）：上一轮 input 已近窗口时，先压缩旧轮次再继续。
+            // system/tools 前缀与首条 user 消息不动（缓存纪律）；失败静默跳过，下轮再试。
+            if lastInputTokens >= KernelDefaults.contextCompactionThreshold,
+               let compacted = await Self.compact(history: history, provider: provider) {
+                continuation.yield(.contextCompacted(fromMessages: history.count, toMessages: compacted.count))
+                Self.logger.info("context compacted \(history.count, privacy: .public) -> \(compacted.count, privacy: .public) messages")
+                history = compacted
+                lastInputTokens = 0
+            }
 
             let result: TurnResult
             do {
@@ -93,6 +106,7 @@ public struct AgentLoop: Sendable {
                 return .blocked(reason: "tool_failure", detail: "本轮连续两次超时，已暂停等待处理")
             }
             history.append(.assistant(result.content))
+            lastInputTokens = result.usage.inputTokens
             spentTokens = Self.saturatingTokenSum(
                 spentTokens,
                 result.usage.inputTokens,
@@ -262,6 +276,95 @@ public struct AgentLoop: Sendable {
                 throw error
             }
         }
+    }
+
+    // MARK: - 上下文压缩（M5-3）
+
+    /// 压缩历史：保留首条 user 消息（上下文包）与最近若干消息（后缀从 assistant 边界起，
+    /// 保证 tool_use/tool_result 配对不被切断），中段经单轮 LLM 摘要替换为
+    /// assistant(摘要) + user(桥接) 两条。不可压缩（太短/找不到边界/摘要失败）返回 nil。
+    package static func compact(
+        history: [APIMessage], provider: any LLMProvider
+    ) async -> [APIMessage]? {
+        guard let cut = compactionCutIndex(history: history) else { return nil }
+        let middle = Array(history[1..<cut])
+        let suffix = Array(history[cut...])
+
+        let summary = await summarize(middle: middle, provider: provider)
+        guard let summary, !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        var compacted: [APIMessage] = [history[0]]
+        compacted.append(.assistant([.text("# 此前进展摘要（早期过程已压缩）\n" + summary)]))
+        compacted.append(.user("（以上是压缩后的早期进展；最近的往来保持原文。继续完成当前小目标，收尾契约不变。）"))
+        compacted.append(contentsOf: suffix)
+        return compacted
+    }
+
+    /// 选切点：后缀 ≤ keepRecent 条、必须从 assistant 消息开始（tool_result 紧随其 tool_use，
+    /// 从 assistant 起步则配对完整落在后缀内）；中段至少 2 条才值得压。
+    package static func compactionCutIndex(history: [APIMessage]) -> Int? {
+        let keep = KernelDefaults.compactionKeepRecentMessages
+        guard history.count > keep + 3 else { return nil }
+        var cut = history.count - keep
+        while cut < history.count, history[cut].role != .assistant {
+            cut += 1
+        }
+        guard cut < history.count, cut > 2 else { return nil }
+        return cut
+    }
+
+    private static func summarize(middle: [APIMessage], provider: any LLMProvider) async -> String? {
+        let rendered = renderForSummary(middle)
+        var text = ""
+        var sawTurn = false
+        do {
+            for try await event in provider.streamTurn(
+                system: compactorSystem,
+                history: [.user(rendered)],
+                tools: [],
+                toolChoice: .auto,
+                maxTokens: 2048
+            ) {
+                if case .turn(let result) = event {
+                    sawTurn = true
+                    text = result.content.compactMap { block -> String? in
+                        if case .text(let t) = block { return t }
+                        return nil
+                    }.joined()
+                }
+            }
+        } catch {
+            return nil
+        }
+        return sawTurn ? text : nil
+    }
+
+    package static let compactorSystem = """
+    你是执行过程的压缩员。把一段智能体工作过程压缩成要点摘要，供它自己继续工作时回看。
+    必须保留：当前进展到哪一步、已经写入/产出的文件路径、关键决定与结论、尚未解决的问题。
+    省略：工具调用的原始输出细节、寒暄。直接输出摘要正文（markdown 要点），不要前言。
+    """
+
+    package static func renderForSummary(_ messages: [APIMessage]) -> String {
+        var lines: [String] = []
+        for message in messages {
+            for block in message.content {
+                switch block {
+                case .text(let text):
+                    lines.append("\(message.role == .user ? "系统/用户" : "我")：\(String(text.prefix(500)))")
+                case .toolUse(_, let name, let input):
+                    let inputPreview = (try? input.encodedString()).map { String($0.prefix(200)) } ?? ""
+                    lines.append("我调用了工具 \(name)(\(inputPreview))")
+                case .toolResult(_, let content, let isError):
+                    lines.append("工具返回\(isError ? "（出错）" : "")：\(String(content.prefix(300)))")
+                case .unknown:
+                    break
+                }
+            }
+        }
+        return lines.joined(separator: "\n")
     }
 
     private static func isRetryable(_ error: Error) -> Bool {

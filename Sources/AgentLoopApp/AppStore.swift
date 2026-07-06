@@ -461,6 +461,9 @@ final class AppStore {
         case .turnRetrying(let attempt, let reason):
             setCardLatest(cardId: cardId, "网络重试 \(attempt)")
             cardActivity[cardId, default: []].append(ActivityItem(text: "网络波动，正在重试（\(attempt)/2）：\(reason)", kind: .retry))
+        case .contextCompacted:
+            setCardLatest(cardId: cardId, "整理了一下背包")
+            cardActivity[cardId, default: []].append(ActivityItem(text: "上下文变长，压缩了早期过程继续赶路", kind: .note))
         case .turnEnded:
             break
         case .finished(let outcome):

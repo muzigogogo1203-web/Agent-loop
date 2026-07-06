@@ -9,4 +9,8 @@ public enum KernelDefaults {
     public static let transportRetryDelays: [Duration] = [.seconds(2), .seconds(5), .seconds(10), .seconds(20)]
     /// 全局同时执行的卡上限（M5-2：多营地并发失控防线）
     public static let maxConcurrentCardRuns = 4
+    /// 上下文压缩触发线（M5-3，spec §6.3：约 200k 窗口的 75%）
+    public static let contextCompactionThreshold = 150_000
+    /// 压缩时保留原文的最近消息数（含配对的工具往返）
+    public static let compactionKeepRecentMessages = 6
 }
