@@ -15,6 +15,7 @@ struct RootView: View {
     @State private var selection: Destination?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var showNewCampSheet = false
+    @State private var abandonTarget: MissionRecord?
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -61,7 +62,9 @@ struct RootView: View {
             .navigationSplitViewColumnWidth(min: 210, ideal: 240)
             .onAppear {
                 store.reload()
-                if selection == nil, let first = store.camps.first {
+                if let previewMission = AppStore.previewMissionId {
+                    selection = .mission(previewMission)
+                } else if selection == nil, let first = store.camps.first {
                     selection = .camp(first.id)
                 }
             }
@@ -100,9 +103,12 @@ struct RootView: View {
             Group {
                 switch selection {
                 case .newMission(let campId):
-                    TaskRunView(mode: .newMission(campId: campId), onNewMission: {
-                        selection = .newMission(campId: campId)
-                    })
+                    TaskRunView(
+                        mode: .newMission(campId: campId),
+                        onNewMission: { selection = .newMission(campId: campId) },
+                        onOpenSettings: { selection = .settings },
+                        onRecruit: { selection = .editCompanion(nil) }
+                    )
                 case .camp(let campId):
                     CampHomeView(
                         campId: campId,
@@ -146,9 +152,37 @@ struct RootView: View {
                 }
             }
             .background(Camp.canvas)
+            // 统一 toast 通道（UX 审计 P2：跨视图反馈不再丢失）
+            .campToast(store.knowledgeToast)
+        }
+        .confirmationDialog(
+            "放弃「\(abandonTarget.map(Self.missionTitleStatic) ?? "")」？",
+            isPresented: Binding(
+                get: { abandonTarget != nil },
+                set: { if !$0 { abandonTarget = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("放弃行动", role: .destructive) {
+                if let mission = abandonTarget {
+                    Task { await store.cancelMission(missionId: mission.id) }
+                }
+                abandonTarget = nil
+            }
+            Button("再想想", role: .cancel) { abandonTarget = nil }
+        } message: {
+            Text("未完成的小目标会作废，已产出的交付物保留。")
         }
         .fontDesign(.rounded)
         .tint(Camp.ember)
+    }
+
+    static func missionTitleStatic(_ mission: MissionRecord) -> String {
+        let refined = mission.goalRefined.trimmingCharacters(in: .whitespacesAndNewlines)
+        let raw = mission.goalRaw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = refined.isEmpty ? raw : refined
+        let firstLine = base.split(whereSeparator: \.isNewline).first.map(String.init) ?? base
+        return firstLine.isEmpty ? "未命名行动" : String(firstLine.prefix(16))
     }
 
     private var isOnNewMission: Bool {
@@ -240,8 +274,8 @@ struct RootView: View {
         }
         .contextMenu {
             if mission.status != .accepted && mission.status != .failed {
-                Button("放弃行动", role: .destructive) {
-                    Task { await store.cancelMission(missionId: mission.id) }
+                Button("放弃行动…", role: .destructive) {
+                    abandonTarget = mission // 二次确认（UX 审计 P1）
                 }
             }
         }

@@ -13,6 +13,9 @@ struct FeedView: View {
     var onInteract: () -> Void = {}
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var expandedIds: Set<String> = []
+    /// 贴底才自动跟随（UX 审计 P2：不打断回看历史）；由底部哨兵可见性驱动
+    @State private var stickToBottom = true
+    @State private var unseenCount = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -50,14 +53,38 @@ struct FeedView: View {
                                 .id(entry.id)
                                 .transition(.opacity.combined(with: .move(edge: .bottom)))
                         }
+                        // 底部哨兵：可见 = 用户贴底
+                        Color.clear
+                            .frame(height: 1)
+                            .id("feed-bottom")
+                            .onAppear {
+                                stickToBottom = true
+                                unseenCount = 0
+                            }
+                            .onDisappear { stickToBottom = false }
                     }
                     .padding(12)
                     .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: entries.count)
                 }
                 .simultaneousGesture(DragGesture(minimumDistance: 1).onChanged { _ in onInteract() })
                 .onChange(of: entries.count) { _, _ in
-                    if let id = entries.last?.id {
-                        proxy.scrollTo(id, anchor: .bottom)
+                    if stickToBottom {
+                        proxy.scrollTo("feed-bottom", anchor: .bottom)
+                    } else {
+                        unseenCount += 1
+                    }
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    if !stickToBottom && unseenCount > 0 {
+                        Button {
+                            proxy.scrollTo("feed-bottom", anchor: .bottom)
+                        } label: {
+                            Label("\(unseenCount) 条新动态", systemImage: "arrow.down")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+                        .padding(10)
+                        .transition(.opacity)
                     }
                 }
             }

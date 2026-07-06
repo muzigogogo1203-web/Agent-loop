@@ -65,6 +65,13 @@ struct AskUserPromptView: View {
                                 .stroke(Camp.line, lineWidth: 1)
                         )
                         .disabled(submitted)
+                        .onSubmit {
+                            // 回车提交，对齐 DM/向导输入习惯（UX 审计 P3）
+                            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !submitted && !trimmed.isEmpty {
+                                submit(.text(text))
+                            }
+                        }
                     Button {
                         submit(.text(text))
                     } label: {
@@ -72,7 +79,13 @@ struct AskUserPromptView: View {
                     }
                     .buttonStyle(CampPrimaryButtonStyle(size: .small))
                     .help("提交回复")
+                    .accessibilityLabel("提交回复")
                     .disabled(submitted || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                if submitted {
+                    Label("已答复，伙伴马上继续", systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(Camp.moss)
                 }
             }
         }

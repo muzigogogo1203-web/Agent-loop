@@ -67,7 +67,6 @@ struct DMChatView: View {
                 Button("编辑伙伴", action: onEdit)
             }
         }
-        .campToast(store.knowledgeToast)
         .task(id: companion.id) {
             store.loadChatHistory(companion: companion)
         }
@@ -93,6 +92,12 @@ struct DMChatView: View {
                 .onChange(of: store.chatMessages.count) { _, newValue in
                     proxy.scrollTo(newValue - 1)
                 }
+                // 流式增量跟随（UX 审计 P2：长回复不再在视口外无声生长）
+                .onChange(of: store.chatMessages.last?.text) { _, _ in
+                    if store.chatStreaming {
+                        proxy.scrollTo(store.chatMessages.count - 1, anchor: .bottom)
+                    }
+                }
             }
             Divider().overlay(Camp.line)
             HStack(spacing: 8) {
@@ -106,10 +111,17 @@ struct DMChatView: View {
                             .stroke(Camp.line, lineWidth: 1)
                     )
                     .onSubmit(send)
-                Button("发送", action: send)
-                    .buttonStyle(CampPrimaryButtonStyle(size: .small))
-                    .disabled(input.isEmpty || store.chatStreaming)
-                    .opacity(input.isEmpty || store.chatStreaming ? 0.5 : 1)
+                if store.chatStreaming {
+                    // 无死等（UX 审计 P2）：流式期间可停止
+                    Button("停止") { store.stopChat() }
+                        .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
+                        .keyboardShortcut(.cancelAction)
+                } else {
+                    Button("发送", action: send)
+                        .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                        .disabled(input.isEmpty)
+                        .opacity(input.isEmpty ? 0.5 : 1)
+                }
             }
             .padding(10)
             .background(Camp.surface)
@@ -121,8 +133,10 @@ struct DMChatView: View {
         guard !input.isEmpty, !store.chatStreaming else {
             return
         }
-        store.sendChat(companion: companion, text: input)
-        input = ""
+        // 未受理（如没配 key）不清空输入（UX 审计 P1）
+        if store.sendChat(companion: companion, text: input) {
+            input = ""
+        }
     }
 }
 

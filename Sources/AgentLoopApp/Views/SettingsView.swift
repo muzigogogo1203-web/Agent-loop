@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(AppStore.self) private var store
     @State private var key = ""
     @State private var budgetText = ""
+    @State private var budgetSavedFlash = false
 
     var body: some View {
         @Bindable var store = store
@@ -98,9 +99,22 @@ struct SettingsView: View {
                         Text("tokens / 行动")
                             .font(.callout)
                             .foregroundStyle(Camp.inkSecondary)
-                        Button("保存", action: saveBudget)
-                            .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
-                            .disabled(Int(budgetText) == nil || Int(budgetText)! <= 0)
+                        Button {
+                            saveBudget()
+                        } label: {
+                            if budgetSavedFlash {
+                                Label("已保存", systemImage: "checkmark")
+                            } else {
+                                Text("保存")
+                            }
+                        }
+                        .buttonStyle(CampSecondaryButtonStyle(tint: budgetSavedFlash ? Camp.moss : Camp.ember))
+                        .disabled(Int(budgetText) == nil || Int(budgetText)! <= 0)
+                    }
+                    if !budgetText.isEmpty && (Int(budgetText) == nil || Int(budgetText)! <= 0) {
+                        Label("需要正整数（tokens 数）", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Camp.charcoalRed)
+                            .font(.caption)
                     }
                     Text("新行动与向导组队提案的缺省预算；耗尽时行动暂停派发，可续预算 / 就地收成果 / 放弃。")
                         .font(.caption)
@@ -121,5 +135,10 @@ struct SettingsView: View {
     private func saveBudget() {
         guard let value = Int(budgetText), value > 0 else { return }
         store.defaultMissionBudget = value
+        budgetSavedFlash = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.4))
+            budgetSavedFlash = false
+        }
     }
 }

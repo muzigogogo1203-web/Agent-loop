@@ -45,7 +45,6 @@ struct CampHomeView: View {
             .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: showNotes)
         }
         .background(Camp.canvas)
-        .campToast(store.knowledgeToast)
         .task(id: campId) {
             store.loadCampHome(campId: campId)
         }
@@ -236,6 +235,12 @@ private struct GuideChatColumn: View {
                 .onChange(of: scrollAnchor) { _, anchor in
                     proxy.scrollTo(anchor, anchor: .bottom)
                 }
+                // 流式增量跟随（UX 审计 P2）
+                .onChange(of: store.guideStreamingText) { _, _ in
+                    if store.guideStreaming {
+                        proxy.scrollTo("streaming", anchor: .bottom)
+                    }
+                }
             }
 
             Divider().overlay(Camp.line)
@@ -265,10 +270,16 @@ private struct GuideChatColumn: View {
                             .stroke(Camp.line, lineWidth: 1)
                     )
                     .onSubmit(send)
-                Button("发送", action: send)
-                    .buttonStyle(CampPrimaryButtonStyle(size: .small))
-                    .disabled(input.isEmpty || store.guideStreaming)
-                    .opacity(input.isEmpty || store.guideStreaming ? 0.5 : 1)
+                if store.guideStreaming {
+                    Button("停止") { store.stopGuideChat() }
+                        .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
+                        .keyboardShortcut(.cancelAction)
+                } else {
+                    Button("发送", action: send)
+                        .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                        .disabled(input.isEmpty)
+                        .opacity(input.isEmpty ? 0.5 : 1)
+                }
             }
             .padding(10)
             .background(Camp.surface)

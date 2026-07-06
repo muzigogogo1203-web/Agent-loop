@@ -58,6 +58,7 @@ struct NoteListPane: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var query = ""
     @State private var editingItem: NoteItem?
+    @State private var pendingDelete: NoteItem?
 
     private var filtered: [NoteItem] {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -128,6 +129,22 @@ struct NoteListPane: View {
             }
         }
         .background(Camp.surface)
+        .confirmationDialog(
+            "删除「\(pendingDelete?.title ?? "")」？",
+            isPresented: Binding(
+                get: { pendingDelete != nil },
+                set: { if !$0 { pendingDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("删除", role: .destructive) {
+                if let item = pendingDelete { onDelete(item.id) }
+                pendingDelete = nil
+            }
+            Button("再想想", role: .cancel) { pendingDelete = nil }
+        } message: {
+            Text("删除后不可恢复。")
+        }
         .sheet(item: $editingItem) { item in
             NoteEditorSheet(
                 item: item,
@@ -228,8 +245,8 @@ struct NoteListPane: View {
                 editingItem = item
             }
             Divider()
-            Button("删除", role: .destructive) {
-                onDelete(item.id)
+            Button("删除…", role: .destructive) {
+                pendingDelete = item // 二次确认（UX 审计 P2：沉淀成果不可误删）
             }
         }
         .transition(.opacity.combined(with: .move(edge: .top)))

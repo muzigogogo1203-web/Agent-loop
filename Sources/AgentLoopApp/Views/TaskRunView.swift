@@ -17,6 +17,11 @@ struct TaskRunView: View {
     @State private var interactionGeneration = 0
     let mode: Mode
     var onNewMission: () -> Void = {}
+    var onOpenSettings: () -> Void = {}
+    var onRecruit: () -> Void = {}
+    @State private var showAbandonConfirm = false
+    @State private var submitting = false
+    @State private var submitError: String?
 
     var body: some View {
         Group {
@@ -45,6 +50,8 @@ struct TaskRunView: View {
 
     private func newMissionForm(campId: String) -> some View {
         ScrollView {
+            let _ = campId // 草稿读写见 .task / .onChange
+
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("出发新行动")
@@ -90,9 +97,17 @@ struct TaskRunView: View {
                         }
                     }
                     if store.companions.isEmpty {
-                        Text("名册还是空的——先去侧栏创建一位伙伴。")
-                            .font(.callout)
-                            .foregroundStyle(Camp.inkSecondary)
+                        HStack(spacing: 10) {
+                            Text("名册还是空的——先招募一位伙伴。")
+                                .font(.callout)
+                                .foregroundStyle(Camp.inkSecondary)
+                            Button {
+                                onRecruit() // 直达入口（UX 审计 P2：草稿已暂存，回来还在）
+                            } label: {
+                                Label("招募伙伴…", systemImage: "person.badge.plus")
+                            }
+                            .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+                        }
                     } else {
                         FlowLayoutLite(spacing: 10) {
                             ForEach(store.companions, id: \.id) { companion in
@@ -136,7 +151,26 @@ struct TaskRunView: View {
                 }
                 .campCard()
 
+                // 出发反馈（UX 审计 P1：进行中/失败都要可见）
+                if let submitError {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Camp.charcoalRed)
+                        Text(submitError)
+                            .font(.callout)
+                            .foregroundStyle(Camp.charcoalRed)
+                        if submitError.contains("API key") {
+                            Button("去设置", action: onOpenSettings)
+                                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+                        }
+                        Spacer()
+                    }
+                    .campCard(padding: 10, highlighted: true)
+                }
+
                 Button {
+                    submitError = nil
+                    submitting = true
                     store.startMission(
                         goal: goal,
                         companionIds: selectedCompanionIds,
@@ -146,13 +180,20 @@ struct TaskRunView: View {
                 } label: {
                     HStack {
                         Spacer()
-                        Label("出发", systemImage: "flag.fill")
+                        if submitting {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(.white)
+                            Text("正在召集…")
+                        } else {
+                            Label("出发", systemImage: "flag.fill")
+                        }
                         Spacer()
                     }
                 }
                 .buttonStyle(CampPrimaryButtonStyle())
                 .keyboardShortcut(.defaultAction)
-                .disabled(goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedCompanionIds.isEmpty)
+                .disabled(submitting || goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedCompanionIds.isEmpty)
                 .opacity(goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedCompanionIds.isEmpty ? 0.5 : 1)
             }
             .frame(maxWidth: 620)
@@ -160,6 +201,30 @@ struct TaskRunView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Camp.canvas)
+        .task(id: campId) {
+            // 读入该营地的草稿（防切页丢输入）
+            let draft = store.missionDrafts[campId] ?? AppStore.MissionDraft()
+            goal = draft.goal
+            workspace = draft.workspace
+            selectedCompanionIds = draft.companionIds
+            submitting = false
+            submitError = nil
+        }
+        .onChange(of: goal) { _, _ in saveDraft(campId: campId) }
+        .onChange(of: workspace) { _, _ in saveDraft(campId: campId) }
+        .onChange(of: selectedCompanionIds) { _, _ in saveDraft(campId: campId) }
+        .onChange(of: store.missionPhase) { _, phase in
+            guard submitting else { return }
+            if case .error(let message) = phase {
+                submitting = false
+                submitError = message
+            }
+        }
+    }
+
+    private func saveDraft(campId: String) {
+        store.missionDrafts[campId] = AppStore.MissionDraft(
+            goal: goal, workspace: workspace, companionIds: selectedCompanionIds)
     }
 
     private func companionChip(_ companion: CompanionRecord) -> some View {
@@ -388,11 +453,19 @@ struct TaskRunView: View {
 
     private var abandonButton: some View {
         Button(role: .destructive) {
-            store.cancelCurrentMission()
+            showAbandonConfirm = true // 二次确认（UX 审计 P1：不可逆操作）
         } label: {
             Text("放弃")
         }
         .buttonStyle(CampSecondaryButtonStyle())
+        .confirmationDialog("放弃这次行动？", isPresented: $showAbandonConfirm, titleVisibility: .visible) {
+            Button("放弃行动", role: .destructive) {
+                store.cancelCurrentMission()
+            }
+            Button("再想想", role: .cancel) {}
+        } message: {
+            Text("未完成的小目标会作废，已产出的交付物保留。")
+        }
     }
 
     private func viewToggle(feedVisible: Bool, feedLocked: Bool) -> some View {

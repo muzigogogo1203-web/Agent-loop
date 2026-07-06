@@ -69,6 +69,14 @@ final class AppStore {
     private var missionTask: Task<Void, Never>?
     private var kernelEventsTask: Task<Void, Never>?
 
+    /// 新行动表单草稿（按营地暂存，防切页丢输入——UX 审计 P2）
+    struct MissionDraft {
+        var goal = ""
+        var workspace = ""
+        var companionIds: [String] = []
+    }
+    var missionDrafts: [String: MissionDraft] = [:]
+
     var chatMessages: [(role: String, text: String)] = []
     var chatStreaming = false
     private var chatTask: Task<Void, Never>?
@@ -150,6 +158,9 @@ final class AppStore {
 
     /// 环境变量 AGENTLOOP_UI_PREVIEW=1 时为 UI 预览模式：不读钥匙串、不调度任务
     static let isUIPreview = ProcessInfo.processInfo.environment["AGENTLOOP_UI_PREVIEW"] == "1"
+    /// 预览直达（截图循环用）：启动即打开指定行动，可选直接进小剧场
+    static let previewMissionId = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_MISSION"]
+    static let previewTheater = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_THEATER"] == "1"
 
     func reload() {
         companions = (try? db.regularCompanions()) ?? []
@@ -210,6 +221,7 @@ final class AppStore {
                 )
                 currentMissionId = missionId
                 theaterMode = false
+                if let campId { missionDrafts[campId] = nil } // 出发成功才清草稿
                 reloadMission(missionId: missionId)
                 reloadMissionList()
             } catch {
@@ -220,7 +232,7 @@ final class AppStore {
 
     func selectMission(_ missionId: String) {
         currentMissionId = missionId
-        theaterMode = false
+        theaterMode = Self.isUIPreview && Self.previewTheater
         selectedCardId = nil
         feedNotice = nil
         reloadMission(missionId: missionId)
@@ -322,6 +334,7 @@ final class AppStore {
                     reloadMission(missionId: currentMissionId, clearNotice: false)
                 }
                 feedNotice = "这个问题已经过期"
+                showToast("这个问题已经过期") // 右栏收起时也能看到（UX 审计 P2）
             } catch {
                 missionPhase = .error(readableError(error))
             }
@@ -565,12 +578,15 @@ final class AppStore {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: artifact.path)])
     }
 
-    func sendChat(companion: CompanionRecord, text: String) {
+    /// 返回是否受理（未受理时调用方不应清空输入——UX 审计 P1：无 key 静默吞消息）
+    @discardableResult
+    func sendChat(companion: CompanionRecord, text: String) -> Bool {
         guard !text.isEmpty, !chatStreaming else {
-            return
+            return false
         }
         guard let provider = provider(model: companion.model) else {
-            return
+            showToast("请先在设置里填入 API key")
+            return false
         }
         chatStreamID += 1
         let streamID = chatStreamID
@@ -607,7 +623,9 @@ final class AppStore {
             } catch {
                 await coalescer.discard()
                 if chatStreamID == streamID, chatMessages.indices.contains(companionMessageIndex) {
-                    chatMessages[companionMessageIndex].text = "（出错了：\(error)）"
+                    // 人话化错误（UX 审计 P3：不倒原始 error 串）
+                    chatMessages[companionMessageIndex].text =
+                        "（没发出去：\(CampCopy.humanizeBlockedDetail(readableError(error)))）"
                 }
             }
             if chatStreamID == streamID {
@@ -616,6 +634,36 @@ final class AppStore {
                 chatTask = nil
             }
         }
+        return true
+    }
+
+    /// 停止当前 DM 流式（UX 审计 P2：无死等）；已收到的增量保留在气泡里
+    func stopChat() {
+        guard chatStreaming else { return }
+        chatStreamID += 1
+        chatTask?.cancel()
+        chatTask = nil
+        let coalescer = chatCoalescer
+        chatCoalescer = nil
+        chatStreaming = false
+        Task { await coalescer?.flush() }
+        showToast("已停下这条回复")
+    }
+
+    /// 停止向导流式
+    func stopGuideChat() {
+        guard guideStreaming else { return }
+        guideStreamID += 1
+        guideTask?.cancel()
+        guideTask = nil
+        let coalescer = guideCoalescer
+        guideCoalescer = nil
+        guideStreaming = false
+        guideStreamingText = nil
+        guideToolActivity = nil
+        Task { await coalescer?.discard() }
+        reloadGuideMessages()
+        showToast("已停下向导这条回复")
     }
 
     func loadChatHistory(companion: CompanionRecord) {

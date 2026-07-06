@@ -70,6 +70,15 @@ struct CardRowView: View {
         .opacity(card.status == .canceled ? 0.65 : 1)
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
+        // 键盘/VoiceOver 可达（UX 审计 P2）：Tab 聚焦 + 回车打开详情
+        .focusable(true)
+        .onKeyPress(.return) {
+            onSelect()
+            return .handled
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(card.title)，\(statusText)")
+        .accessibilityAction(named: "查看详情", onSelect)
         .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: card.status)
     }
 
