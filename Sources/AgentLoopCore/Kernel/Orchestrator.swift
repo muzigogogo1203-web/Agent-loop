@@ -88,6 +88,14 @@ public actor Orchestrator {
                 let campNotes = self.loadCampNotes(campId: try db.squad(forMission: missionId)?.campId)
                 let result = try await planner.propose(
                     goal: goal, roster: roster, workspacePath: workspacePath, campNotes: campNotes)
+                // M6-D13：规划轮入账（fallback 路径已消耗的部分也在 result.usage 里）
+                if result.usage.inputTokens + result.usage.outputTokens > 0 {
+                    try db.recordPlanningTokens(
+                        missionId: missionId,
+                        inputTokens: result.usage.inputTokens,
+                        outputTokens: result.usage.outputTokens,
+                        cacheReadTokens: result.usage.cacheReadTokens)
+                }
                 if let reason = result.fallbackReason {
                     try db.recordPlanFallback(missionId: missionId, reason: reason)
                 }

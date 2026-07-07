@@ -3,6 +3,13 @@ public struct Usage: Sendable, Equatable {
     public init(inputTokens: Int = 0, outputTokens: Int = 0, cacheReadTokens: Int = 0) {
         self.inputTokens = inputTokens; self.outputTokens = outputTokens; self.cacheReadTokens = cacheReadTokens
     }
+
+    /// 跨轮累计（M6-D13：规划两轮 + fallback 路径的 usage 求和）
+    public mutating func add(_ other: Usage) {
+        inputTokens += other.inputTokens
+        outputTokens += other.outputTokens
+        cacheReadTokens += other.cacheReadTokens
+    }
 }
 
 public struct TurnResult: Sendable, Equatable {

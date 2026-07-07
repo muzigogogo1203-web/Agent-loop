@@ -70,10 +70,13 @@ public struct PlanProposal: Sendable, Codable, Equatable {
 public struct PlanResult: Sendable, Equatable {
     public let proposal: PlanProposal
     public let fallbackReason: String?
+    /// 规划全程累计 usage（M6-D13）：含重试轮与 fallback 前已消耗的部分
+    public let usage: Usage
 
-    public init(proposal: PlanProposal, fallbackReason: String?) {
+    public init(proposal: PlanProposal, fallbackReason: String?, usage: Usage = .init()) {
         self.proposal = proposal
         self.fallbackReason = fallbackReason
+        self.usage = usage
     }
 }
 
@@ -95,11 +98,14 @@ public struct Planner: Sendable {
         var history: [APIMessage] = [
             .user(userPrompt(goal: goal, roster: roster, workspacePath: workspacePath, campNotes: campNotes)),
         ]
+        // M6-D13：跨轮累计 usage——第一轮成功、第二轮失败时，第一轮的钱也要入账
+        var spent = Usage()
         do {
             let first = try await providerTurn(history: history)
+            spent.add(first.usage)
             switch parse(first, rosterCount: roster.count) {
             case .valid(let proposal):
-                return PlanResult(proposal: proposal, fallbackReason: nil)
+                return PlanResult(proposal: proposal, fallbackReason: nil, usage: spent)
             case .invalidToolUse(let toolUseId, let error):
                 history.append(.assistant(first.content))
                 history.append(.user(toolResults: [.toolResult(toolUseId: toolUseId, content: error, isError: true)]))
@@ -109,15 +115,18 @@ public struct Planner: Sendable {
             }
 
             let second = try await providerTurn(history: history)
+            spent.add(second.usage)
             switch parse(second, rosterCount: roster.count) {
             case .valid(let proposal):
-                return PlanResult(proposal: proposal, fallbackReason: nil)
+                return PlanResult(proposal: proposal, fallbackReason: nil, usage: spent)
             case .invalidToolUse, .noToolUse:
-                return PlanResult(proposal: Self.fallback(goal: goal), fallbackReason: "invalid_after_retry")
+                return PlanResult(
+                    proposal: Self.fallback(goal: goal),
+                    fallbackReason: "invalid_after_retry", usage: spent)
             }
         } catch {
             if error is CancellationError { throw error }
-            return PlanResult(proposal: Self.fallback(goal: goal), fallbackReason: "llm_failed")
+            return PlanResult(proposal: Self.fallback(goal: goal), fallbackReason: "llm_failed", usage: spent)
         }
     }
 

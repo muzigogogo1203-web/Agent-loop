@@ -21,6 +21,7 @@ public enum EventKind {
     public static let planCompleted = "plan_completed"
     public static let planNoop = "plan_noop"
     public static let planFallback = "plan_fallback"
+    public static let planningTokens = "planning_tokens"
 
     // 执行与内核
     public static let runError = "run_error"

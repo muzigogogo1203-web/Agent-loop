@@ -869,12 +869,37 @@ public final class AppDatabase: Sendable {
             try run.update(db)
             if let card = try CardRecord.fetchOne(db, key: run.cardId),
                var mission = try MissionRecord.fetchOne(db, key: card.missionId) {
-                let total = max(0, tokensIn) + max(0, tokensOut)
-                let (newSpent, overflow) = mission.spentTokens.addingReportingOverflow(total)
-                mission.spentTokens = overflow ? Int.max : newSpent
+                Self.addSpentSaturating(&mission, tokensIn: tokensIn, tokensOut: tokensOut)
                 try mission.update(db)
             }
         }
+    }
+
+    /// 规划轮 token 入账（M6-D13）：规划没有 run 行，走独立入账；
+    /// 投影更新与 planning_tokens 事件在同一写事务（事件溯源纪律）。
+    public func recordPlanningTokens(
+        missionId: String, inputTokens: Int, outputTokens: Int, cacheReadTokens: Int
+    ) throws {
+        try pool.write { db in
+            guard var mission = try MissionRecord.fetchOne(db, key: missionId) else { return }
+            Self.addSpentSaturating(&mission, tokensIn: inputTokens, tokensOut: outputTokens)
+            try mission.update(db)
+            try Self.appendEvent(
+                db, missionId: missionId, cardId: nil, runId: nil,
+                kind: EventKind.planningTokens,
+                payload: [
+                    "inputTokens": .number(Double(max(0, inputTokens))),
+                    "outputTokens": .number(Double(max(0, outputTokens))),
+                    "cacheReadTokens": .number(Double(max(0, cacheReadTokens))),
+                ])
+        }
+    }
+
+    /// 饱和加法（原内联于 finishRun）：溢出封顶 Int.max，预算执法不许翻车
+    private static func addSpentSaturating(_ mission: inout MissionRecord, tokensIn: Int, tokensOut: Int) {
+        let (total, totalOverflow) = max(0, tokensIn).addingReportingOverflow(max(0, tokensOut))
+        let (newSpent, overflow) = mission.spentTokens.addingReportingOverflow(totalOverflow ? Int.max : total)
+        mission.spentTokens = (overflow || totalOverflow) ? Int.max : newSpent
     }
 
     // MARK: Artifacts
