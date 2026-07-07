@@ -27,6 +27,8 @@ public struct MissionStateError: Error, Sendable, Equatable {
 public actor Orchestrator {
     private let db: AppDatabase
     private let makeProvider: @Sendable (String) -> any LLMProvider
+    /// M6-D7：搜索 key 派发时解析（沿 makeProvider 注入模式），Core 不直连 Keychain 细节
+    private let searchKeyProvider: @Sendable () -> String?
     private let artifactStoreRoot: URL
     private var running: [String: RunningEntry] = [:]
     private var planningTasks: [String: Task<Void, Never>] = [:]
@@ -45,12 +47,14 @@ public actor Orchestrator {
         db: AppDatabase,
         makeProvider: @escaping @Sendable (String) -> any LLMProvider,
         artifactStoreRoot: URL,
-        tickInterval: Duration? = .seconds(5)
+        tickInterval: Duration? = .seconds(5),
+        searchKeyProvider: @escaping @Sendable () -> String? = { nil }
     ) {
         self.db = db
         self.makeProvider = makeProvider
         self.artifactStoreRoot = artifactStoreRoot
         self.tickInterval = tickInterval
+        self.searchKeyProvider = searchKeyProvider
     }
 
     public func events() -> AsyncStream<KernelEvent> {
@@ -646,7 +650,8 @@ public actor Orchestrator {
                 answeredRequests: answeredRequests,
                 campNotes: campNotes,
                 companionNotes: companionNotes,
-                toolAccess: toolAccess
+                toolAccess: toolAccess,
+                searchKey: searchKeyProvider()
             )
             for try await event in stream {
                 await emitFromTask(.cardEvent(cardId: candidate.card.id, event))

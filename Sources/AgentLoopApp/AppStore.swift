@@ -24,6 +24,8 @@ final class AppStore {
     /// 侧栏用：各营地的行动列表（含历史，UI 侧再分组）
     var missionsByCamp: [String: [MissionRecord]] = [:]
     var apiKeyPresent = false
+    /// M6-D8：Tavily key 在场与否决定 web_search 是否可用（编辑器置灰提示用）
+    var searchKeyPresent = false
     var defaultModel = "claude-sonnet-4-6"
     static let modelChoices = ["claude-sonnet-4-6", "claude-fable-5", "claude-haiku-4-5-20251001"]
 
@@ -139,7 +141,14 @@ final class AppStore {
                 let base = AnthropicProvider.normalizedBaseURL(rawBase) ?? URL(string: defaultBaseURL)!
                 return AnthropicProvider(apiKey: key, model: model, baseURL: base)
             },
-            artifactStoreRoot: artifactStoreRoot
+            artifactStoreRoot: artifactStoreRoot,
+            searchKeyProvider: {
+                // M6-D7/D8：无 key（或预览模式）→ web_search 不装配
+                guard ProcessInfo.processInfo.environment["AGENTLOOP_UI_PREVIEW"] != "1",
+                      let key = try? keychainStore.get(account: "tavily-api-key"),
+                      !key.isEmpty else { return nil }
+                return key
+            }
         )
         try! db.ensureDefaultCamp()
         apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
@@ -168,11 +177,25 @@ final class AppStore {
         apiKeyPresent = Self.isUIPreview
             ? false
             : ((try? keychain.get(account: "anthropic-api-key")) ?? nil) != nil
+        searchKeyPresent = Self.isUIPreview
+            ? false
+            : (((try? keychain.get(account: "tavily-api-key")) ?? nil).map { !$0.isEmpty } ?? false)
         reloadMissionList()
     }
 
     func saveAPIKey(_ key: String) {
         try? keychain.set(key.trimmingCharacters(in: .whitespacesAndNewlines), account: "anthropic-api-key")
+        reload()
+    }
+
+    /// M6-D7：Tavily 搜索 key（Keychain 第二槽）
+    func saveSearchKey(_ key: String) {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            try? keychain.delete(account: "tavily-api-key")
+        } else {
+            try? keychain.set(trimmed, account: "tavily-api-key")
+        }
         reload()
     }
 

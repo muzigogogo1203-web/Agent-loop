@@ -4,6 +4,7 @@ import AgentLoopCore
 struct SettingsView: View {
     @Environment(AppStore.self) private var store
     @State private var key = ""
+    @State private var searchKey = ""
     @State private var budgetText = ""
     @State private var budgetSavedFlash = false
 
@@ -79,6 +80,51 @@ struct SettingsView: View {
                         Text("Key 只进系统钥匙串，不进配置文件。")
                             .font(.caption)
                             .foregroundStyle(Camp.inkSecondary)
+                    }
+                }
+                .campCard()
+
+                // M6-D7/D8：Tavily 搜索 key（Keychain 第二槽）
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        CampSectionTitle("联网搜索（Tavily）")
+                        Spacer()
+                        if store.searchKeyPresent {
+                            CampChip(text: "已配置", color: Camp.moss, icon: "checkmark.seal.fill")
+                        }
+                    }
+                    Text(store.searchKeyPresent
+                        ? "伙伴可以用 web_search 联网搜索（可在伙伴编辑器按人勾选）。"
+                        : "配置 Tavily API key 后，伙伴才能联网搜索；不配置则该工具不出现。")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                    SecureField("tvly-…", text: $searchKey)
+                        .textFieldStyle(.plain)
+                        .font(.body.monospaced())
+                        .padding(11)
+                        .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                .stroke(Camp.line, lineWidth: 1)
+                        )
+                    HStack {
+                        Button {
+                            store.saveSearchKey(searchKey)
+                            searchKey = ""
+                        } label: {
+                            Label("保存到钥匙串", systemImage: "key.fill")
+                        }
+                        .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                        .disabled(searchKey.isEmpty)
+                        .opacity(searchKey.isEmpty ? 0.5 : 1)
+                        if store.searchKeyPresent {
+                            Button {
+                                store.saveSearchKey("")
+                            } label: {
+                                Label("移除", systemImage: "trash")
+                            }
+                            .buttonStyle(CampSecondaryButtonStyle(size: .small))
+                        }
                     }
                 }
                 .campCard()

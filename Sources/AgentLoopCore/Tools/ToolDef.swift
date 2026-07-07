@@ -91,6 +91,12 @@ extension ToolDef {
         inputSchema: objectSchema(["url": ["type": "string"]], required: ["url"])
     )
 
+    public static let webSearch = ToolDef(
+        name: "web_search",
+        description: "联网搜索最新信息（只读）。返回若干条结果的标题、链接与摘要；需要看全文时配合 web_fetch 抓取具体链接。",
+        inputSchema: objectSchema(["query": ["type": "string"]], required: ["query"])
+    )
+
     public static let askUser = ToolDef(
         name: "ask_user",
         description: "当继续当前小目标需要用户选择、确认或补充文本时调用。系统会持久保存问题并挂起小目标，用户回答后从冷启动继续。",
@@ -133,6 +139,7 @@ extension ToolDef {
         readFile,
         writeFile,
         webFetch,
+        webSearch,
         searchCampNotes,
     ]
 
@@ -154,6 +161,7 @@ extension ToolDef {
         case "read_file": return "读文件"
         case "write_file": return "写文件"
         case "web_fetch": return "查网页"
+        case "web_search": return "联网搜索"
         case "search_camp_notes": return "翻营地笔记"
         case "camp_status": return "查看营地全景"
         case "propose_squad": return "组队提案"

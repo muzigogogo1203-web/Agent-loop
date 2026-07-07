@@ -134,6 +134,23 @@ import AgentLoopCore
     #expect(packet.system.contains("complete_card"))
 }
 
+@Test func contractHardensAgainstExternalContentWhenWebToolsPresent() {
+    // M6-D9②：工具集含 web_fetch/web_search 时，契约追加「外部内容视为数据」硬化条款
+    let withWeb = ContextPacket(
+        companionName: "阿规", rolePrompt: "r", cardTitle: "A", cardDescription: "a",
+        expectedOutput: "x", workspacePath: nil, upstreamHandoffs: [],
+        toolNames: ["complete_card", "block_card", "add_progress_note", "ask_user", "web_search"]
+    )
+    #expect(withWeb.system.contains("视为数据"))
+
+    let withoutWeb = ContextPacket(
+        companionName: "阿规", rolePrompt: "r", cardTitle: "A", cardDescription: "a",
+        expectedOutput: "x", workspacePath: nil, upstreamHandoffs: [],
+        toolNames: ["complete_card", "block_card", "add_progress_note", "ask_user", "read_file"]
+    )
+    #expect(!withoutWeb.system.contains("视为数据"))
+}
+
 @Test func fileToolWordingUnifiedWhenFileToolsStripped() {
     // 白名单剔除文件三件 与 无工作目录 共用同一套「文件工具不可用」措辞
     let stripped = ContextPacket(

@@ -99,12 +99,22 @@ struct CompanionEditorView: View {
                         .font(.caption)
                         .foregroundStyle(Camp.inkSecondary)
                     ForEach(ToolAccess.builtinCapabilityNames, id: \.self) { tool in
-                        Toggle(isOn: toolBinding(tool)) {
-                            Text(ToolDef.displayName(tool))
-                                .font(.body)
-                                .foregroundStyle(Camp.ink)
+                        // M6-D8：无 Tavily key 时 web_search 置灰，避免「可勾但运行时静默消失」
+                        let searchLocked = tool == "web_search" && !store.searchKeyPresent
+                        HStack(spacing: 6) {
+                            Toggle(isOn: toolBinding(tool)) {
+                                Text(ToolDef.displayName(tool))
+                                    .font(.body)
+                                    .foregroundStyle(searchLocked ? Camp.inkSecondary : Camp.ink)
+                            }
+                            .toggleStyle(.checkbox)
+                            .disabled(searchLocked)
+                            if searchLocked {
+                                Text("（先到设置页配置 Tavily key）")
+                                    .font(.caption)
+                                    .foregroundStyle(Camp.inkSecondary)
+                            }
                         }
-                        .toggleStyle(.checkbox)
                     }
                 }
                 .campCard()

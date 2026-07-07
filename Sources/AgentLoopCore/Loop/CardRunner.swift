@@ -29,7 +29,8 @@ public struct CardRunner: Sendable {
         answeredRequests: [(prompt: String, answer: String)] = [],
         campNotes: [NoteSnippet] = [],
         companionNotes: [NoteSnippet] = [],
-        toolAccess: ToolAccess = .full
+        toolAccess: ToolAccess = .full,
+        searchKey: String? = nil
     ) throws -> AsyncThrowingStream<AgentEvent, Error> {
         guard let card = try db.card(id: cardId) else {
             throw RecordNotFoundError(table: "card", id: cardId)
@@ -60,18 +61,23 @@ public struct CardRunner: Sendable {
             "add_progress_note": BoardToolHandler(tools: board, op: .note),
             "ask_user": BoardToolHandler(tools: board, op: .askUser),
         ]
-        let capabilityHandlers: [String: any ToolHandler] = [
+        var capabilityHandlers: [String: any ToolHandler] = [
             "list_dir": FileToolHandler(tools: files, op: .list),
             "read_file": FileToolHandler(tools: files, op: .read),
             "write_file": FileToolHandler(tools: files, op: .write),
             "web_fetch": WebFetchTool(),
             "search_camp_notes": CampNotesSearchTool(db: db, campId: squad?.campId),
         ]
+        // M6-D8：无 key 时 web_search 根本不装配——白名单 ∩ 可用性
+        if let searchKey, !searchKey.isEmpty {
+            capabilityHandlers["web_search"] = WebSearchTool(apiKey: searchKey)
+        }
         for (name, handler) in capabilityHandlers where toolAccess.allows(name) {
             handlers[name] = handler
         }
         let executor = ToolExecutor(handlers: handlers)
-        let tools = ToolDef.agentTools.filter { toolAccess.allows($0.name) }
+        // 提示词工具区从 handlers 派生：可见即可用，构造上保证同源（D4/D8）
+        let tools = ToolDef.agentTools.filter { handlers.keys.contains($0.name) }
         let packet = ContextPacket(
             companionName: companionName,
             rolePrompt: rolePrompt,

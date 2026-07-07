@@ -17,7 +17,7 @@ public struct ToolAccess: Sendable, Equatable {
     ]
     /// 内置能力工具全集（可被白名单勾选的部分）。
     public static let builtinCapabilityNames: [String] = [
-        "list_dir", "read_file", "write_file", "web_fetch", "search_camp_notes",
+        "list_dir", "read_file", "write_file", "web_fetch", "web_search", "search_camp_notes",
     ]
 
     /// 解析后的能力工具集合（已应用「空=全量(仅内置)」）。
