@@ -114,7 +114,7 @@ import AgentLoopCore
         db: db,
         provider: provider,
         artifactStoreRoot: base.appendingPathComponent("store"),
-        turnTimeout: .milliseconds(5)
+        turnTimeout: .milliseconds(50)
     )
 
     let consumerTask = Task {

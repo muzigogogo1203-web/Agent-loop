@@ -10,6 +10,9 @@ struct AgentLoopApp: App {
             RootView()
                 .environment(store)
                 .frame(minWidth: 1060, minHeight: 680)
+                .onOpenURL { url in
+                    store.handleOAuthCallback(url)
+                }
                 // 开发用：AGENTLOOP_FORCE_DARK=1 强制暗色（篝火夜景验证）
                 .preferredColorScheme(
                     ProcessInfo.processInfo.environment["AGENTLOOP_FORCE_DARK"] == "1" ? .dark : nil

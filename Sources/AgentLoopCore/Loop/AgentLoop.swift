@@ -368,7 +368,10 @@ public struct AgentLoop: Sendable {
     }
 
     private static func isRetryable(_ error: Error) -> Bool {
-        if error is URLError {
+        if let urlError = error as? URLError {
+            guard urlError.code != .appTransportSecurityRequiresSecureConnection else {
+                return false
+            }
             return true
         }
         guard let providerError = error as? ProviderError else {

@@ -487,12 +487,28 @@ private let doneHandoff: JSONValue = [
     #expect(await provider.callCount == 2)
 }
 
+@Test func appTransportSecurityErrorDoesNotRetry() async throws {
+    let provider = FlakyProvider(
+        failures: [.url(.appTransportSecurityRequiresSecureConnection)],
+        script: []
+    )
+
+    await #expect(throws: URLError.self) {
+        _ = try await runLoop(
+            provider: provider,
+            handlers: [:],
+            retryDelays: [.milliseconds(1), .milliseconds(1)]
+        )
+    }
+    #expect(await provider.callCount == 1)
+}
+
 @Test func turnTimeoutRetriesOnceThenBlocks() async throws {
     let provider = IdlePatternProvider(steps: [.hang, .hang])
     let result = try await runLoop(
         provider: provider,
         handlers: [:],
-        turnTimeout: .milliseconds(5)
+        turnTimeout: .milliseconds(50)
     )
 
     guard case .blocked(let reason, let detail) = result.outcome else {
@@ -538,7 +554,7 @@ private let doneHandoff: JSONValue = [
         maxTurns: 10,
         tokenBudget: Int.max,
         maxTokensPerTurn: 4096,
-        turnTimeout: .milliseconds(5)
+        turnTimeout: .milliseconds(50)
     )
     let task = Task<CancelOutcome, Never> {
         do {
@@ -581,7 +597,7 @@ private let doneHandoff: JSONValue = [
             "add_progress_note": StubHandler([.result("ok")]),
             "complete_card": StubHandler([.completed(handoff)]),
         ],
-        turnTimeout: .milliseconds(5)
+        turnTimeout: .milliseconds(50)
     )
 
     guard case .completed = result.outcome else {

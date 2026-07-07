@@ -23,6 +23,15 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("API 端点")
+                    Picker("接口格式", selection: $store.apiFormat) {
+                        ForEach(ProviderAPIFormat.allCases, id: \.rawValue) { format in
+                            Text(format.displayName).tag(format)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    Label("鉴权 header 按接口格式自动处理", systemImage: "wand.and.stars")
+                        .foregroundStyle(Camp.inkSecondary)
+                        .font(.caption)
                     TextField(AppStore.defaultBaseURL, text: $store.apiBaseURL)
                         .textFieldStyle(.plain)
                         .autocorrectionDisabled()
@@ -37,12 +46,14 @@ struct SettingsView: View {
                         Label("URL 无效：需要 http(s):// 开头的完整地址", systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(Camp.charcoalRed)
                             .font(.caption)
-                    } else if store.apiBaseURL != AppStore.defaultBaseURL {
-                        Label("自定义端点：任何 Anthropic Messages API 兼容服务（官方 / 中转网关 / 本地代理）", systemImage: "point.3.connected.trianglepath.dotted")
+                    } else if store.apiBaseURL != AppStore.defaultBaseURL || store.apiFormat != .anthropicMessages {
+                        Label("自定义接入：端点会按所选接口格式自动补齐请求路径", systemImage: "point.3.connected.trianglepath.dotted")
                             .foregroundStyle(Camp.inkSecondary)
                             .font(.caption)
                         Button("恢复官方端点") {
                             store.apiBaseURL = AppStore.defaultBaseURL
+                            store.apiFormat = .anthropicMessages
+                            store.apiAuthScheme = .automatic
                         }
                         .buttonStyle(CampSecondaryButtonStyle())
                     }
@@ -51,12 +62,35 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        CampSectionTitle("API Key")
+                        CampSectionTitle("认证")
                         Spacer()
+                        if store.webCredentialPresent {
+                            CampChip(text: "网页登录已授权", color: Camp.moss, icon: "checkmark.seal.fill")
+                        }
                         if store.apiKeyPresent {
-                            CampChip(text: "已配置", color: Camp.moss, icon: "checkmark.seal.fill")
+                            CampChip(text: "API Key 已保存", color: Camp.moss, icon: "key.fill")
                         }
                     }
+                    HStack(spacing: 10) {
+                        Button {
+                            store.openProviderAuth()
+                        } label: {
+                            Label(store.apiFormat == .openAIChatCompletions ? "OpenAI Auth 登录" : "网页登录授权", systemImage: "arrow.up.forward.app")
+                        }
+                        .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                        .disabled(!store.apiBaseURLValid)
+                        .opacity(store.apiBaseURLValid ? 1 : 0.5)
+                        Text(store.webCredentialPresent ? "优先使用网页登录凭据" : store.authHintText)
+                            .font(.caption)
+                            .foregroundStyle(Camp.inkSecondary)
+                    }
+                    if let status = store.oauthLoginStatus {
+                        Label(status, systemImage: store.webCredentialPresent ? "checkmark.circle.fill" : "info.circle")
+                            .foregroundStyle(store.webCredentialPresent ? Camp.moss : Camp.inkSecondary)
+                            .font(.caption)
+                    }
+                    Divider()
+                    CampSectionTitle("API Key")
                     SecureField("sk-ant-… 或网关分发的 key", text: $key)
                         .textFieldStyle(.plain)
                         .font(.body.monospaced())
@@ -139,6 +173,25 @@ struct SettingsView: View {
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.4))
             budgetSavedFlash = false
+        }
+    }
+}
+
+private extension AppStore {
+    var authHintText: String {
+        apiFormat == .openAIChatCompletions
+            ? "会打开 OpenAI 登录页"
+            : "会打开当前端点对应的登录页"
+    }
+}
+
+private extension ProviderAPIFormat {
+    var displayName: String {
+        switch self {
+        case .anthropicMessages:
+            return "Anthropic"
+        case .openAIChatCompletions:
+            return "OpenAI"
         }
     }
 }

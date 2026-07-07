@@ -30,8 +30,28 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleIdentifier</key><string>com.muzi.agentloop.dev</string>
   <key>CFBundleName</key><string>AgentLoop</string>
   <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key><string>com.muzi.agentloop.oauth</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>agentloop</string>
+      </array>
+    </dict>
+  </array>
   <key>NSHighResolutionCapable</key><true/>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSExceptionDomains</key>
+    <dict>
+      <key>ai-api.jdcloud.com</key>
+      <dict>
+        <key>NSExceptionAllowsInsecureHTTPLoads</key><true/>
+      </dict>
+    </dict>
+  </dict>
 </dict>
 </plist>
 PLIST

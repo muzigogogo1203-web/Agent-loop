@@ -6,6 +6,7 @@ public struct AnthropicProvider: LLMProvider {
     let model: String
     let session: URLSession
     let baseURL: URL
+    let authScheme: ProviderAuthScheme
     let retryBaseDelay: Duration
     let maxRetries: Int
     private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "provider")
@@ -20,16 +21,19 @@ public struct AnthropicProvider: LLMProvider {
 
     public init(apiKey: String, model: String,
                 baseURL: URL = URL(string: "https://api.anthropic.com")!,
+                authScheme: ProviderAuthScheme = .xAPIKey,
                 retryBaseDelay: Duration = .seconds(1), maxRetries: Int = 3) {
         self.init(apiKey: apiKey, model: model, session: Self.streamingSession,
-                  baseURL: baseURL, retryBaseDelay: retryBaseDelay, maxRetries: maxRetries)
+                  baseURL: baseURL, authScheme: authScheme, retryBaseDelay: retryBaseDelay, maxRetries: maxRetries)
     }
 
     public init(apiKey: String, model: String, session: URLSession,
                 baseURL: URL = URL(string: "https://api.anthropic.com")!,
+                authScheme: ProviderAuthScheme = .xAPIKey,
                 retryBaseDelay: Duration = .seconds(1), maxRetries: Int = 3) {
         self.apiKey = apiKey; self.model = model; self.session = session
-        self.baseURL = baseURL; self.retryBaseDelay = retryBaseDelay; self.maxRetries = maxRetries
+        self.baseURL = baseURL; self.authScheme = authScheme
+        self.retryBaseDelay = retryBaseDelay; self.maxRetries = maxRetries
     }
 
     /// Pure function — directly unit-testable.
@@ -87,7 +91,7 @@ public struct AnthropicProvider: LLMProvider {
                      continuation: AsyncThrowingStream<ProviderEvent, Error>.Continuation) async throws {
         var request = URLRequest(url: baseURL.appending(path: "/v1/messages"))
         request.httpMethod = "POST"
-        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        authScheme.apply(to: &request, credential: apiKey)
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         // spec §6.3 requires byte-deterministic prefix across process restarts for prompt-cache hits;
@@ -230,14 +234,8 @@ public struct AnthropicProvider: LLMProvider {
 
 public extension AnthropicProvider {
     /// 规范化用户输入的 API 端点：去空白、去尾部斜杠；仅接受带主机的 http/https。
-    /// 支持官方端点、Anthropic Messages API 兼容的中转网关与本地代理。
+    /// 支持官方端点、中转网关与本地代理。
     static func normalizedBaseURL(_ raw: String) -> URL? {
-        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        while s.hasSuffix("/") { s.removeLast() }
-        guard let url = URL(string: s),
-              let scheme = url.scheme?.lowercased(),
-              scheme == "http" || scheme == "https",
-              url.host() != nil else { return nil }
-        return url
+        ProviderEndpoint.normalizedBaseURL(raw)
     }
 }

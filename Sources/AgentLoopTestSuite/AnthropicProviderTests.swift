@@ -77,6 +77,36 @@ final class Counter: @unchecked Sendable {
     #expect(try encoder.encode(defaultBody) == encoder.encode(explicitAuto))
 }
 
+@Test func openAIRequestBodyShape() throws {
+    let body = OpenAIProvider.requestBody(
+        model: "gpt-4.1",
+        system: "sys",
+        history: [
+            .user("hi"),
+            .assistant([.toolUse(id: "call_1", name: "read_file", input: ["path": "a.md"])]),
+            .user(toolResults: [.toolResult(toolUseId: "call_1", content: "ok", isError: false)]),
+        ],
+        tools: [ToolDef(name: "read_file", description: "读文件", inputSchema: ["type": "object"])],
+        toolChoice: .tool(name: "read_file"),
+        maxTokens: 10
+    )
+    #expect(body["model"]?.stringValue == "gpt-4.1")
+    #expect(body["stream"]?.boolValue == true)
+    #expect(body["messages"]?[0]?["role"]?.stringValue == "system")
+    #expect(body["messages"]?[2]?["tool_calls"]?[0]?["function"]?["name"]?.stringValue == "read_file")
+    #expect(body["messages"]?[3]?["role"]?.stringValue == "tool")
+    #expect(body["tools"]?[0]?["type"]?.stringValue == "function")
+    #expect(body["tools"]?[0]?["function"]?["parameters"]?["type"]?.stringValue == "object")
+    #expect(body["tool_choice"]?["type"]?.stringValue == "function")
+    #expect(body["tool_choice"]?["function"]?["name"]?.stringValue == "read_file")
+}
+
+@Test func automaticAuthSchemeResolvesByFormat() {
+    #expect(ProviderAuthScheme.automatic.resolved(for: .anthropicMessages) == .xAPIKey)
+    #expect(ProviderAuthScheme.automatic.resolved(for: .openAIChatCompletions) == .bearer)
+    #expect(ProviderAuthScheme.oauthBearer.resolved(for: .openAIChatCompletions) == .oauthBearer)
+}
+
 @Test func streamingSessionTimeoutDefaultsSupportSlowRelays() {
     #expect(AnthropicProvider.streamingTimeoutIntervalForRequest == 300)
     #expect(AnthropicProvider.streamingTimeoutIntervalForResource == 3600)
@@ -295,7 +325,7 @@ func stubbedSession() -> URLSession {
     #expect(turn?.toolUses.first?.input["path"]?.stringValue == "a.md")
 }
 
-@Test func retriesExhaustedThrows() async {
+    @Test func retriesExhaustedThrows() async {
     let counter = Counter()
     StubProtocol.handler = { _ in counter.bump(); return (503, Data(), [:]) }
     let p = AnthropicProvider(apiKey: "k", model: "m", session: stubbedSession(),
@@ -304,13 +334,55 @@ func stubbedSession() -> URLSession {
         for try await _ in p.streamTurn(system: "s", history: [.user("x")], tools: [], toolChoice: .auto, maxTokens: 10) {}
     }
     #expect(counter.value == 3)  // initial attempt + 2 retries
-}
+    }
+
+    @Test func openAIStreamsToolCall() async throws {
+        let sse = """
+        data: {"choices":[{"delta":{"content":"准备写文件"},"finish_reason":null}]}
+        data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"write_file","arguments":"{\\\"path\\\":\\\"a"}}]},"finish_reason":null}]}
+        data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":".html\\\",\\\"content\\\":\\\"x\\\"}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":3,"completion_tokens":4}}
+        data: [DONE]
+        """
+        StubProtocol.handler = { req in
+            #expect(req.url?.absoluteString == "http://gateway.test/v1/chat/completions")
+            #expect(req.value(forHTTPHeaderField: "Authorization") == "Bearer sk-openai")
+            return (200, Data(sse.utf8), ["Content-Type": "text/event-stream"])
+        }
+        let provider = OpenAIProvider(
+            apiKey: "sk-openai",
+            model: "gpt-4.1",
+            session: stubbedSession(),
+            baseURL: URL(string: "http://gateway.test")!,
+            authScheme: .bearer
+        )
+        var deltas: [String] = []
+        var turn: TurnResult?
+        for try await event in provider.streamTurn(system: "s", history: [.user("hi")], tools: [.writeFile], toolChoice: .auto, maxTokens: 100) {
+            switch event {
+            case .textDelta(let text):
+                deltas.append(text)
+            case .turn(let result):
+                turn = result
+            }
+        }
+        #expect(deltas == ["准备写文件"])
+        #expect(turn?.stopReason == .toolUse)
+        #expect(turn?.usage.inputTokens == 3)
+        #expect(turn?.usage.outputTokens == 4)
+        #expect(turn?.toolUses.first?.id == "call_1")
+        #expect(turn?.toolUses.first?.name == "write_file")
+        #expect(turn?.toolUses.first?.input["path"]?.stringValue == "a.html")
+        #expect(turn?.toolUses.first?.input["content"]?.stringValue == "x")
+    }
 
 }
 
 @Test func normalizesBaseURL() {
     #expect(AnthropicProvider.normalizedBaseURL(" https://api.z.ai/api/anthropic/ ")?.absoluteString == "https://api.z.ai/api/anthropic")
     #expect(AnthropicProvider.normalizedBaseURL("http://127.0.0.1:8080")?.absoluteString == "http://127.0.0.1:8080")
+    #expect(AnthropicProvider.normalizedBaseURL(" http://ai-api.jdcloud.com/v1/ ")?.absoluteString == "http://ai-api.jdcloud.com")
+    #expect(AnthropicProvider.normalizedBaseURL("https://gateway.example.com/anthropic/v1")?.absoluteString == "https://gateway.example.com/anthropic")
+    #expect(ProviderEndpoint.normalizedBaseURL("https://api.openai.com/v1")?.absoluteString == "https://api.openai.com")
     #expect(AnthropicProvider.normalizedBaseURL("api.anthropic.com") == nil)
     #expect(AnthropicProvider.normalizedBaseURL("ftp://x.com") == nil)
     #expect(AnthropicProvider.normalizedBaseURL("https://") == nil)
