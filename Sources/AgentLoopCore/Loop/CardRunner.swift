@@ -28,7 +28,8 @@ public struct CardRunner: Sendable {
         upstreamHandoffs: [UpstreamHandoff] = [],
         answeredRequests: [(prompt: String, answer: String)] = [],
         campNotes: [NoteSnippet] = [],
-        companionNotes: [NoteSnippet] = []
+        companionNotes: [NoteSnippet] = [],
+        toolAccess: ToolAccess = .full
     ) throws -> AsyncThrowingStream<AgentEvent, Error> {
         guard let card = try db.card(id: cardId) else {
             throw RecordNotFoundError(table: "card", id: cardId)
@@ -51,17 +52,26 @@ public struct CardRunner: Sendable {
             artifactStoreRoot: artifactStoreRoot
         )
         let files = FileTools(workspaceRoot: workspace)
-        let executor = ToolExecutor(handlers: [
+        // M6-D4：白名单在此单点收口——handlers、提示词工具区、契约文本三处同源。
+        // 板工具四件永远在场（终结契约 + 人工门，spec §5.2-4）。
+        var handlers: [String: any ToolHandler] = [
             "complete_card": BoardToolHandler(tools: board, op: .complete),
             "block_card": BoardToolHandler(tools: board, op: .block),
             "add_progress_note": BoardToolHandler(tools: board, op: .note),
             "ask_user": BoardToolHandler(tools: board, op: .askUser),
+        ]
+        let capabilityHandlers: [String: any ToolHandler] = [
             "list_dir": FileToolHandler(tools: files, op: .list),
             "read_file": FileToolHandler(tools: files, op: .read),
             "write_file": FileToolHandler(tools: files, op: .write),
             "web_fetch": WebFetchTool(),
             "search_camp_notes": CampNotesSearchTool(db: db, campId: squad?.campId),
-        ])
+        ]
+        for (name, handler) in capabilityHandlers where toolAccess.allows(name) {
+            handlers[name] = handler
+        }
+        let executor = ToolExecutor(handlers: handlers)
+        let tools = ToolDef.agentTools.filter { toolAccess.allows($0.name) }
         let packet = ContextPacket(
             companionName: companionName,
             rolePrompt: rolePrompt,
@@ -72,13 +82,14 @@ public struct CardRunner: Sendable {
             upstreamHandoffs: upstreamHandoffs,
             answeredRequests: answeredRequests,
             campNotes: campNotes,
-            companionNotes: companionNotes
+            companionNotes: companionNotes,
+            toolNames: tools.map(\.name)
         )
         let loop = AgentLoop(
             provider: provider,
             executor: executor,
             packet: packet,
-            tools: ToolDef.agentTools,
+            tools: tools,
             maxTurns: card.maxTurns,
             tokenBudget: card.tokenBudget,
             maxTokensPerTurn: KernelDefaults.maxTokensPerTurn,

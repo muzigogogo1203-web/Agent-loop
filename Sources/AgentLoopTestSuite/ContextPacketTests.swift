@@ -120,6 +120,40 @@ import AgentLoopCore
     #expect(packet.system.contains("3000"))
 }
 
+// MARK: - 工具感知渲染（M6-D4）
+
+@Test func contractOmitsChunkedWritesWithoutWriteFile() {
+    // 契约规则「分多次 write_file」仅在 write_file 在场时渲染
+    let packet = ContextPacket(
+        companionName: "阿规", rolePrompt: "r", cardTitle: "A", cardDescription: "a",
+        expectedOutput: "x", workspacePath: "/tmp/ws", upstreamHandoffs: [],
+        toolNames: ["complete_card", "block_card", "add_progress_note", "ask_user", "read_file"]
+    )
+    #expect(!packet.system.contains("3000"))
+    #expect(!packet.system.contains("append"))
+    #expect(packet.system.contains("complete_card"))
+}
+
+@Test func fileToolWordingUnifiedWhenFileToolsStripped() {
+    // 白名单剔除文件三件 与 无工作目录 共用同一套「文件工具不可用」措辞
+    let stripped = ContextPacket(
+        companionName: "阿规", rolePrompt: "r", cardTitle: "A", cardDescription: "a",
+        expectedOutput: "x", workspacePath: "/tmp/ws", upstreamHandoffs: [],
+        toolNames: ["complete_card", "block_card", "add_progress_note", "ask_user", "web_fetch"]
+    )
+    guard case .text(let strippedUser) = stripped.firstUserMessage.content[0] else { return }
+    #expect(strippedUser.contains("文件工具不可用"))
+    #expect(!strippedUser.contains("/tmp/ws"))
+    #expect(!stripped.system.contains("文件操作仅限工作目录"))
+
+    let noWorkspace = ContextPacket(
+        companionName: "阿规", rolePrompt: "r", cardTitle: "A", cardDescription: "a",
+        expectedOutput: "x", workspacePath: nil, upstreamHandoffs: []
+    )
+    guard case .text(let noWsUser) = noWorkspace.firstUserMessage.content[0] else { return }
+    #expect(noWsUser.contains("文件工具不可用"))
+}
+
 @Test func systemIsStableAcrossCards() {
     let first = ContextPacket(
         companionName: "阿规",

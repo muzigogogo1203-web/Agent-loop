@@ -235,7 +235,8 @@ public actor Orchestrator {
                             assigneeId: assigneeId,
                             companionName: companion.name,
                             rolePrompt: companion.rolePrompt,
-                            model: companion.model
+                            model: companion.model,
+                            toolsJson: companion.toolsJson
                         )
                     )
                 }
@@ -625,6 +626,13 @@ public actor Orchestrator {
             // 知识注入（spec §6.2-5/6）：营地笔记 + 该伙伴的记忆
             let campNotes = loadCampNotes(campId: try db.squad(forCard: candidate.card.id)?.campId)
             let companionNotes = loadCompanionNotes(companionId: candidate.assigneeId)
+            // M6-D4：白名单解析失败回退全量并留痕，坏 JSON 不瘫痪卡片
+            let toolAccess = ToolAccess.parse(toolsJson: candidate.toolsJson)
+            if toolAccess.parseFailed {
+                db.appendKernelErrorEvent(
+                    missionId: candidate.card.missionId,
+                    message: "伙伴「\(candidate.companionName)」工具白名单解析失败，本次按全量工具执行")
+            }
             let stream = try CardRunner(
                 db: db,
                 provider: provider,
@@ -637,7 +645,8 @@ public actor Orchestrator {
                 upstreamHandoffs: upstream,
                 answeredRequests: answeredRequests,
                 campNotes: campNotes,
-                companionNotes: companionNotes
+                companionNotes: companionNotes,
+                toolAccess: toolAccess
             )
             for try await event in stream {
                 await emitFromTask(.cardEvent(cardId: candidate.card.id, event))
@@ -740,6 +749,7 @@ public actor Orchestrator {
         let companionName: String
         let rolePrompt: String
         let model: String
+        let toolsJson: String
     }
 
     private struct RunningEntry: Sendable {

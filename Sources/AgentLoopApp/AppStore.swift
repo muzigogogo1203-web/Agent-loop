@@ -511,18 +511,8 @@ final class AppStore {
     }
 
     private func humanToolName(_ name: String) -> String {
-        switch name {
-        case "write_file": return "写文件"
-        case "read_file": return "读文件"
-        case "list_dir": return "查看目录"
-        case "web_fetch": return "查网页"
-        case "complete_card": return "提交交接包"
-        case "block_card": return "报告受阻"
-        case "add_progress_note": return "汇报进展"
-        case "ask_user": return "提问"
-        case "search_camp_notes": return "翻营地笔记"
-        default: return name
-        }
+        // M6-D5：中文名收敛到 ToolDef.displayName 单点维护
+        ToolDef.displayName(name)
     }
 
     private func missionId(forCardId cardId: String) -> String? {

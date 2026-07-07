@@ -253,3 +253,45 @@ private actor RunnerHangingProvider: LLMProvider {
         }
     }
 }
+
+// MARK: - 工具白名单（M6-D4）
+
+@Test func whitelistStripsDisallowedToolFromRunner() async throws {
+    // 白名单只允许 read_file：write_file 不进提示词工具区、调用被拒、文件不落盘
+    let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    let workspace = base.appendingPathComponent("ws")
+    try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+    let db = try AppDatabase(path: base.appendingPathComponent("t.sqlite").path)
+    let ids = try db.createSingleCardMission(
+        campName: "c", squadName: "s", goal: "g",
+        cardTitle: "t", cardDescription: "d", expectedOutput: "e",
+        assigneeId: nil, maxTurns: 10, workspacePath: workspace.path
+    )
+    let mock = MockProvider(script: [
+        TurnResult(
+            content: [.toolUse(id: "t1", name: "write_file",
+                               input: ["path": "x.md", "content": "hi"])],
+            stopReason: .toolUse
+        ),
+        TurnResult(
+            content: [.toolUse(id: "t2", name: "complete_card", input: [
+                "outcome": "o", "summary": "s",
+                "noArtifactReason": "无写文件权限，结论在摘要里",
+                "verification": [["method": "自查", "passed": true, "note": "ok"]],
+                "risks": [],
+            ])],
+            stopReason: .toolUse
+        ),
+    ])
+    let runner = CardRunner(db: db, provider: mock, artifactStoreRoot: base.appendingPathComponent("store"))
+    let access = ToolAccess.parse(toolsJson: #"{"v":2,"allow":["read_file"]}"#)
+    for try await _ in try runner.run(
+        cardId: ids.cardId, companionName: "n", rolePrompt: "r", toolAccess: access) {}
+
+    #expect(try db.card(id: ids.cardId)?.status == .done)
+    #expect(!FileManager.default.fileExists(atPath: workspace.appendingPathComponent("x.md").path))
+    let firstTurnTools = await mock.recordedTools.first?.map(\.name) ?? []
+    #expect(!firstTurnTools.contains("write_file"))
+    #expect(firstTurnTools.contains("read_file"))
+    #expect(firstTurnTools.contains("complete_card"))
+}

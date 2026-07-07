@@ -142,4 +142,22 @@ extension ToolDef {
         campStatus,
         proposeSquad,
     ]
+
+    /// 工具中文名（M6-D5）：单点维护，UI 层（活动行/伙伴编辑器）统一查这里。
+    public static func displayName(_ name: String) -> String {
+        switch name {
+        case "complete_card": return "提交交接包"
+        case "block_card": return "报告受阻"
+        case "add_progress_note": return "汇报进展"
+        case "ask_user": return "提问"
+        case "list_dir": return "查看目录"
+        case "read_file": return "读文件"
+        case "write_file": return "写文件"
+        case "web_fetch": return "查网页"
+        case "search_camp_notes": return "翻营地笔记"
+        case "camp_status": return "查看营地全景"
+        case "propose_squad": return "组队提案"
+        default: return name
+        }
+    }
 }

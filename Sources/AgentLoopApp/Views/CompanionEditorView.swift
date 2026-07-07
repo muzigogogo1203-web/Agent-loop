@@ -11,6 +11,7 @@ struct CompanionEditorView: View {
     @State private var rolePrompt = ""
     @State private var modelChoice = "claude-sonnet-4-6"
     @State private var customModel = ""
+    @State private var enabledTools: Set<String> = Set(ToolAccess.builtinCapabilityNames)
     @State private var saveError: String?
 
     static let colors = ["purple", "teal", "coral", "pink", "blue", "green", "amber"]
@@ -93,6 +94,22 @@ struct CompanionEditorView: View {
                 .campCard()
 
                 VStack(alignment: .leading, spacing: 12) {
+                    CampSectionTitle("工具")
+                    Text("勾选这位伙伴执行小目标时可用的工具；汇报进展、提问与交接始终可用。")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                    ForEach(ToolAccess.builtinCapabilityNames, id: \.self) { tool in
+                        Toggle(isOn: toolBinding(tool)) {
+                            Text(ToolDef.displayName(tool))
+                                .font(.body)
+                                .foregroundStyle(Camp.ink)
+                        }
+                        .toggleStyle(.checkbox)
+                    }
+                }
+                .campCard()
+
+                VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("职责")
                     Text("它决定这位伙伴擅长什么、以什么口吻做事（system prompt）。")
                         .font(.caption)
@@ -164,6 +181,15 @@ struct CompanionEditorView: View {
         .buttonStyle(.plain)
     }
 
+    private func toolBinding(_ tool: String) -> Binding<Bool> {
+        Binding(
+            get: { enabledTools.contains(tool) },
+            set: { on in
+                if on { enabledTools.insert(tool) } else { enabledTools.remove(tool) }
+            }
+        )
+    }
+
     private func load() {
         saveError = nil
         guard let companionId else {
@@ -172,6 +198,7 @@ struct CompanionEditorView: View {
             rolePrompt = ""
             modelChoice = AppStore.modelChoices[0]
             customModel = ""
+            enabledTools = Set(ToolAccess.builtinCapabilityNames)
             return
         }
         guard let companion = try? store.db.companion(id: companionId) else {
@@ -180,6 +207,7 @@ struct CompanionEditorView: View {
         name = companion.name
         color = companion.color
         rolePrompt = companion.rolePrompt
+        enabledTools = ToolAccess.parse(toolsJson: companion.toolsJson).capabilities
         if AppStore.modelChoices.contains(companion.model) {
             modelChoice = companion.model
             customModel = ""
@@ -191,6 +219,8 @@ struct CompanionEditorView: View {
 
     private func save() {
         do {
+            // M6-D5b：保存永远写显式 v2 列表——打开编辑器保存即视为显式授权
+            let toolsJson = ToolAccess.explicitJson(allow: enabledTools)
             if let companionId {
                 guard var companion = try store.db.companion(id: companionId) else {
                     saveError = "保存失败：伙伴不存在"
@@ -200,14 +230,16 @@ struct CompanionEditorView: View {
                 companion.color = color
                 companion.rolePrompt = rolePrompt
                 companion.model = resolvedModel
+                companion.toolsJson = toolsJson
                 try store.db.saveCompanion(companion)
             } else {
-                let companion = CompanionRecord.new(
+                var companion = CompanionRecord.new(
                     name: name,
                     color: color,
                     rolePrompt: rolePrompt,
                     model: resolvedModel
                 )
+                companion.toolsJson = toolsJson
                 try store.db.saveCompanion(companion)
             }
             saveError = nil
