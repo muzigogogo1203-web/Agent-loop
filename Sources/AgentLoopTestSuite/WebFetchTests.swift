@@ -128,12 +128,24 @@ private final class FailingStubProtocol: URLProtocol {
     #expect(!text.contains("侧边栏广告位"))
 }
 
-@Test func fetchResultWrappedAsExternalContent() async {
-    WebFetchStubProtocol.handler = { _ in
-        (200, Data("<p>外部页面内容</p>".utf8), ["Content-Type": "text/html"])
+// 专属 stub（不共享 handler 静态量——并行测试下共享可变态会互相覆盖）
+private final class WrapFixtureStubProtocol: URLProtocol {
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let response = HTTPURLResponse(
+            url: request.url!, statusCode: 200, httpVersion: nil,
+            headerFields: ["Content-Type": "text/html"])!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data("<p>外部页面内容</p>".utf8))
+        client?.urlProtocolDidFinishLoading(self)
     }
+    override func stopLoading() {}
+}
+
+@Test func fetchResultWrappedAsExternalContent() async {
     let configuration = URLSessionConfiguration.ephemeral
-    configuration.protocolClasses = [WebFetchStubProtocol.self]
+    configuration.protocolClasses = [WrapFixtureStubProtocol.self]
     let tool = WebFetchTool(session: URLSession(configuration: configuration))
     let output = await tool.execute(input: ["url": "https://example.com/a"])
     guard case .result(let text) = output else {

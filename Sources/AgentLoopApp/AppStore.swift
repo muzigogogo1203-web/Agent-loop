@@ -26,8 +26,24 @@ final class AppStore {
     var apiKeyPresent = false
     /// M6-D8：Tavily key 在场与否决定 web_search 是否可用（编辑器置灰提示用）
     var searchKeyPresent = false
-    var defaultModel = "claude-sonnet-4-6"
-    static let modelChoices = ["claude-sonnet-4-6", "claude-fable-5", "claude-haiku-4-5-20251001"]
+    /// M6-D11：默认模型持久化（修「重启复位」bug）
+    var defaultModel = "claude-sonnet-4-6" {
+        didSet { UserDefaults.standard.set(defaultModel, forKey: "defaultModel") }
+    }
+    /// M6-D11：模型目录从硬编码数组改为可编辑 + 持久化
+    static let factoryModelChoices = ["claude-sonnet-4-6", "claude-fable-5", "claude-haiku-4-5-20251001"]
+    var modelChoices: [String] = AppStore.factoryModelChoices {
+        didSet { UserDefaults.standard.set(modelChoices, forKey: "modelChoices") }
+    }
+    /// M6-D12：轻任务模型（空 = 跟随默认模型）——蒸馏与规划是最便宜的降档位
+    var distillModel: String = "" {
+        didSet { UserDefaults.standard.set(distillModel, forKey: "distillModel") }
+    }
+    var plannerModel: String = "" {
+        didSet { UserDefaults.standard.set(plannerModel, forKey: "plannerModel") }
+    }
+    var effectiveDistillModel: String { distillModel.isEmpty ? defaultModel : distillModel }
+    var effectivePlannerModel: String { plannerModel.isEmpty ? defaultModel : plannerModel }
 
     /// 默认行动预算（M5-2，spec §13：设置页可改；propose_squad 缺省随之）
     var defaultMissionBudget: Int = KernelDefaults.missionBudget {
@@ -156,6 +172,17 @@ final class AppStore {
         if storedBudget > 0 {
             defaultMissionBudget = storedBudget
         }
+        // M6-D11/D12：模型目录与各档模型回读
+        if let storedChoices = UserDefaults.standard.stringArray(forKey: "modelChoices"),
+           !storedChoices.isEmpty {
+            modelChoices = storedChoices
+        }
+        if let storedDefault = UserDefaults.standard.string(forKey: "defaultModel"),
+           !storedDefault.isEmpty {
+            defaultModel = storedDefault
+        }
+        distillModel = UserDefaults.standard.string(forKey: "distillModel") ?? ""
+        plannerModel = UserDefaults.standard.string(forKey: "plannerModel") ?? ""
         reload()
         startKernelEventListener()
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
@@ -238,7 +265,7 @@ final class AppStore {
                     goal: goal,
                     companionIds: companionIds,
                     workspacePath: workspacePath,
-                    plannerModel: defaultModel,
+                    plannerModel: effectivePlannerModel,
                     budgetTokens: defaultMissionBudget,
                     campId: campId
                 )
@@ -266,7 +293,7 @@ final class AppStore {
         missionTask = Task { [weak self] in
             guard let self else { return }
             do {
-                try await orchestrator.closeout(currentMissionId, distillModel: defaultModel)
+                try await orchestrator.closeout(currentMissionId, distillModel: effectiveDistillModel)
                 reloadMission(missionId: currentMissionId)
                 reloadMissionList()
             } catch {
@@ -830,7 +857,7 @@ final class AppStore {
             guard let self else { return }
             do {
                 let missionId = try await orchestrator.confirmSquadProposal(
-                    messageId: messageId, plannerModel: defaultModel,
+                    messageId: messageId, plannerModel: effectivePlannerModel,
                     fallbackBudget: defaultMissionBudget)
                 reloadGuideMessages()
                 reloadMissionList()
@@ -859,7 +886,7 @@ final class AppStore {
 
     func distillGuideChatNow() {
         guard let campId, !distillingGuideChat else { return }
-        guard let provider = provider(model: defaultModel) else {
+        guard let provider = provider(model: effectiveDistillModel) else {
             showToast("请先在设置里填入 API key")
             return
         }
@@ -903,7 +930,7 @@ final class AppStore {
 
     func distillMemoryNow(companion: CompanionRecord) {
         guard !distillingMemory else { return }
-        guard let provider = provider(model: defaultModel) else {
+        guard let provider = provider(model: effectiveDistillModel) else {
             showToast("请先在设置里填入 API key")
             return
         }
@@ -921,7 +948,7 @@ final class AppStore {
     /// 切走 DM 线程时的自动沉淀（D7：未蒸馏增量 ≥4 条才触发，后台静默）
     func autoDistillOnLeave(companionId: String) {
         // 预览模式不触发（避免钥匙串弹窗）；正常模式无 key 时静默跳过
-        guard !Self.isUIPreview, let provider = provider(model: defaultModel) else { return }
+        guard !Self.isUIPreview, let provider = provider(model: effectiveDistillModel) else { return }
         guard autoDistillInFlight.insert(companionId).inserted else { return }
         Task { [weak self] in
             guard let self else { return }

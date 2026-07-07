@@ -72,7 +72,7 @@ struct CompanionEditorView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("模型")
                     Picker("模型", selection: $modelChoice) {
-                        ForEach(AppStore.modelChoices, id: \.self) { model in
+                        ForEach(store.modelChoices, id: \.self) { model in
                             Text(model).tag(model)
                         }
                         Text("自定义…").tag(Self.customTag)
@@ -206,7 +206,7 @@ struct CompanionEditorView: View {
             name = ""
             color = "purple"
             rolePrompt = ""
-            modelChoice = AppStore.modelChoices[0]
+            modelChoice = store.modelChoices.first ?? AppStore.factoryModelChoices[0]
             customModel = ""
             enabledTools = Set(ToolAccess.builtinCapabilityNames)
             return
@@ -218,7 +218,7 @@ struct CompanionEditorView: View {
         color = companion.color
         rolePrompt = companion.rolePrompt
         enabledTools = ToolAccess.parse(toolsJson: companion.toolsJson).capabilities
-        if AppStore.modelChoices.contains(companion.model) {
+        if store.modelChoices.contains(companion.model) {
             modelChoice = companion.model
             customModel = ""
         } else {

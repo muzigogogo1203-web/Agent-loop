@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var searchKey = ""
     @State private var budgetText = ""
     @State private var budgetSavedFlash = false
+    @State private var newModelId = ""
 
     var body: some View {
         @Bindable var store = store
@@ -81,6 +82,68 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundStyle(Camp.inkSecondary)
                     }
+                }
+                .campCard()
+
+                // M6-D11/D12：模型目录 + 默认/蒸馏/规划三档
+                VStack(alignment: .leading, spacing: 12) {
+                    CampSectionTitle("模型")
+                    Text("目录里的模型会出现在伙伴编辑器与下面三档选择里。")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                    ForEach(store.modelChoices, id: \.self) { model in
+                        HStack {
+                            Text(model)
+                                .font(.body.monospaced())
+                                .foregroundStyle(Camp.ink)
+                            Spacer()
+                            if store.modelChoices.count > 1 {
+                                Button {
+                                    removeModel(model)
+                                } label: {
+                                    Image(systemName: "minus.circle")
+                                        .foregroundStyle(Camp.inkSecondary)
+                                }
+                                .buttonStyle(.plain)
+                                .help("从目录移除")
+                            }
+                        }
+                    }
+                    HStack {
+                        TextField("模型 id（如 glm-5.1）", text: $newModelId)
+                            .textFieldStyle(.plain)
+                            .autocorrectionDisabled()
+                            .font(.body.monospaced())
+                            .padding(8)
+                            .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                    .stroke(Camp.line, lineWidth: 1)
+                            )
+                        Button {
+                            addModel()
+                        } label: {
+                            Label("加入目录", systemImage: "plus")
+                        }
+                        .buttonStyle(CampSecondaryButtonStyle(size: .small))
+                        .disabled(newModelId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        Button {
+                            store.modelChoices = AppStore.factoryModelChoices
+                            if !store.modelChoices.contains(store.defaultModel) {
+                                store.defaultModel = store.modelChoices[0]
+                            }
+                        } label: {
+                            Text("恢复出厂")
+                        }
+                        .buttonStyle(CampSecondaryButtonStyle(size: .small))
+                    }
+                    Divider()
+                    modelPicker("默认模型", selection: $store.defaultModel, allowFollow: false)
+                    modelPicker("蒸馏用模型", selection: $store.distillModel, allowFollow: true)
+                    modelPicker("规划用模型", selection: $store.plannerModel, allowFollow: true)
+                    Text("蒸馏与规划可以用轻量模型省成本；「跟随默认」= 不单独指定。")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
                 }
                 .campCard()
 
@@ -186,5 +249,52 @@ struct SettingsView: View {
             try? await Task.sleep(for: .seconds(1.4))
             budgetSavedFlash = false
         }
+    }
+
+    // MARK: 模型目录（M6-D11/D12）
+
+    @ViewBuilder
+    private func modelPicker(_ title: String, selection: Binding<String>, allowFollow: Bool) -> some View {
+        HStack {
+            Text(title)
+                .font(.body)
+                .foregroundStyle(Camp.ink)
+                .frame(width: 96, alignment: .leading)
+            Picker(title, selection: selection) {
+                if allowFollow {
+                    Text("跟随默认").tag("")
+                }
+                ForEach(store.modelChoices, id: \.self) { model in
+                    Text(model).tag(model)
+                }
+                // 当前值不在目录里（目录被改过）也要可见可选，避免 Picker 空选
+                if !selection.wrappedValue.isEmpty && !store.modelChoices.contains(selection.wrappedValue) {
+                    Text("\(selection.wrappedValue)（不在目录）").tag(selection.wrappedValue)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+        }
+    }
+
+    private func addModel() {
+        let id = newModelId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !id.isEmpty, !store.modelChoices.contains(id) else {
+            newModelId = ""
+            return
+        }
+        store.modelChoices.append(id)
+        newModelId = ""
+    }
+
+    private func removeModel(_ model: String) {
+        guard store.modelChoices.count > 1 else { return }
+        store.modelChoices.removeAll { $0 == model }
+        // 默认模型被移除时落到目录首项；蒸馏/规划回「跟随默认」
+        if store.defaultModel == model {
+            store.defaultModel = store.modelChoices[0]
+        }
+        if store.distillModel == model { store.distillModel = "" }
+        if store.plannerModel == model { store.plannerModel = "" }
     }
 }

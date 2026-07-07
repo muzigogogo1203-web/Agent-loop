@@ -13,4 +13,6 @@ public enum KernelDefaults {
     public static let contextCompactionThreshold = 150_000
     /// 压缩时保留原文的最近消息数（含配对的工具往返）
     public static let compactionKeepRecentMessages = 6
+    /// 向导伙伴的出厂默认模型（M6-D12：收敛原先散落在 AppDatabase 两处的字面量）
+    public static let defaultGuideModel = "claude-sonnet-4-6"
 }

@@ -2,42 +2,59 @@ import Testing
 import Foundation
 import AgentLoopCore
 
-private final class WebSearchStubProtocol: URLProtocol {
-    nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> Result<(Int, Data), URLError>)?
+// 每个用例专属 stub 类（并行测试下共享 handler 静态量会互相覆盖，是竞态源）
+private class FixedResponseStubProtocol: URLProtocol {
+    class var status: Int { 200 }
+    class var body: String { "{}" }
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
-        switch Self.handler!(request) {
-        case .success(let (status, data)):
-            let response = HTTPURLResponse(
-                url: request.url!, statusCode: status, httpVersion: nil,
-                headerFields: ["Content-Type": "application/json"])!
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: data)
-            client?.urlProtocolDidFinishLoading(self)
-        case .failure(let error):
-            client?.urlProtocol(self, didFailWithError: error)
-        }
+        let response = HTTPURLResponse(
+            url: request.url!, statusCode: Self.status, httpVersion: nil,
+            headerFields: ["Content-Type": "application/json"])!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data(Self.body.utf8))
+        client?.urlProtocolDidFinishLoading(self)
     }
 
     override func stopLoading() {}
 }
 
-private func webSearchStubSession() -> URLSession {
+private final class SearchOKStubProtocol: FixedResponseStubProtocol {
+    nonisolated(unsafe) static var seenAuthorization: String?
+    override class var body: String {
+        #"{"results":[{"title":"Swift 6 发布","url":"https://example.com/1","content":"摘要一"},{"title":"GRDB 7","url":"https://example.com/2","content":"摘要二"}]}"#
+    }
+    override func startLoading() {
+        Self.seenAuthorization = request.value(forHTTPHeaderField: "Authorization")
+        super.startLoading()
+    }
+}
+
+private final class Search401StubProtocol: FixedResponseStubProtocol {
+    override class var status: Int { 401 }
+}
+
+private final class SearchTimeoutStubProtocol: URLProtocol {
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        client?.urlProtocol(self, didFailWithError: URLError(.timedOut))
+    }
+    override func stopLoading() {}
+}
+
+private func webSearchStubSession(_ protocolClass: AnyClass) -> URLSession {
     let configuration = URLSessionConfiguration.ephemeral
-    configuration.protocolClasses = [WebSearchStubProtocol.self]
+    configuration.protocolClasses = [protocolClass]
     return URLSession(configuration: configuration)
 }
 
 @Test func webSearchRendersResultsWithSourceMarker() async {
-    WebSearchStubProtocol.handler = { request in
-        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-key")
-        let body = #"{"results":[{"title":"Swift 6 发布","url":"https://example.com/1","content":"摘要一"},{"title":"GRDB 7","url":"https://example.com/2","content":"摘要二"}]}"#
-        return .success((200, Data(body.utf8)))
-    }
-    let tool = WebSearchTool(apiKey: "test-key", session: webSearchStubSession())
+    let tool = WebSearchTool(
+        apiKey: "test-key", session: webSearchStubSession(SearchOKStubProtocol.self))
     let outcome = await tool.execute(input: ["query": "swift 6"])
     guard case .result(let text) = outcome else {
         Issue.record("expected result")
@@ -49,11 +66,12 @@ private func webSearchStubSession() -> URLSession {
     // D9①：外部内容包裹来源标记，指令视为数据
     #expect(text.contains("外部来源"))
     #expect(text.contains("不代表用户"))
+    #expect(SearchOKStubProtocol.seenAuthorization == "Bearer test-key")
 }
 
 @Test func webSearchNon200ReturnsError() async {
-    WebSearchStubProtocol.handler = { _ in .success((401, Data("{}".utf8))) }
-    let tool = WebSearchTool(apiKey: "bad-key", session: webSearchStubSession())
+    let tool = WebSearchTool(
+        apiKey: "bad-key", session: webSearchStubSession(Search401StubProtocol.self))
     let outcome = await tool.execute(input: ["query": "q"])
     guard case .error(let message) = outcome else {
         Issue.record("expected error")
@@ -64,8 +82,8 @@ private func webSearchStubSession() -> URLSession {
 
 @Test func webSearchTimeoutReturnsError() async {
     // D6：无网/超时一律 .error，回合继续自愈，不抛出循环
-    WebSearchStubProtocol.handler = { _ in .failure(URLError(.timedOut)) }
-    let tool = WebSearchTool(apiKey: "k", session: webSearchStubSession())
+    let tool = WebSearchTool(
+        apiKey: "k", session: webSearchStubSession(SearchTimeoutStubProtocol.self))
     let outcome = await tool.execute(input: ["query": "q"])
     guard case .error = outcome else {
         Issue.record("expected error")
@@ -74,7 +92,8 @@ private func webSearchStubSession() -> URLSession {
 }
 
 @Test func webSearchRejectsEmptyQuery() async {
-    let tool = WebSearchTool(apiKey: "k", session: webSearchStubSession())
+    let tool = WebSearchTool(
+        apiKey: "k", session: webSearchStubSession(SearchTimeoutStubProtocol.self))
     let outcome = await tool.execute(input: ["query": "  "])
     guard case .error = outcome else {
         Issue.record("expected error")

@@ -210,7 +210,7 @@ public final class AppDatabase: Sendable {
         var guide = CompanionRecord.new(
             name: "向导", color: "amber",
             rolePrompt: "你是这个营地的向导，熟悉营地里的一切。",
-            model: "claude-sonnet-4-6", kind: .guide, campId: camp.id)
+            model: KernelDefaults.defaultGuideModel, kind: .guide, campId: camp.id)
         guide.toolsJson = "[]"
         try guide.insert(db)
         return camp
@@ -250,7 +250,7 @@ public final class AppDatabase: Sendable {
             var guide = CompanionRecord.new(
                 name: "向导", color: "amber",
                 rolePrompt: trimmedPrompt.isEmpty ? "你是这个营地的向导，熟悉营地里的一切。" : trimmedPrompt,
-                model: "claude-sonnet-4-6", kind: .guide, campId: camp.id)
+                model: KernelDefaults.defaultGuideModel, kind: .guide, campId: camp.id)
             guide.toolsJson = "[]"
             try guide.insert(db)
             return camp
