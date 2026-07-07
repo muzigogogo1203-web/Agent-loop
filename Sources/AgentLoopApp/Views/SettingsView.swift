@@ -125,7 +125,7 @@ struct SettingsView: View {
                         } label: {
                             Label("加入目录", systemImage: "plus")
                         }
-                        .buttonStyle(CampSecondaryButtonStyle(size: .small))
+                        .buttonStyle(CampSecondaryButtonStyle())
                         .disabled(newModelId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         Button {
                             store.modelChoices = AppStore.factoryModelChoices
@@ -135,7 +135,7 @@ struct SettingsView: View {
                         } label: {
                             Text("恢复出厂")
                         }
-                        .buttonStyle(CampSecondaryButtonStyle(size: .small))
+                        .buttonStyle(CampSecondaryButtonStyle())
                     }
                     Divider()
                     modelPicker("默认模型", selection: $store.defaultModel, allowFollow: false)
@@ -186,7 +186,7 @@ struct SettingsView: View {
                             } label: {
                                 Label("移除", systemImage: "trash")
                             }
-                            .buttonStyle(CampSecondaryButtonStyle(size: .small))
+                            .buttonStyle(CampSecondaryButtonStyle())
                         }
                     }
                 }
