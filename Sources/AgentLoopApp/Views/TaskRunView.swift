@@ -21,6 +21,10 @@ struct TaskRunView: View {
     var onRecruit: () -> Void = {}
     @State private var showAbandonConfirm = false
     @State private var submitting = false
+    /// 交付物区收起态（多交付物时防挤压小目标区域；每次进入行动默认展开）
+    @State private var artifactsCollapsed = false
+    /// 详情弹层的键盘焦点（Esc 关闭）
+    @FocusState private var detailFocused: Bool
     @State private var submitError: String?
 
     var body: some View {
@@ -37,12 +41,44 @@ struct TaskRunView: View {
             }
         }
         .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: store.missionCards.map(\.status))
-        .sheet(isPresented: inspectorBinding) {
-            if let card = selectedCard {
+        .overlay { cardDetailOverlay }
+        .animation(reduceMotion ? nil : .smooth(duration: 0.22), value: store.selectedCardId)
+    }
+
+    // MARK: - 卡片详情弹层
+    // 自绘居中弹层替代系统 sheet：背景微暗渐入 + 内容 scale/opacity 弹入，
+    // 点背景或 Esc 关闭；Reduce Motion 时静态出现（spec §11.2）。
+
+    @ViewBuilder private var cardDetailOverlay: some View {
+        if let card = selectedCard {
+            ZStack {
+                Camp.ink.opacity(0.22)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture { store.selectedCardId = nil }
+                    .transition(.opacity)
                 CardDetailInspector(card: card) {
                     store.selectedCardId = nil
                 }
+                .clipShape(RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                        .stroke(Camp.line, lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.25), radius: 28, y: 12)
+                .transition(reduceMotion
+                    ? .opacity
+                    : .scale(scale: 0.94).combined(with: .opacity))
             }
+            // 弹出即接管键盘焦点：Esc 关闭（focusable 卡片行不再吞键）
+            .focusable()
+            .focused($detailFocused)
+            .focusEffectDisabled()
+            .onKeyPress(.escape) {
+                store.selectedCardId = nil
+                return .handled
+            }
+            .onAppear { detailFocused = true }
         }
     }
 
@@ -519,6 +555,7 @@ struct TaskRunView: View {
                         latest: store.cardLatest[card.id],
                         animState: card.assigneeId.flatMap { store.companionAnimStates[$0] } ?? .idle,
                         pendingRequest: pendingRequest(for: card.id),
+                        isSelected: store.selectedCardId == card.id,
                         onRetry: { store.retryCard(card.id) },
                         onAnswer: { requestId, answer in
                             recordInteraction()
@@ -532,55 +569,114 @@ struct TaskRunView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
-            .padding(.vertical, 2)
+            // 水平呼吸位：卡片阴影/描边不再贴着裁剪边界被硬切出「容器切割线」
+            .padding(.horizontal, Self.cardListBleed)
+            .padding(.vertical, Self.cardListBleed)
         }
+        // 视觉边缘与下方交付物卡对齐（呼吸位向外抵消）
+        .padding(.horizontal, -Self.cardListBleed)
+        // 滚动上下边渐隐渐显，替代硬切
+        .mask(
+            VStack(spacing: 0) {
+                LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                    .frame(height: Self.cardListBleed)
+                Rectangle()
+                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                    .frame(height: Self.cardListBleed)
+            }
+        )
     }
+
+    /// 清单滚动区的边缘呼吸位（阴影伸展 + 上下渐隐带高度）
+    private static let cardListBleed: CGFloat = 10
+
+    /// 交付物列表高度封顶（约 5 行），超出走内部滚动——交付物再多也不挤压小目标区域
+    private static let artifactsMaxHeight: CGFloat = 240
+    private static let artifactsScrollThreshold = 4
 
     @ViewBuilder private var artifactsView: some View {
         VStack(alignment: .leading, spacing: 10) {
-            CampSectionTitle("交付物")
+            HStack(spacing: 8) {
+                CampSectionTitle("交付物")
+                if !store.missionArtifacts.isEmpty {
+                    CampChip(text: "\(store.missionArtifacts.count) 件", color: Camp.moss, icon: "doc.fill")
+                    Spacer()
+                    Button {
+                        if reduceMotion {
+                            artifactsCollapsed.toggle()
+                        } else {
+                            withAnimation(.snappy(duration: 0.2)) { artifactsCollapsed.toggle() }
+                        }
+                    } label: {
+                        HStack(spacing: 3) {
+                            Text(artifactsCollapsed ? "展开" : "收起")
+                            // 披露语义：展开态 ∨（内容敞开着）、收起态 ›（内容收着）
+                            Image(systemName: artifactsCollapsed ? "chevron.right" : "chevron.down")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(artifactsCollapsed ? "展开交付物列表" : "收起交付物列表")
+                }
+            }
             if store.missionArtifacts.isEmpty {
                 Text("行动完成的交付物会出现在这里")
                     .font(.caption)
                     .foregroundStyle(Camp.inkSecondary)
-            } else {
-                ForEach(groupedArtifacts, id: \.card.id) { group in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(group.card.title)
-                            .font(.caption)
-                            .foregroundStyle(Camp.inkSecondary)
-                        ForEach(group.artifacts, id: \.id) { artifact in
-                            Button {
-                                store.revealArtifact(artifact)
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "doc.fill")
-                                        .foregroundStyle(Camp.moss)
-                                    Text(artifact.label)
-                                        .font(.callout)
-                                        .foregroundStyle(Camp.ink)
-                                    Spacer()
-                                    Image(systemName: "arrow.up.forward.square")
-                                        .font(.caption)
-                                        .foregroundStyle(Camp.inkSecondary)
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 7)
-                                .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
-                                        .stroke(Camp.line, lineWidth: 1)
-                                )
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .help("在 Finder 中显示")
-                        }
+            } else if !artifactsCollapsed {
+                if store.missionArtifacts.count > Self.artifactsScrollThreshold {
+                    ScrollView {
+                        artifactList
                     }
+                    .frame(maxHeight: Self.artifactsMaxHeight)
+                } else {
+                    artifactList
                 }
             }
         }
         .campCard()
+    }
+
+    private var artifactList: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(groupedArtifacts, id: \.card.id) { group in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(group.card.title)
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                    ForEach(group.artifacts, id: \.id) { artifact in
+                        Button {
+                            store.revealArtifact(artifact)
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "doc.fill")
+                                    .foregroundStyle(Camp.moss)
+                                Text(artifact.label)
+                                    .font(.callout)
+                                    .foregroundStyle(Camp.ink)
+                                Spacer()
+                                Image(systemName: "arrow.up.forward.square")
+                                    .font(.caption)
+                                    .foregroundStyle(Camp.inkSecondary)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                    .stroke(Camp.line, lineWidth: 1)
+                            )
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("在 Finder 中显示")
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - 派生
@@ -642,13 +738,6 @@ struct TaskRunView: View {
     private var selectedCard: CardRecord? {
         guard let id = store.selectedCardId else { return nil }
         return store.missionCards.first { $0.id == id }
-    }
-
-    private var inspectorBinding: Binding<Bool> {
-        Binding(
-            get: { store.selectedCardId != nil },
-            set: { if !$0 { store.selectedCardId = nil } }
-        )
     }
 
     private var theaterBinding: Binding<Bool> {

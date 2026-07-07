@@ -7,10 +7,14 @@ struct CardRowView: View {
     let latest: String?
     let animState: CompanionAnimState
     let pendingRequest: UserRequestRecord?
+    /// 详情弹层当前打开的是否是本卡（选中态）
+    var isSelected = false
     let onRetry: () -> Void
     let onAnswer: (String, AskUserAnswer) -> Void
     let onSelect: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @FocusState private var focused: Bool
+    @State private var hovering = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -67,11 +71,27 @@ struct CardRowView: View {
             .padding(.leading, 10)
         }
         .campCard(padding: 12, highlighted: pendingRequest != nil)
+        // 营地风选中/焦点/悬停三态（替代系统蓝色焦点环——与暖色设计语言不符）：
+        // 悬停 = 余烬淡描边微升起；键盘焦点/选中 = 余烬描边 + 底色微染
+        .overlay(
+            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                .fill(Camp.ember.opacity(isSelected ? 0.05 : 0))
+                .allowsHitTesting(false)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                .stroke(accentStroke, lineWidth: isSelected || focused ? 1.5 : 1)
+        )
+        .shadow(color: .black.opacity(hovering ? 0.08 : 0), radius: 8, y: 3)
+        .scaleEffect(hovering && !reduceMotion ? 1.004 : 1)
         .opacity(card.status == .canceled ? 0.65 : 1)
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
-        // 键盘/VoiceOver 可达（UX 审计 P2）：Tab 聚焦 + 回车打开详情
+        .onHover { hovering = $0 }
+        // 键盘/VoiceOver 可达（UX 审计 P2）：Tab 聚焦 + 回车打开详情；焦点样式自绘
         .focusable(true)
+        .focused($focused)
+        .focusEffectDisabled()
         .onKeyPress(.return) {
             onSelect()
             return .handled
@@ -80,6 +100,16 @@ struct CardRowView: View {
         .accessibilityLabel("\(card.title)，\(statusText)")
         .accessibilityAction(named: "查看详情", onSelect)
         .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: card.status)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.15), value: hovering)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.15), value: focused)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.15), value: isSelected)
+    }
+
+    private var accentStroke: Color {
+        if isSelected { return Camp.ember.opacity(0.85) }
+        if focused { return Camp.ember.opacity(0.7) }
+        if hovering { return Camp.ember.opacity(0.3) }
+        return .clear
     }
 
     private var detailText: String {
