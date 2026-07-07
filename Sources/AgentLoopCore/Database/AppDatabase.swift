@@ -335,7 +335,7 @@ public final class AppDatabase: Sendable {
             try card.insert(db)
 
             try Self.appendEvent(db, missionId: mission.id, cardId: card.id, runId: nil,
-                                 kind: "mission_created", payload: ["goal": .string(goal)])
+                                 kind: EventKind.missionCreated, payload: ["goal": .string(goal)])
 
             return SingleCardIds(missionId: mission.id, cardId: card.id, squadId: squad.id)
         }
@@ -378,9 +378,9 @@ public final class AppDatabase: Sendable {
             )
             try mission.insert(db)
             try Self.appendEvent(db, missionId: mission.id, cardId: nil, runId: nil,
-                                 kind: "mission_created", payload: ["goal": .string(goal)])
+                                 kind: EventKind.missionCreated, payload: ["goal": .string(goal)])
             try Self.appendEvent(db, missionId: mission.id, cardId: nil, runId: nil,
-                                 kind: "plan_started", payload: .object([:]))
+                                 kind: EventKind.planStarted, payload: .object([:]))
             return mission.id
         }
     }
@@ -404,7 +404,7 @@ public final class AppDatabase: Sendable {
             try mission.update(db)
             try Self.appendEvent(
                 db, missionId: missionId, cardId: nil, runId: nil,
-                kind: "budget_added",
+                kind: EventKind.budgetAdded,
                 payload: ["tokens": .number(Double(max(0, tokens)))]
             )
         }
@@ -413,7 +413,7 @@ public final class AppDatabase: Sendable {
     public func recordPlanFallback(missionId: String, reason: String) throws {
         try pool.write { db in
             try Self.appendEvent(db, missionId: missionId, cardId: nil, runId: nil,
-                                 kind: "plan_fallback", payload: ["reason": .string(reason)])
+                                 kind: EventKind.planFallback, payload: ["reason": .string(reason)])
         }
     }
 
@@ -427,12 +427,12 @@ public final class AppDatabase: Sendable {
                 .fetchCount(db)
             if existingCount > 0 {
                 try Self.appendEvent(db, missionId: missionId, cardId: nil, runId: nil,
-                                     kind: "plan_noop", payload: ["reason": "cards_exist"])
+                                     kind: EventKind.planNoop, payload: ["reason": "cards_exist"])
                 return
             }
             guard mission.status == .planning else {
                 try Self.appendEvent(db, missionId: missionId, cardId: nil, runId: nil,
-                                     kind: "plan_noop", payload: ["reason": "not_planning"])
+                                     kind: EventKind.planNoop, payload: ["reason": "not_planning"])
                 return
             }
             guard let squad = try SquadRecord.fetchOne(db, key: mission.squadId) else {
@@ -472,7 +472,7 @@ public final class AppDatabase: Sendable {
                 missionId: missionId,
                 cardId: nil,
                 runId: nil,
-                kind: "plan_completed",
+                kind: EventKind.planCompleted,
                 payload: [
                     "goalRefined": .string(goalRefined),
                     "cardIds": .array(cardIds.map(JSONValue.string)),
@@ -593,7 +593,7 @@ public final class AppDatabase: Sendable {
             missionId: missionId,
             cardId: nil,
             runId: nil,
-            kind: "mission_status_changed",
+            kind: EventKind.missionStatusChanged,
             payload: ["from": .string(previous.rawValue), "to": .string(next.rawValue)]
         )
         if next == .failed && previous != .accepted && previous != .failed {
@@ -602,7 +602,7 @@ public final class AppDatabase: Sendable {
                 missionId: missionId,
                 cardId: nil,
                 runId: nil,
-                kind: "mission_failed",
+                kind: EventKind.missionFailed,
                 payload: ["reason": "defensive_rollup"]
             )
         }
@@ -724,7 +724,7 @@ public final class AppDatabase: Sendable {
                 missionId: card.missionId,
                 cardId: cardId,
                 runId: runId,
-                kind: "user_request_created",
+                kind: EventKind.userRequestCreated,
                 payload: [
                     "kind": .string(kind.rawValue),
                     "prompt": .string(prompt),
@@ -756,7 +756,7 @@ public final class AppDatabase: Sendable {
                 db,
                 id: card.id,
                 to: .ready,
-                eventKind: "card_ready",
+                eventKind: EventKind.cardReady,
                 payload: ["answeredRequest": .string(requestId)]
             )
             try Self.appendEvent(
@@ -764,7 +764,7 @@ public final class AppDatabase: Sendable {
                 missionId: card.missionId,
                 cardId: card.id,
                 runId: nil,
-                kind: "user_request_answered",
+                kind: EventKind.userRequestAnswered,
                 payload: ["userRequestId": .string(requestId)]
             )
         }
@@ -802,7 +802,7 @@ public final class AppDatabase: Sendable {
                 missionId: missionId,
                 cardId: nil,
                 runId: nil,
-                kind: "kernel_error",
+                kind: EventKind.kernelError,
                 payload: ["message": .string(message)]
             )
         }
@@ -852,7 +852,7 @@ public final class AppDatabase: Sendable {
             card.blockedReasonJson = nil
             try card.update(db)
             try Self.appendEvent(db, missionId: card.missionId, cardId: cardId, runId: runId,
-                                 kind: "card_started", payload: ["runId": .string(runId)])
+                                 kind: EventKind.cardStarted, payload: ["runId": .string(runId)])
         }
     }
 

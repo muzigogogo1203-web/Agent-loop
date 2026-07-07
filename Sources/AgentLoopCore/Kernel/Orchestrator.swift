@@ -132,7 +132,7 @@ public actor Orchestrator {
                         database,
                         id: card.id,
                         to: .ready,
-                        eventKind: "card_interrupted",
+                        eventKind: EventKind.cardInterrupted,
                         payload: ["reason": "crash_recovery"]
                     )
                 }
@@ -188,7 +188,7 @@ public actor Orchestrator {
                                 database,
                                 id: card.id,
                                 to: .ready,
-                                eventKind: "card_ready",
+                                eventKind: EventKind.cardReady,
                                 payload: .object([:])
                             )
                         }
@@ -260,7 +260,7 @@ public actor Orchestrator {
             try? await db.pool.write { database in
                 try AppDatabase.appendEvent(
                     database, missionId: missionId, cardId: nil, runId: nil,
-                    kind: "mission_budget_exhausted", payload: .object([:]))
+                    kind: EventKind.missionBudgetExhausted, payload: .object([:]))
             }
             emit(.missionChanged(missionId: missionId))
         }
@@ -326,7 +326,7 @@ public actor Orchestrator {
                     missionId: missionId,
                     cardId: nil,
                     runId: nil,
-                    kind: "mission_failed",
+                    kind: EventKind.missionFailed,
                     payload: ["reason": "abandoned"]
                 )
                 try AppDatabase.appendEvent(
@@ -334,7 +334,7 @@ public actor Orchestrator {
                     missionId: missionId,
                     cardId: nil,
                     runId: nil,
-                    kind: "mission_status_changed",
+                    kind: EventKind.missionStatusChanged,
                     payload: ["from": .string(previous.rawValue), "to": .string(MissionStatus.failed.rawValue)]
                 )
                 let cards = try CardRecord
@@ -346,7 +346,7 @@ public actor Orchestrator {
                         database,
                         id: card.id,
                         to: .canceled,
-                        eventKind: "card_canceled",
+                        eventKind: EventKind.cardCanceled,
                         payload: ["reason": "mission_abandoned"]
                     )
                 }
@@ -395,7 +395,7 @@ public actor Orchestrator {
     }
 
     public func retryCard(_ cardId: String) async throws {
-        try db.transitionCard(id: cardId, to: .ready, eventKind: "card_ready", payload: .object([:]))
+        try db.transitionCard(id: cardId, to: .ready, eventKind: EventKind.cardReady, payload: .object([:]))
         await reconcile()
     }
 
@@ -421,7 +421,7 @@ public actor Orchestrator {
             try? await db.pool.write { database in
                 try AppDatabase.appendEvent(
                     database, missionId: missionId, cardId: nil, runId: nil,
-                    kind: "squad_proposal_confirmed",
+                    kind: EventKind.squadProposalConfirmed,
                     payload: [
                         "proposalId": .string(block.proposalId),
                         "missionId": .string(missionId),
@@ -474,7 +474,7 @@ public actor Orchestrator {
                         database,
                         id: card.id,
                         to: .canceled,
-                        eventKind: "card_canceled",
+                        eventKind: EventKind.cardCanceled,
                         payload: ["reason": "budget_harvest"]
                     )
                 }
@@ -499,13 +499,13 @@ public actor Orchestrator {
             mission.status = .accepted
             try mission.update(database)
             try AppDatabase.appendEvent(database, missionId: missionId, cardId: nil, runId: nil,
-                                        kind: "mission_accepted", payload: .object([:]))
+                                        kind: EventKind.missionAccepted, payload: .object([:]))
             try AppDatabase.appendEvent(
                 database,
                 missionId: missionId,
                 cardId: nil,
                 runId: nil,
-                kind: "mission_status_changed",
+                kind: EventKind.missionStatusChanged,
                 payload: ["from": .string(previous.rawValue), "to": .string(MissionStatus.accepted.rawValue)]
             )
         }
@@ -558,7 +558,7 @@ public actor Orchestrator {
                 try record.insert(database)
                 try AppDatabase.appendEvent(
                     database, missionId: missionId, cardId: nil, runId: nil,
-                    kind: "camp_note_created",
+                    kind: EventKind.campNoteCreated,
                     payload: [
                         "noteId": .string(record.id),
                         "source": .string(fallback ? "fallback" : "closeout"),

@@ -104,7 +104,7 @@ public struct BoardTools: Sendable {
                     missionId: card.missionId,
                     cardId: cardId,
                     runId: runId,
-                    kind: "progress_note",
+                    kind: EventKind.progressNote,
                     payload: ["text": .string(text)]
                 )
             }

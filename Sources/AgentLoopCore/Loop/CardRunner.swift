@@ -177,7 +177,7 @@ public struct CardRunner: Sendable {
                         try? db.appendDiagnosticEvent(
                             cardId: cardId,
                             runId: runId,
-                            kind: "run_error",
+                            kind: EventKind.runError,
                             payload: ["error": .string(detail), "turns": .number(Double(turns))]
                         )
                         try? blockCardIfStillRunning(
@@ -209,7 +209,7 @@ public struct CardRunner: Sendable {
         try db.transitionCard(
             id: cardId,
             to: .ready,
-            eventKind: "card_interrupted",
+            eventKind: EventKind.cardInterrupted,
             payload: ["runId": .string(runId), "reason": "canceled"]
         )
     }
