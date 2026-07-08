@@ -16,8 +16,10 @@ public struct ToolAccess: Sendable, Equatable {
         "complete_card", "block_card", "add_progress_note", "ask_user",
     ]
     /// 内置能力工具全集（可被白名单勾选的部分）。
+    /// run_shell 的危险面由审批矩阵把守（M7：标准档必审），白名单只管能力面。
     public static let builtinCapabilityNames: [String] = [
-        "list_dir", "read_file", "write_file", "web_fetch", "web_search", "search_camp_notes",
+        "list_dir", "read_file", "write_file", "web_fetch", "web_search", "run_shell",
+        "search_camp_notes",
     ]
 
     /// 解析后的能力工具集合（已应用「空=全量(仅内置)」）。

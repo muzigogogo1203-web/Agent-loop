@@ -5,7 +5,7 @@ import AgentLoopCore
     let names = ToolDef.agentTools.map(\.name)
     #expect(names == ["complete_card", "block_card", "add_progress_note",
                       "ask_user", "list_dir", "read_file", "write_file", "web_fetch",
-                      "web_search", "search_camp_notes"])
+                      "web_search", "run_shell", "search_camp_notes"])
     for def in ToolDef.agentTools {
         #expect(def.inputSchema["type"]?.stringValue == "object")
         #expect(def.inputSchema["additionalProperties"]?.boolValue == false)

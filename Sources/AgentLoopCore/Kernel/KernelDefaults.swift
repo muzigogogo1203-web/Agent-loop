@@ -15,4 +15,6 @@ public enum KernelDefaults {
     public static let compactionKeepRecentMessages = 6
     /// 向导伙伴的出厂默认模型（M6-D12：收敛原先散落在 AppDatabase 两处的字面量）
     public static let defaultGuideModel = "claude-sonnet-4-6"
+    /// shell 命令超时（M7-D6）
+    public static let shellTimeout: Duration = .seconds(120)
 }

@@ -97,6 +97,12 @@ extension ToolDef {
         inputSchema: objectSchema(["query": ["type": "string"]], required: ["query"])
     )
 
+    public static let runShell = ToolDef(
+        name: "run_shell",
+        description: "在小队工作目录内执行一条 shell 命令（zsh），返回退出码与输出（120 秒超时，输出截断 20KB）。危险命令可能需要用户批准后才会执行。",
+        inputSchema: objectSchema(["command": ["type": "string"]], required: ["command"])
+    )
+
     public static let askUser = ToolDef(
         name: "ask_user",
         description: "当继续当前小目标需要用户选择、确认或补充文本时调用。系统会持久保存问题并挂起小目标，用户回答后从冷启动继续。",
@@ -140,6 +146,7 @@ extension ToolDef {
         writeFile,
         webFetch,
         webSearch,
+        runShell,
         searchCampNotes,
     ]
 
@@ -162,6 +169,7 @@ extension ToolDef {
         case "write_file": return "写文件"
         case "web_fetch": return "查网页"
         case "web_search": return "联网搜索"
+        case "run_shell": return "跑命令"
         case "search_camp_notes": return "翻营地笔记"
         case "camp_status": return "查看营地全景"
         case "propose_squad": return "组队提案"

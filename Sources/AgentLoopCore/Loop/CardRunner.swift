@@ -73,6 +73,10 @@ public struct CardRunner: Sendable {
         if let searchKey, !searchKey.isEmpty {
             capabilityHandlers["web_search"] = WebSearchTool(apiKey: searchKey)
         }
+        // M7-D6：无工作目录不装配 shell（可见即可用）
+        if let workspace {
+            capabilityHandlers["run_shell"] = ShellTool(workspaceRoot: workspace)
+        }
         for (name, handler) in capabilityHandlers where toolAccess.allows(name) {
             handlers[name] = handler
         }
