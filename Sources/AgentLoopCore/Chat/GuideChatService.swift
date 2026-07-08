@@ -50,6 +50,15 @@ public struct GuideChatService: Sendable {
         """
 
         return AsyncThrowingStream { continuation in
+            // M6-D1：向导工具与执行伙伴同走 ToolExecutor 单一分发；
+            // propose_squad 需要 threadId/continuation，用闭包 handler 捕获。
+            let executor = ToolExecutor(handlers: [
+                "search_camp_notes": CampNotesSearchTool(db: db, campId: campId),
+                "camp_status": CampStatusTool(db: db, campId: campId),
+                "propose_squad": ClosureToolHandler { [self] input in
+                    proposeSquad(input: input, threadId: thread.id, continuation: continuation)
+                },
+            ])
             let task = Task {
                 do {
                     var history = initialHistory
@@ -79,8 +88,7 @@ public struct GuideChatService: Sendable {
                             var results: [ContentBlock] = []
                             for use in turn.toolUses {
                                 continuation.yield(.toolActivity(name: use.name))
-                                let outcome = await execute(
-                                    use: use, campId: campId, threadId: thread.id, continuation: continuation)
+                                let outcome = await executor.execute(name: use.name, input: use.input)
                                 switch outcome {
                                 case .result(let content):
                                     results.append(.toolResult(toolUseId: use.id, content: content, isError: false))
@@ -142,24 +150,6 @@ public struct GuideChatService: Sendable {
     }
 
     // MARK: - 工具执行
-
-    private func execute(
-        use: (id: String, name: String, input: JSONValue),
-        campId: String,
-        threadId: String,
-        continuation: AsyncThrowingStream<GuideChatEvent, Error>.Continuation
-    ) async -> ToolOutcome {
-        switch use.name {
-        case "search_camp_notes":
-            return await CampNotesSearchTool(db: db, campId: campId).execute(input: use.input)
-        case "camp_status":
-            return await CampStatusTool(db: db, campId: campId).execute(input: use.input)
-        case "propose_squad":
-            return proposeSquad(input: use.input, threadId: threadId, continuation: continuation)
-        default:
-            return .error("未知工具 \(use.name)")
-        }
-    }
 
     /// propose_squad（plan D5）：校验 → pending 提案块落库 → 通知 UI；
     /// tool_result 只告知「等待用户确认」，向导永不静默建队。

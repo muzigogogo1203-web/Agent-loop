@@ -52,7 +52,7 @@ extension AppDatabase {
             missionId: card.missionId,
             cardId: id,
             runId: runId,
-            kind: "card_completed",
+            kind: EventKind.cardCompleted,
             payload: payload
         )
         try rollupMission(db, missionId: card.missionId)
@@ -87,7 +87,7 @@ extension AppDatabase {
             missionId: card.missionId,
             cardId: id,
             runId: runId,
-            kind: "card_blocked",
+            kind: EventKind.cardBlocked,
             payload: payload
         )
         try rollupMission(db, missionId: card.missionId)

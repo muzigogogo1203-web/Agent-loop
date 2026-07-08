@@ -91,6 +91,18 @@ extension ToolDef {
         inputSchema: objectSchema(["url": ["type": "string"]], required: ["url"])
     )
 
+    public static let webSearch = ToolDef(
+        name: "web_search",
+        description: "联网搜索最新信息（只读）。返回若干条结果的标题、链接与摘要；需要看全文时配合 web_fetch 抓取具体链接。",
+        inputSchema: objectSchema(["query": ["type": "string"]], required: ["query"])
+    )
+
+    public static let runShell = ToolDef(
+        name: "run_shell",
+        description: "在小队工作目录内执行一条 shell 命令（zsh），返回退出码与输出（120 秒超时，输出截断 20KB）。危险命令可能需要用户批准后才会执行。",
+        inputSchema: objectSchema(["command": ["type": "string"]], required: ["command"])
+    )
+
     public static let askUser = ToolDef(
         name: "ask_user",
         description: "当继续当前小目标需要用户选择、确认或补充文本时调用。系统会持久保存问题并挂起小目标，用户回答后从冷启动继续。",
@@ -133,6 +145,8 @@ extension ToolDef {
         readFile,
         writeFile,
         webFetch,
+        webSearch,
+        runShell,
         searchCampNotes,
     ]
 
@@ -142,4 +156,28 @@ extension ToolDef {
         campStatus,
         proposeSquad,
     ]
+
+    /// 工具中文名（M6-D5）：单点维护，UI 层（活动行/伙伴编辑器）统一查这里。
+    /// MCP 工具（M8）：`mcp__<server>__<tool>` → 「驿站·server / tool」。
+    public static func displayName(_ name: String) -> String {
+        if let parsed = McpToolNaming.parse(name) {
+            return "驿站·\(parsed.server) / \(parsed.tool)"
+        }
+        switch name {
+        case "complete_card": return "提交交接包"
+        case "block_card": return "报告受阻"
+        case "add_progress_note": return "汇报进展"
+        case "ask_user": return "提问"
+        case "list_dir": return "查看目录"
+        case "read_file": return "读文件"
+        case "write_file": return "写文件"
+        case "web_fetch": return "查网页"
+        case "web_search": return "联网搜索"
+        case "run_shell": return "跑命令"
+        case "search_camp_notes": return "翻营地笔记"
+        case "camp_status": return "查看营地全景"
+        case "propose_squad": return "组队提案"
+        default: return name
+        }
+    }
 }

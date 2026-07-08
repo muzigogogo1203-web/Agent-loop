@@ -1,11 +1,21 @@
 import Foundation
 
+/// 网页抓取 v2（M6-D10）：专用 20s 超时会话、字节安全截断、重定向后 scheme 复验、
+/// article/main 优先抽取；结果经 ExternalContent 包裹（D9①）。只读。
 public struct WebFetchTool: ToolHandler {
     let session: URLSession
-    let maxBytes = 50_000
+    static let maxBytes = 50_000
 
-    public init(session: URLSession = .shared) {
-        self.session = session
+    public init(session: URLSession? = nil) {
+        self.session = session ?? Self.makeSession()
+    }
+
+    /// 专用会话：请求超时 20s（与 web_search 同参）——v1 用 URLSession.shared 无显式超时。
+    static func makeSession() -> URLSession {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 20
+        configuration.timeoutIntervalForResource = 60
+        return URLSession(configuration: configuration)
     }
 
     public func execute(input: JSONValue) async -> ToolOutcome {
@@ -21,15 +31,38 @@ public struct WebFetchTool: ToolHandler {
             guard status == 200 else {
                 return .error("HTTP \(status)")
             }
-            let raw = String(data: data, encoding: .utf8) ?? ""
-            let text = Self.stripHTML(raw)
-            if text.utf8.count > maxBytes {
-                return .result(String(text.prefix(maxBytes)) + "\n...(截断)")
+            // D10：重定向后复验最终 URL 仍是 https，拒绝降级到明文
+            if let finalScheme = response.url?.scheme?.lowercased(), finalScheme != "https" {
+                return .error("目标经重定向落在非 https 地址（\(finalScheme)://），已拒绝抓取")
             }
-            return .result(text)
+            let raw = String(data: data, encoding: .utf8) ?? ""
+            let text = Self.truncateUTF8(Self.extractReadable(raw), maxBytes: Self.maxBytes)
+            return .result(ExternalContent.wrap(
+                source: "网页 \(response.url?.absoluteString ?? urlString)",
+                body: text))
         } catch {
             return .error("抓取失败：\(error.localizedDescription)")
         }
+    }
+
+    /// article/main 内容优先（正文密度高），太短说明只是壳，退回全文剥标签。
+    package static func extractReadable(_ html: String) -> String {
+        for tag in ["article", "main"] {
+            if let range = html.range(
+                of: "<\(tag)[\\s>][\\s\\S]*?</\(tag)>",
+                options: [.regularExpression, .caseInsensitive]) {
+                let stripped = stripHTML(String(html[range]))
+                if stripped.count >= 80 {
+                    return stripped
+                }
+            }
+        }
+        return stripHTML(html)
+    }
+
+    /// 字节安全截断（M7 起委托 TextTruncation 共用实现）
+    package static func truncateUTF8(_ text: String, maxBytes: Int) -> String {
+        TextTruncation.truncateUTF8(text, maxBytes: maxBytes, suffix: "\n…（已按 50KB 截断）")
     }
 
     static func stripHTML(_ html: String) -> String {

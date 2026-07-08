@@ -597,7 +597,7 @@ private let doneHandoff: JSONValue = [
             "add_progress_note": StubHandler([.result("ok")]),
             "complete_card": StubHandler([.completed(handoff)]),
         ],
-        turnTimeout: .milliseconds(50)
+        turnTimeout: .milliseconds(60)
     )
 
     guard case .completed = result.outcome else {

@@ -42,7 +42,7 @@ public struct MemoryDistillService: Sendable {
             try? await db.pool.write { database in
                 try AppDatabase.appendEvent(
                     database, missionId: nil, cardId: nil, runId: nil,
-                    kind: "companion_note_created",
+                    kind: EventKind.companionNoteCreated,
                     payload: [
                         "noteId": .string(record.id),
                         "companionId": .string(companionId),
@@ -81,7 +81,7 @@ public struct MemoryDistillService: Sendable {
             try? await db.pool.write { database in
                 try AppDatabase.appendEvent(
                     database, missionId: nil, cardId: nil, runId: nil,
-                    kind: "camp_note_created",
+                    kind: EventKind.campNoteCreated,
                     payload: [
                         "noteId": .string(record.id),
                         "source": .string("guide_chat"),

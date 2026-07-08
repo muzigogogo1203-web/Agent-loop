@@ -11,7 +11,10 @@ struct CompanionEditorView: View {
     @State private var rolePrompt = ""
     @State private var modelChoice = "claude-sonnet-4-6"
     @State private var customModel = ""
+    @State private var enabledTools: Set<String> = Set(ToolAccess.builtinCapabilityNames)
     @State private var saveError: String?
+    /// 各驿站的已知工具（连接后取自 Manager 缓存）
+    @State private var mcpToolsByServer: [String: [McpServerManager.AssembledTool]] = [:]
 
     static let colors = ["purple", "teal", "coral", "pink", "blue", "green", "amber"]
     private static let customTag = "__custom__"
@@ -71,7 +74,7 @@ struct CompanionEditorView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("模型")
                     Picker("模型", selection: $modelChoice) {
-                        ForEach(AppStore.modelChoices, id: \.self) { model in
+                        ForEach(store.modelChoices, id: \.self) { model in
                             Text(model).tag(model)
                         }
                         Text("自定义…").tag(Self.customTag)
@@ -88,6 +91,42 @@ struct CompanionEditorView: View {
                                 RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
                                     .stroke(Camp.line, lineWidth: 1)
                             )
+                    }
+                }
+                .campCard()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    CampSectionTitle("工具")
+                    Text("勾选这位伙伴执行小目标时可用的工具；汇报进展、提问与交接始终可用。")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                    ForEach(ToolAccess.builtinCapabilityNames, id: \.self) { tool in
+                        // M6-D8：无 Tavily key 时 web_search 置灰，避免「可勾但运行时静默消失」
+                        let searchLocked = tool == "web_search" && !store.searchKeyPresent
+                        HStack(spacing: 6) {
+                            Toggle(isOn: toolBinding(tool)) {
+                                Text(ToolDef.displayName(tool))
+                                    .font(.body)
+                                    .foregroundStyle(searchLocked ? Camp.inkSecondary : Camp.ink)
+                            }
+                            .toggleStyle(.checkbox)
+                            .disabled(searchLocked)
+                            if searchLocked {
+                                Text("（先到设置页配置 Tavily key）")
+                                    .font(.caption)
+                                    .foregroundStyle(Camp.inkSecondary)
+                            }
+                        }
+                    }
+                    // M8-D7：驿站工具按 server 分组，显式勾选（默认全不勾，不随内置继承）
+                    if !store.mcp.servers.isEmpty {
+                        Divider()
+                        Text("驿站工具（MCP）——外部来源，必须逐个显式勾选。")
+                            .font(.caption)
+                            .foregroundStyle(Camp.inkSecondary)
+                        ForEach(store.mcp.servers, id: \.id) { server in
+                            mcpServerGroup(server)
+                        }
                     }
                 }
                 .campCard()
@@ -137,6 +176,7 @@ struct CompanionEditorView: View {
         .background(Camp.canvas)
         .task(id: companionId) {
             load()
+            await refreshMcpTools()
         }
     }
 
@@ -164,14 +204,115 @@ struct CompanionEditorView: View {
         .buttonStyle(.plain)
     }
 
+    private func toolBinding(_ tool: String) -> Binding<Bool> {
+        Binding(
+            get: { enabledTools.contains(tool) },
+            set: { on in
+                if on { enabledTools.insert(tool) } else { enabledTools.remove(tool) }
+            }
+        )
+    }
+
+    // MARK: - 驿站工具分组（M8-D7）
+
+    @ViewBuilder
+    private func mcpServerGroup(_ server: McpServerRecord) -> some View {
+        let status = store.mcp.status(server.id)
+        let known = mcpToolsByServer[server.id] ?? []
+        let knownNames = Set(known.map(\.def.name))
+        // 已勾选但当前列不出来的名字（驿站没在跑/工具被下架）：保留可取消，不静默丢失
+        let orphanNames = enabledTools
+            .filter { McpToolNaming.parse($0)?.server == McpToolNaming.serverComponent(server.name) }
+            .subtracting(knownNames)
+            .sorted()
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "point.3.connected.trianglepath.dotted")
+                    .font(.caption)
+                    .foregroundStyle(Camp.stone)
+                Text(server.name)
+                    .font(.callout.weight(.medium).monospaced())
+                    .foregroundStyle(Camp.ink)
+                if server.experimental {
+                    Image(systemName: "flask")
+                        .font(.caption2)
+                        .foregroundStyle(Camp.amber)
+                }
+                Spacer()
+                if !status.isRunning {
+                    Button {
+                        store.mcp.connectForToolListing(server)
+                    } label: {
+                        if store.mcp.busyServerIds.contains(server.id) {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text("连接列出工具")
+                        }
+                    }
+                    .buttonStyle(CampSecondaryButtonStyle())
+                    .disabled(store.mcp.busyServerIds.contains(server.id))
+                }
+            }
+            if known.isEmpty && orphanNames.isEmpty {
+                Text(status.isRunning ? "这个驿站没有可用工具" : "连接后这里会列出它的工具")
+                    .font(.caption)
+                    .foregroundStyle(Camp.stone)
+            }
+            ForEach(known, id: \.def.name) { tool in
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Toggle(isOn: toolBinding(tool.def.name)) {
+                        Text(tool.originalToolName)
+                            .font(.body.monospaced())
+                            .foregroundStyle(Camp.ink)
+                    }
+                    .toggleStyle(.checkbox)
+                    if !tool.def.description.isEmpty {
+                        Text(tool.def.description)
+                            .font(.caption)
+                            .foregroundStyle(Camp.inkSecondary)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            ForEach(orphanNames, id: \.self) { name in
+                HStack(spacing: 6) {
+                    Toggle(isOn: toolBinding(name)) {
+                        Text(McpToolNaming.parse(name)?.tool ?? name)
+                            .font(.body.monospaced())
+                            .foregroundStyle(Camp.inkSecondary)
+                    }
+                    .toggleStyle(.checkbox)
+                    Text("（当前列不出——驿站未连接或工具已下架）")
+                        .font(.caption)
+                        .foregroundStyle(Camp.stone)
+                }
+            }
+        }
+        .padding(8)
+        .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+        .onChange(of: status.isRunning) {
+            Task { await refreshMcpTools() }
+        }
+    }
+
+    private func refreshMcpTools() async {
+        await store.mcp.refreshStatuses()
+        var result: [String: [McpServerManager.AssembledTool]] = [:]
+        for server in store.mcp.servers {
+            result[server.id] = await store.mcp.assembledTools(serverId: server.id)
+        }
+        mcpToolsByServer = result
+    }
+
     private func load() {
         saveError = nil
         guard let companionId else {
             name = ""
             color = "purple"
             rolePrompt = ""
-            modelChoice = AppStore.modelChoices[0]
+            modelChoice = store.modelChoices.first ?? AppStore.factoryModelChoices[0]
             customModel = ""
+            enabledTools = Set(ToolAccess.builtinCapabilityNames)
             return
         }
         guard let companion = try? store.db.companion(id: companionId) else {
@@ -180,7 +321,8 @@ struct CompanionEditorView: View {
         name = companion.name
         color = companion.color
         rolePrompt = companion.rolePrompt
-        if AppStore.modelChoices.contains(companion.model) {
+        enabledTools = ToolAccess.parse(toolsJson: companion.toolsJson).capabilities
+        if store.modelChoices.contains(companion.model) {
             modelChoice = companion.model
             customModel = ""
         } else {
@@ -191,6 +333,8 @@ struct CompanionEditorView: View {
 
     private func save() {
         do {
+            // M6-D5b：保存永远写显式 v2 列表——打开编辑器保存即视为显式授权
+            let toolsJson = ToolAccess.explicitJson(allow: enabledTools)
             if let companionId {
                 guard var companion = try store.db.companion(id: companionId) else {
                     saveError = "保存失败：伙伴不存在"
@@ -200,14 +344,16 @@ struct CompanionEditorView: View {
                 companion.color = color
                 companion.rolePrompt = rolePrompt
                 companion.model = resolvedModel
+                companion.toolsJson = toolsJson
                 try store.db.saveCompanion(companion)
             } else {
-                let companion = CompanionRecord.new(
+                var companion = CompanionRecord.new(
                     name: name,
                     color: color,
                     rolePrompt: rolePrompt,
                     model: resolvedModel
                 )
+                companion.toolsJson = toolsJson
                 try store.db.saveCompanion(companion)
             }
             saveError = nil

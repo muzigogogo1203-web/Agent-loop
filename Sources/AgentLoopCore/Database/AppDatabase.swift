@@ -191,6 +191,31 @@ public final class AppDatabase: Sendable {
                 t.add(column: "workspaceBookmark", .blob)
             }
         }
+        // M7-D2: 行动自主档位（谨慎/标准/放手），决定工具审批矩阵
+        m.registerMigration("v5") { db in
+            try db.alter(table: "mission") { t in
+                t.add(column: "autonomy", .text).notNull().defaults(to: "standard")
+            }
+        }
+        // M8-D2: MCP 驿站——全局注册表 + 营地级启用关联（频道隔离与 M5-0 一致）。
+        // 敏感 env 值不落库（secretEnvKeysJson 只存 key 名，值在 Keychain，M8-D5）。
+        m.registerMigration("v6") { db in
+            try db.create(table: "mcp_server") { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull().unique()
+                t.column("command", .text).notNull()
+                t.column("argsJson", .text).notNull().defaults(to: "[]")
+                t.column("envJson", .text).notNull().defaults(to: "{}")
+                t.column("secretEnvKeysJson", .text).notNull().defaults(to: "[]")
+                t.column("experimental", .boolean).notNull().defaults(to: false)
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.create(table: "camp_mcp_enable") { t in
+                t.column("campId", .text).notNull().references("camp")
+                t.column("serverId", .text).notNull().references("mcp_server")
+                t.primaryKey(["campId", "serverId"])
+            }
+        }
         return m
     }
 
@@ -210,7 +235,7 @@ public final class AppDatabase: Sendable {
         var guide = CompanionRecord.new(
             name: "向导", color: "amber",
             rolePrompt: "你是这个营地的向导，熟悉营地里的一切。",
-            model: "claude-sonnet-4-6", kind: .guide, campId: camp.id)
+            model: KernelDefaults.defaultGuideModel, kind: .guide, campId: camp.id)
         guide.toolsJson = "[]"
         try guide.insert(db)
         return camp
@@ -250,7 +275,7 @@ public final class AppDatabase: Sendable {
             var guide = CompanionRecord.new(
                 name: "向导", color: "amber",
                 rolePrompt: trimmedPrompt.isEmpty ? "你是这个营地的向导，熟悉营地里的一切。" : trimmedPrompt,
-                model: "claude-sonnet-4-6", kind: .guide, campId: camp.id)
+                model: KernelDefaults.defaultGuideModel, kind: .guide, campId: camp.id)
             guide.toolsJson = "[]"
             try guide.insert(db)
             return camp
@@ -335,7 +360,7 @@ public final class AppDatabase: Sendable {
             try card.insert(db)
 
             try Self.appendEvent(db, missionId: mission.id, cardId: card.id, runId: nil,
-                                 kind: "mission_created", payload: ["goal": .string(goal)])
+                                 kind: EventKind.missionCreated, payload: ["goal": .string(goal)])
 
             return SingleCardIds(missionId: mission.id, cardId: card.id, squadId: squad.id)
         }
@@ -347,7 +372,8 @@ public final class AppDatabase: Sendable {
         companionIds: [String],
         workspacePath: String?,
         budgetTokens: Int = KernelDefaults.missionBudget,
-        campId: String? = nil
+        campId: String? = nil,
+        autonomy: MissionAutonomy = .standard
     ) throws -> String {
         let camp = try resolveCamp(id: campId)
         return try pool.write { db in
@@ -374,13 +400,14 @@ public final class AppDatabase: Sendable {
                 budgetTokens: max(1, budgetTokens),
                 spentTokens: 0,
                 revision: 1,
+                autonomy: autonomy,
                 createdAt: Date()
             )
             try mission.insert(db)
             try Self.appendEvent(db, missionId: mission.id, cardId: nil, runId: nil,
-                                 kind: "mission_created", payload: ["goal": .string(goal)])
+                                 kind: EventKind.missionCreated, payload: ["goal": .string(goal)])
             try Self.appendEvent(db, missionId: mission.id, cardId: nil, runId: nil,
-                                 kind: "plan_started", payload: .object([:]))
+                                 kind: EventKind.planStarted, payload: .object([:]))
             return mission.id
         }
     }
@@ -404,7 +431,7 @@ public final class AppDatabase: Sendable {
             try mission.update(db)
             try Self.appendEvent(
                 db, missionId: missionId, cardId: nil, runId: nil,
-                kind: "budget_added",
+                kind: EventKind.budgetAdded,
                 payload: ["tokens": .number(Double(max(0, tokens)))]
             )
         }
@@ -413,7 +440,7 @@ public final class AppDatabase: Sendable {
     public func recordPlanFallback(missionId: String, reason: String) throws {
         try pool.write { db in
             try Self.appendEvent(db, missionId: missionId, cardId: nil, runId: nil,
-                                 kind: "plan_fallback", payload: ["reason": .string(reason)])
+                                 kind: EventKind.planFallback, payload: ["reason": .string(reason)])
         }
     }
 
@@ -427,12 +454,12 @@ public final class AppDatabase: Sendable {
                 .fetchCount(db)
             if existingCount > 0 {
                 try Self.appendEvent(db, missionId: missionId, cardId: nil, runId: nil,
-                                     kind: "plan_noop", payload: ["reason": "cards_exist"])
+                                     kind: EventKind.planNoop, payload: ["reason": "cards_exist"])
                 return
             }
             guard mission.status == .planning else {
                 try Self.appendEvent(db, missionId: missionId, cardId: nil, runId: nil,
-                                     kind: "plan_noop", payload: ["reason": "not_planning"])
+                                     kind: EventKind.planNoop, payload: ["reason": "not_planning"])
                 return
             }
             guard let squad = try SquadRecord.fetchOne(db, key: mission.squadId) else {
@@ -472,7 +499,7 @@ public final class AppDatabase: Sendable {
                 missionId: missionId,
                 cardId: nil,
                 runId: nil,
-                kind: "plan_completed",
+                kind: EventKind.planCompleted,
                 payload: [
                     "goalRefined": .string(goalRefined),
                     "cardIds": .array(cardIds.map(JSONValue.string)),
@@ -593,7 +620,7 @@ public final class AppDatabase: Sendable {
             missionId: missionId,
             cardId: nil,
             runId: nil,
-            kind: "mission_status_changed",
+            kind: EventKind.missionStatusChanged,
             payload: ["from": .string(previous.rawValue), "to": .string(next.rawValue)]
         )
         if next == .failed && previous != .accepted && previous != .failed {
@@ -602,7 +629,7 @@ public final class AppDatabase: Sendable {
                 missionId: missionId,
                 cardId: nil,
                 runId: nil,
-                kind: "mission_failed",
+                kind: EventKind.missionFailed,
                 payload: ["reason": "defensive_rollup"]
             )
         }
@@ -724,7 +751,7 @@ public final class AppDatabase: Sendable {
                 missionId: card.missionId,
                 cardId: cardId,
                 runId: runId,
-                kind: "user_request_created",
+                kind: EventKind.userRequestCreated,
                 payload: [
                     "kind": .string(kind.rawValue),
                     "prompt": .string(prompt),
@@ -756,7 +783,7 @@ public final class AppDatabase: Sendable {
                 db,
                 id: card.id,
                 to: .ready,
-                eventKind: "card_ready",
+                eventKind: EventKind.cardReady,
                 payload: ["answeredRequest": .string(requestId)]
             )
             try Self.appendEvent(
@@ -764,8 +791,104 @@ public final class AppDatabase: Sendable {
                 missionId: card.missionId,
                 cardId: card.id,
                 runId: nil,
-                kind: "user_request_answered",
+                kind: EventKind.userRequestAnswered,
                 payload: ["userRequestId": .string(requestId)]
+            )
+            // M7-D4：审批答复额外落 decided 事件（含决定，feed 可渲染）
+            if request.kind == .approval,
+               let answer = try? JSONValue.decoded(from: answerJson),
+               let decision = answer["decision"]?.stringValue {
+                try Self.appendEvent(
+                    db,
+                    missionId: card.missionId,
+                    cardId: card.id,
+                    runId: nil,
+                    kind: EventKind.approvalDecided,
+                    payload: ["userRequestId": .string(requestId), "decision": .string(decision)]
+                )
+            }
+        }
+    }
+
+    /// M7-D3：审批挂起（复用 ask_user 持久门语义）。optionsJson 存 {tool, input, inputHash} 全文，
+    /// UI 从中渲染动作实体内容（命令全文/写入路径与内容）。
+    public func suspendCardForApproval(
+        cardId: String,
+        runId: String?,
+        prompt: String,
+        tool: String,
+        input: JSONValue,
+        inputHash: String
+    ) throws -> String {
+        try pool.write { db in
+            guard let card = try CardRecord.fetchOne(db, key: cardId) else {
+                throw RecordNotFoundError(table: "card", id: cardId)
+            }
+            let requestId = UUID().uuidString
+            let payload: JSONValue = [
+                "tool": .string(tool),
+                "input": input,
+                "inputHash": .string(inputHash),
+            ]
+            try UserRequestRecord(
+                id: requestId,
+                cardId: cardId,
+                kind: .approval,
+                prompt: prompt,
+                optionsJson: try payload.encodedString(),
+                answerJson: nil,
+                createdAt: Date(),
+                answeredAt: nil
+            ).insert(db)
+
+            let blockedPayload: JSONValue = [
+                "detail": .string(prompt),
+                "reason": "needs_human_input",
+                "userRequestId": .string(requestId),
+            ]
+            try blockCard(
+                db,
+                id: cardId,
+                runId: runId,
+                reason: "needs_human_input",
+                detail: prompt,
+                payload: blockedPayload,
+                reasonJson: try blockedPayload.encodedString()
+            )
+            try Self.appendEvent(
+                db,
+                missionId: card.missionId,
+                cardId: cardId,
+                runId: runId,
+                kind: EventKind.approvalRequested,
+                payload: [
+                    "tool": .string(tool),
+                    "prompt": .string(prompt),
+                    "userRequestId": .string(requestId),
+                ]
+            )
+            return requestId
+        }
+    }
+
+    /// 本卡已决的审批记录 → 授权令牌快照（M7-D4，冷启动重跑时装入令牌罐）
+    public func approvalDecisions(cardId: String) throws -> [ApprovalDecision] {
+        let answered = try answeredRequests(cardId: cardId).filter { $0.kind == .approval }
+        return answered.compactMap { request in
+            guard let optionsJson = request.optionsJson,
+                  let payload = try? JSONValue.decoded(from: optionsJson),
+                  let tool = payload["tool"]?.stringValue,
+                  let hash = payload["inputHash"]?.stringValue,
+                  let answerJson = request.answerJson,
+                  let answer = try? JSONValue.decoded(from: answerJson),
+                  let decision = answer["decision"]?.stringValue else {
+                return nil
+            }
+            return ApprovalDecision(
+                tool: tool,
+                inputHash: hash,
+                approved: decision == "approve",
+                reason: answer["reason"]?.stringValue
             )
         }
     }
@@ -802,7 +925,7 @@ public final class AppDatabase: Sendable {
                 missionId: missionId,
                 cardId: nil,
                 runId: nil,
-                kind: "kernel_error",
+                kind: EventKind.kernelError,
                 payload: ["message": .string(message)]
             )
         }
@@ -852,7 +975,7 @@ public final class AppDatabase: Sendable {
             card.blockedReasonJson = nil
             try card.update(db)
             try Self.appendEvent(db, missionId: card.missionId, cardId: cardId, runId: runId,
-                                 kind: "card_started", payload: ["runId": .string(runId)])
+                                 kind: EventKind.cardStarted, payload: ["runId": .string(runId)])
         }
     }
 
@@ -869,12 +992,92 @@ public final class AppDatabase: Sendable {
             try run.update(db)
             if let card = try CardRecord.fetchOne(db, key: run.cardId),
                var mission = try MissionRecord.fetchOne(db, key: card.missionId) {
-                let total = max(0, tokensIn) + max(0, tokensOut)
-                let (newSpent, overflow) = mission.spentTokens.addingReportingOverflow(total)
-                mission.spentTokens = overflow ? Int.max : newSpent
+                Self.addSpentSaturating(&mission, tokensIn: tokensIn, tokensOut: tokensOut)
                 try mission.update(db)
             }
         }
+    }
+
+    /// 规划轮 token 入账（M6-D13）：规划没有 run 行，走独立入账；
+    /// 投影更新与 planning_tokens 事件在同一写事务（事件溯源纪律）。
+    public func recordPlanningTokens(
+        missionId: String, inputTokens: Int, outputTokens: Int, cacheReadTokens: Int
+    ) throws {
+        try pool.write { db in
+            guard var mission = try MissionRecord.fetchOne(db, key: missionId) else { return }
+            Self.addSpentSaturating(&mission, tokensIn: inputTokens, tokensOut: outputTokens)
+            try mission.update(db)
+            try Self.appendEvent(
+                db, missionId: missionId, cardId: nil, runId: nil,
+                kind: EventKind.planningTokens,
+                payload: [
+                    "inputTokens": .number(Double(max(0, inputTokens))),
+                    "outputTokens": .number(Double(max(0, outputTokens))),
+                    "cacheReadTokens": .number(Double(max(0, cacheReadTokens))),
+                ])
+        }
+    }
+
+    /// 行动花销分账（M7-D7，本地估算口径）：按伙伴聚合 run 表 + 规划轮事件求和
+    public func missionSpendBreakdown(missionId: String) throws -> MissionSpendBreakdown {
+        try pool.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                    SELECT card.assigneeId AS assigneeId,
+                           companion.name AS name,
+                           SUM(COALESCE(run.tokensIn, 0) + COALESCE(run.tokensOut, 0)) AS tokens
+                    FROM run
+                    JOIN card ON card.id = run.cardId
+                    LEFT JOIN companion ON companion.id = card.assigneeId
+                    WHERE card.missionId = ?
+                    GROUP BY card.assigneeId
+                    ORDER BY tokens DESC
+                    """,
+                arguments: [missionId]
+            )
+            let companions: [MissionSpendBreakdown.CompanionSpend] = rows.map { row in
+                .init(
+                    companionId: row["assigneeId"],
+                    name: row["name"] ?? "（未指派）",
+                    tokens: row["tokens"] ?? 0
+                )
+            }
+            let planningEvents = try EventRecord
+                .filter(Column("missionId") == missionId && Column("kind") == EventKind.planningTokens)
+                .fetchAll(db)
+            let planning = planningEvents.reduce(0) { total, event in
+                guard let payload = try? JSONValue.decoded(from: event.payloadJson) else { return total }
+                let input = payload["inputTokens"]?.intValue ?? 0
+                let output = payload["outputTokens"]?.intValue ?? 0
+                return total + input + output
+            }
+            return MissionSpendBreakdown(planningTokens: planning, companions: companions)
+        }
+    }
+
+    /// 行动自主档位中途可改（M7-D2）：更新与 autonomy_changed 事件同事务
+    public func setMissionAutonomy(missionId: String, to autonomy: MissionAutonomy) throws {
+        try pool.write { db in
+            guard var mission = try MissionRecord.fetchOne(db, key: missionId) else {
+                throw RecordNotFoundError(table: "mission", id: missionId)
+            }
+            guard mission.autonomy != autonomy else { return }
+            let previous = mission.autonomy
+            mission.autonomy = autonomy
+            try mission.update(db)
+            try Self.appendEvent(
+                db, missionId: missionId, cardId: nil, runId: nil,
+                kind: EventKind.autonomyChanged,
+                payload: ["from": .string(previous.rawValue), "to": .string(autonomy.rawValue)])
+        }
+    }
+
+    /// 饱和加法（原内联于 finishRun）：溢出封顶 Int.max，预算执法不许翻车
+    private static func addSpentSaturating(_ mission: inout MissionRecord, tokensIn: Int, tokensOut: Int) {
+        let (total, totalOverflow) = max(0, tokensIn).addingReportingOverflow(max(0, tokensOut))
+        let (newSpent, overflow) = mission.spentTokens.addingReportingOverflow(totalOverflow ? Int.max : total)
+        mission.spentTokens = (overflow || totalOverflow) ? Int.max : newSpent
     }
 
     // MARK: Artifacts

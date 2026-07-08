@@ -13,4 +13,15 @@ public enum KernelDefaults {
     public static let contextCompactionThreshold = 150_000
     /// 压缩时保留原文的最近消息数（含配对的工具往返）
     public static let compactionKeepRecentMessages = 6
+    /// 向导伙伴的出厂默认模型（M6-D12：收敛原先散落在 AppDatabase 两处的字面量）
+    public static let defaultGuideModel = "claude-sonnet-4-6"
+    /// shell 命令超时（M7-D6）
+    public static let shellTimeout: Duration = .seconds(120)
+    /// 429 重试耗尽后的全局派发冷却（M7-D8）
+    public static let rateLimitCooldown: Duration = .seconds(15)
+    /// MCP 握手（initialize + tools/list）超时（M8-D3）。
+    /// 60s：npx 首启要现场下包（真机实测 15s 必超时），冷启动是常态不是异常。
+    public static let mcpInitTimeout: Duration = .seconds(60)
+    /// MCP 工具单次调用超时（M8-D4）
+    public static let mcpCallTimeout: Duration = .seconds(30)
 }

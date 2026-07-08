@@ -20,6 +20,8 @@ final class AppStore {
     let keychain: KeychainStore
     let artifactStoreRoot: URL
     let orchestrator: Orchestrator
+    /// MCP 驿站（M8-D8：绞杀第二刀，领域状态独立成 store）
+    let mcp: McpStore
 
     var companions: [CompanionRecord] = []
     /// 营地=频道（M5-0）：全部营地，创建序
@@ -32,8 +34,14 @@ final class AppStore {
         didSet { UserDefaults.standard.set(preferredCredentialSource.rawValue, forKey: "preferredCredentialSource") }
     }
     var oauthLoginStatus: String?
-    var defaultModel = "claude-sonnet-4-6"
-    static let modelChoices = [
+    /// M6-D8：Tavily key 在场与否决定 web_search 是否可用（编辑器置灰提示用）
+    var searchKeyPresent = false
+    /// M6-D11：默认模型持久化（修「重启复位」bug）
+    var defaultModel = "claude-sonnet-4-6" {
+        didSet { UserDefaults.standard.set(defaultModel, forKey: "defaultModel") }
+    }
+    /// M6-D11：模型目录从硬编码数组改为可编辑 + 持久化
+    static let factoryModelChoices = [
         "claude-sonnet-4-6",
         "claude-fable-5",
         "claude-haiku-4-5-20251001",
@@ -41,6 +49,27 @@ final class AppStore {
         "gpt-4o",
         "DeepSeek-V4-Flash-Third",
     ]
+    var modelChoices: [String] = AppStore.factoryModelChoices {
+        didSet { UserDefaults.standard.set(modelChoices, forKey: "modelChoices") }
+    }
+    /// M6-D12：轻任务模型（空 = 跟随默认模型）——蒸馏与规划是最便宜的降档位
+    var distillModel: String = "" {
+        didSet { UserDefaults.standard.set(distillModel, forKey: "distillModel") }
+    }
+    var plannerModel: String = "" {
+        didSet { UserDefaults.standard.set(plannerModel, forKey: "plannerModel") }
+    }
+    var effectiveDistillModel: String { distillModel.isEmpty ? defaultModel : distillModel }
+    var effectivePlannerModel: String { plannerModel.isEmpty ? defaultModel : plannerModel }
+
+    // MARK: 哨卡（M7）
+
+    /// 紧急收哨状态（内核事件驱动）
+    var campHalted = false
+    /// 新行动的默认自主档位（M7-D2）
+    var defaultAutonomy: MissionAutonomy = .standard {
+        didSet { UserDefaults.standard.set(defaultAutonomy.rawValue, forKey: "defaultAutonomy") }
+    }
 
     private struct StoredCredential: Sendable {
         var value: String
@@ -188,10 +217,21 @@ final class AppStore {
                 .appendingPathComponent("AgentLoop")
         try! FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
         artifactStoreRoot = appSupport.appendingPathComponent("artifacts")
-        db = try! AppDatabase(path: appSupport.appendingPathComponent("agentloop.sqlite").path)
+        let database = try! AppDatabase(path: appSupport.appendingPathComponent("agentloop.sqlite").path)
+        db = database
         let defaultBaseURL = Self.defaultBaseURL
+        // M8-D5：MCP 敏感 env 从 Keychain 解析（account mcp-<serverId>-<key>）；预览模式不读钥匙串
+        let isPreview = ProcessInfo.processInfo.environment["AGENTLOOP_UI_PREVIEW"] == "1"
+        let mcpManager = McpServerManager(
+            db: database,
+            secretProvider: { serverId, key in
+                guard !isPreview else { return nil }
+                return (try? keychainStore.get(account: "mcp-\(serverId)-\(key)")) ?? nil
+            }
+        )
+        mcp = McpStore(db: database, manager: mcpManager, keychain: keychainStore)
         orchestrator = Orchestrator(
-            db: db,
+            db: database,
             makeProvider: { model in
                 let credential = Self.storedProviderCredential(using: keychainStore)
                 let rawBase = UserDefaults.standard.string(forKey: "apiBaseURL") ?? defaultBaseURL
@@ -207,7 +247,15 @@ final class AppStore {
                     baseURL: base
                 )
             },
-            artifactStoreRoot: artifactStoreRoot
+            artifactStoreRoot: artifactStoreRoot,
+            searchKeyProvider: {
+                // M6-D7/D8：无 key（或预览模式）→ web_search 不装配
+                guard ProcessInfo.processInfo.environment["AGENTLOOP_UI_PREVIEW"] != "1",
+                      let key = try? keychainStore.get(account: "tavily-api-key"),
+                      !key.isEmpty else { return nil }
+                return key
+            },
+            mcpManager: mcpManager
         )
         try! db.ensureDefaultCamp()
         apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
@@ -215,6 +263,28 @@ final class AppStore {
         if storedBudget > 0 {
             defaultMissionBudget = storedBudget
         }
+        // M6-D11/D12：模型目录与各档模型回读
+        if let storedChoices = UserDefaults.standard.stringArray(forKey: "modelChoices"),
+           !storedChoices.isEmpty {
+            modelChoices = storedChoices
+        }
+        if let storedDefault = UserDefaults.standard.string(forKey: "defaultModel"),
+           !storedDefault.isEmpty {
+            defaultModel = storedDefault
+        }
+        distillModel = UserDefaults.standard.string(forKey: "distillModel") ?? ""
+        plannerModel = UserDefaults.standard.string(forKey: "plannerModel") ?? ""
+        if let storedAutonomy = UserDefaults.standard.string(forKey: "defaultAutonomy"),
+           let autonomy = MissionAutonomy(rawValue: storedAutonomy) {
+            defaultAutonomy = autonomy
+        }
+        // M7-D5：退出时终止 shell/MCP 子进程，防僵尸（同步、最要紧的一件）
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { _ in
+            ShellProcessRegistry.shared.terminateAll()
+        }
+        mcp.onToast = { [weak self] message in self?.showToast(message) }
         reload()
         startKernelEventListener()
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
@@ -261,6 +331,9 @@ final class AppStore {
             && Self.nonEmptyCredential(try? keychain.get(account: Self.apiKeyAccount)) != nil
         webCredentialPresent = !Self.isUIPreview
             && Self.nonEmptyCredential(try? keychain.get(account: Self.oauthAccessTokenAccount)) != nil
+        searchKeyPresent = Self.isUIPreview
+            ? false
+            : (((try? keychain.get(account: "tavily-api-key")) ?? nil).map { !$0.isEmpty } ?? false)
         reloadMissionList()
     }
 
@@ -270,6 +343,17 @@ final class AppStore {
         try? keychain.set(trimmed, account: Self.apiKeyAccount)
         preferredCredentialSource = .apiKey
         oauthLoginStatus = nil
+        reload()
+    }
+
+    /// M6-D7：Tavily 搜索 key（Keychain 第二槽）
+    func saveSearchKey(_ key: String) {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            try? keychain.delete(account: "tavily-api-key")
+        } else {
+            try? keychain.set(trimmed, account: "tavily-api-key")
+        }
         reload()
     }
 
@@ -635,7 +719,8 @@ final class AppStore {
         Data(SHA256.hash(data: Data(verifier.utf8))).base64URLEncodedString()
     }
 
-    func startMission(goal: String, companionIds: [String], workspacePath: String?, campId: String? = nil) {
+    func startMission(goal: String, companionIds: [String], workspacePath: String?, campId: String? = nil,
+                      autonomy: MissionAutonomy? = nil) {
         guard Self.storedProviderCredential(using: keychain) != nil else {
             missionPhase = .error("请先在设置里保存 API Key 或网页登录授权")
             return
@@ -664,9 +749,10 @@ final class AppStore {
                     goal: goal,
                     companionIds: companionIds,
                     workspacePath: workspacePath,
-                    plannerModel: defaultModel,
+                    plannerModel: effectivePlannerModel,
                     budgetTokens: defaultMissionBudget,
-                    campId: campId
+                    campId: campId,
+                    autonomy: autonomy ?? defaultAutonomy
                 )
                 currentMissionId = missionId
                 theaterMode = false
@@ -692,7 +778,7 @@ final class AppStore {
         missionTask = Task { [weak self] in
             guard let self else { return }
             do {
-                try await orchestrator.closeout(currentMissionId, distillModel: defaultModel)
+                try await orchestrator.closeout(currentMissionId, distillModel: effectiveDistillModel)
                 reloadMission(missionId: currentMissionId)
                 reloadMissionList()
             } catch {
@@ -845,7 +931,37 @@ final class AppStore {
             }
         case .campNoteCreated:
             reloadCampKnowledge()
+        case .haltStateChanged(let halted):
+            campHalted = halted
+            reloadMissionList()
+            if let currentMissionId { reloadMission(missionId: currentMissionId) }
         }
+    }
+
+    // MARK: 哨卡动作（M7-D5/D2/D7）
+
+    func emergencyStopCamp() {
+        Task { await orchestrator.emergencyStop() }
+    }
+
+    func resumeCamp() {
+        Task { await orchestrator.resume() }
+    }
+
+    /// 当前行动档位中途可改（记 autonomy_changed 事件）
+    func setCurrentMissionAutonomy(_ autonomy: MissionAutonomy) {
+        guard let currentMissionId else { return }
+        do {
+            try db.setMissionAutonomy(missionId: currentMissionId, to: autonomy)
+            reloadMissionList()
+        } catch {
+            showToast("档位修改失败：\(readableError(error))")
+        }
+    }
+
+    /// 行动花销分账（M7-D7，本地估算）
+    func spendBreakdown(missionId: String) -> MissionSpendBreakdown? {
+        try? db.missionSpendBreakdown(missionId: missionId)
     }
 
     /// 收营蒸馏/沉淀产出笔记后刷新营地首页数据
@@ -960,18 +1076,8 @@ final class AppStore {
     }
 
     private func humanToolName(_ name: String) -> String {
-        switch name {
-        case "write_file": return "写文件"
-        case "read_file": return "读文件"
-        case "list_dir": return "查看目录"
-        case "web_fetch": return "查网页"
-        case "complete_card": return "提交交接包"
-        case "block_card": return "报告受阻"
-        case "add_progress_note": return "汇报进展"
-        case "ask_user": return "提问"
-        case "search_camp_notes": return "翻营地笔记"
-        default: return name
-        }
+        // M6-D5：中文名收敛到 ToolDef.displayName 单点维护
+        ToolDef.displayName(name)
     }
 
     private func missionId(forCardId cardId: String) -> String? {
@@ -1012,6 +1118,13 @@ final class AppStore {
             value = ["confirm": .bool(confirm)]
         case .text(let text):
             value = ["text": .string(text)]
+        case .approval(let approved, let reason):
+            // M7-D4：审批答复；decided 事件在 DB 层随答复同事务落
+            var object: [String: JSONValue] = ["decision": .string(approved ? "approve" : "deny")]
+            if let reason, !reason.isEmpty {
+                object["reason"] = .string(reason)
+            }
+            value = .object(object)
         }
         return try value.encodedString()
     }
@@ -1266,8 +1379,9 @@ final class AppStore {
             guard let self else { return }
             do {
                 let missionId = try await orchestrator.confirmSquadProposal(
-                    messageId: messageId, plannerModel: defaultModel,
-                    fallbackBudget: defaultMissionBudget)
+                    messageId: messageId, plannerModel: effectivePlannerModel,
+                    fallbackBudget: defaultMissionBudget,
+                    autonomy: defaultAutonomy)
                 reloadGuideMessages()
                 reloadMissionList()
                 navigateToMissionId = missionId
@@ -1295,7 +1409,7 @@ final class AppStore {
 
     func distillGuideChatNow() {
         guard let campId, !distillingGuideChat else { return }
-        guard let provider = provider(model: defaultModel) else {
+        guard let provider = provider(model: effectiveDistillModel) else {
             showToast("请先在设置里保存 API Key 或网页登录授权")
             return
         }
@@ -1339,7 +1453,7 @@ final class AppStore {
 
     func distillMemoryNow(companion: CompanionRecord) {
         guard !distillingMemory else { return }
-        guard let provider = provider(model: defaultModel) else {
+        guard let provider = provider(model: effectiveDistillModel) else {
             showToast("请先在设置里保存 API Key 或网页登录授权")
             return
         }
@@ -1357,7 +1471,7 @@ final class AppStore {
     /// 切走 DM 线程时的自动沉淀（D7：未蒸馏增量 ≥4 条才触发，后台静默）
     func autoDistillOnLeave(companionId: String) {
         // 预览模式不触发（避免钥匙串弹窗）；正常模式无 key 时静默跳过
-        guard !Self.isUIPreview, let provider = provider(model: defaultModel) else { return }
+        guard !Self.isUIPreview, let provider = provider(model: effectiveDistillModel) else { return }
         guard autoDistillInFlight.insert(companionId).inserted else { return }
         Task { [weak self] in
             guard let self else { return }

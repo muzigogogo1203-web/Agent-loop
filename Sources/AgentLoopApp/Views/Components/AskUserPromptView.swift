@@ -87,6 +87,57 @@ struct AskUserPromptView: View {
                         .font(.caption)
                         .foregroundStyle(Camp.moss)
                 }
+            case .approval:
+                // M7-D3：审批必须展示动作实体内容（命令全文/写入内容），等宽渲染
+                VStack(alignment: .leading, spacing: 8) {
+                    if let detail = approvalDetail, !detail.isEmpty {
+                        ScrollView {
+                            Text(detail)
+                                .font(.callout.monospaced())
+                                .foregroundStyle(Camp.ink)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .textSelection(.enabled)
+                        }
+                        .frame(maxHeight: 140)
+                        .padding(8)
+                        .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                .stroke(Camp.line, lineWidth: 1)
+                        )
+                    }
+                    HStack(spacing: 8) {
+                        Button {
+                            submit(.approval(approved: true, reason: nil))
+                        } label: {
+                            Label("批准", systemImage: "checkmark.shield.fill")
+                        }
+                        .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                        Button {
+                            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                            submit(.approval(approved: false, reason: trimmed.isEmpty ? nil : trimmed))
+                        } label: {
+                            Label("拒绝", systemImage: "xmark.shield")
+                        }
+                        .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
+                        TextField("拒绝理由（可选）", text: $text)
+                            .textFieldStyle(.plain)
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                    .stroke(Camp.line, lineWidth: 1)
+                            )
+                    }
+                    .disabled(submitted)
+                    if submitted {
+                        Label("已答复，伙伴马上继续", systemImage: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(Camp.moss)
+                    }
+                }
             }
         }
         .padding(11)
@@ -103,6 +154,26 @@ struct AskUserPromptView: View {
             return []
         }
         return decoded
+    }
+
+    /// 审批动作实体内容（M7-D3）：从 optionsJson {tool, input} 渲染命令全文/写入内容
+    private var approvalDetail: String? {
+        guard let optionsJson = request.optionsJson,
+              let payload = try? JSONValue.decoded(from: optionsJson),
+              let tool = payload["tool"]?.stringValue,
+              let input = payload["input"] else {
+            return nil
+        }
+        switch tool {
+        case "run_shell":
+            return input["command"]?.stringValue
+        case "write_file":
+            let path = input["path"]?.stringValue ?? "?"
+            let content = input["content"]?.stringValue ?? ""
+            return "→ \(path)\n\(content)"
+        default:
+            return (try? input.encodedString()) ?? nil
+        }
     }
 
     private func submit(_ answer: AskUserAnswer) {

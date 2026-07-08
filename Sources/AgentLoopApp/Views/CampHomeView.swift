@@ -12,6 +12,7 @@ struct CampHomeView: View {
     @State private var notesPaneVisible = true
     @State private var renaming = false
     @State private var renameText = ""
+    @State private var enabledStations: Set<String> = []
 
     var body: some View {
         GeometryReader { proxy in
@@ -27,6 +28,7 @@ struct CampHomeView: View {
                     if showNotes {
                         VStack(spacing: 10) {
                             notesPane
+                            stationsPane
                             pastMissionsPane
                         }
                         .frame(width: 340)
@@ -78,6 +80,64 @@ struct CampHomeView: View {
         .overlay(
             RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
                 .stroke(Camp.line, lineWidth: 1)
+        )
+    }
+
+    /// 启用的驿站（M8-D7）：全局注册的 MCP server 按营地勾选启用；
+    /// 启用只是「本营地行动可见」，伙伴还需在编辑器里显式勾选工具。
+    @ViewBuilder private var stationsPane: some View {
+        if !store.mcp.servers.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "point.3.connected.trianglepath.dotted")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                    Text("驿站")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Camp.inkSecondary)
+                    Spacer()
+                    Text("\(enabledStations.count)/\(store.mcp.servers.count) 启用")
+                        .font(.caption2)
+                        .foregroundStyle(Camp.stone)
+                }
+                ForEach(store.mcp.servers, id: \.id) { server in
+                    Toggle(isOn: stationBinding(server.id)) {
+                        HStack(spacing: 5) {
+                            Text(server.name)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(Camp.ink)
+                            if server.experimental {
+                                Image(systemName: "flask")
+                                    .font(.caption2)
+                                    .foregroundStyle(Camp.amber)
+                            }
+                        }
+                    }
+                    .toggleStyle(.checkbox)
+                }
+                Text("启用后，本营地行动派发时会拉起驿站；工具还需在伙伴编辑器里按人勾选。")
+                    .font(.caption2)
+                    .foregroundStyle(Camp.stone)
+            }
+            .padding(10)
+            .background(Camp.surface, in: RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                    .stroke(Camp.line, lineWidth: 1)
+            )
+            .task(id: campId) {
+                enabledStations = store.mcp.enabledServerIds(campId: campId)
+            }
+        }
+    }
+
+    private func stationBinding(_ serverId: String) -> Binding<Bool> {
+        Binding(
+            get: { enabledStations.contains(serverId) },
+            set: { enabled in
+                store.mcp.setEnabled(campId: campId, serverId: serverId, enabled: enabled)
+                enabledStations = store.mcp.enabledServerIds(campId: campId)
+            }
         )
     }
 

@@ -5,7 +5,7 @@ import AgentLoopCore
     let names = ToolDef.agentTools.map(\.name)
     #expect(names == ["complete_card", "block_card", "add_progress_note",
                       "ask_user", "list_dir", "read_file", "write_file", "web_fetch",
-                      "search_camp_notes"])
+                      "web_search", "run_shell", "search_camp_notes"])
     for def in ToolDef.agentTools {
         #expect(def.inputSchema["type"]?.stringValue == "object")
         #expect(def.inputSchema["additionalProperties"]?.boolValue == false)
@@ -36,4 +36,17 @@ import AgentLoopCore
     let outcome = await exec.execute(name: "no_such_tool", input: .object([:]))
     guard case .error(let msg) = outcome else { Issue.record("expected error"); return }
     #expect(msg.contains("no_such_tool"))
+}
+
+@Test func closureToolHandlerDispatchesThroughExecutor() async {
+    // M6-D1：闭包式 handler 让需要捕获调用上下文的工具（如 propose_squad）
+    // 也能走 ToolExecutor 单一分发
+    let exec = ToolExecutor(handlers: [
+        "echo": ClosureToolHandler { input in
+            .result("echo:\(input["text"]?.stringValue ?? "")")
+        },
+    ])
+    let outcome = await exec.execute(name: "echo", input: ["text": "hi"])
+    guard case .result(let content) = outcome else { Issue.record("expected result"); return }
+    #expect(content == "echo:hi")
 }

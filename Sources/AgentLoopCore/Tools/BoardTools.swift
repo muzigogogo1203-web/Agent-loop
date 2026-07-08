@@ -104,7 +104,7 @@ public struct BoardTools: Sendable {
                     missionId: card.missionId,
                     cardId: cardId,
                     runId: runId,
-                    kind: "progress_note",
+                    kind: EventKind.progressNote,
                     payload: ["text": .string(text)]
                 )
             }
@@ -124,7 +124,9 @@ public struct BoardTools: Sendable {
             return .error("ask_user 不支持参数：\(extraKeys.sorted().joined(separator: ", "))")
         }
         guard let kindRaw = object["kind"]?.stringValue,
-              let kind = UserRequestRecord.Kind(rawValue: kindRaw) else {
+              let kind = UserRequestRecord.Kind(rawValue: kindRaw),
+              kind != .approval else {
+            // approval 是内核审批门专用 kind（M7-D3），模型不可自造审批请求
             return .error("ask_user.kind 必须是 choice / confirm / text")
         }
         let prompt = object["prompt"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -154,6 +156,9 @@ public struct BoardTools: Sendable {
                 return .error("ask_user.\(kind.rawValue) 不接受 options")
             }
             options = nil
+        case .approval:
+            // 前置 guard 已拒绝，仅为穷举完备
+            return .error("ask_user.kind 必须是 choice / confirm / text")
         }
 
         do {

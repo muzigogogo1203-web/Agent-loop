@@ -58,23 +58,23 @@ public enum ActivityFeed {
             let payload = (try? JSONValue.decoded(from: event.payloadJson)) ?? .object([:])
             let actor = actor(for: event, cardsById: cardsById, companions: companions)
             switch event.kind {
-            case "mission_created":
+            case EventKind.missionCreated:
                 return entry(event, actor: .user, kind: .directive,
                              text: payload["goal"]?.stringValue ?? "新行动")
-            case "plan_completed":
+            case EventKind.planCompleted:
                 let count = payload["cardIds"]?.arrayValue?.count ?? 0
                 return entry(event, actor: .system, kind: .planned,
                              text: "已规划 \(count) 个小目标")
-            case "plan_fallback":
+            case EventKind.planFallback:
                 let reason = payload["reason"]?.stringValue ?? "使用回退规划"
                 return entry(event, actor: .system, kind: .planned,
                              text: "规划回退：\(reason)")
-            case "card_started":
+            case EventKind.cardStarted:
                 return entry(event, actor: actor, kind: .claimed, text: "接下了小目标")
-            case "progress_note":
+            case EventKind.progressNote:
                 return entry(event, actor: actor, kind: .progress,
                              text: payload["text"]?.stringValue ?? "有新进展")
-            case "user_request_created":
+            case EventKind.userRequestCreated:
                 return entry(
                     event,
                     actor: actor,
@@ -82,7 +82,7 @@ public enum ActivityFeed {
                     text: payload["prompt"]?.stringValue ?? "需要用户补充",
                     userRequestId: payload["userRequestId"]?.stringValue
                 )
-            case "user_request_answered":
+            case EventKind.userRequestAnswered:
                 return entry(
                     event,
                     actor: .user,
@@ -90,33 +90,37 @@ public enum ActivityFeed {
                     text: "已回复",
                     userRequestId: payload["userRequestId"]?.stringValue
                 )
-            case "card_blocked":
+            case EventKind.cardBlocked:
                 guard payload["reason"]?.stringValue != "needs_human_input" else { return nil }
                 return entry(event, actor: actor, kind: .blocked,
                              text: payload["detail"]?.stringValue ?? "小目标受阻")
-            case "card_completed":
+            case EventKind.cardCompleted:
                 return entry(event, actor: actor, kind: .delivered,
                              text: payload["summary"]?.stringValue ?? "已交付")
-            case "card_canceled":
+            case EventKind.cardCanceled:
                 return entry(event, actor: .system, kind: .canceled, text: "小目标已取消")
-            case "mission_status_changed":
+            case EventKind.missionStatusChanged:
                 guard payload["to"]?.stringValue == MissionStatus.delivering.rawValue else { return nil }
                 return entry(event, actor: .system, kind: .statusChange,
                              text: "全部小目标完成，等你收营")
-            case "mission_budget_exhausted":
+            case EventKind.missionBudgetExhausted:
                 return entry(event, actor: .system, kind: .statusChange,
                              text: "预算见底了，等你拿主意：加预算、就地收成果，或放弃")
-            case "budget_added":
+            case EventKind.budgetAdded:
                 let tokens = payload["tokens"]?.intValue ?? 0
                 return entry(event, actor: .user, kind: .progress,
                              text: "追加了 \(tokens / 1000)k 预算，继续")
-            case "mission_accepted":
+            case EventKind.missionAccepted:
                 return entry(event, actor: .system, kind: .statusChange, text: "行动已收营")
-            case "mission_failed":
+            case EventKind.missionFailed:
                 return entry(event, actor: .system, kind: .statusChange, text: "行动已失败")
-            case "kernel_error":
+            case EventKind.kernelError:
                 return entry(event, actor: .system, kind: .error,
                              text: payload["message"]?.stringValue ?? "内核错误")
+            case EventKind.mcpServerDown:
+                let server = payload["serverName"]?.stringValue ?? "未知"
+                return entry(event, actor: .system, kind: .blocked,
+                             text: "驿站「\(server)」停摆了——它不会自动重启，可到「设置 → MCP 驿站」手动重启")
             default:
                 return nil
             }

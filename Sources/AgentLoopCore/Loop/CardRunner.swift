@@ -1,5 +1,17 @@
 import Foundation
 
+/// 外部（MCP）工具装配单元（M8-D4）：def 进提示词工具区，handler 进分发表。
+/// 与内置工具走同一装配口（白名单过滤 + 审批门 + 三处同源），不开旁路。
+public struct ExternalTool: Sendable {
+    public let def: ToolDef
+    public let handler: any ToolHandler
+
+    public init(def: ToolDef, handler: any ToolHandler) {
+        self.def = def
+        self.handler = handler
+    }
+}
+
 public struct CardRunner: Sendable {
     let db: AppDatabase
     let provider: any LLMProvider
@@ -28,7 +40,11 @@ public struct CardRunner: Sendable {
         upstreamHandoffs: [UpstreamHandoff] = [],
         answeredRequests: [(prompt: String, answer: String)] = [],
         campNotes: [NoteSnippet] = [],
-        companionNotes: [NoteSnippet] = []
+        companionNotes: [NoteSnippet] = [],
+        toolAccess: ToolAccess = .full,
+        searchKey: String? = nil,
+        autonomy: MissionAutonomy = .standard,
+        externalTools: [ExternalTool] = []
     ) throws -> AsyncThrowingStream<AgentEvent, Error> {
         guard let card = try db.card(id: cardId) else {
             throw RecordNotFoundError(table: "card", id: cardId)
@@ -51,17 +67,48 @@ public struct CardRunner: Sendable {
             artifactStoreRoot: artifactStoreRoot
         )
         let files = FileTools(workspaceRoot: workspace)
-        let executor = ToolExecutor(handlers: [
+        // M6-D4：白名单在此单点收口——handlers、提示词工具区、契约文本三处同源。
+        // 板工具四件永远在场（终结契约 + 人工门，spec §5.2-4）。
+        var handlers: [String: any ToolHandler] = [
             "complete_card": BoardToolHandler(tools: board, op: .complete),
             "block_card": BoardToolHandler(tools: board, op: .block),
             "add_progress_note": BoardToolHandler(tools: board, op: .note),
             "ask_user": BoardToolHandler(tools: board, op: .askUser),
+        ]
+        var capabilityHandlers: [String: any ToolHandler] = [
             "list_dir": FileToolHandler(tools: files, op: .list),
             "read_file": FileToolHandler(tools: files, op: .read),
             "write_file": FileToolHandler(tools: files, op: .write),
             "web_fetch": WebFetchTool(),
             "search_camp_notes": CampNotesSearchTool(db: db, campId: squad?.campId),
-        ])
+        ]
+        // M6-D8：无 key 时 web_search 根本不装配——白名单 ∩ 可用性
+        if let searchKey, !searchKey.isEmpty {
+            capabilityHandlers["web_search"] = WebSearchTool(apiKey: searchKey)
+        }
+        // M7-D6：无工作目录不装配 shell（可见即可用）
+        if let workspace {
+            capabilityHandlers["run_shell"] = ShellTool(workspaceRoot: workspace)
+        }
+        // M8-D4：MCP 外部工具走同一装配口。白名单语义（M6-D5b）：必须显式勾选，
+        // 存量 "[]"（=内置全量）与 v2 空名单都不包含 mcp__ 名——构造上不被继承。
+        for tool in externalTools where capabilityHandlers[tool.def.name] == nil {
+            capabilityHandlers[tool.def.name] = tool.handler
+        }
+        for (name, handler) in capabilityHandlers where toolAccess.allows(name) {
+            handlers[name] = handler
+        }
+        // M7-D3/D4：审批门套在非只读工具上——档位矩阵 + 一次性授权令牌（冷启动重跑时装罐）
+        let approvalJar = ApprovalTokenJar((try? db.approvalDecisions(cardId: cardId)) ?? [])
+        for (name, handler) in handlers where ToolDef.risk(name) != .readOnly {
+            handlers[name] = ApprovalGateHandler(
+                inner: handler, toolName: name, autonomy: autonomy,
+                jar: approvalJar, db: db, cardId: cardId, runId: runId)
+        }
+        let executor = ToolExecutor(handlers: handlers)
+        // 提示词工具区从 handlers 派生：可见即可用，构造上保证同源（D4/D8）
+        let tools = (ToolDef.agentTools + externalTools.map(\.def))
+            .filter { handlers.keys.contains($0.name) }
         let packet = ContextPacket(
             companionName: companionName,
             rolePrompt: rolePrompt,
@@ -72,13 +119,14 @@ public struct CardRunner: Sendable {
             upstreamHandoffs: upstreamHandoffs,
             answeredRequests: answeredRequests,
             campNotes: campNotes,
-            companionNotes: companionNotes
+            companionNotes: companionNotes,
+            toolNames: tools.map(\.name)
         )
         let loop = AgentLoop(
             provider: provider,
             executor: executor,
             packet: packet,
-            tools: ToolDef.agentTools,
+            tools: tools,
             maxTurns: card.maxTurns,
             tokenBudget: card.tokenBudget,
             maxTokensPerTurn: KernelDefaults.maxTokensPerTurn,
@@ -177,7 +225,7 @@ public struct CardRunner: Sendable {
                         try? db.appendDiagnosticEvent(
                             cardId: cardId,
                             runId: runId,
-                            kind: "run_error",
+                            kind: EventKind.runError,
                             payload: ["error": .string(detail), "turns": .number(Double(turns))]
                         )
                         try? blockCardIfStillRunning(
@@ -209,7 +257,7 @@ public struct CardRunner: Sendable {
         try db.transitionCard(
             id: cardId,
             to: .ready,
-            eventKind: "card_interrupted",
+            eventKind: EventKind.cardInterrupted,
             payload: ["runId": .string(runId), "reason": "canceled"]
         )
     }

@@ -10,6 +10,8 @@ public enum KernelEvent: Sendable {
     case kernelError(missionId: String, message: String)
     /// 收营蒸馏产出营地笔记（source: "closeout" | "fallback"）
     case campNoteCreated(missionId: String, noteId: String)
+    /// M7-D5：紧急收哨状态翻转（true=已收哨）
+    case haltStateChanged(Bool)
 }
 
 public struct MissionStateError: Error, Sendable, Equatable {
@@ -27,6 +29,8 @@ public struct MissionStateError: Error, Sendable, Equatable {
 public actor Orchestrator {
     private let db: AppDatabase
     private let makeProvider: @Sendable (String) -> any LLMProvider
+    /// M6-D7：搜索 key 派发时解析（沿 makeProvider 注入模式），Core 不直连 Keychain 细节
+    private let searchKeyProvider: @Sendable () -> String?
     private let artifactStoreRoot: URL
     private var running: [String: RunningEntry] = [:]
     private var planningTasks: [String: Task<Void, Never>] = [:]
@@ -39,18 +43,31 @@ public actor Orchestrator {
     private var cancelling: Set<String> = []
     /// 预算耗尽已通知的行动（加预算后移除，避免每次 reconcile 重复发事件）
     private var budgetNotified: Set<String> = []
+    /// M7-D5：紧急收哨标志——reconcile 全停，直到 resume
+    private var halted = false
+    /// M7-D8：429 全局冷却截止点（在途不动，只挡新派发）
+    private var cooldownUntil: ContinuousClock.Instant?
+    private let rateLimitCooldownDuration: Duration
+    /// M8-D4：MCP 驿站管理（nil = 未接驿路，一切照旧）
+    private let mcpManager: McpServerManager?
     private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "orchestrator")
 
     public init(
         db: AppDatabase,
         makeProvider: @escaping @Sendable (String) -> any LLMProvider,
         artifactStoreRoot: URL,
-        tickInterval: Duration? = .seconds(5)
+        tickInterval: Duration? = .seconds(5),
+        searchKeyProvider: @escaping @Sendable () -> String? = { nil },
+        rateLimitCooldown: Duration = KernelDefaults.rateLimitCooldown,
+        mcpManager: McpServerManager? = nil
     ) {
         self.db = db
         self.makeProvider = makeProvider
         self.artifactStoreRoot = artifactStoreRoot
         self.tickInterval = tickInterval
+        self.searchKeyProvider = searchKeyProvider
+        self.rateLimitCooldownDuration = rateLimitCooldown
+        self.mcpManager = mcpManager
     }
 
     public func events() -> AsyncStream<KernelEvent> {
@@ -69,12 +86,14 @@ public actor Orchestrator {
         workspacePath: String?,
         plannerModel: String,
         budgetTokens: Int = KernelDefaults.missionBudget,
-        campId: String? = nil
+        campId: String? = nil,
+        autonomy: MissionAutonomy = .standard
     ) async throws -> String {
         ensureTickStarted()
         let missionId = try db.createMissionShell(
             goal: goal, companionIds: companionIds,
-            workspacePath: workspacePath, budgetTokens: budgetTokens, campId: campId)
+            workspacePath: workspacePath, budgetTokens: budgetTokens, campId: campId,
+            autonomy: autonomy)
         emit(.planningStarted(missionId: missionId))
         let task = Task {
             do {
@@ -84,6 +103,14 @@ public actor Orchestrator {
                 let campNotes = self.loadCampNotes(campId: try db.squad(forMission: missionId)?.campId)
                 let result = try await planner.propose(
                     goal: goal, roster: roster, workspacePath: workspacePath, campNotes: campNotes)
+                // M6-D13：规划轮入账（fallback 路径已消耗的部分也在 result.usage 里）
+                if result.usage.inputTokens + result.usage.outputTokens > 0 {
+                    try db.recordPlanningTokens(
+                        missionId: missionId,
+                        inputTokens: result.usage.inputTokens,
+                        outputTokens: result.usage.outputTokens,
+                        cacheReadTokens: result.usage.cacheReadTokens)
+                }
                 if let reason = result.fallbackReason {
                     try db.recordPlanFallback(missionId: missionId, reason: reason)
                 }
@@ -132,7 +159,7 @@ public actor Orchestrator {
                         database,
                         id: card.id,
                         to: .ready,
-                        eventKind: "card_interrupted",
+                        eventKind: EventKind.cardInterrupted,
                         payload: ["reason": "crash_recovery"]
                     )
                 }
@@ -154,6 +181,8 @@ public actor Orchestrator {
 
     public func reconcile() async {
         ensureTickStarted()
+        // M7-D5：收哨期间不做任何调度（含 todo→ready 提升）
+        guard !halted else { return }
         guard !reconciling else {
             reconcilePending = true
             return
@@ -188,7 +217,7 @@ public actor Orchestrator {
                                 database,
                                 id: card.id,
                                 to: .ready,
-                                eventKind: "card_ready",
+                                eventKind: EventKind.cardReady,
                                 payload: .object([:])
                             )
                         }
@@ -213,6 +242,9 @@ public actor Orchestrator {
                 let exhaustedMissionIds = Set(
                     executingMissions.filter { $0.spentTokens >= $0.budgetTokens }.map(\.id)
                 )
+                // M7-D2：档位随候选下发（审批矩阵在 CardRunner 装门时消费）
+                let autonomyByMission = Dictionary(
+                    uniqueKeysWithValues: executingMissions.map { ($0.id, $0.autonomy) })
                 var candidates: [DispatchCandidate] = []
                 var errors: [KernelErrorRecord] = []
                 for ready in readyCards where !exhaustedMissionIds.contains(ready.missionId) {
@@ -235,7 +267,9 @@ public actor Orchestrator {
                             assigneeId: assigneeId,
                             companionName: companion.name,
                             rolePrompt: companion.rolePrompt,
-                            model: companion.model
+                            model: companion.model,
+                            toolsJson: companion.toolsJson,
+                            autonomy: autonomyByMission[ready.missionId] ?? .standard
                         )
                     )
                 }
@@ -260,9 +294,14 @@ public actor Orchestrator {
             try? await db.pool.write { database in
                 try AppDatabase.appendEvent(
                     database, missionId: missionId, cardId: nil, runId: nil,
-                    kind: "mission_budget_exhausted", payload: .object([:]))
+                    kind: EventKind.missionBudgetExhausted, payload: .object([:]))
             }
             emit(.missionChanged(missionId: missionId))
+        }
+
+        // M7-D8：429 冷却期不派发新卡（在途不动）；到点自然恢复
+        if let cooldownUntil, ContinuousClock.now < cooldownUntil {
+            return
         }
 
         var busy = Set(running.values.map(\.assigneeId))
@@ -284,6 +323,73 @@ public actor Orchestrator {
                 missionId: candidate.card.missionId
             )
             busy.insert(candidate.assigneeId)
+        }
+    }
+
+    // MARK: - 紧急收哨（M7-D5）
+
+    public var isHalted: Bool { halted }
+
+    /// 一键停营：取消全部在途（卡片走既有 card_interrupted → ready 领养语义）+
+    /// 终止子进程 + 停派发。恢复用 resume()。
+    public func emergencyStop() async {
+        guard !halted else { return }
+        halted = true
+
+        for (_, task) in planningTasks { task.cancel() }
+        let planningSnapshot = planningTasks.values
+        planningTasks.removeAll()
+        for task in planningSnapshot { await task.value }
+
+        let runningSnapshot = running
+        for (_, entry) in runningSnapshot { entry.task.cancel() }
+        for (cardId, entry) in runningSnapshot {
+            await entry.task.value
+            running.removeValue(forKey: cardId)
+        }
+
+        // M8：先优雅停驿站（状态回 stopped，恢复后可自动再启），再扫尾杀残余子进程；
+        // 直接 terminateAll 会让驿站走「意外死亡」路径卡在 down（down 只能手动重启）。
+        await mcpManager?.stopAll()
+        ShellProcessRegistry.shared.terminateAll()
+        try? await db.pool.write { database in
+            try AppDatabase.appendEvent(
+                database, missionId: nil, cardId: nil, runId: nil,
+                kind: EventKind.campHalted, payload: .object([:]))
+        }
+        emit(.haltStateChanged(true))
+    }
+
+    /// 解除收哨并立即调度（中断的卡已在 ready，直接续跑）
+    public func resume() async {
+        guard halted else { return }
+        halted = false
+        try? await db.pool.write { database in
+            try AppDatabase.appendEvent(
+                database, missionId: nil, cardId: nil, runId: nil,
+                kind: EventKind.campResumed, payload: .object([:]))
+        }
+        emit(.haltStateChanged(false))
+        await reconcile()
+    }
+
+    // MARK: - 限流冷却（M7-D8）
+
+    private static func isRateLimit(_ error: ProviderError) -> Bool {
+        switch error {
+        case .http(let status, _): return status == 429
+        case .overloadedRetriesExhausted: return true
+        default: return false
+        }
+    }
+
+    private func startRateLimitCooldown(missionId: String) {
+        cooldownUntil = ContinuousClock.now + rateLimitCooldownDuration
+        try? db.pool.write { database in
+            try AppDatabase.appendEvent(
+                database, missionId: missionId, cardId: nil, runId: nil,
+                kind: EventKind.rateLimitCooldown,
+                payload: ["seconds": .number(15)])
         }
     }
 
@@ -326,7 +432,7 @@ public actor Orchestrator {
                     missionId: missionId,
                     cardId: nil,
                     runId: nil,
-                    kind: "mission_failed",
+                    kind: EventKind.missionFailed,
                     payload: ["reason": "abandoned"]
                 )
                 try AppDatabase.appendEvent(
@@ -334,7 +440,7 @@ public actor Orchestrator {
                     missionId: missionId,
                     cardId: nil,
                     runId: nil,
-                    kind: "mission_status_changed",
+                    kind: EventKind.missionStatusChanged,
                     payload: ["from": .string(previous.rawValue), "to": .string(MissionStatus.failed.rawValue)]
                 )
                 let cards = try CardRecord
@@ -346,7 +452,7 @@ public actor Orchestrator {
                         database,
                         id: card.id,
                         to: .canceled,
-                        eventKind: "card_canceled",
+                        eventKind: EventKind.cardCanceled,
                         payload: ["reason": "mission_abandoned"]
                     )
                 }
@@ -395,7 +501,7 @@ public actor Orchestrator {
     }
 
     public func retryCard(_ cardId: String) async throws {
-        try db.transitionCard(id: cardId, to: .ready, eventKind: "card_ready", payload: .object([:]))
+        try db.transitionCard(id: cardId, to: .ready, eventKind: EventKind.cardReady, payload: .object([:]))
         await reconcile()
     }
 
@@ -403,7 +509,8 @@ public actor Orchestrator {
     /// 建队失败补偿回滚 pending。重复确认在 CAS 处抛 StaleProposalError——宁可回滚，绝不重复建队。
     public func confirmSquadProposal(
         messageId: String, plannerModel: String,
-        fallbackBudget: Int = KernelDefaults.missionBudget
+        fallbackBudget: Int = KernelDefaults.missionBudget,
+        autonomy: MissionAutonomy = .standard
     ) async throws -> String {
         let block = try db.confirmProposalBlock(messageId: messageId)
         do {
@@ -415,13 +522,14 @@ public actor Orchestrator {
                 workspacePath: nil,
                 plannerModel: plannerModel,
                 budgetTokens: block.budget ?? fallbackBudget,
-                campId: campId
+                campId: campId,
+                autonomy: autonomy
             )
             try db.attachMissionToProposal(messageId: messageId, missionId: missionId)
             try? await db.pool.write { database in
                 try AppDatabase.appendEvent(
                     database, missionId: missionId, cardId: nil, runId: nil,
-                    kind: "squad_proposal_confirmed",
+                    kind: EventKind.squadProposalConfirmed,
                     payload: [
                         "proposalId": .string(block.proposalId),
                         "missionId": .string(missionId),
@@ -474,7 +582,7 @@ public actor Orchestrator {
                         database,
                         id: card.id,
                         to: .canceled,
-                        eventKind: "card_canceled",
+                        eventKind: EventKind.cardCanceled,
                         payload: ["reason": "budget_harvest"]
                     )
                 }
@@ -499,13 +607,13 @@ public actor Orchestrator {
             mission.status = .accepted
             try mission.update(database)
             try AppDatabase.appendEvent(database, missionId: missionId, cardId: nil, runId: nil,
-                                        kind: "mission_accepted", payload: .object([:]))
+                                        kind: EventKind.missionAccepted, payload: .object([:]))
             try AppDatabase.appendEvent(
                 database,
                 missionId: missionId,
                 cardId: nil,
                 runId: nil,
-                kind: "mission_status_changed",
+                kind: EventKind.missionStatusChanged,
                 payload: ["from": .string(previous.rawValue), "to": .string(MissionStatus.accepted.rawValue)]
             )
         }
@@ -558,7 +666,7 @@ public actor Orchestrator {
                 try record.insert(database)
                 try AppDatabase.appendEvent(
                     database, missionId: missionId, cardId: nil, runId: nil,
-                    kind: "camp_note_created",
+                    kind: EventKind.campNoteCreated,
                     payload: [
                         "noteId": .string(record.id),
                         "source": .string(fallback ? "fallback" : "closeout"),
@@ -611,6 +719,7 @@ public actor Orchestrator {
         planningTasks.removeAll()
         running.removeAll()
         distillTasks.removeAll()
+        await mcpManager?.stopAll()
         for (_, continuation) in continuations {
             continuation.finish()
         }
@@ -623,8 +732,18 @@ public actor Orchestrator {
             let answeredRequests = try db.answeredRequests(cardId: candidate.card.id)
                 .map { (prompt: $0.prompt, answer: $0.humanAnswer()) }
             // 知识注入（spec §6.2-5/6）：营地笔记 + 该伙伴的记忆
-            let campNotes = loadCampNotes(campId: try db.squad(forCard: candidate.card.id)?.campId)
+            let campId = try db.squad(forCard: candidate.card.id)?.campId
+            let campNotes = loadCampNotes(campId: campId)
             let companionNotes = loadCompanionNotes(companionId: candidate.assigneeId)
+            // M6-D4：白名单解析失败回退全量并留痕，坏 JSON 不瘫痪卡片
+            let toolAccess = ToolAccess.parse(toolsJson: candidate.toolsJson)
+            if toolAccess.parseFailed {
+                db.appendKernelErrorEvent(
+                    missionId: candidate.card.missionId,
+                    message: "伙伴「\(candidate.companionName)」工具白名单解析失败，本次按全量工具执行")
+            }
+            let externalTools = await assembleMcpTools(
+                campId: campId, missionId: candidate.card.missionId, cardId: candidate.card.id)
             let stream = try CardRunner(
                 db: db,
                 provider: provider,
@@ -637,7 +756,11 @@ public actor Orchestrator {
                 upstreamHandoffs: upstream,
                 answeredRequests: answeredRequests,
                 campNotes: campNotes,
-                companionNotes: companionNotes
+                companionNotes: companionNotes,
+                toolAccess: toolAccess,
+                searchKey: searchKeyProvider(),
+                autonomy: candidate.autonomy,
+                externalTools: externalTools
             )
             for try await event in stream {
                 await emitFromTask(.cardEvent(cardId: candidate.card.id, event))
@@ -648,11 +771,34 @@ public actor Orchestrator {
                 "ignored stale dispatch candidate for card \(candidate.card.id, privacy: .public): \(String(describing: error), privacy: .public)"
             )
         } catch {
+            // M7-D8：重试耗尽的限流错误 → 全局冷却，reconcile 期间不派发新卡
+            if let providerError = error as? ProviderError, Self.isRateLimit(providerError) {
+                startRateLimitCooldown(missionId: candidate.card.missionId)
+            }
             let message = String(describing: error)
             db.appendKernelErrorEvent(missionId: candidate.card.missionId, message: message)
             await emitFromTask(.kernelError(missionId: candidate.card.missionId, message: message))
         }
         await runnerFinished(cardId: candidate.card.id, missionId: candidate.card.missionId)
+    }
+
+    /// MCP 外部工具装配（M8-D4）：按卡所在营地取启用驿站 → 确保在跑（down 不自动重试）
+    /// → 工具清单（缓存）→ 桥接为 ExternalTool。旁路增强：任何失败静默为空，不阻塞派发。
+    private func assembleMcpTools(campId: String?, missionId: String, cardId: String) async -> [ExternalTool] {
+        guard let mcpManager, let campId else { return [] }
+        guard let enabled = try? db.enabledMcpServers(campId: campId), !enabled.isEmpty else {
+            return []
+        }
+        await mcpManager.ensureRunning(serverIds: enabled.map(\.id))
+        let assembled = await mcpManager.assembledTools(campId: campId)
+        return assembled.map { tool in
+            ExternalTool(
+                def: tool.def,
+                handler: McpToolBridge(
+                    manager: mcpManager, db: db, missionId: missionId, cardId: cardId,
+                    serverId: tool.serverId, serverName: tool.serverName,
+                    toolName: tool.originalToolName))
+        }
     }
 
     /// 知识注入是旁路增强：读取失败不阻塞规划/派发，静默为空。
@@ -740,6 +886,8 @@ public actor Orchestrator {
         let companionName: String
         let rolePrompt: String
         let model: String
+        let toolsJson: String
+        let autonomy: MissionAutonomy
     }
 
     private struct RunningEntry: Sendable {
