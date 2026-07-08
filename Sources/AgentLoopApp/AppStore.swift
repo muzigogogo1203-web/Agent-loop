@@ -17,6 +17,8 @@ final class AppStore {
     let keychain: KeychainStore
     let artifactStoreRoot: URL
     let orchestrator: Orchestrator
+    /// MCP 驿站（M8-D8：绞杀第二刀，领域状态独立成 store）
+    let mcp: McpStore
 
     var companions: [CompanionRecord] = []
     /// 营地=频道（M5-0）：全部营地，创建序
@@ -156,10 +158,21 @@ final class AppStore {
                 .appendingPathComponent("AgentLoop")
         try! FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
         artifactStoreRoot = appSupport.appendingPathComponent("artifacts")
-        db = try! AppDatabase(path: appSupport.appendingPathComponent("agentloop.sqlite").path)
+        let database = try! AppDatabase(path: appSupport.appendingPathComponent("agentloop.sqlite").path)
+        db = database
         let defaultBaseURL = Self.defaultBaseURL
+        // M8-D5：MCP 敏感 env 从 Keychain 解析（account mcp-<serverId>-<key>）；预览模式不读钥匙串
+        let isPreview = ProcessInfo.processInfo.environment["AGENTLOOP_UI_PREVIEW"] == "1"
+        let mcpManager = McpServerManager(
+            db: database,
+            secretProvider: { serverId, key in
+                guard !isPreview else { return nil }
+                return (try? keychainStore.get(account: "mcp-\(serverId)-\(key)")) ?? nil
+            }
+        )
+        mcp = McpStore(db: database, manager: mcpManager, keychain: keychainStore)
         orchestrator = Orchestrator(
-            db: db,
+            db: database,
             makeProvider: { model in
                 let key = (try? keychainStore.get(account: "anthropic-api-key")) ?? ""
                 let rawBase = UserDefaults.standard.string(forKey: "apiBaseURL") ?? defaultBaseURL
@@ -173,7 +186,8 @@ final class AppStore {
                       let key = try? keychainStore.get(account: "tavily-api-key"),
                       !key.isEmpty else { return nil }
                 return key
-            }
+            },
+            mcpManager: mcpManager
         )
         try! db.ensureDefaultCamp()
         apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
@@ -202,6 +216,7 @@ final class AppStore {
         ) { _ in
             ShellProcessRegistry.shared.terminateAll()
         }
+        mcp.onToast = { [weak self] message in self?.showToast(message) }
         reload()
         startKernelEventListener()
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗

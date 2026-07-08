@@ -163,11 +163,21 @@ struct CardDetailInspector: View {
                             .font(.caption2)
                             .foregroundStyle(Camp.stone)
                     }
+                    // M8-D7：驿站停摆导致的受阻，给「去设置页重启」引导
+                    if card.status == .blocked, hasStationDownBeat {
+                        Label("驿站不会自动重启——到「设置 → MCP 驿站」手动重启，然后回来点「重试」。", systemImage: "bolt.slash.fill")
+                            .font(.caption)
+                            .foregroundStyle(Camp.amber)
+                    }
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .campCard()
+    }
+
+    private var hasStationDownBeat: Bool {
+        timelineEntries.contains { $0.kind == .blocked && $0.text.contains("驿站") }
     }
 
     // MARK: - 产物

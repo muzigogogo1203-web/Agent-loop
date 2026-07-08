@@ -130,20 +130,33 @@ public actor McpServerManager {
         var used = Set<String>()
         var result: [AssembledTool] = []
         for server in servers {
-            guard let handle = handles[server.id], handle.status.isRunning else { continue }
-            for tool in handle.tools {
-                guard let name = McpToolNaming.compose(server: server.name, tool: tool.name),
-                      !used.contains(name) else { continue }
-                used.insert(name)
-                let description = TextTruncation.truncateUTF8(
-                    tool.description, maxBytes: 600, suffix: "…")
-                result.append(AssembledTool(
-                    def: ToolDef(name: name, description: description, inputSchema: tool.inputSchema),
-                    serverId: server.id,
-                    serverName: server.name,
-                    originalToolName: tool.name
-                ))
-            }
+            result.append(contentsOf: assemble(server: server, used: &used))
+        }
+        return result
+    }
+
+    /// 单个 server 的工具清单（伙伴编辑器分组勾选用）；未在跑时为空。
+    public func assembledTools(serverId: String) -> [AssembledTool] {
+        guard let server = try? db.mcpServer(id: serverId) else { return [] }
+        var used = Set<String>()
+        return assemble(server: server, used: &used)
+    }
+
+    private func assemble(server: McpServerRecord, used: inout Set<String>) -> [AssembledTool] {
+        guard let handle = handles[server.id], handle.status.isRunning else { return [] }
+        var result: [AssembledTool] = []
+        for tool in handle.tools {
+            guard let name = McpToolNaming.compose(server: server.name, tool: tool.name),
+                  !used.contains(name) else { continue }
+            used.insert(name)
+            let description = TextTruncation.truncateUTF8(
+                tool.description, maxBytes: 600, suffix: "…")
+            result.append(AssembledTool(
+                def: ToolDef(name: name, description: description, inputSchema: tool.inputSchema),
+                serverId: server.id,
+                serverName: server.name,
+                originalToolName: tool.name
+            ))
         }
         return result
     }
@@ -243,7 +256,11 @@ public actor McpServerManager {
     }
 
     private static func readableStartFailure(error: Error, stderr: String) -> String {
-        let base = (error as? McpClientError)?.readable ?? String(describing: error)
+        var base = (error as? McpClientError)?.readable ?? String(describing: error)
+        // 真机实测：npx 冷启动要现场下包，慢网络下超过握手上限是常态不是异常——给出路
+        if case .some(.timeout) = error as? McpClientError {
+            base += "。首次启动常在下载依赖，稍等再点重启多半就好；若网络需要代理，把代理变量加进该驿站的 env"
+        }
         let tail = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !tail.isEmpty else { return base }
         return "\(base)\n启动日志尾部：\(String(tail.suffix(500)))"

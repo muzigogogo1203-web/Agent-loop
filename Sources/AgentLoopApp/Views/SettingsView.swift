@@ -208,6 +208,10 @@ struct SettingsView: View {
                     }
                 }
                 .campCard()
+
+                // M8-D6/D7：MCP 驿站（全局注册；营地首页启用；伙伴编辑器按人授权）
+                McpStationSection()
+
                 VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("默认预算")
                     HStack(spacing: 10) {

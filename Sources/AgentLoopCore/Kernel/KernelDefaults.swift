@@ -19,8 +19,9 @@ public enum KernelDefaults {
     public static let shellTimeout: Duration = .seconds(120)
     /// 429 重试耗尽后的全局派发冷却（M7-D8）
     public static let rateLimitCooldown: Duration = .seconds(15)
-    /// MCP 握手（initialize + tools/list）超时（M8-D3）
-    public static let mcpInitTimeout: Duration = .seconds(15)
+    /// MCP 握手（initialize + tools/list）超时（M8-D3）。
+    /// 60s：npx 首启要现场下包（真机实测 15s 必超时），冷启动是常态不是异常。
+    public static let mcpInitTimeout: Duration = .seconds(60)
     /// MCP 工具单次调用超时（M8-D4）
     public static let mcpCallTimeout: Duration = .seconds(30)
 }

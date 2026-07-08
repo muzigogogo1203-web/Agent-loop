@@ -117,6 +117,10 @@ public enum ActivityFeed {
             case EventKind.kernelError:
                 return entry(event, actor: .system, kind: .error,
                              text: payload["message"]?.stringValue ?? "内核错误")
+            case EventKind.mcpServerDown:
+                let server = payload["serverName"]?.stringValue ?? "未知"
+                return entry(event, actor: .system, kind: .blocked,
+                             text: "驿站「\(server)」停摆了——它不会自动重启，可到「设置 → MCP 驿站」手动重启")
             default:
                 return nil
             }
