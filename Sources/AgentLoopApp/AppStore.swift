@@ -603,6 +603,13 @@ final class AppStore {
             value = ["confirm": .bool(confirm)]
         case .text(let text):
             value = ["text": .string(text)]
+        case .approval(let approved, let reason):
+            // M7-D4：审批答复；decided 事件在 DB 层随答复同事务落
+            var object: [String: JSONValue] = ["decision": .string(approved ? "approve" : "deny")]
+            if let reason, !reason.isEmpty {
+                object["reason"] = .string(reason)
+            }
+            value = .object(object)
         }
         return try value.encodedString()
     }

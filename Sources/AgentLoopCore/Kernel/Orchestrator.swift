@@ -227,6 +227,9 @@ public actor Orchestrator {
                 let exhaustedMissionIds = Set(
                     executingMissions.filter { $0.spentTokens >= $0.budgetTokens }.map(\.id)
                 )
+                // M7-D2：档位随候选下发（审批矩阵在 CardRunner 装门时消费）
+                let autonomyByMission = Dictionary(
+                    uniqueKeysWithValues: executingMissions.map { ($0.id, $0.autonomy) })
                 var candidates: [DispatchCandidate] = []
                 var errors: [KernelErrorRecord] = []
                 for ready in readyCards where !exhaustedMissionIds.contains(ready.missionId) {
@@ -250,7 +253,8 @@ public actor Orchestrator {
                             companionName: companion.name,
                             rolePrompt: companion.rolePrompt,
                             model: companion.model,
-                            toolsJson: companion.toolsJson
+                            toolsJson: companion.toolsJson,
+                            autonomy: autonomyByMission[ready.missionId] ?? .standard
                         )
                     )
                 }
@@ -661,7 +665,8 @@ public actor Orchestrator {
                 campNotes: campNotes,
                 companionNotes: companionNotes,
                 toolAccess: toolAccess,
-                searchKey: searchKeyProvider()
+                searchKey: searchKeyProvider(),
+                autonomy: candidate.autonomy
             )
             for try await event in stream {
                 await emitFromTask(.cardEvent(cardId: candidate.card.id, event))
@@ -765,6 +770,7 @@ public actor Orchestrator {
         let rolePrompt: String
         let model: String
         let toolsJson: String
+        let autonomy: MissionAutonomy
     }
 
     private struct RunningEntry: Sendable {

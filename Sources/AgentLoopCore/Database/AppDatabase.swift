@@ -775,6 +775,102 @@ public final class AppDatabase: Sendable {
                 kind: EventKind.userRequestAnswered,
                 payload: ["userRequestId": .string(requestId)]
             )
+            // M7-D4：审批答复额外落 decided 事件（含决定，feed 可渲染）
+            if request.kind == .approval,
+               let answer = try? JSONValue.decoded(from: answerJson),
+               let decision = answer["decision"]?.stringValue {
+                try Self.appendEvent(
+                    db,
+                    missionId: card.missionId,
+                    cardId: card.id,
+                    runId: nil,
+                    kind: EventKind.approvalDecided,
+                    payload: ["userRequestId": .string(requestId), "decision": .string(decision)]
+                )
+            }
+        }
+    }
+
+    /// M7-D3：审批挂起（复用 ask_user 持久门语义）。optionsJson 存 {tool, input, inputHash} 全文，
+    /// UI 从中渲染动作实体内容（命令全文/写入路径与内容）。
+    public func suspendCardForApproval(
+        cardId: String,
+        runId: String?,
+        prompt: String,
+        tool: String,
+        input: JSONValue,
+        inputHash: String
+    ) throws -> String {
+        try pool.write { db in
+            guard let card = try CardRecord.fetchOne(db, key: cardId) else {
+                throw RecordNotFoundError(table: "card", id: cardId)
+            }
+            let requestId = UUID().uuidString
+            let payload: JSONValue = [
+                "tool": .string(tool),
+                "input": input,
+                "inputHash": .string(inputHash),
+            ]
+            try UserRequestRecord(
+                id: requestId,
+                cardId: cardId,
+                kind: .approval,
+                prompt: prompt,
+                optionsJson: try payload.encodedString(),
+                answerJson: nil,
+                createdAt: Date(),
+                answeredAt: nil
+            ).insert(db)
+
+            let blockedPayload: JSONValue = [
+                "detail": .string(prompt),
+                "reason": "needs_human_input",
+                "userRequestId": .string(requestId),
+            ]
+            try blockCard(
+                db,
+                id: cardId,
+                runId: runId,
+                reason: "needs_human_input",
+                detail: prompt,
+                payload: blockedPayload,
+                reasonJson: try blockedPayload.encodedString()
+            )
+            try Self.appendEvent(
+                db,
+                missionId: card.missionId,
+                cardId: cardId,
+                runId: runId,
+                kind: EventKind.approvalRequested,
+                payload: [
+                    "tool": .string(tool),
+                    "prompt": .string(prompt),
+                    "userRequestId": .string(requestId),
+                ]
+            )
+            return requestId
+        }
+    }
+
+    /// 本卡已决的审批记录 → 授权令牌快照（M7-D4，冷启动重跑时装入令牌罐）
+    public func approvalDecisions(cardId: String) throws -> [ApprovalDecision] {
+        let answered = try answeredRequests(cardId: cardId).filter { $0.kind == .approval }
+        return answered.compactMap { request in
+            guard let optionsJson = request.optionsJson,
+                  let payload = try? JSONValue.decoded(from: optionsJson),
+                  let tool = payload["tool"]?.stringValue,
+                  let hash = payload["inputHash"]?.stringValue,
+                  let answerJson = request.answerJson,
+                  let answer = try? JSONValue.decoded(from: answerJson),
+                  let decision = answer["decision"]?.stringValue else {
+                return nil
+            }
+            return ApprovalDecision(
+                tool: tool,
+                inputHash: hash,
+                approved: decision == "approve",
+                reason: answer["reason"]?.stringValue
+            )
         }
     }
 

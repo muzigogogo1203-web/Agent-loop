@@ -30,7 +30,8 @@ public struct CardRunner: Sendable {
         campNotes: [NoteSnippet] = [],
         companionNotes: [NoteSnippet] = [],
         toolAccess: ToolAccess = .full,
-        searchKey: String? = nil
+        searchKey: String? = nil,
+        autonomy: MissionAutonomy = .standard
     ) throws -> AsyncThrowingStream<AgentEvent, Error> {
         guard let card = try db.card(id: cardId) else {
             throw RecordNotFoundError(table: "card", id: cardId)
@@ -74,6 +75,13 @@ public struct CardRunner: Sendable {
         }
         for (name, handler) in capabilityHandlers where toolAccess.allows(name) {
             handlers[name] = handler
+        }
+        // M7-D3/D4：审批门套在非只读工具上——档位矩阵 + 一次性授权令牌（冷启动重跑时装罐）
+        let approvalJar = ApprovalTokenJar((try? db.approvalDecisions(cardId: cardId)) ?? [])
+        for (name, handler) in handlers where ToolDef.risk(name) != .readOnly {
+            handlers[name] = ApprovalGateHandler(
+                inner: handler, toolName: name, autonomy: autonomy,
+                jar: approvalJar, db: db, cardId: cardId, runId: runId)
         }
         let executor = ToolExecutor(handlers: handlers)
         // 提示词工具区从 handlers 派生：可见即可用，构造上保证同源（D4/D8）
