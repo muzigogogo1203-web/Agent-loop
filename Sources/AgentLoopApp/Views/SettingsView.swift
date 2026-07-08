@@ -147,6 +147,23 @@ struct SettingsView: View {
                 }
                 .campCard()
 
+                // M7-D2：新行动的默认自主档位
+                VStack(alignment: .leading, spacing: 12) {
+                    CampSectionTitle("默认自主档位")
+                    Picker("默认自主档位", selection: $store.defaultAutonomy) {
+                        ForEach(MissionAutonomy.allCases, id: \.self) { autonomy in
+                            Text(autonomy.displayName).tag(autonomy)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(maxWidth: 320)
+                    Text("谨慎=写入即审批；标准=危险操作（跑命令）才审批；放手=预算内全放行。每个行动出发时可单独调整，进行中也能改。")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                }
+                .campCard()
+
                 // M6-D7/D8：Tavily 搜索 key（Keychain 第二槽）
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {

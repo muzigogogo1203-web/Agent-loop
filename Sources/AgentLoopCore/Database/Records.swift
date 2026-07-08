@@ -373,6 +373,30 @@ public struct UserRequestRecord: Codable, Sendable, FetchableRecord, Persistable
     }
 }
 
+/// 行动花销分账（M7-D7）：run 表按伙伴聚合 + 规划轮事件；口径为本地估算
+public struct MissionSpendBreakdown: Sendable, Equatable {
+    public struct CompanionSpend: Sendable, Equatable, Identifiable {
+        public var id: String { companionId ?? "unassigned" }
+        public let companionId: String?
+        public let name: String
+        public let tokens: Int
+
+        public init(companionId: String?, name: String, tokens: Int) {
+            self.companionId = companionId
+            self.name = name
+            self.tokens = tokens
+        }
+    }
+
+    public let planningTokens: Int
+    public let companions: [CompanionSpend]
+
+    public init(planningTokens: Int, companions: [CompanionSpend]) {
+        self.planningTokens = planningTokens
+        self.companions = companions
+    }
+}
+
 public enum AskUserAnswer: Sendable, Equatable {
     case choice(Int)
     case confirm(Bool)

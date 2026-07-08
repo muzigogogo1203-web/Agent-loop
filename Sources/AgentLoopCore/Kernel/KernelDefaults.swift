@@ -17,4 +17,6 @@ public enum KernelDefaults {
     public static let defaultGuideModel = "claude-sonnet-4-6"
     /// shell 命令超时（M7-D6）
     public static let shellTimeout: Duration = .seconds(120)
+    /// 429 重试耗尽后的全局派发冷却（M7-D8）
+    public static let rateLimitCooldown: Duration = .seconds(15)
 }

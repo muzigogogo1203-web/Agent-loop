@@ -25,6 +25,18 @@ struct TaskRunView: View {
     @State private var artifactsCollapsed = false
     /// 详情弹层的键盘焦点（Esc 关闭）
     @FocusState private var detailFocused: Bool
+    /// 花销分账浮层（M7-D7）
+    @State private var showSpendPopover = false
+    /// 新行动表单的档位选择（M7-D2；.task 里以全局默认初始化）
+    @State private var formAutonomy: MissionAutonomy = .standard
+
+    private var formAutonomyCaption: String {
+        switch formAutonomy {
+        case .careful: return "谨慎：伙伴写文件、跑命令等一切落盘动作都先问你。"
+        case .standard: return "标准：只有危险操作（如跑命令）需要你批准。"
+        case .free: return "放手：预算内全放行，不打扰你。"
+        }
+    }
     @State private var submitError: String?
 
     var body: some View {
@@ -187,6 +199,23 @@ struct TaskRunView: View {
                 }
                 .campCard()
 
+                // M7-D2：自主档位（决定哪些工具动作需要你批准）
+                VStack(alignment: .leading, spacing: 10) {
+                    CampSectionTitle("自主档位")
+                    Picker("自主档位", selection: $formAutonomy) {
+                        ForEach(MissionAutonomy.allCases, id: \.self) { autonomy in
+                            Text(autonomy.displayName).tag(autonomy)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(maxWidth: 320)
+                    Text(formAutonomyCaption)
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                }
+                .campCard()
+
                 // 出发反馈（UX 审计 P1：进行中/失败都要可见）
                 if let submitError {
                     HStack(spacing: 8) {
@@ -211,7 +240,8 @@ struct TaskRunView: View {
                         goal: goal,
                         companionIds: selectedCompanionIds,
                         workspacePath: workspace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : workspace,
-                        campId: campId
+                        campId: campId,
+                        autonomy: formAutonomy
                     )
                 } label: {
                     HStack {
@@ -243,6 +273,7 @@ struct TaskRunView: View {
             goal = draft.goal
             workspace = draft.workspace
             selectedCompanionIds = draft.companionIds
+            formAutonomy = store.defaultAutonomy
             submitting = false
             submitError = nil
         }
@@ -310,6 +341,9 @@ struct TaskRunView: View {
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 14) {
                     missionHeader
+                    if store.campHalted {
+                        haltedBanner
+                    }
                     if store.currentMissionBudgetExhausted {
                         budgetBanner
                     }
@@ -376,6 +410,8 @@ struct TaskRunView: View {
                             .font(.caption)
                             .foregroundStyle(Camp.inkSecondary)
                     }
+                    autonomyMenu
+                    spendChip
                 }
             }
             Spacer()
@@ -383,6 +419,129 @@ struct TaskRunView: View {
             missionActions
         }
         .campCard()
+    }
+
+    // MARK: - 哨卡（M7）
+
+    private var currentMission: MissionRecord? {
+        store.missionList.first { $0.id == store.currentMissionId }
+    }
+
+    /// 收哨横幅：全营停摆，给恢复入口
+    private var haltedBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "hand.raised.slash.fill")
+                .foregroundStyle(Camp.charcoalRed)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("营地已紧急收哨")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(Camp.ink)
+                Text("全部行动暂停派发，进行中的小目标已中断（恢复后自动续跑）。")
+                    .font(.caption)
+                    .foregroundStyle(Camp.inkSecondary)
+            }
+            Spacer()
+            Button {
+                store.resumeCamp()
+            } label: {
+                Label("恢复出哨", systemImage: "flag.fill")
+            }
+            .buttonStyle(CampPrimaryButtonStyle(size: .small))
+        }
+        .padding(12)
+        .background(Camp.charcoalRed.opacity(0.08), in: RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                .stroke(Camp.charcoalRed.opacity(0.4), lineWidth: 1)
+        )
+    }
+
+    /// 档位菜单（M7-D2）：行动执行中可改，收营后只读
+    @ViewBuilder private var autonomyMenu: some View {
+        if let mission = currentMission {
+            let editable = mission.status == .executing || mission.status == .planning || mission.status == .delivering
+            Menu {
+                ForEach(MissionAutonomy.allCases, id: \.self) { autonomy in
+                    Button {
+                        store.setCurrentMissionAutonomy(autonomy)
+                    } label: {
+                        if autonomy == mission.autonomy {
+                            Label(autonomyLabel(autonomy), systemImage: "checkmark")
+                        } else {
+                            Text(autonomyLabel(autonomy))
+                        }
+                    }
+                }
+            } label: {
+                CampChip(text: "档位 · \(mission.autonomy.displayName)", color: Camp.amber, icon: "shield.lefthalf.filled")
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .disabled(!editable)
+            .help("自主档位：谨慎=写入即审批；标准=危险操作才审批；放手=预算内全放行")
+        }
+    }
+
+    private func autonomyLabel(_ autonomy: MissionAutonomy) -> String {
+        switch autonomy {
+        case .careful: return "谨慎——写入与危险操作都需要批准"
+        case .standard: return "标准——危险操作（如跑命令）需要批准"
+        case .free: return "放手——预算内全放行"
+        }
+    }
+
+    /// 花销签（M7-D7）：点开分账浮层（本地估算口径）
+    @ViewBuilder private var spendChip: some View {
+        if let mission = currentMission, mission.spentTokens > 0 {
+            Button {
+                showSpendPopover.toggle()
+            } label: {
+                CampChip(
+                    text: "花销 ~\(mission.spentTokens / 1000)k",
+                    color: Camp.stone,
+                    icon: "creditcard"
+                )
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showSpendPopover, arrowEdge: .bottom) {
+                spendBreakdownView(mission: mission)
+            }
+        }
+    }
+
+    private func spendBreakdownView(mission: MissionRecord) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("花销分账")
+                .font(.headline)
+                .foregroundStyle(Camp.ink)
+            if let breakdown = store.spendBreakdown(missionId: mission.id) {
+                if breakdown.planningTokens > 0 {
+                    spendRow(name: "向导规划", tokens: breakdown.planningTokens)
+                }
+                ForEach(breakdown.companions) { spend in
+                    spendRow(name: spend.name, tokens: spend.tokens)
+                }
+            }
+            Divider()
+            spendRow(name: "合计 / 预算", tokens: mission.spentTokens, budget: mission.budgetTokens)
+            Text("本地估算：按 API 回报用量累计")
+                .font(.caption2)
+                .foregroundStyle(Camp.inkSecondary)
+        }
+        .padding(14)
+        .frame(width: 260)
+    }
+
+    private func spendRow(name: String, tokens: Int, budget: Int? = nil) -> some View {
+        HStack {
+            Text(name)
+                .font(.callout)
+                .foregroundStyle(Camp.ink)
+            Spacer()
+            Text(budget.map { "\(tokens / 1000)k / \($0 / 1000)k" } ?? "\(tokens / 1000)k tokens")
+                .font(.callout.monospacedDigit())
+                .foregroundStyle(Camp.inkSecondary)
+        }
     }
 
     @ViewBuilder private var statusChip: some View {
@@ -518,6 +677,18 @@ struct TaskRunView: View {
                 .opacity(theaterPulse ? 1 : 0)
                 .symbolEffect(.pulse, options: .repeat(2), value: theaterPulseToken)
             Spacer()
+            // M7-D5：紧急收哨（全营停摆止损），Cmd+. 快捷键
+            if !store.campHalted {
+                Button {
+                    store.emergencyStopCamp()
+                } label: {
+                    Label("收哨", systemImage: "hand.raised.fill")
+                        .foregroundStyle(Camp.charcoalRed)
+                }
+                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
+                .keyboardShortcut(".", modifiers: .command)
+                .help("紧急收哨：暂停全部行动并终止子进程（Cmd+.）")
+            }
             Button {
                 store.feedPanelVisible.toggle()
             } label: {

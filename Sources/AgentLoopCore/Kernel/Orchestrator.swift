@@ -10,6 +10,8 @@ public enum KernelEvent: Sendable {
     case kernelError(missionId: String, message: String)
     /// 收营蒸馏产出营地笔记（source: "closeout" | "fallback"）
     case campNoteCreated(missionId: String, noteId: String)
+    /// M7-D5：紧急收哨状态翻转（true=已收哨）
+    case haltStateChanged(Bool)
 }
 
 public struct MissionStateError: Error, Sendable, Equatable {
@@ -41,6 +43,11 @@ public actor Orchestrator {
     private var cancelling: Set<String> = []
     /// 预算耗尽已通知的行动（加预算后移除，避免每次 reconcile 重复发事件）
     private var budgetNotified: Set<String> = []
+    /// M7-D5：紧急收哨标志——reconcile 全停，直到 resume
+    private var halted = false
+    /// M7-D8：429 全局冷却截止点（在途不动，只挡新派发）
+    private var cooldownUntil: ContinuousClock.Instant?
+    private let rateLimitCooldownDuration: Duration
     private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "orchestrator")
 
     public init(
@@ -48,13 +55,15 @@ public actor Orchestrator {
         makeProvider: @escaping @Sendable (String) -> any LLMProvider,
         artifactStoreRoot: URL,
         tickInterval: Duration? = .seconds(5),
-        searchKeyProvider: @escaping @Sendable () -> String? = { nil }
+        searchKeyProvider: @escaping @Sendable () -> String? = { nil },
+        rateLimitCooldown: Duration = KernelDefaults.rateLimitCooldown
     ) {
         self.db = db
         self.makeProvider = makeProvider
         self.artifactStoreRoot = artifactStoreRoot
         self.tickInterval = tickInterval
         self.searchKeyProvider = searchKeyProvider
+        self.rateLimitCooldownDuration = rateLimitCooldown
     }
 
     public func events() -> AsyncStream<KernelEvent> {
@@ -168,6 +177,8 @@ public actor Orchestrator {
 
     public func reconcile() async {
         ensureTickStarted()
+        // M7-D5：收哨期间不做任何调度（含 todo→ready 提升）
+        guard !halted else { return }
         guard !reconciling else {
             reconcilePending = true
             return
@@ -284,6 +295,11 @@ public actor Orchestrator {
             emit(.missionChanged(missionId: missionId))
         }
 
+        // M7-D8：429 冷却期不派发新卡（在途不动）；到点自然恢复
+        if let cooldownUntil, ContinuousClock.now < cooldownUntil {
+            return
+        }
+
         var busy = Set(running.values.map(\.assigneeId))
         for candidate in plan.candidates {
             // 全局并发节流（M5-2）
@@ -303,6 +319,70 @@ public actor Orchestrator {
                 missionId: candidate.card.missionId
             )
             busy.insert(candidate.assigneeId)
+        }
+    }
+
+    // MARK: - 紧急收哨（M7-D5）
+
+    public var isHalted: Bool { halted }
+
+    /// 一键停营：取消全部在途（卡片走既有 card_interrupted → ready 领养语义）+
+    /// 终止子进程 + 停派发。恢复用 resume()。
+    public func emergencyStop() async {
+        guard !halted else { return }
+        halted = true
+
+        for (_, task) in planningTasks { task.cancel() }
+        let planningSnapshot = planningTasks.values
+        planningTasks.removeAll()
+        for task in planningSnapshot { await task.value }
+
+        let runningSnapshot = running
+        for (_, entry) in runningSnapshot { entry.task.cancel() }
+        for (cardId, entry) in runningSnapshot {
+            await entry.task.value
+            running.removeValue(forKey: cardId)
+        }
+
+        ShellProcessRegistry.shared.terminateAll()
+        try? await db.pool.write { database in
+            try AppDatabase.appendEvent(
+                database, missionId: nil, cardId: nil, runId: nil,
+                kind: EventKind.campHalted, payload: .object([:]))
+        }
+        emit(.haltStateChanged(true))
+    }
+
+    /// 解除收哨并立即调度（中断的卡已在 ready，直接续跑）
+    public func resume() async {
+        guard halted else { return }
+        halted = false
+        try? await db.pool.write { database in
+            try AppDatabase.appendEvent(
+                database, missionId: nil, cardId: nil, runId: nil,
+                kind: EventKind.campResumed, payload: .object([:]))
+        }
+        emit(.haltStateChanged(false))
+        await reconcile()
+    }
+
+    // MARK: - 限流冷却（M7-D8）
+
+    private static func isRateLimit(_ error: ProviderError) -> Bool {
+        switch error {
+        case .http(let status, _): return status == 429
+        case .overloadedRetriesExhausted: return true
+        default: return false
+        }
+    }
+
+    private func startRateLimitCooldown(missionId: String) {
+        cooldownUntil = ContinuousClock.now + rateLimitCooldownDuration
+        try? db.pool.write { database in
+            try AppDatabase.appendEvent(
+                database, missionId: missionId, cardId: nil, runId: nil,
+                kind: EventKind.rateLimitCooldown,
+                payload: ["seconds": .number(15)])
         }
     }
 
@@ -422,7 +502,8 @@ public actor Orchestrator {
     /// 建队失败补偿回滚 pending。重复确认在 CAS 处抛 StaleProposalError——宁可回滚，绝不重复建队。
     public func confirmSquadProposal(
         messageId: String, plannerModel: String,
-        fallbackBudget: Int = KernelDefaults.missionBudget
+        fallbackBudget: Int = KernelDefaults.missionBudget,
+        autonomy: MissionAutonomy = .standard
     ) async throws -> String {
         let block = try db.confirmProposalBlock(messageId: messageId)
         do {
@@ -434,7 +515,8 @@ public actor Orchestrator {
                 workspacePath: nil,
                 plannerModel: plannerModel,
                 budgetTokens: block.budget ?? fallbackBudget,
-                campId: campId
+                campId: campId,
+                autonomy: autonomy
             )
             try db.attachMissionToProposal(messageId: messageId, missionId: missionId)
             try? await db.pool.write { database in
@@ -677,6 +759,10 @@ public actor Orchestrator {
                 "ignored stale dispatch candidate for card \(candidate.card.id, privacy: .public): \(String(describing: error), privacy: .public)"
             )
         } catch {
+            // M7-D8：重试耗尽的限流错误 → 全局冷却，reconcile 期间不派发新卡
+            if let providerError = error as? ProviderError, Self.isRateLimit(providerError) {
+                startRateLimitCooldown(missionId: candidate.card.missionId)
+            }
             let message = String(describing: error)
             db.appendKernelErrorEvent(missionId: candidate.card.missionId, message: message)
             await emitFromTask(.kernelError(missionId: candidate.card.missionId, message: message))

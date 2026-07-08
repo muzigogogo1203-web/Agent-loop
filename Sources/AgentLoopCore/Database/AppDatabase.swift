@@ -999,6 +999,44 @@ public final class AppDatabase: Sendable {
         }
     }
 
+    /// 行动花销分账（M7-D7，本地估算口径）：按伙伴聚合 run 表 + 规划轮事件求和
+    public func missionSpendBreakdown(missionId: String) throws -> MissionSpendBreakdown {
+        try pool.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                    SELECT card.assigneeId AS assigneeId,
+                           companion.name AS name,
+                           SUM(COALESCE(run.tokensIn, 0) + COALESCE(run.tokensOut, 0)) AS tokens
+                    FROM run
+                    JOIN card ON card.id = run.cardId
+                    LEFT JOIN companion ON companion.id = card.assigneeId
+                    WHERE card.missionId = ?
+                    GROUP BY card.assigneeId
+                    ORDER BY tokens DESC
+                    """,
+                arguments: [missionId]
+            )
+            let companions: [MissionSpendBreakdown.CompanionSpend] = rows.map { row in
+                .init(
+                    companionId: row["assigneeId"],
+                    name: row["name"] ?? "（未指派）",
+                    tokens: row["tokens"] ?? 0
+                )
+            }
+            let planningEvents = try EventRecord
+                .filter(Column("missionId") == missionId && Column("kind") == EventKind.planningTokens)
+                .fetchAll(db)
+            let planning = planningEvents.reduce(0) { total, event in
+                guard let payload = try? JSONValue.decoded(from: event.payloadJson) else { return total }
+                let input = payload["inputTokens"]?.intValue ?? 0
+                let output = payload["outputTokens"]?.intValue ?? 0
+                return total + input + output
+            }
+            return MissionSpendBreakdown(planningTokens: planning, companions: companions)
+        }
+    }
+
     /// 行动自主档位中途可改（M7-D2）：更新与 autonomy_changed 事件同事务
     public func setMissionAutonomy(missionId: String, to autonomy: MissionAutonomy) throws {
         try pool.write { db in

@@ -45,6 +45,15 @@ final class AppStore {
     var effectiveDistillModel: String { distillModel.isEmpty ? defaultModel : distillModel }
     var effectivePlannerModel: String { plannerModel.isEmpty ? defaultModel : plannerModel }
 
+    // MARK: 哨卡（M7）
+
+    /// 紧急收哨状态（内核事件驱动）
+    var campHalted = false
+    /// 新行动的默认自主档位（M7-D2）
+    var defaultAutonomy: MissionAutonomy = .standard {
+        didSet { UserDefaults.standard.set(defaultAutonomy.rawValue, forKey: "defaultAutonomy") }
+    }
+
     /// 默认行动预算（M5-2，spec §13：设置页可改；propose_squad 缺省随之）
     var defaultMissionBudget: Int = KernelDefaults.missionBudget {
         didSet { UserDefaults.standard.set(defaultMissionBudget, forKey: "defaultMissionBudget") }
@@ -183,6 +192,16 @@ final class AppStore {
         }
         distillModel = UserDefaults.standard.string(forKey: "distillModel") ?? ""
         plannerModel = UserDefaults.standard.string(forKey: "plannerModel") ?? ""
+        if let storedAutonomy = UserDefaults.standard.string(forKey: "defaultAutonomy"),
+           let autonomy = MissionAutonomy(rawValue: storedAutonomy) {
+            defaultAutonomy = autonomy
+        }
+        // M7-D5：退出时终止 shell/MCP 子进程，防僵尸（同步、最要紧的一件）
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { _ in
+            ShellProcessRegistry.shared.terminateAll()
+        }
         reload()
         startKernelEventListener()
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
@@ -236,7 +255,8 @@ final class AppStore {
         return AnthropicProvider(apiKey: key, model: model, baseURL: base)
     }
 
-    func startMission(goal: String, companionIds: [String], workspacePath: String?, campId: String? = nil) {
+    func startMission(goal: String, companionIds: [String], workspacePath: String?, campId: String? = nil,
+                      autonomy: MissionAutonomy? = nil) {
         guard ((try? keychain.get(account: "anthropic-api-key")) ?? nil) != nil else {
             missionPhase = .error("请先在设置里填入 API key")
             return
@@ -267,7 +287,8 @@ final class AppStore {
                     workspacePath: workspacePath,
                     plannerModel: effectivePlannerModel,
                     budgetTokens: defaultMissionBudget,
-                    campId: campId
+                    campId: campId,
+                    autonomy: autonomy ?? defaultAutonomy
                 )
                 currentMissionId = missionId
                 theaterMode = false
@@ -446,7 +467,37 @@ final class AppStore {
             }
         case .campNoteCreated:
             reloadCampKnowledge()
+        case .haltStateChanged(let halted):
+            campHalted = halted
+            reloadMissionList()
+            if let currentMissionId { reloadMission(missionId: currentMissionId) }
         }
+    }
+
+    // MARK: 哨卡动作（M7-D5/D2/D7）
+
+    func emergencyStopCamp() {
+        Task { await orchestrator.emergencyStop() }
+    }
+
+    func resumeCamp() {
+        Task { await orchestrator.resume() }
+    }
+
+    /// 当前行动档位中途可改（记 autonomy_changed 事件）
+    func setCurrentMissionAutonomy(_ autonomy: MissionAutonomy) {
+        guard let currentMissionId else { return }
+        do {
+            try db.setMissionAutonomy(missionId: currentMissionId, to: autonomy)
+            reloadMissionList()
+        } catch {
+            showToast("档位修改失败：\(readableError(error))")
+        }
+    }
+
+    /// 行动花销分账（M7-D7，本地估算）
+    func spendBreakdown(missionId: String) -> MissionSpendBreakdown? {
+        try? db.missionSpendBreakdown(missionId: missionId)
     }
 
     /// 收营蒸馏/沉淀产出笔记后刷新营地首页数据
@@ -865,7 +916,8 @@ final class AppStore {
             do {
                 let missionId = try await orchestrator.confirmSquadProposal(
                     messageId: messageId, plannerModel: effectivePlannerModel,
-                    fallbackBudget: defaultMissionBudget)
+                    fallbackBudget: defaultMissionBudget,
+                    autonomy: defaultAutonomy)
                 reloadGuideMessages()
                 reloadMissionList()
                 navigateToMissionId = missionId
