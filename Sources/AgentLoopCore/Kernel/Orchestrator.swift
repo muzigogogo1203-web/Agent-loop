@@ -73,12 +73,14 @@ public actor Orchestrator {
         workspacePath: String?,
         plannerModel: String,
         budgetTokens: Int = KernelDefaults.missionBudget,
-        campId: String? = nil
+        campId: String? = nil,
+        autonomy: MissionAutonomy = .standard
     ) async throws -> String {
         ensureTickStarted()
         let missionId = try db.createMissionShell(
             goal: goal, companionIds: companionIds,
-            workspacePath: workspacePath, budgetTokens: budgetTokens, campId: campId)
+            workspacePath: workspacePath, budgetTokens: budgetTokens, campId: campId,
+            autonomy: autonomy)
         emit(.planningStarted(missionId: missionId))
         let task = Task {
             do {

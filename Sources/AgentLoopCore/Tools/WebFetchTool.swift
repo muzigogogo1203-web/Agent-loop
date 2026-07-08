@@ -60,16 +60,9 @@ public struct WebFetchTool: ToolHandler {
         return stripHTML(html)
     }
 
-    /// 字节安全截断（修 v1「字节判断 + 字符截断」bug）：
-    /// 按 UTF-8 字节上限裁剪，再从尾部去掉不完整序列，保证落在合法字符边界。
+    /// 字节安全截断（M7 起委托 TextTruncation 共用实现）
     package static func truncateUTF8(_ text: String, maxBytes: Int) -> String {
-        guard text.utf8.count > maxBytes else { return text }
-        var data = Data(text.utf8.prefix(maxBytes))
-        while !data.isEmpty, String(data: data, encoding: .utf8) == nil {
-            data.removeLast()
-        }
-        let body = String(data: data, encoding: .utf8) ?? ""
-        return body + "\n…（已按 50KB 截断）"
+        TextTruncation.truncateUTF8(text, maxBytes: maxBytes, suffix: "\n…（已按 50KB 截断）")
     }
 
     static func stripHTML(_ html: String) -> String {

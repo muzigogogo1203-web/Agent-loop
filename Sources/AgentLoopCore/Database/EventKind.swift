@@ -29,6 +29,14 @@ public enum EventKind {
     public static let kernelError = "kernel_error"
     public static let budgetAdded = "budget_added"
 
+    // 哨卡（M7）：审批 / 档位 / 收哨 / 限流
+    public static let approvalRequested = "approval_requested"
+    public static let approvalDecided = "approval_decided"
+    public static let autonomyChanged = "autonomy_changed"
+    public static let campHalted = "camp_halted"
+    public static let campResumed = "camp_resumed"
+    public static let rateLimitCooldown = "rate_limit_cooldown"
+
     // 人工门与提案
     public static let userRequestCreated = "user_request_created"
     public static let userRequestAnswered = "user_request_answered"

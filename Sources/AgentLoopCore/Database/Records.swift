@@ -166,10 +166,13 @@ public struct MissionRecord: Codable, Sendable, FetchableRecord, PersistableReco
     public var budgetTokens: Int
     public var spentTokens: Int
     public var revision: Int
+    /// 自主档位（M7-D2，迁移 v5）：谨慎/标准/放手，决定审批矩阵
+    public var autonomy: MissionAutonomy
     public var createdAt: Date
 
     public init(id: String, squadId: String, goalRaw: String, goalRefined: String,
-                status: MissionStatus, budgetTokens: Int, spentTokens: Int, revision: Int, createdAt: Date) {
+                status: MissionStatus, budgetTokens: Int, spentTokens: Int, revision: Int,
+                autonomy: MissionAutonomy = .standard, createdAt: Date) {
         self.id = id
         self.squadId = squadId
         self.goalRaw = goalRaw
@@ -178,6 +181,7 @@ public struct MissionRecord: Codable, Sendable, FetchableRecord, PersistableReco
         self.budgetTokens = budgetTokens
         self.spentTokens = spentTokens
         self.revision = revision
+        self.autonomy = autonomy
         self.createdAt = createdAt
     }
 }
@@ -305,6 +309,8 @@ public struct UserRequestRecord: Codable, Sendable, FetchableRecord, Persistable
 
     public enum Kind: String, Codable, Sendable {
         case choice, confirm, text
+        /// M7-D3：工具动作审批（复用 ask_user 持久门；optionsJson 存 {tool, input, inputHash}）
+        case approval
     }
 
     public var id: String
@@ -357,6 +363,12 @@ public struct UserRequestRecord: Codable, Sendable, FetchableRecord, Persistable
             return confirm ? "确认" : "否"
         case .text:
             return answer["text"]?.stringValue ?? ""
+        case .approval:
+            // M7-D4：{"decision":"approve"} 或 {"decision":"deny","reason":…}
+            guard let decision = answer["decision"]?.stringValue else { return "" }
+            if decision == "approve" { return "已批准" }
+            let reason = answer["reason"]?.stringValue
+            return reason.map { "已拒绝：\($0)" } ?? "已拒绝"
         }
     }
 }
@@ -365,6 +377,8 @@ public enum AskUserAnswer: Sendable, Equatable {
     case choice(Int)
     case confirm(Bool)
     case text(String)
+    /// M7-D4：审批答复（approved=false 时可附拒绝理由）
+    case approval(approved: Bool, reason: String?)
 }
 
 // MARK: - Chat Thread

@@ -191,6 +191,12 @@ public final class AppDatabase: Sendable {
                 t.add(column: "workspaceBookmark", .blob)
             }
         }
+        // M7-D2: 行动自主档位（谨慎/标准/放手），决定工具审批矩阵
+        m.registerMigration("v5") { db in
+            try db.alter(table: "mission") { t in
+                t.add(column: "autonomy", .text).notNull().defaults(to: "standard")
+            }
+        }
         return m
     }
 
@@ -347,7 +353,8 @@ public final class AppDatabase: Sendable {
         companionIds: [String],
         workspacePath: String?,
         budgetTokens: Int = KernelDefaults.missionBudget,
-        campId: String? = nil
+        campId: String? = nil,
+        autonomy: MissionAutonomy = .standard
     ) throws -> String {
         let camp = try resolveCamp(id: campId)
         return try pool.write { db in
@@ -374,6 +381,7 @@ public final class AppDatabase: Sendable {
                 budgetTokens: max(1, budgetTokens),
                 spentTokens: 0,
                 revision: 1,
+                autonomy: autonomy,
                 createdAt: Date()
             )
             try mission.insert(db)
@@ -892,6 +900,23 @@ public final class AppDatabase: Sendable {
                     "outputTokens": .number(Double(max(0, outputTokens))),
                     "cacheReadTokens": .number(Double(max(0, cacheReadTokens))),
                 ])
+        }
+    }
+
+    /// 行动自主档位中途可改（M7-D2）：更新与 autonomy_changed 事件同事务
+    public func setMissionAutonomy(missionId: String, to autonomy: MissionAutonomy) throws {
+        try pool.write { db in
+            guard var mission = try MissionRecord.fetchOne(db, key: missionId) else {
+                throw RecordNotFoundError(table: "mission", id: missionId)
+            }
+            guard mission.autonomy != autonomy else { return }
+            let previous = mission.autonomy
+            mission.autonomy = autonomy
+            try mission.update(db)
+            try Self.appendEvent(
+                db, missionId: missionId, cardId: nil, runId: nil,
+                kind: EventKind.autonomyChanged,
+                payload: ["from": .string(previous.rawValue), "to": .string(autonomy.rawValue)])
         }
     }
 
