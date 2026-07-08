@@ -49,6 +49,7 @@ struct TaskRunView: View {
                     .padding(16)
                     .task(id: id) {
                         store.selectMission(id)
+                        store.reloadCampKnowledge()
                     }
             }
         }
@@ -355,6 +356,7 @@ struct TaskRunView: View {
                             cards: store.missionCards,
                             companions: store.cardCompanions,
                             states: store.companionAnimStates,
+                            campMemoryCount: store.campNotes.count,
                             onSelectCard: {
                                 recordInteraction()
                                 store.selectedCardId = $0
@@ -867,11 +869,7 @@ struct TaskRunView: View {
     }
 
     private var presentCompanionList: [CompanionRecord] {
-        var seen = Set<String>()
-        return store.missionCards.compactMap { card in
-            guard let id = card.assigneeId, seen.insert(id).inserted else { return nil }
-            return store.cardCompanions[id]
-        }
+        store.cardCompanions.values.sorted(by: { $0.name < $1.name })
     }
 
     private var companionColors: [String: String] {

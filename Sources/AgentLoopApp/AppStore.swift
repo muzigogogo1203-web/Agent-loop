@@ -966,8 +966,17 @@ final class AppStore {
 
     /// 收营蒸馏/沉淀产出笔记后刷新营地首页数据
     func reloadCampKnowledge() {
-        guard let campId else { return }
-        campNotes = (try? db.campNotes(campId: campId)) ?? []
+        let activeCampId: String
+        if let campId {
+            activeCampId = campId
+        } else if let camp = try? db.ensureDefaultCamp() {
+            campId = camp.id
+            campName = camp.name
+            activeCampId = camp.id
+        } else {
+            return
+        }
+        campNotes = (try? db.campNotes(campId: activeCampId)) ?? []
     }
 
     private func reloadMission(missionId: String, clearNotice: Bool = true) {
@@ -978,9 +987,16 @@ final class AppStore {
         missionCards = (try? db.cards(missionId: missionId)) ?? []
         missionArtifacts = (try? db.missionArtifacts(missionId: missionId)) ?? []
         pendingRequests = (try? db.pendingUserRequests(missionId: missionId)) ?? []
-        var seenAssigneeIds = Set<String>()
-        let assigneeIds = missionCards.compactMap(\.assigneeId).filter { seenAssigneeIds.insert($0).inserted }
-        let companions = (try? db.companions(ids: assigneeIds)) ?? []
+        let companionIds: [String]
+        if let squad = try? db.squad(forMission: missionId),
+           let ids = try? JSONDecoder().decode([String].self, from: Data(squad.memberIdsJson.utf8)),
+           !ids.isEmpty {
+            companionIds = ids
+        } else {
+            var seenAssigneeIds = Set<String>()
+            companionIds = missionCards.compactMap(\.assigneeId).filter { seenAssigneeIds.insert($0).inserted }
+        }
+        let companions = (try? db.companions(ids: companionIds)) ?? []
         cardCompanions = Dictionary(companions.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let events = (try? db.events(missionId: missionId, limit: 200)) ?? []
         feedEntries = ActivityFeed.entries(events: events, cards: missionCards, companions: cardCompanions)
