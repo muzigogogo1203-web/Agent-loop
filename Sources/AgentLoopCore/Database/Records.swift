@@ -585,3 +585,72 @@ public struct CompanionNoteRecord: Codable, Sendable, FetchableRecord, Persistab
                      title: title, bodyMd: bodyMd, pinned: false, createdAt: now, updatedAt: now)
     }
 }
+
+// MARK: - MCP Server（驿站，M8-D2：全局注册 + 营地级启用）
+
+public struct McpServerRecord: Codable, Sendable, Equatable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "mcp_server"
+    public var id: String
+    /// 展示名，同时是工具名 `mcp__<server>__<tool>` 的 server 段来源——建后不可改名
+    /// （改名会使伙伴白名单里的显式工具名失配，McpStore 层不提供改名入口）。
+    public var name: String
+    public var command: String
+    public var argsJson: String
+    public var envJson: String
+    /// 敏感 env 的 key 名清单（JSON 数组）。值不落库，存 Keychain
+    /// account `mcp-<serverId>-<key>`（M8-D5），启动时合成注入。
+    public var secretEnvKeysJson: String
+    public var experimental: Bool
+    public var createdAt: Date
+
+    public init(id: String, name: String, command: String, argsJson: String, envJson: String,
+                secretEnvKeysJson: String, experimental: Bool, createdAt: Date) {
+        self.id = id
+        self.name = name
+        self.command = command
+        self.argsJson = argsJson
+        self.envJson = envJson
+        self.secretEnvKeysJson = secretEnvKeysJson
+        self.experimental = experimental
+        self.createdAt = createdAt
+    }
+
+    public static func new(name: String, command: String, args: [String],
+                           env: [String: String] = [:], secretEnvKeys: [String] = [],
+                           experimental: Bool = false) -> McpServerRecord {
+        .init(id: UUID().uuidString, name: name, command: command,
+              argsJson: Self.encodeJson(args), envJson: Self.encodeJson(env),
+              secretEnvKeysJson: Self.encodeJson(secretEnvKeys),
+              experimental: experimental, createdAt: Date())
+    }
+
+    public var args: [String] {
+        (try? JSONDecoder().decode([String].self, from: Data(argsJson.utf8))) ?? []
+    }
+
+    public var env: [String: String] {
+        (try? JSONDecoder().decode([String: String].self, from: Data(envJson.utf8))) ?? [:]
+    }
+
+    public var secretEnvKeys: [String] {
+        (try? JSONDecoder().decode([String].self, from: Data(secretEnvKeysJson.utf8))) ?? []
+    }
+
+    private static func encodeJson(_ value: some Encodable) -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        guard let data = try? encoder.encode(value) else { return "[]" }
+        return String(decoding: data, as: UTF8.self)
+    }
+}
+
+public struct CampMcpEnableRecord: Codable, Sendable, Equatable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "camp_mcp_enable"
+    public var campId: String
+    public var serverId: String
+
+    public init(campId: String, serverId: String) {
+        self.campId = campId
+        self.serverId = serverId
+    }
+}

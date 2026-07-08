@@ -1,5 +1,17 @@
 import Foundation
 
+/// 外部（MCP）工具装配单元（M8-D4）：def 进提示词工具区，handler 进分发表。
+/// 与内置工具走同一装配口（白名单过滤 + 审批门 + 三处同源），不开旁路。
+public struct ExternalTool: Sendable {
+    public let def: ToolDef
+    public let handler: any ToolHandler
+
+    public init(def: ToolDef, handler: any ToolHandler) {
+        self.def = def
+        self.handler = handler
+    }
+}
+
 public struct CardRunner: Sendable {
     let db: AppDatabase
     let provider: any LLMProvider
@@ -31,7 +43,8 @@ public struct CardRunner: Sendable {
         companionNotes: [NoteSnippet] = [],
         toolAccess: ToolAccess = .full,
         searchKey: String? = nil,
-        autonomy: MissionAutonomy = .standard
+        autonomy: MissionAutonomy = .standard,
+        externalTools: [ExternalTool] = []
     ) throws -> AsyncThrowingStream<AgentEvent, Error> {
         guard let card = try db.card(id: cardId) else {
             throw RecordNotFoundError(table: "card", id: cardId)
@@ -77,6 +90,11 @@ public struct CardRunner: Sendable {
         if let workspace {
             capabilityHandlers["run_shell"] = ShellTool(workspaceRoot: workspace)
         }
+        // M8-D4：MCP 外部工具走同一装配口。白名单语义（M6-D5b）：必须显式勾选，
+        // 存量 "[]"（=内置全量）与 v2 空名单都不包含 mcp__ 名——构造上不被继承。
+        for tool in externalTools where capabilityHandlers[tool.def.name] == nil {
+            capabilityHandlers[tool.def.name] = tool.handler
+        }
         for (name, handler) in capabilityHandlers where toolAccess.allows(name) {
             handlers[name] = handler
         }
@@ -89,7 +107,8 @@ public struct CardRunner: Sendable {
         }
         let executor = ToolExecutor(handlers: handlers)
         // 提示词工具区从 handlers 派生：可见即可用，构造上保证同源（D4/D8）
-        let tools = ToolDef.agentTools.filter { handlers.keys.contains($0.name) }
+        let tools = (ToolDef.agentTools + externalTools.map(\.def))
+            .filter { handlers.keys.contains($0.name) }
         let packet = ContextPacket(
             companionName: companionName,
             rolePrompt: rolePrompt,

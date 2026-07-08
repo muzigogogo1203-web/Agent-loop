@@ -197,6 +197,25 @@ public final class AppDatabase: Sendable {
                 t.add(column: "autonomy", .text).notNull().defaults(to: "standard")
             }
         }
+        // M8-D2: MCP 驿站——全局注册表 + 营地级启用关联（频道隔离与 M5-0 一致）。
+        // 敏感 env 值不落库（secretEnvKeysJson 只存 key 名，值在 Keychain，M8-D5）。
+        m.registerMigration("v6") { db in
+            try db.create(table: "mcp_server") { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull().unique()
+                t.column("command", .text).notNull()
+                t.column("argsJson", .text).notNull().defaults(to: "[]")
+                t.column("envJson", .text).notNull().defaults(to: "{}")
+                t.column("secretEnvKeysJson", .text).notNull().defaults(to: "[]")
+                t.column("experimental", .boolean).notNull().defaults(to: false)
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.create(table: "camp_mcp_enable") { t in
+                t.column("campId", .text).notNull().references("camp")
+                t.column("serverId", .text).notNull().references("mcp_server")
+                t.primaryKey(["campId", "serverId"])
+            }
+        }
         return m
     }
 

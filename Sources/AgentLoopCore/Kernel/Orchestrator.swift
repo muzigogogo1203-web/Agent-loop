@@ -48,6 +48,8 @@ public actor Orchestrator {
     /// M7-D8：429 全局冷却截止点（在途不动，只挡新派发）
     private var cooldownUntil: ContinuousClock.Instant?
     private let rateLimitCooldownDuration: Duration
+    /// M8-D4：MCP 驿站管理（nil = 未接驿路，一切照旧）
+    private let mcpManager: McpServerManager?
     private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "orchestrator")
 
     public init(
@@ -56,7 +58,8 @@ public actor Orchestrator {
         artifactStoreRoot: URL,
         tickInterval: Duration? = .seconds(5),
         searchKeyProvider: @escaping @Sendable () -> String? = { nil },
-        rateLimitCooldown: Duration = KernelDefaults.rateLimitCooldown
+        rateLimitCooldown: Duration = KernelDefaults.rateLimitCooldown,
+        mcpManager: McpServerManager? = nil
     ) {
         self.db = db
         self.makeProvider = makeProvider
@@ -64,6 +67,7 @@ public actor Orchestrator {
         self.tickInterval = tickInterval
         self.searchKeyProvider = searchKeyProvider
         self.rateLimitCooldownDuration = rateLimitCooldown
+        self.mcpManager = mcpManager
     }
 
     public func events() -> AsyncStream<KernelEvent> {
@@ -344,6 +348,9 @@ public actor Orchestrator {
             running.removeValue(forKey: cardId)
         }
 
+        // M8：先优雅停驿站（状态回 stopped，恢复后可自动再启），再扫尾杀残余子进程；
+        // 直接 terminateAll 会让驿站走「意外死亡」路径卡在 down（down 只能手动重启）。
+        await mcpManager?.stopAll()
         ShellProcessRegistry.shared.terminateAll()
         try? await db.pool.write { database in
             try AppDatabase.appendEvent(
@@ -712,6 +719,7 @@ public actor Orchestrator {
         planningTasks.removeAll()
         running.removeAll()
         distillTasks.removeAll()
+        await mcpManager?.stopAll()
         for (_, continuation) in continuations {
             continuation.finish()
         }
@@ -724,7 +732,8 @@ public actor Orchestrator {
             let answeredRequests = try db.answeredRequests(cardId: candidate.card.id)
                 .map { (prompt: $0.prompt, answer: $0.humanAnswer()) }
             // 知识注入（spec §6.2-5/6）：营地笔记 + 该伙伴的记忆
-            let campNotes = loadCampNotes(campId: try db.squad(forCard: candidate.card.id)?.campId)
+            let campId = try db.squad(forCard: candidate.card.id)?.campId
+            let campNotes = loadCampNotes(campId: campId)
             let companionNotes = loadCompanionNotes(companionId: candidate.assigneeId)
             // M6-D4：白名单解析失败回退全量并留痕，坏 JSON 不瘫痪卡片
             let toolAccess = ToolAccess.parse(toolsJson: candidate.toolsJson)
@@ -733,6 +742,8 @@ public actor Orchestrator {
                     missionId: candidate.card.missionId,
                     message: "伙伴「\(candidate.companionName)」工具白名单解析失败，本次按全量工具执行")
             }
+            let externalTools = await assembleMcpTools(
+                campId: campId, missionId: candidate.card.missionId, cardId: candidate.card.id)
             let stream = try CardRunner(
                 db: db,
                 provider: provider,
@@ -748,7 +759,8 @@ public actor Orchestrator {
                 companionNotes: companionNotes,
                 toolAccess: toolAccess,
                 searchKey: searchKeyProvider(),
-                autonomy: candidate.autonomy
+                autonomy: candidate.autonomy,
+                externalTools: externalTools
             )
             for try await event in stream {
                 await emitFromTask(.cardEvent(cardId: candidate.card.id, event))
@@ -768,6 +780,25 @@ public actor Orchestrator {
             await emitFromTask(.kernelError(missionId: candidate.card.missionId, message: message))
         }
         await runnerFinished(cardId: candidate.card.id, missionId: candidate.card.missionId)
+    }
+
+    /// MCP 外部工具装配（M8-D4）：按卡所在营地取启用驿站 → 确保在跑（down 不自动重试）
+    /// → 工具清单（缓存）→ 桥接为 ExternalTool。旁路增强：任何失败静默为空，不阻塞派发。
+    private func assembleMcpTools(campId: String?, missionId: String, cardId: String) async -> [ExternalTool] {
+        guard let mcpManager, let campId else { return [] }
+        guard let enabled = try? db.enabledMcpServers(campId: campId), !enabled.isEmpty else {
+            return []
+        }
+        await mcpManager.ensureRunning(serverIds: enabled.map(\.id))
+        let assembled = await mcpManager.assembledTools(campId: campId)
+        return assembled.map { tool in
+            ExternalTool(
+                def: tool.def,
+                handler: McpToolBridge(
+                    manager: mcpManager, db: db, missionId: missionId, cardId: cardId,
+                    serverId: tool.serverId, serverName: tool.serverName,
+                    toolName: tool.originalToolName))
+        }
     }
 
     /// 知识注入是旁路增强：读取失败不阻塞规划/派发，静默为空。

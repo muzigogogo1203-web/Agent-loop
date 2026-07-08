@@ -158,7 +158,11 @@ extension ToolDef {
     ]
 
     /// 工具中文名（M6-D5）：单点维护，UI 层（活动行/伙伴编辑器）统一查这里。
+    /// MCP 工具（M8）：`mcp__<server>__<tool>` → 「驿站·server / tool」。
     public static func displayName(_ name: String) -> String {
+        if let parsed = McpToolNaming.parse(name) {
+            return "驿站·\(parsed.server) / \(parsed.tool)"
+        }
         switch name {
         case "complete_card": return "提交交接包"
         case "block_card": return "报告受阻"

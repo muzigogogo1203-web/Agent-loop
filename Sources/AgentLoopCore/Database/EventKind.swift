@@ -45,4 +45,7 @@ public enum EventKind {
     // 知识层
     public static let campNoteCreated = "camp_note_created"
     public static let companionNoteCreated = "companion_note_created"
+
+    // 驿路（M8）：MCP server 停摆（挂在受影响行动上，UI 可渲染）
+    public static let mcpServerDown = "mcp_server_down"
 }
