@@ -11,7 +11,9 @@ public struct OpenAIResponsesProvider: LLMProvider {
     let baseURL: URL
     let retryBaseDelay: Duration
     let maxRetries: Int
+    let tokenRefresher: (@Sendable () async throws -> String)?
 
+    static let toolErrorMarker = "[tool_error] "
     private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "provider.openai.responses")
     private static let streamingSession: URLSession = {
         let configuration = URLSessionConfiguration.default
@@ -26,7 +28,8 @@ public struct OpenAIResponsesProvider: LLMProvider {
         model: String,
         baseURL: URL = OpenAIChatGPTAuth.responsesBaseURL,
         retryBaseDelay: Duration = .seconds(1),
-        maxRetries: Int = 3
+        maxRetries: Int = 3,
+        tokenRefresher: (@Sendable () async throws -> String)? = nil
     ) {
         self.init(
             accessToken: accessToken,
@@ -35,7 +38,8 @@ public struct OpenAIResponsesProvider: LLMProvider {
             session: Self.streamingSession,
             baseURL: baseURL,
             retryBaseDelay: retryBaseDelay,
-            maxRetries: maxRetries
+            maxRetries: maxRetries,
+            tokenRefresher: tokenRefresher
         )
     }
 
@@ -46,7 +50,8 @@ public struct OpenAIResponsesProvider: LLMProvider {
         session: URLSession,
         baseURL: URL = OpenAIChatGPTAuth.responsesBaseURL,
         retryBaseDelay: Duration = .seconds(1),
-        maxRetries: Int = 3
+        maxRetries: Int = 3,
+        tokenRefresher: (@Sendable () async throws -> String)? = nil
     ) {
         self.accessToken = accessToken
         self.accountID = accountID
@@ -55,6 +60,7 @@ public struct OpenAIResponsesProvider: LLMProvider {
         self.baseURL = baseURL
         self.retryBaseDelay = retryBaseDelay
         self.maxRetries = maxRetries
+        self.tokenRefresher = tokenRefresher
     }
 
     public static func requestBody(
@@ -130,18 +136,9 @@ public struct OpenAIResponsesProvider: LLMProvider {
         maxTokens: Int,
         continuation: AsyncThrowingStream<ProviderEvent, Error>.Continuation
     ) async throws {
-        var request = URLRequest(url: baseURL.appending(path: "responses"))
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue(accountID, forHTTPHeaderField: "ChatGPT-Account-ID")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        request.setValue(OpenAIChatGPTAuth.originator, forHTTPHeaderField: "originator")
-        request.setValue("codex-cli", forHTTPHeaderField: "User-Agent")
-
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        request.httpBody = try encoder.encode(
+        let body = try encoder.encode(
             Self.requestBody(
                 model: model,
                 system: system,
@@ -152,9 +149,11 @@ public struct OpenAIResponsesProvider: LLMProvider {
             )
         )
 
-        var attempt = 0
+        var retryAttempt = 0
+        var currentAccessToken = accessToken
+        var refreshedThisCall = false
         while true {
-            attempt += 1
+            let request = makeRequest(accessToken: currentAccessToken, body: body)
             let (bytes, response) = try await session.bytes(for: request)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             switch status {
@@ -162,16 +161,22 @@ public struct OpenAIResponsesProvider: LLMProvider {
                 try await consumeStream(bytes, continuation: continuation)
                 return
             case 401, 403:
-                throw ProviderError.unauthorized
+                guard let tokenRefresher, !refreshedThisCall else {
+                    throw ProviderError.unauthorized
+                }
+                currentAccessToken = try await tokenRefresher()
+                refreshedThisCall = true
+                continue
             case 429, 500...599:
-                guard attempt <= maxRetries else { throw ProviderError.overloadedRetriesExhausted }
+                retryAttempt += 1
+                guard retryAttempt <= maxRetries else { throw ProviderError.overloadedRetriesExhausted }
                 let retryAfterSeconds = (response as? HTTPURLResponse)?
                     .value(forHTTPHeaderField: "retry-after").flatMap(Double.init)
                 let delay: Duration
                 if let seconds = retryAfterSeconds, seconds.isFinite, seconds >= 0 {
                     delay = .seconds(min(seconds, 60))
                 } else {
-                    delay = retryBaseDelay * (1 << (attempt - 1))
+                    delay = retryBaseDelay * (1 << (retryAttempt - 1))
                 }
                 try await Task.sleep(for: delay)
             default:
@@ -183,6 +188,19 @@ public struct OpenAIResponsesProvider: LLMProvider {
                 throw ProviderError.http(status: status, body: body)
             }
         }
+    }
+
+    private func makeRequest(accessToken: String, body: Data) -> URLRequest {
+        var request = URLRequest(url: baseURL.appending(path: "responses"))
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(accountID, forHTTPHeaderField: "ChatGPT-Account-ID")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.setValue(OpenAIChatGPTAuth.originator, forHTTPHeaderField: "originator")
+        request.setValue("codex-cli", forHTTPHeaderField: "User-Agent")
+        request.httpBody = body
+        return request
     }
 
     private func consumeStream(
@@ -249,11 +267,13 @@ public struct OpenAIResponsesProvider: LLMProvider {
                     ])
                 }
                 for block in message.content {
-                    if case .toolResult(let id, let content, _) = block {
+                    if case .toolResult(let id, let content, let isError) = block {
+                        // Responses function_call_output has no native error field; mark text so the model can see failed tool calls.
+                        let output = isError ? toolErrorMarker + content : content
                         items.append([
                             "type": "function_call_output",
                             "call_id": .string(id),
-                            "output": .string(content),
+                            "output": .string(output),
                         ])
                     }
                 }

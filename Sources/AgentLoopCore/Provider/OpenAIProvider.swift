@@ -289,8 +289,9 @@ public struct OpenAIProvider: LLMProvider {
                 output.append(["role": "user", "content": .string(text)])
             }
             for block in message.content {
-                if case .toolResult(let id, let content, _) = block {
-                    output.append(["role": "tool", "tool_call_id": .string(id), "content": .string(content)])
+                if case .toolResult(let id, let content, let isError) = block {
+                    let outputContent = isError ? OpenAIResponsesProvider.toolErrorMarker + content : content
+                    output.append(["role": "tool", "tool_call_id": .string(id), "content": .string(outputContent)])
                 }
             }
             return output.isEmpty ? [["role": "user", "content": ""]] : output

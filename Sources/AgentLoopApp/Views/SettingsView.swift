@@ -59,6 +59,12 @@ struct SettingsView: View {
                         }
                         .buttonStyle(CampSecondaryButtonStyle())
                     }
+                    if store.apiFormat == .openAIChatCompletions,
+                       store.preferredCredentialSource == .webLogin {
+                        Label("网页登录固定使用 ChatGPT 官方后端，自定义端点仅对 API key 生效", systemImage: "lock.fill")
+                            .foregroundStyle(Camp.inkSecondary)
+                            .font(.caption)
+                    }
                 }
                 .campCard()
 
@@ -89,6 +95,11 @@ struct SettingsView: View {
                     if let status = store.oauthLoginStatus {
                         Label(status, systemImage: store.webCredentialPresent ? "checkmark.circle.fill" : "info.circle")
                             .foregroundStyle(store.webCredentialPresent ? Camp.moss : Camp.inkSecondary)
+                            .font(.caption)
+                    }
+                    if store.oauthNeedsRelogin {
+                        Label("登录已过期", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Camp.ember)
                             .font(.caption)
                     }
                     Divider()

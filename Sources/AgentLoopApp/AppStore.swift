@@ -4,6 +4,19 @@ import Network
 import Security
 import AgentLoopCore
 
+private final class OpenAIOAuthReloginHandler: @unchecked Sendable {
+    @MainActor weak var store: AppStore?
+
+    func markPermanentFailure() {
+        Task { @MainActor [weak self] in
+            guard let store = self?.store else { return }
+            store.oauthNeedsRelogin = true
+            store.oauthLoginStatus = "ChatGPT 登录已过期，请在设置里重新登录"
+            store.reload()
+        }
+    }
+}
+
 @MainActor @Observable
 final class AppStore {
     struct ActivityItem: Identifiable, Equatable {
@@ -19,6 +32,7 @@ final class AppStore {
     private let stateDirectoryLock: StateDirectoryLock
     let db: AppDatabase
     let keychain: KeychainStore
+    private let openAIOAuthSession: OpenAIOAuthSession?
     let artifactStoreRoot: URL
     let reportStoreRoot: URL
     let orchestrator: Orchestrator
@@ -38,6 +52,7 @@ final class AppStore {
         didSet { UserDefaults.standard.set(preferredCredentialSource.rawValue, forKey: "preferredCredentialSource") }
     }
     var oauthLoginStatus: String?
+    var oauthNeedsRelogin = false
     /// M6-D8：Tavily key 在场与否决定 web_search 是否可用（编辑器置灰提示用）
     var searchKeyPresent = false
     /// M6-D11：默认模型持久化（修「重启复位」bug）
@@ -268,7 +283,19 @@ final class AppStore {
 
     init() {
         let keychainStore = KeychainStore()
+        let reloginHandler = OpenAIOAuthReloginHandler()
+        let openAISession = Self.isUIPreview ? nil : OpenAIOAuthSession(
+            store: keychainStore,
+            accessTokenAccount: Self.oauthAccessTokenAccount,
+            refreshTokenAccount: Self.oauthRefreshTokenAccount,
+            idTokenAccount: Self.oauthIDTokenAccount,
+            chatGPTAccountIDAccount: Self.oauthChatGPTAccountIDAccount,
+            onPermanentFailure: {
+                reloginHandler.markPermanentFailure()
+            }
+        )
         keychain = keychainStore
+        openAIOAuthSession = openAISession
         apiFormat = ProviderAPIFormat(
             rawValue: UserDefaults.standard.string(forKey: "apiFormat") ?? ""
         ) ?? .anthropicMessages
@@ -327,7 +354,8 @@ final class AppStore {
                     credential: credential,
                     format: format,
                     model: model,
-                    baseURL: base
+                    baseURL: base,
+                    tokenRefresher: Self.tokenRefresher(for: openAISession)
                 )
             },
             artifactStoreRoot: artifactStoreRoot,
@@ -372,6 +400,7 @@ final class AppStore {
         reload()
         startKernelEventListener(recoverKernel: !Self.isUIPreview)
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
+        reloginHandler.store = self
     }
 
     /// 环境变量 AGENTLOOP_UI_PREVIEW=1 时为 UI 预览模式：不读钥匙串、不调度任务
@@ -415,14 +444,16 @@ final class AppStore {
         credential: StoredCredential?,
         format: ProviderAPIFormat,
         model: String,
-        baseURL: URL
+        baseURL: URL,
+        tokenRefresher: (@Sendable () async throws -> String)? = nil
     ) -> any LLMProvider {
         if format == .openAIChatCompletions,
            credential?.source == .webLogin {
             return OpenAIResponsesProvider(
                 accessToken: credential?.value ?? "",
                 accountID: credential?.chatGPTAccountID ?? "",
-                model: model
+                model: model,
+                tokenRefresher: tokenRefresher
             )
         }
         return LLMProviderFactory.make(
@@ -432,6 +463,15 @@ final class AppStore {
             model: model,
             baseURL: baseURL
         )
+    }
+
+    nonisolated private static func tokenRefresher(
+        for session: OpenAIOAuthSession?
+    ) -> (@Sendable () async throws -> String)? {
+        guard let session else { return nil }
+        return {
+            try await session.refreshedAccessToken()
+        }
     }
 
     func reload() {
@@ -487,7 +527,8 @@ final class AppStore {
             credential: credential,
             format: apiFormat,
             model: model,
-            baseURL: base
+            baseURL: base,
+            tokenRefresher: Self.tokenRefresher(for: openAIOAuthSession)
         )
     }
 
@@ -568,7 +609,7 @@ final class AppStore {
             oauthCallbackListener = listener
             return true
         } catch {
-            oauthLoginStatus = "OpenAI Auth 需要本机端口 \(OpenAIChatGPTAuth.callbackPort)，当前无法监听：\(readableError(error))"
+            oauthLoginStatus = "OpenAI Auth 需要本机端口 1455，当前被占用（可能是 Codex CLI 或上次未完成的登录）；请关闭占用程序后重试"
             return false
         }
     }
@@ -693,13 +734,21 @@ final class AppStore {
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("codex-cli", forHTTPHeaderField: "User-Agent")
-        request.httpBody = Self.formURLEncoded([
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": redirectURI,
-            "client_id": clientID,
-            "code_verifier": codeVerifier,
-        ])
+        let requestBody: Data? = clientID == OpenAIChatGPTAuth.clientID
+            ? OpenAIChatGPTAuth.tokenRequestBody(code: code, codeVerifier: codeVerifier)
+            : Self.formURLEncoded([
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": redirectURI,
+                "client_id": clientID,
+                "code_verifier": codeVerifier,
+            ])
+        guard let requestBody else {
+            oauthLoginStatus = "无法编码 OAuth 请求体"
+            stopOpenAIAuthCallbackListener()
+            return
+        }
+        request.httpBody = requestBody
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -760,6 +809,7 @@ final class AppStore {
         try? keychain.delete(account: Self.oauthCodeVerifierAccount)
         UserDefaults.standard.removeObject(forKey: Self.oauthStateKey)
         preferredCredentialSource = .webLogin
+        oauthNeedsRelogin = false
         oauthLoginStatus = "网页登录授权已完成"
         stopOpenAIAuthCallbackListener()
         reload()
