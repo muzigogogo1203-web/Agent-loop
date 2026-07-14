@@ -36,6 +36,11 @@ enum Camp {
     /// 炭红——错误
     static let charcoalRed = dynamic(light: 0xB9553F, dark: 0xD07B62)
 
+    /// Coding 牧场新增语义面：喂入材料与轻提示，不改变原有 Camp 主色体系。
+    static let hay = dynamic(light: 0xEFE2BF, dark: 0x443824)
+    static let pasture = dynamic(light: 0xE7EFE0, dark: 0x263424)
+    static let skyWash = dynamic(light: 0xE8F0F5, dark: 0x24313A)
+
     static let cornerRadius: CGFloat = 14
     static let smallRadius: CGFloat = 10
 
@@ -96,6 +101,29 @@ struct CampChip: View {
         .padding(.vertical, 3.5)
         .foregroundStyle(color)
         .background(color.opacity(0.14), in: Capsule())
+    }
+}
+
+// MARK: - Coding 牧场状态容器
+
+struct CampStatusPanel: ViewModifier {
+    let color: Color
+
+    func body(content: Content) -> some View {
+        content
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                    .stroke(color.opacity(0.32), lineWidth: 1)
+            )
+    }
+}
+
+extension View {
+    func campStatusPanel(_ color: Color) -> some View {
+        modifier(CampStatusPanel(color: color))
     }
 }
 

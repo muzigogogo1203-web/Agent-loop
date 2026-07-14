@@ -10,7 +10,7 @@ struct NoteItem: Identifiable, Equatable {
 
         var label: String {
             switch self {
-            case .closeout: "收营"
+            case .closeout: "回营"
             case .manual: "手记"
             case .dm: "私聊"
             }

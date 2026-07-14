@@ -18,7 +18,7 @@ struct McpStationSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             CampSectionTitle("MCP 驿站")
-            Text("驿站是外部工具的补给点（MCP server）。全局注册，按营地启用（营地首页勾选），再在伙伴编辑器里按人授权后伙伴才能用。")
+            Text("驿站是外部工具的补给点（MCP server）。全局注册，按营地启用，再在牛的档案里逐只授权后才能使用。")
                 .font(.caption)
                 .foregroundStyle(Camp.inkSecondary)
 
@@ -124,7 +124,7 @@ struct McpStationSection: View {
             }
             Button("取消", role: .cancel) { deleteCandidate = nil }
         } message: {
-            Text("已勾选它工具的伙伴会失去这些工具（白名单里的名字保留，重新添加同名驿站即恢复）。")
+            Text("已勾选它工具的牛会失去这些工具（白名单里的名字保留，重新添加同名驿站即恢复）。")
         }
     }
 

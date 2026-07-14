@@ -46,6 +46,15 @@ public enum EventKind {
     public static let campNoteCreated = "camp_note_created"
     public static let companionNoteCreated = "companion_note_created"
 
+    // Coding 牧场产品层
+    public static let baseCowProvisioned = "base_cow_provisioned"
+    public static let ingestionCreated = "ingestion_created"
+    public static let ruminationCompleted = "rumination_completed"
+    public static let ruminationFailed = "rumination_failed"
+    public static let ruminationMaterialized = "rumination_materialized"
+    public static let actionCandidateConverted = "action_candidate_converted"
+    public static let cowUnlocked = "cow_unlocked"
+
     // 驿路（M8）：MCP server 停摆（挂在受影响行动上，UI 可渲染）
     public static let mcpServerDown = "mcp_server_down"
 

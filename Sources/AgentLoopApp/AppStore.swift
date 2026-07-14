@@ -30,6 +30,8 @@ final class AppStore {
     var camps: [CampRecord] = []
     /// 侧栏用：各营地的行动列表（含历史，UI 侧再分组）
     var missionsByCamp: [String: [MissionRecord]] = [:]
+    var codingRanchDashboard: CampDashboardViewState?
+    var codingRanchInbox = RuminationInboxViewState(loadState: .idle, items: [])
     var apiKeyPresent = false
     var webCredentialPresent = false
     var preferredCredentialSource: ProviderCredentialSource = .apiKey {
@@ -139,6 +141,7 @@ final class AppStore {
     private struct StoredCredential: Sendable {
         var value: String
         var source: ProviderCredentialSource
+        var chatGPTAccountID: String?
 
         var authScheme: ProviderAuthScheme {
             switch source {
@@ -153,16 +156,13 @@ final class AppStore {
     nonisolated private static let apiKeyAccount = "anthropic-api-key"
     nonisolated private static let oauthAccessTokenAccount = "oauth-access-token"
     nonisolated private static let oauthRefreshTokenAccount = "oauth-refresh-token"
+    nonisolated private static let oauthIDTokenAccount = "oauth-id-token"
+    nonisolated private static let oauthChatGPTAccountIDAccount = "oauth-chatgpt-account-id"
     nonisolated private static let oauthCodeVerifierAccount = "oauth-code-verifier"
     nonisolated private static let preferredCredentialSourceKey = "preferredCredentialSource"
     nonisolated private static let oauthStateKey = "oauthState"
     nonisolated private static let genericOAuthClientID = "agentloop"
     nonisolated private static let genericOAuthRedirectURI = "agentloop://oauth/callback"
-    nonisolated private static let openAIAuthClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
-    nonisolated private static let openAIAuthCallbackPort: UInt16 = 1455
-    nonisolated private static let openAIAuthRedirectURI = "http://localhost:1455/auth/callback"
-    nonisolated private static let openAIAuthURL = URL(string: "https://auth.openai.com/oauth/authorize")!
-    nonisolated private static let openAIAuthTokenURL = URL(string: "https://auth.openai.com/oauth/token")!
     nonisolated private static let oauthCallbackQueue = DispatchQueue(label: "com.muzi.agentloop.oauth-callback")
 
     /// 默认行动预算（M5-2，spec §13：设置页可改；propose_squad 缺省随之）
@@ -323,10 +323,9 @@ final class AppStore {
                 let format = ProviderAPIFormat(
                     rawValue: UserDefaults.standard.string(forKey: "apiFormat") ?? ""
                 ) ?? .anthropicMessages
-                return LLMProviderFactory.make(
+                return Self.makeProvider(
+                    credential: credential,
                     format: format,
-                    authScheme: credential?.authScheme ?? .automatic,
-                    credential: credential?.value ?? "",
                     model: model,
                     baseURL: base
                 )
@@ -342,7 +341,7 @@ final class AppStore {
             mcpManager: mcpManager,
             requiresStartupRecovery: !isPreview
         )
-        try! db.ensureDefaultCamp()
+        try! db.ensureCodingRanchBootstrap()
         apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
         let storedBudget = UserDefaults.standard.integer(forKey: "defaultMissionBudget")
         if storedBudget > 0 {
@@ -392,17 +391,47 @@ final class AppStore {
             rawValue: UserDefaults.standard.string(forKey: preferredCredentialSourceKey) ?? ""
         ) ?? .apiKey
         let apiKey = nonEmptyCredential(try? keychain.get(account: apiKeyAccount))
-        let oauthToken = nonEmptyCredential(try? keychain.get(account: oauthAccessTokenAccount))
+        let chatGPTAccountID = nonEmptyCredential(try? keychain.get(account: oauthChatGPTAccountIDAccount))
+        let format = ProviderAPIFormat(
+            rawValue: UserDefaults.standard.string(forKey: "apiFormat") ?? ""
+        ) ?? .anthropicMessages
+        let rawOAuthToken = nonEmptyCredential(try? keychain.get(account: oauthAccessTokenAccount))
+        let oauthToken = format == .openAIChatCompletions && chatGPTAccountID == nil
+            ? nil
+            : rawOAuthToken
 
         switch preferred {
         case .webLogin:
-            if let oauthToken { return StoredCredential(value: oauthToken, source: .webLogin) }
-            if let apiKey { return StoredCredential(value: apiKey, source: .apiKey) }
+            if let oauthToken { return StoredCredential(value: oauthToken, source: .webLogin, chatGPTAccountID: chatGPTAccountID) }
+            if let apiKey { return StoredCredential(value: apiKey, source: .apiKey, chatGPTAccountID: nil) }
         case .apiKey:
-            if let apiKey { return StoredCredential(value: apiKey, source: .apiKey) }
-            if let oauthToken { return StoredCredential(value: oauthToken, source: .webLogin) }
+            if let apiKey { return StoredCredential(value: apiKey, source: .apiKey, chatGPTAccountID: nil) }
+            if let oauthToken { return StoredCredential(value: oauthToken, source: .webLogin, chatGPTAccountID: chatGPTAccountID) }
         }
         return nil
+    }
+
+    nonisolated private static func makeProvider(
+        credential: StoredCredential?,
+        format: ProviderAPIFormat,
+        model: String,
+        baseURL: URL
+    ) -> any LLMProvider {
+        if format == .openAIChatCompletions,
+           credential?.source == .webLogin {
+            return OpenAIResponsesProvider(
+                accessToken: credential?.value ?? "",
+                accountID: credential?.chatGPTAccountID ?? "",
+                model: model
+            )
+        }
+        return LLMProviderFactory.make(
+            format: format,
+            authScheme: credential?.authScheme ?? .automatic,
+            credential: credential?.value ?? "",
+            model: model,
+            baseURL: baseURL
+        )
     }
 
     func reload() {
@@ -413,8 +442,15 @@ final class AppStore {
         searchKeyPresent = Self.isUIPreview
             ? false
             : (((try? keychain.get(account: "tavily-api-key")) ?? nil).map { !$0.isEmpty } ?? false)
+        let hasOAuthToken = Self.nonEmptyCredential(
+            try? keychain.get(account: Self.oauthAccessTokenAccount)
+        ) != nil
+        let hasChatGPTAccount = Self.nonEmptyCredential(
+            try? keychain.get(account: Self.oauthChatGPTAccountIDAccount)
+        ) != nil
         webCredentialPresent = !Self.isUIPreview
-            && Self.nonEmptyCredential(try? keychain.get(account: Self.oauthAccessTokenAccount)) != nil
+            && hasOAuthToken
+            && (apiFormat != .openAIChatCompletions || hasChatGPTAccount)
         reloadMissionList()
         reloadArtifactLedger()
     }
@@ -447,10 +483,9 @@ final class AppStore {
         }
         let base = ProviderEndpoint.normalizedBaseURL(apiBaseURL)
             ?? URL(string: Self.defaultBaseURL)!
-        return LLMProviderFactory.make(
+        return Self.makeProvider(
+            credential: credential,
             format: apiFormat,
-            authScheme: credential.authScheme,
-            credential: credential.value,
             model: model,
             baseURL: base
         )
@@ -498,22 +533,15 @@ final class AppStore {
         UserDefaults.standard.set(state, forKey: Self.oauthStateKey)
         try? keychain.set(codeVerifier, account: Self.oauthCodeVerifierAccount)
 
-        var components = URLComponents(url: Self.openAIAuthURL, resolvingAgainstBaseURL: false)
-        components?.queryItems = [
-            URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "client_id", value: Self.openAIAuthClientID),
-            URLQueryItem(name: "redirect_uri", value: Self.openAIAuthRedirectURI),
-            URLQueryItem(name: "state", value: state),
-            URLQueryItem(name: "code_challenge", value: Self.codeChallenge(for: codeVerifier)),
-            URLQueryItem(name: "code_challenge_method", value: "S256"),
-            URLQueryItem(name: "codex_streamlined_login", value: "true"),
-        ]
-        return components?.url
+        return OpenAIChatGPTAuth.authorizationURL(
+            state: state,
+            codeChallenge: Self.codeChallenge(for: codeVerifier)
+        )
     }
 
     private func startOpenAIAuthCallbackListener() -> Bool {
         stopOpenAIAuthCallbackListener()
-        guard let port = NWEndpoint.Port(rawValue: Self.openAIAuthCallbackPort) else {
+        guard let port = NWEndpoint.Port(rawValue: OpenAIChatGPTAuth.callbackPort) else {
             oauthLoginStatus = "OpenAI Auth 回调端口无效"
             return false
         }
@@ -540,7 +568,7 @@ final class AppStore {
             oauthCallbackListener = listener
             return true
         } catch {
-            oauthLoginStatus = "OpenAI Auth 需要本机端口 \(Self.openAIAuthCallbackPort)，当前无法监听：\(readableError(error))"
+            oauthLoginStatus = "OpenAI Auth 需要本机端口 \(OpenAIChatGPTAuth.callbackPort)，当前无法监听：\(readableError(error))"
             return false
         }
     }
@@ -553,9 +581,10 @@ final class AppStore {
     private func handleOpenAIAuthLocalCallback(_ url: URL) {
         finishOAuthCallback(
             params: Self.callbackParameters(from: url),
-            tokenEndpoint: Self.openAIAuthTokenURL,
-            redirectURI: Self.openAIAuthRedirectURI,
-            clientID: Self.openAIAuthClientID
+            tokenEndpoint: OpenAIChatGPTAuth.tokenEndpoint,
+            redirectURI: OpenAIChatGPTAuth.redirectURI,
+            clientID: OpenAIChatGPTAuth.clientID,
+            requiresChatGPTAccountID: true
         )
     }
 
@@ -563,7 +592,8 @@ final class AppStore {
         params: [String: String],
         tokenEndpoint: URL?,
         redirectURI: String,
-        clientID: String
+        clientID: String,
+        requiresChatGPTAccountID: Bool = false
     ) {
         if let error = Self.nonEmptyCredential(params["error"]) {
             oauthLoginStatus = "网页登录失败：\(params["error_description"] ?? error)"
@@ -591,7 +621,8 @@ final class AppStore {
                     code,
                     tokenEndpoint: tokenEndpoint,
                     redirectURI: redirectURI,
-                    clientID: clientID
+                    clientID: clientID,
+                    requiresChatGPTAccountID: requiresChatGPTAccountID
                 )
             }
             return
@@ -643,7 +674,8 @@ final class AppStore {
         _ code: String,
         tokenEndpoint: URL?,
         redirectURI: String,
-        clientID: String
+        clientID: String,
+        requiresChatGPTAccountID: Bool
     ) async {
         guard let endpoint = tokenEndpoint else {
             oauthLoginStatus = "服务方没有提供可自动换取 token 的 OAuth 入口"
@@ -659,6 +691,8 @@ final class AppStore {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("codex-cli", forHTTPHeaderField: "User-Agent")
         request.httpBody = Self.formURLEncoded([
             "grant_type": "authorization_code",
             "code": code,
@@ -682,17 +716,46 @@ final class AppStore {
                 stopOpenAIAuthCallbackListener()
                 return
             }
-            saveWebCredential(accessToken: accessToken, refreshToken: object?["refresh_token"] as? String)
+            let idToken = Self.nonEmptyCredential(object?["id_token"] as? String)
+            let chatGPTAccountID = idToken.flatMap {
+                OpenAIChatGPTAuth.chatGPTAccountID(idToken: $0, accessToken: accessToken)
+            }
+            if requiresChatGPTAccountID, chatGPTAccountID == nil {
+                oauthLoginStatus = "OpenAI Auth 响应缺少 ChatGPT 账户信息，请重新授权"
+                stopOpenAIAuthCallbackListener()
+                return
+            }
+            saveWebCredential(
+                accessToken: accessToken,
+                refreshToken: object?["refresh_token"] as? String,
+                idToken: idToken,
+                chatGPTAccountID: chatGPTAccountID
+            )
         } catch {
             oauthLoginStatus = "OAuth 换 token 失败：\(readableError(error))"
             stopOpenAIAuthCallbackListener()
         }
     }
 
-    private func saveWebCredential(accessToken: String, refreshToken: String?) {
+    private func saveWebCredential(
+        accessToken: String,
+        refreshToken: String?,
+        idToken: String? = nil,
+        chatGPTAccountID: String? = nil
+    ) {
         try? keychain.set(accessToken, account: Self.oauthAccessTokenAccount)
         if let refreshToken = Self.nonEmptyCredential(refreshToken) {
             try? keychain.set(refreshToken, account: Self.oauthRefreshTokenAccount)
+        }
+        if let idToken = Self.nonEmptyCredential(idToken) {
+            try? keychain.set(idToken, account: Self.oauthIDTokenAccount)
+        } else {
+            try? keychain.delete(account: Self.oauthIDTokenAccount)
+        }
+        if let chatGPTAccountID = Self.nonEmptyCredential(chatGPTAccountID) {
+            try? keychain.set(chatGPTAccountID, account: Self.oauthChatGPTAccountIDAccount)
+        } else {
+            try? keychain.delete(account: Self.oauthChatGPTAccountIDAccount)
         }
         try? keychain.delete(account: Self.oauthCodeVerifierAccount)
         UserDefaults.standard.removeObject(forKey: Self.oauthStateKey)
@@ -726,7 +789,7 @@ final class AppStore {
             guard let data,
                   let request = String(data: data, encoding: .utf8),
                   let target = Self.httpRequestTarget(from: request),
-                  let url = URL(string: "http://localhost:\(Self.openAIAuthCallbackPort)\(target)") else {
+                  let url = URL(string: "http://localhost:\(OpenAIChatGPTAuth.callbackPort)\(target)") else {
                 Self.respondToOAuthCallback(connection: connection, ok: false)
                 return
             }
@@ -745,8 +808,8 @@ final class AppStore {
     }
 
     nonisolated private static func respondToOAuthCallback(connection: NWConnection, ok: Bool) {
-        let title = ok ? "AgentLoop 登录完成" : "AgentLoop 登录失败"
-        let message = ok ? "可以回到 AgentLoop 继续了。" : "AgentLoop 没有识别这次登录回调，请重新授权。"
+        let title = ok ? "Coding 牧场登录完成" : "Coding 牧场登录失败"
+        let message = ok ? "可以回到 Coding 牧场继续了。" : "Coding 牧场没有识别这次登录回调，请重新授权。"
         let body = """
         <!doctype html>
         <html>
@@ -1478,7 +1541,7 @@ final class AppStore {
         guideToolActivity = nil
         Task { await coalescer?.discard() }
         reloadGuideMessages()
-        showToast("已停下向导这条回复")
+        showToast("已停下营地管家这条回复")
     }
 
     func loadChatHistory(companion: CompanionRecord) {
@@ -1617,7 +1680,7 @@ final class AppStore {
             } catch {
                 await coalescer.discard()
                 if guideStreamID == streamID {
-                    showToast("向导这会儿联系不上：\(readableError(error))")
+                    showToast("营地管家这会儿联系不上：\(readableError(error))")
                 }
             }
             if guideStreamID == streamID {
@@ -1785,10 +1848,10 @@ final class AppStore {
 
     private static func humanGuideToolName(_ name: String) -> String {
         switch name {
-        case "search_camp_notes": return "向导翻了翻笔记本…"
-        case "camp_status": return "向导看了看营地各处…"
-        case "propose_squad": return "向导在拟组队提案…"
-        default: return "向导在忙…"
+        case "search_camp_notes": return "营地管家翻了翻笔记本…"
+        case "camp_status": return "营地管家看了看营地各处…"
+        case "propose_squad": return "营地管家在拟组队提案…"
+        default: return "营地管家在忙…"
         }
     }
 }

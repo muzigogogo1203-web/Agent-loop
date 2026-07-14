@@ -1,7 +1,7 @@
 import SwiftUI
 import AgentLoopCore
 
-/// 营地首页（spec §11 一等界面）：左营地笔记本 + 右向导常驻对话。
+/// 营地管家辅助页：左营地笔记本 + 右管家常驻对话。
 struct CampHomeView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -13,6 +13,8 @@ struct CampHomeView: View {
     @State private var renaming = false
     @State private var renameText = ""
     @State private var enabledStations: Set<String> = []
+    @State private var showFeedComposer = false
+    @State private var showRumination = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -49,6 +51,47 @@ struct CampHomeView: View {
         .background(Camp.canvas)
         .task(id: campId) {
             store.loadCampHome(campId: campId)
+            await store.loadDashboard(campId: campId)
+        }
+        .sheet(isPresented: $showFeedComposer) {
+            FeedComposerView(
+                draft: FeedDraft(campId: campId),
+                campName: store.campName,
+                modelConnection: modelConnection,
+                onSaveDraft: store.saveFeedDraft,
+                onSubmit: { draft, start in
+                    try await store.submitFeed(draft, startRumination: start)
+                },
+                onSubmitDuplicate: { draft, start in
+                    try await store.submitDuplicateAnyway(draft, startRumination: start)
+                },
+                onCancel: {
+                    showFeedComposer = false
+                    Task { await store.loadDashboard(campId: campId) }
+                }
+            )
+            .frame(minWidth: 640, minHeight: 680)
+        }
+        .sheet(isPresented: $showRumination) {
+            CampRuminationSheet(
+                campId: campId,
+                onClose: {
+                    showRumination = false
+                    Task { await store.loadDashboard(campId: campId) }
+                },
+                onOpenMission: { missionId in
+                    showRumination = false
+                    onOpenMission(missionId)
+                },
+                onFeed: {
+                    showRumination = false
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(180))
+                        showFeedComposer = true
+                    }
+                }
+            )
+            .frame(width: 820, height: 600)
         }
         .alert("重命名营地", isPresented: $renaming) {
             TextField("营地名字", text: $renameText)
@@ -63,7 +106,7 @@ struct CampHomeView: View {
         NoteListPane(
                             title: "营地笔记",
                             items: store.campNotes.map(NoteItem.init),
-                            emptyText: "还没有营地笔记——收营后会自动沉淀，或让向导帮你记。",
+                            emptyText: "还没有营地笔记——回营后会自动沉淀，或让营地管家帮你记。",
                             onSave: { id, title, body in
                                 guard var record = store.campNotes.first(where: { $0.id == id }) else { return }
                                 record.title = title
@@ -115,7 +158,7 @@ struct CampHomeView: View {
                     }
                     .toggleStyle(.checkbox)
                 }
-                Text("启用后，本营地行动派发时会拉起驿站；工具还需在伙伴编辑器里按人勾选。")
+                Text("启用后，本营地行动派发时会拉起驿站；工具还需在牛的档案里逐只勾选。")
                     .font(.caption2)
                     .foregroundStyle(Camp.stone)
             }
@@ -151,7 +194,7 @@ struct CampHomeView: View {
                     Image(systemName: "shippingbox")
                         .font(.caption)
                         .foregroundStyle(Camp.inkSecondary)
-                    Text("往期行动")
+                    Text("往期放牛任务")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Camp.inkSecondary)
                     Spacer()
@@ -216,7 +259,7 @@ struct CampHomeView: View {
                         renaming = true
                     }
                 }
-                Text("行动的经验和向导都在这儿")
+                Text("任务经验和营地管家都在这儿")
                     .font(.caption)
                     .foregroundStyle(Camp.inkSecondary)
             }
@@ -230,14 +273,39 @@ struct CampHomeView: View {
                     .help(store.missionStartBlockMessage)
             }
             Button {
+                showFeedComposer = true
+            } label: {
+                Label("喂牛", systemImage: "plus.rectangle.on.rectangle")
+            }
+            .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+
+            Button {
+                showRumination = true
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                    Text("待反刍")
+                    if pendingRuminationCount > 0 {
+                        Text("\(pendingRuminationCount)")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Camp.ember, in: Capsule())
+                    }
+                }
+            }
+            .buttonStyle(CampSecondaryButtonStyle())
+
+            Button {
                 onNewMission()
             } label: {
-                Label("新行动", systemImage: "flag.fill")
+                Label("发起放牛", systemImage: "flag.fill")
             }
             .buttonStyle(CampPrimaryButtonStyle(size: .small))
             .disabled(store.missionStartBlocked)
             .opacity(store.missionStartBlocked ? 0.5 : 1)
-            .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在这个营地开启新行动")
+            .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在这个营地发起放牛任务")
 
             Button {
                 notesPaneVisible.toggle()
@@ -257,17 +325,68 @@ struct CampHomeView: View {
                     size: 34
                 )
                 .contextMenu {
-                    Button("编辑向导…", action: onEditGuide)
+                    Button("编辑营地管家…", action: onEditGuide)
                 }
             }
         }
         .campCard(padding: 12)
     }
 
+    private var pendingRuminationCount: Int {
+        guard store.dashboard?.campId == campId else { return 0 }
+        return (store.dashboard?.pendingRuminationCount ?? 0)
+            + (store.dashboard?.pendingConfirmationCount ?? 0)
+    }
+
+    private var modelConnection: ModelConnectionViewState {
+        store.apiKeyPresent || store.webCredentialPresent ? .configured : .missing
+    }
+
     private var guideAnimState: CompanionAnimState {
         if store.guideToolActivity != nil { return .working }
         if store.guideStreaming { return .thinking }
         return .idle
+    }
+}
+
+/// 反刍属于营地内部工作流：列表、确认和放牛草稿都留在同一个营地 sheet，
+/// 不占用全局侧栏层级。
+private struct CampRuminationSheet: View {
+    @Environment(AppStore.self) private var store
+    let campId: String
+    var onClose: () -> Void
+    var onOpenMission: (String) -> Void
+    var onFeed: () -> Void
+
+    @State private var ingestionId: String?
+    @State private var missionDraft: MissionDraftViewState?
+
+    var body: some View {
+        Group {
+            if let missionDraft {
+                MissionDraftConfirmationView(
+                    draft: missionDraft,
+                    onStart: store.startMission,
+                    onStarted: onOpenMission,
+                    onCancel: { self.missionDraft = nil }
+                )
+            } else if let ingestionId {
+                RuminationDetailHost(
+                    ingestionId: ingestionId,
+                    onMissionDraft: { missionDraft = $0 },
+                    onClose: { self.ingestionId = nil }
+                )
+            } else {
+                RuminationInboxHost(
+                    campId: campId,
+                    onOpen: { ingestionId = $0 },
+                    onClose: onClose,
+                    onFeed: onFeed
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Camp.canvas)
     }
 }
 
@@ -331,7 +450,7 @@ private struct GuideChatColumn: View {
                 .disabled(store.distillingGuideChat)
                 .help("把这段对话里值得记的内容沉淀为营地笔记")
 
-                TextField("跟\(store.guideCompanion?.name ?? "向导")说点什么…", text: $input)
+                TextField("跟\(store.guideCompanion?.name ?? "营地管家")说点什么…", text: $input)
                     .textFieldStyle(.plain)
                     .padding(.horizontal, 11)
                     .padding(.vertical, 7)
@@ -373,7 +492,7 @@ private struct GuideChatColumn: View {
     private var emptyOpening: some View {
         HStack(alignment: .top, spacing: 8) {
             guideAvatar(state: .idle)
-            Text("我是这营地的向导。想了解营地情况、翻往期笔记，或者组队出发，都可以找我。")
+            Text("我是营地管家。想了解营地情况、翻往期笔记，或者整理任务，都可以找我。")
                 .font(.callout)
                 .foregroundStyle(Camp.inkSecondary)
                 .padding(.horizontal, 11)
@@ -451,7 +570,7 @@ private struct GuideChatColumn: View {
 
     private func guideAvatar(state: CompanionAnimState) -> some View {
         CompanionAvatarView(
-            name: store.guideCompanion?.name ?? "向导",
+            name: store.guideCompanion?.name ?? "营地管家",
             colorName: store.guideCompanion?.color ?? "amber",
             state: state,
             size: 26
@@ -629,7 +748,7 @@ struct ProposalCardView: View {
 
     private var proposalConfirmationHelp: String {
         if store.missionStartBlocked { return store.missionStartBlockMessage }
-        if hasGhostMembers { return "提案里有已删除的伙伴，无法开工" }
+        if hasGhostMembers { return "提案里有已删除的牛，无法开工" }
         return "确认后立即建队开工"
     }
 }

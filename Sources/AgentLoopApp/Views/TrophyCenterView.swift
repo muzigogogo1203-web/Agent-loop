@@ -17,9 +17,9 @@ struct TrophyCenterView: View {
 
             if store.artifactLedgerItems.isEmpty {
                 ContentUnavailableView(
-                    "还没有战利品",
+                    "还没有回营成果",
                     systemImage: "shippingbox",
-                    description: Text("伙伴完成行动并交付文件后，会在这里按营地和行动归档。")
+                    description: Text("牛完成任务并带回文件后，会在这里按营地和任务归档。")
                 )
                 .foregroundStyle(Camp.inkSecondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -55,10 +55,10 @@ struct TrophyCenterView: View {
                 .font(.title2)
                 .foregroundStyle(Camp.ember)
             VStack(alignment: .leading, spacing: 3) {
-                Text("战利品")
+                Text("回营成果")
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(Camp.ink)
-                Text("跨营地查看、预览和定位全部交付物")
+                Text("跨营地查看、预览和定位基础牛带回的成果")
                     .font(.caption)
                     .foregroundStyle(Camp.inkSecondary)
             }
@@ -147,7 +147,7 @@ struct TrophyCenterView: View {
                     Image(systemName: "doc.text")
                 }
                 .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
-                .help("预览远征报告")
+                .help("预览回营报告")
 
                 Button {
                     onOpenMission(group.mission.id)
@@ -155,7 +155,7 @@ struct TrophyCenterView: View {
                     Image(systemName: "arrow.right.circle")
                 }
                 .buttonStyle(CampSecondaryButtonStyle())
-                .help("打开行动")
+                .help("打开放牛任务")
             }
             .padding(12)
 
@@ -283,7 +283,7 @@ struct TrophyCenterView: View {
         let refined = mission.goalRefined.trimmingCharacters(in: .whitespacesAndNewlines)
         let raw = mission.goalRaw.trimmingCharacters(in: .whitespacesAndNewlines)
         let source = refined.isEmpty ? raw : refined
-        return source.split(whereSeparator: \.isNewline).first.map(String.init) ?? "未命名行动"
+        return source.split(whereSeparator: \.isNewline).first.map(String.init) ?? "未命名任务"
     }
 
     private func artifactIcon(_ artifact: ArtifactRecord) -> String {

@@ -19,6 +19,7 @@ struct TaskRunView: View {
     var onNewMission: () -> Void = {}
     var onOpenSettings: () -> Void = {}
     var onRecruit: () -> Void = {}
+    var onReturnSummary: () -> Void = {}
     @State private var showAbandonConfirm = false
     @State private var submitting = false
     /// 交付物区收起态（多交付物时防挤压小目标区域；每次进入行动默认展开）
@@ -32,7 +33,7 @@ struct TaskRunView: View {
 
     private var formAutonomyCaption: String {
         switch formAutonomy {
-        case .careful: return "谨慎：伙伴写文件、跑命令等一切落盘动作都先问你。"
+        case .careful: return "谨慎：牛写文件、跑命令等一切落盘动作都先问你。"
         case .standard: return "标准：只有危险操作（如跑命令）需要你批准。"
         case .free: return "放手：预算内全放行，不打扰你。"
         }
@@ -103,7 +104,7 @@ struct TaskRunView: View {
 
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("出发新行动")
+                    Text("发起放牛")
                         .font(.largeTitle.weight(.bold))
                         .foregroundStyle(Camp.ink)
                     HStack(spacing: 6) {
@@ -113,7 +114,7 @@ struct TaskRunView: View {
                             color: Camp.ember,
                             icon: "tent.fill"
                         )
-                        Text("说清目标，选好伙伴，剩下的交给营地。")
+                        Text("说清目标和验收标准，基础牛就会进入 Coding 草原。")
                             .font(.callout)
                             .foregroundStyle(Camp.inkSecondary)
                     }
@@ -121,8 +122,8 @@ struct TaskRunView: View {
                 .padding(.top, 8)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    CampSectionTitle("行动目标")
-                    TextField("这次行动要达成什么？越具体越好…", text: $goal, axis: .vertical)
+                    CampSectionTitle("任务目标")
+                    TextField("这次放牛要达成什么？越具体越好…", text: $goal, axis: .vertical)
                         .textFieldStyle(.plain)
                         .font(.body)
                         .lineLimit(4...10)
@@ -137,7 +138,7 @@ struct TaskRunView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        CampSectionTitle("同行伙伴")
+                        CampSectionTitle(newcomerSingleCow ? "参与的牛" : "参与的牛")
                         Spacer()
                         if !selectedCompanionIds.isEmpty {
                             Text("已选 \(selectedCompanionIds.count) 位")
@@ -145,15 +146,29 @@ struct TaskRunView: View {
                                 .foregroundStyle(Camp.inkSecondary)
                         }
                     }
-                    if store.companions.isEmpty {
+                    if newcomerSingleCow, let cow = store.companions.first(where: { $0.kind == .regular }) {
+                        HStack(spacing: 9) {
+                            CompanionAvatarView(name: cow.name, colorName: cow.color, size: 34)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(cow.name)
+                                    .font(.callout.weight(.semibold))
+                                    .foregroundStyle(Camp.ink)
+                                Text("首次任务默认由基础牛完成")
+                                    .font(.caption)
+                                    .foregroundStyle(Camp.inkSecondary)
+                            }
+                            Spacer()
+                            CampChip(text: "已准备", color: Camp.moss, icon: "checkmark")
+                        }
+                    } else if store.companions.isEmpty {
                         HStack(spacing: 10) {
-                            Text("名册还是空的——先招募一位伙伴。")
+                            Text("牛棚还是空的——先创建一只自定义牛。")
                                 .font(.callout)
                                 .foregroundStyle(Camp.inkSecondary)
                             Button {
                                 onRecruit() // 直达入口（UX 审计 P2：草稿已暂存，回来还在）
                             } label: {
-                                Label("招募伙伴…", systemImage: "person.badge.plus")
+                                Label("创建自定义牛…", systemImage: "person.badge.plus")
                             }
                             .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
                         }
@@ -267,9 +282,9 @@ struct TaskRunView: View {
                             ProgressView()
                                 .controlSize(.small)
                                 .tint(.white)
-                            Text("正在召集…")
+                            Text("正在开工…")
                         } else {
-                            Label("出发", systemImage: "flag.fill")
+                            Label("开始放牛", systemImage: "flag.fill")
                         }
                         Spacer()
                     }
@@ -283,7 +298,7 @@ struct TaskRunView: View {
                 .opacity(store.missionStartBlocked
                          || goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                          || selectedCompanionIds.isEmpty ? 0.5 : 1)
-                .help(store.missionStartBlocked ? store.missionStartBlockMessage : "召集伙伴开启行动")
+                .help(store.missionStartBlocked ? store.missionStartBlockMessage : "让基础牛开始任务")
             }
             .frame(maxWidth: 620)
             .padding(24)
@@ -296,6 +311,10 @@ struct TaskRunView: View {
             goal = draft.goal
             workspace = draft.workspace
             selectedCompanionIds = draft.companionIds
+            if newcomerSingleCow,
+               let baseCow = store.companions.first(where: { $0.id == CowTemplate.baseCowId }) {
+                selectedCompanionIds = [baseCow.id]
+            }
             formAutonomy = store.defaultAutonomy
             submitting = false
             submitError = nil
@@ -390,7 +409,7 @@ struct TaskRunView: View {
                 .frame(maxWidth: .infinity, alignment: .topLeading)
 
                 if showFeed {
-                    FeedView(
+                        FeedView(
                         entries: store.feedEntries,
                         pendingRequests: visiblePendingRequests,
                         cardTitles: cardTitles,
@@ -401,7 +420,7 @@ struct TaskRunView: View {
                             recordInteraction()
                             store.answerRequest(requestId: requestId, answer: answer)
                         },
-                        onCloseout: { store.closeoutCurrentMission() },
+                        onCloseout: onReturnSummary,
                         onInteract: { recordInteraction() }
                     )
                     .frame(width: 330)
@@ -427,7 +446,7 @@ struct TaskRunView: View {
                 HStack(spacing: 8) {
                     statusChip
                     if doneCount > 0 || store.missionCards.count > 0 {
-                        Text("\(doneCount)/\(store.missionCards.count) 个小目标完成")
+                        Text("\(doneCount)/\(store.missionCards.count) 张工作卡完成")
                             .font(.caption)
                             .foregroundStyle(Camp.inkSecondary)
                     }
@@ -508,7 +527,7 @@ struct TaskRunView: View {
                 .foregroundStyle(Camp.ink)
             if let breakdown = store.spendBreakdown(missionId: mission.id) {
                 if breakdown.planningTokens > 0 {
-                    spendRow(name: "向导规划", tokens: breakdown.planningTokens)
+                    spendRow(name: "营地管家规划", tokens: breakdown.planningTokens)
                 }
                 ForEach(breakdown.companions) { spend in
                     spendRow(name: spend.name, tokens: spend.tokens)
@@ -540,18 +559,18 @@ struct TaskRunView: View {
         switch store.missionPhase {
         case .planning:
             HStack(spacing: 6) {
-                CompanionAvatarView(name: "向导", colorName: "amber", state: .thinking, size: 22)
+                CompanionAvatarView(name: "基础牛", colorName: "amber", state: .thinking, size: 22)
                 TypingIndicatorView()
-                Text("向导正在铺开地图规划…")
+                Text("基础牛正在规划路线…")
                     .font(.caption)
                     .foregroundStyle(Camp.amber)
             }
         case .executing:
-            CampChip(text: "进行中", color: Camp.creek, icon: "bolt.fill")
+            CampChip(text: "基础牛正在制作首版", color: Camp.creek, icon: "bolt.fill")
         case .delivering:
-            CampChip(text: "全部完成，等你收营", color: Camp.moss, icon: "flag.checkered")
+            CampChip(text: "基础牛带着成果回来了", color: Camp.moss, icon: "flag.checkered")
         case .accepted:
-            CampChip(text: "已收营", color: Camp.moss, icon: "checkmark")
+            CampChip(text: "已回营", color: Camp.moss, icon: "checkmark")
         case .failed:
             CampChip(text: "已放弃", color: Camp.stone, icon: "xmark")
         case .error(let message):
@@ -580,9 +599,9 @@ struct TaskRunView: View {
         case .delivering:
             HStack(spacing: 8) {
                 Button {
-                    store.closeoutCurrentMission()
+                    onReturnSummary()
                 } label: {
-                    Label("收营", systemImage: "flag.checkered")
+                    Label("回营验收", systemImage: "flag.checkered")
                 }
                 .buttonStyle(CampPrimaryButtonStyle(size: .small))
                 abandonButton
@@ -593,12 +612,12 @@ struct TaskRunView: View {
             Button {
                 onNewMission()
             } label: {
-                Label("开启新行动", systemImage: "flag.fill")
+                Label("发起新放牛任务", systemImage: "flag.fill")
             }
             .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
             .disabled(store.missionStartBlocked)
             .opacity(store.missionStartBlocked ? 0.5 : 1)
-            .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在当前营地开启新行动")
+            .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在当前营地发起新放牛任务")
         case .idle:
             EmptyView()
         }
@@ -628,7 +647,7 @@ struct TaskRunView: View {
                 store.harvestCurrentMission()
             }
             .buttonStyle(CampSecondaryButtonStyle(tint: Camp.moss))
-            .help("取消未完成的小目标，保留已完成的产出，直接进入收营")
+            .help("取消未完成的工作卡，保留已有成果，直接进入回营验收")
             abandonButton
         }
         .campCard(padding: 12, highlighted: true)
@@ -638,7 +657,7 @@ struct TaskRunView: View {
         guard let mission = store.missionList.first(where: { $0.id == store.currentMissionId }) else {
             return ""
         }
-        return "已用 \(mission.spentTokens / 1000)k / \(mission.budgetTokens / 1000)k tokens，行动已暂停派发"
+        return "已用 \(mission.spentTokens / 1000)k / \(mission.budgetTokens / 1000)k tokens，任务已暂停派发"
     }
 
     private var abandonButton: some View {
@@ -648,8 +667,8 @@ struct TaskRunView: View {
             Text("放弃")
         }
         .buttonStyle(CampSecondaryButtonStyle())
-        .confirmationDialog("放弃这次行动？", isPresented: $showAbandonConfirm, titleVisibility: .visible) {
-            Button("放弃行动", role: .destructive) {
+        .confirmationDialog("放弃这次放牛任务？", isPresented: $showAbandonConfirm, titleVisibility: .visible) {
+            Button("放弃任务", role: .destructive) {
                 store.cancelCurrentMission()
             }
             Button("再想想", role: .cancel) {}
@@ -661,8 +680,8 @@ struct TaskRunView: View {
     private func viewToggle(feedVisible: Bool, feedLocked: Bool) -> some View {
         HStack(spacing: 8) {
             Picker("视图", selection: theaterBinding) {
-                Label("清单", systemImage: "checklist").tag(false)
-                Label("小剧场", systemImage: "flame").tag(true)
+                Label("工作卡", systemImage: "checklist").tag(false)
+                Label("Coding 草原", systemImage: "leaf.fill").tag(true)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -770,7 +789,7 @@ struct TaskRunView: View {
     @ViewBuilder private var artifactsView: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                CampSectionTitle("交付物")
+                CampSectionTitle("回营成果")
                 if !store.missionArtifacts.isEmpty {
                     CampChip(text: "\(store.missionArtifacts.count) 件", color: Camp.moss, icon: "doc.fill")
                 }
@@ -805,7 +824,7 @@ struct TaskRunView: View {
                 }
             }
             if store.missionArtifacts.isEmpty {
-                Text("行动完成的交付物会出现在这里")
+                Text("基础牛完成的成果会出现在这里")
                     .font(.caption)
                     .foregroundStyle(Camp.inkSecondary)
             } else if !artifactsCollapsed {
@@ -866,12 +885,17 @@ struct TaskRunView: View {
 
     private var missionGoalLine: String {
         guard let mission = store.missionList.first(where: { $0.id == store.currentMissionId }) else {
-            return "行动"
+            return "放牛任务"
         }
         let refined = mission.goalRefined.trimmingCharacters(in: .whitespacesAndNewlines)
         let raw = mission.goalRaw.trimmingCharacters(in: .whitespacesAndNewlines)
         let base = refined.isEmpty ? raw : refined
-        return base.split(whereSeparator: \.isNewline).first.map(String.init) ?? "行动"
+        return base.split(whereSeparator: \.isNewline).first.map(String.init) ?? "放牛任务"
+    }
+
+    private var newcomerSingleCow: Bool {
+        let regular = store.companions.filter { $0.kind == .regular }
+        return regular.count == 1 && regular.first?.id == CowTemplate.baseCowId
     }
 
     private var doneCount: Int {

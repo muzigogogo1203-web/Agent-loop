@@ -6,10 +6,10 @@ struct AgentLoopApp: App {
     @State private var store = AppStore()
 
     var body: some Scene {
-        WindowGroup("AgentLoop") {
+        WindowGroup("Coding 牧场") {
             RootView()
                 .environment(store)
-                .frame(minWidth: 1060, minHeight: 680)
+                .frame(minWidth: 640, minHeight: 680)
                 .onOpenURL { url in
                     store.handleOAuthCallback(url)
                 }
@@ -19,7 +19,7 @@ struct AgentLoopApp: App {
                 )
         }
         .commands {
-            CommandMenu("行动") {
+            CommandMenu("放牛任务") {
                 Button {
                     store.emergencyStopCamp()
                 } label: {

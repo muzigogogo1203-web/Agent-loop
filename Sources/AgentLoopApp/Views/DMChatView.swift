@@ -64,7 +64,7 @@ struct DMChatView: View {
                 .disabled(tooNarrowForDrawer)
                 .help(tooNarrowForDrawer ? "窗口太窄，加宽窗口后可查看记忆" : (showDrawer ? "收起记忆" : "查看记忆"))
 
-                Button("编辑伙伴", action: onEdit)
+                Button("牛的档案", action: onEdit)
             }
         }
         .task(id: companion.id) {

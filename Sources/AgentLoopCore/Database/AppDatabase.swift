@@ -244,6 +244,63 @@ public final class AppDatabase: Sendable {
                 t.add(column: "archived", .boolean).notNull().defaults(to: false)
             }
         }
+        // Coding 牧场 MVP：主动喂牛、反刍、来源与行动候选。
+        m.registerMigration("v8-coding-ranch") { db in
+            try db.create(table: "ingestion_item") { t in
+                t.primaryKey("id", .text)
+                t.column("campId", .text).notNull().references("camp")
+                t.column("sourceType", .text).notNull()
+                t.column("title", .text)
+                t.column("rawText", .text).notNull()
+                t.column("sourceURL", .text)
+                t.column("author", .text)
+                t.column("userIntent", .text)
+                t.column("contentHash", .text).notNull()
+                t.column("status", .text).notNull()
+                t.column("attempt", .integer).notNull().defaults(to: 0)
+                t.column("errorText", .text)
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull()
+            }
+            try db.create(index: "ingestion_item_camp_status", on: "ingestion_item", columns: ["campId", "status"])
+            try db.create(index: "ingestion_item_camp_hash", on: "ingestion_item", columns: ["campId", "contentHash"])
+
+            try db.create(table: "rumination_result") { t in
+                t.primaryKey("id", .text)
+                t.column("ingestionId", .text).notNull().unique().references("ingestion_item")
+                t.column("pipelineVersion", .text).notNull()
+                t.column("resultJson", .text).notNull()
+                t.column("userEditedJson", .text)
+                t.column("materializedAt", .datetime)
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull()
+            }
+
+            try db.create(table: "knowledge_source_link") { t in
+                t.primaryKey("id", .text)
+                t.column("campNoteId", .text).notNull().references("camp_note")
+                t.column("ingestionId", .text).notNull().references("ingestion_item")
+                t.column("locatorJson", .text)
+                t.column("createdAt", .datetime).notNull()
+                t.uniqueKey(["campNoteId", "ingestionId"])
+            }
+            try db.create(index: "knowledge_source_ingestion", on: "knowledge_source_link", columns: ["ingestionId"])
+
+            try db.create(table: "action_candidate") { t in
+                t.primaryKey("id", .text)
+                t.column("ingestionId", .text).notNull().references("ingestion_item")
+                t.column("campId", .text).notNull().references("camp")
+                t.column("type", .text).notNull()
+                t.column("title", .text).notNull()
+                t.column("detailJson", .text).notNull()
+                t.column("status", .text).notNull()
+                t.column("missionId", .text).references("mission")
+                t.column("idemKey", .text).notNull().unique()
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull()
+            }
+            try db.create(index: "action_candidate_camp_status", on: "action_candidate", columns: ["campId", "status"])
+        }
         return m
     }
 
@@ -301,8 +358,8 @@ public final class AppDatabase: Sendable {
                 createdAt: Date())
             try camp.insert(db)
             var guide = CompanionRecord.new(
-                name: "向导", color: "amber",
-                rolePrompt: trimmedPrompt.isEmpty ? "你是这个营地的向导，熟悉营地里的一切。" : trimmedPrompt,
+                name: "营地管家", color: "amber",
+                rolePrompt: trimmedPrompt.isEmpty ? "你是这个 Coding 牧场营地的管家，熟悉营地里的一切。" : trimmedPrompt,
                 model: KernelDefaults.defaultGuideModel, kind: .guide, campId: camp.id)
             guide.toolsJson = "[]"
             try guide.insert(db)

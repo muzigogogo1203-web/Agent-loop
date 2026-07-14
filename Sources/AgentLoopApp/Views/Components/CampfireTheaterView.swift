@@ -48,16 +48,16 @@ struct CampfireTheaterView: View {
     private var theaterHeader: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("小剧场")
+                Text("Coding 草原")
                     .font(.headline)
                     .foregroundStyle(Camp.ink)
-                Text("营地中的工作循环正在推进")
+                Text("牛群正在按真实工作卡推进任务")
                     .font(.caption)
                     .foregroundStyle(Camp.inkSecondary)
             }
             Spacer()
-            CampChip(text: "\(sortedCompanions.count) 个席位", color: Camp.creek, icon: "person.2.fill")
-            CampChip(text: "营地记忆 \(campMemoryCount)", color: Camp.amber, icon: "book.closed.fill")
+            CampChip(text: "\(sortedCompanions.count) 只牛", color: Camp.creek, icon: "person.2.fill")
+            CampChip(text: "营地知识 \(campMemoryCount)", color: Camp.amber, icon: "book.closed.fill")
         }
     }
 
@@ -252,7 +252,7 @@ struct CampfireTheaterView: View {
             HStack(spacing: 6) {
                 Image(systemName: "book.closed.fill")
                     .foregroundStyle(Camp.amber)
-                Text("营地记忆")
+                Text("营地知识")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Camp.ink)
                 Text("\(campMemoryCount)")
@@ -381,7 +381,7 @@ struct CampfireTheaterView: View {
         }
         .buttonStyle(.plain)
         .disabled(card == nil)
-        .help(card == nil ? "这位伙伴当前没有可查看的小目标" : "查看这位伙伴的小目标")
+        .help(card == nil ? "这只牛当前没有可查看的工作卡" : "查看这只牛的工作卡")
     }
 
     private func statusCapsule(for state: CompanionAnimState) -> some View {
@@ -397,7 +397,7 @@ struct CampfireTheaterView: View {
         HStack(spacing: 8) {
             Image(systemName: "person.crop.circle.badge.clock")
                 .foregroundStyle(Camp.inkSecondary)
-            Text("等待小队入席")
+            Text("等待牛群开工")
                 .font(.caption)
                 .foregroundStyle(Camp.inkSecondary)
         }
@@ -447,9 +447,9 @@ struct CampfireTheaterView: View {
 
     private func label(for state: CompanionAnimState) -> String {
         switch state {
-        case .idle: "休整"
+        case .idle: "在营地休息"
         case .thinking: "思考中"
-        case .working: "干活中"
+        case .working: "正在干活"
         case .asking: "等你决定"
         case .scratching: "复检中"
         case .celebrating: "刚完成"
@@ -528,7 +528,7 @@ private enum LoopStage: CaseIterable, Hashable {
         case .handoff: "产出交接"
         case .review: "复检判断"
         case .cycle: "继续循环"
-        case .memory: "收营沉淀"
+        case .memory: "回营沉淀"
         }
     }
 

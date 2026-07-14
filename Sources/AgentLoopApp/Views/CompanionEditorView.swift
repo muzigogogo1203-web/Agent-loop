@@ -40,10 +40,10 @@ struct CompanionEditorView: View {
                         size: 64
                     )
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(companionId == nil ? "招募新伙伴" : "编辑伙伴")
+                        Text(companionId == nil ? "创建自定义牛" : "牛的档案")
                             .font(.largeTitle.weight(.bold))
                             .foregroundStyle(Camp.ink)
-                        Text(companionId == nil ? "起个名字、挑个颜色、写清职责，就能一起出发。" : "改动会即时用于之后的行动与私聊。")
+                        Text(companionId == nil ? "起个名字、挑个颜色、写清职责，就能加入牛棚。" : "改动会用于之后的放牛任务与私聊。")
                             .font(.callout)
                             .foregroundStyle(Camp.inkSecondary)
                     }
@@ -97,7 +97,7 @@ struct CompanionEditorView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("工具")
-                    Text("勾选这位伙伴执行小目标时可用的工具；汇报进展、提问与交接始终可用。")
+                    Text("勾选这只牛执行工作卡时可用的工具；汇报进展、提问与交接始终可用。")
                         .font(.caption)
                         .foregroundStyle(Camp.inkSecondary)
                     ForEach(ToolAccess.builtinCapabilityNames, id: \.self) { tool in
@@ -133,7 +133,7 @@ struct CompanionEditorView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("职责")
-                    Text("它决定这位伙伴擅长什么、以什么口吻做事（system prompt）。")
+                    Text("它决定这只牛擅长什么、以什么口吻做事（system prompt）。")
                         .font(.caption)
                         .foregroundStyle(Camp.inkSecondary)
                     TextEditor(text: $rolePrompt)
@@ -337,7 +337,7 @@ struct CompanionEditorView: View {
             let toolsJson = ToolAccess.explicitJson(allow: enabledTools)
             if let companionId {
                 guard var companion = try store.db.companion(id: companionId) else {
-                    saveError = "保存失败：伙伴不存在"
+                    saveError = "保存失败：这只牛不存在"
                     return
                 }
                 companion.name = name

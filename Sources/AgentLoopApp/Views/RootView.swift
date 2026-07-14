@@ -3,9 +3,17 @@ import Accessibility
 import AgentLoopCore
 
 enum Destination: Hashable {
+    case onboarding
     case newMission(campId: String)
     case camp(String)
+    case campGuide(String)
+    case campNotes(String)
+    case ruminationInbox(String)
+    case rumination(String)
+    case cowRoster(String)
+    case missionDraft
     case mission(String)
+    case returnSummary(String)
     case trophies
     case settings
     case chat(String)
@@ -19,6 +27,8 @@ struct RootView: View {
     @State private var showNewCampSheet = false
     @State private var abandonTarget: MissionRecord?
     @State private var showResumeConfirmation = false
+    @State private var pendingMissionDraft: MissionDraftViewState?
+    @AppStorage("codingRanch.didCompleteOnboarding") private var didCompleteOnboarding = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,12 +47,12 @@ struct RootView: View {
 
                     Section("归营") {
                         NavigationLink(value: Destination.trophies) {
-                            Label("战利品", systemImage: "shippingbox.fill")
+                            Label("回营成果", systemImage: "shippingbox.fill")
                                 .foregroundStyle(selection == .trophies ? Camp.ember : Camp.ink)
                         }
                     }
 
-                    Section("伙伴") {
+                    Section("牛群") {
                         ForEach(store.companions, id: \.id) { companion in
                             NavigationLink(value: Destination.chat(companion.id)) {
                                 HStack(spacing: 8) {
@@ -56,13 +66,17 @@ struct RootView: View {
                                 }
                             }
                             .contextMenu {
-                                Button("编辑…") {
-                                    selection = .editCompanion(companion.id)
-                                }
+                                Button("编辑…") { selection = .editCompanion(companion.id) }
+                            }
+                        }
+                        if let campId = store.campId ?? store.camps.first?.id {
+                            NavigationLink(value: Destination.cowRoster(campId)) {
+                                Label("牛棚与解锁", systemImage: "building.2")
+                                    .foregroundStyle(Camp.inkSecondary)
                             }
                         }
                         NavigationLink(value: Destination.editCompanion(nil)) {
-                            Label("新伙伴…", systemImage: "person.badge.plus")
+                            Label("新牛…", systemImage: "person.badge.plus")
                                 .foregroundStyle(Camp.inkSecondary)
                         }
                     }
@@ -80,6 +94,8 @@ struct RootView: View {
                 store.reload()
                 if let previewMission = AppStore.previewMissionId {
                     selection = .mission(previewMission)
+                } else if shouldShowOnboarding {
+                    selection = .onboarding
                 } else if selection == nil, let first = store.camps.first {
                     selection = .camp(first.id)
                 }
@@ -118,6 +134,16 @@ struct RootView: View {
         } detail: {
             Group {
                 switch selection {
+                case .onboarding:
+                    CodingRanchOnboardingView(
+                        cow: onboardingCow,
+                        modelConnection: modelConnection,
+                        onEnter: {
+                            didCompleteOnboarding = true
+                            if let first = store.camps.first { selection = .camp(first.id) }
+                        },
+                        onOpenSettings: { selection = .settings }
+                    )
                 case .newMission(let campId):
                     TaskRunView(
                         mode: .newMission(campId: campId),
@@ -136,13 +162,74 @@ struct RootView: View {
                         onNewMission: { selection = .newMission(campId: campId) },
                         onOpenMission: { selection = .mission($0) }
                     )
+                case .campGuide(let campId):
+                    CampHomeView(
+                        campId: campId,
+                        onEditGuide: {
+                            if let guideId = store.guideCompanion?.id {
+                                selection = .editCompanion(guideId)
+                            }
+                        },
+                        onNewMission: { selection = .newMission(campId: campId) },
+                        onOpenMission: { selection = .mission($0) }
+                    )
+                case .campNotes(let campId):
+                    CampNotesHost(campId: campId)
+                case .ruminationInbox(let campId):
+                    RuminationInboxHost(campId: campId) { selection = .rumination($0) }
+                case .rumination(let ingestionId):
+                    RuminationDetailHost(
+                        ingestionId: ingestionId,
+                        onMissionDraft: { draft in
+                            pendingMissionDraft = draft
+                            selection = .missionDraft
+                        },
+                        onClose: {
+                            let campId = store.dashboard?.campId ?? store.camps.first?.id
+                            if let campId { selection = .ruminationInbox(campId) }
+                        }
+                    )
+                case .cowRoster(let campId):
+                    CowRosterHost(
+                        campId: campId,
+                        onOpenCow: { selection = .chat($0) },
+                        onCreateCustomCow: { selection = .editCompanion(nil) }
+                    )
+                case .missionDraft:
+                    if let draft = pendingMissionDraft {
+                        MissionDraftConfirmationView(
+                            draft: draft,
+                            onStart: store.startMission,
+                            onStarted: { missionId in
+                                pendingMissionDraft = nil
+                                selection = .mission(missionId)
+                            },
+                            onCancel: {
+                                if let ingestionId = draft.ingestionId {
+                                    selection = .rumination(ingestionId)
+                                } else {
+                                    selection = .camp(draft.campId)
+                                }
+                            }
+                        )
+                    } else {
+                        ContentUnavailableView("放牛草稿不在了", systemImage: "doc.badge.ellipsis")
+                    }
                 case .mission(let id):
                     TaskRunView(mode: .mission(id), onNewMission: {
                         let campId = store.camp(forMission: id) ?? store.camps.first?.id
                         if let campId {
                             selection = .newMission(campId: campId)
                         }
+                    }, onReturnSummary: {
+                        selection = .returnSummary(id)
                     })
+                case .returnSummary(let id):
+                    ReturnSummaryHost(
+                        missionId: id,
+                        onBackToMission: { selection = .mission(id) },
+                        onAccepted: { selection = .mission(id) }
+                    )
                 case .trophies:
                     TrophyCenterView { missionId in
                         selection = .mission(missionId)
@@ -155,7 +242,7 @@ struct RootView: View {
                             selection = .editCompanion(companion.id)
                         }
                     } else {
-                        ContentUnavailableView("伙伴不在名册里", systemImage: "person.crop.circle.badge.questionmark")
+                        ContentUnavailableView("这只牛不在牛棚里", systemImage: "person.crop.circle.badge.questionmark")
                     }
                 case .editCompanion(let id):
                     CompanionEditorView(companionId: id) {
@@ -184,7 +271,7 @@ struct RootView: View {
             ),
             titleVisibility: .visible
         ) {
-            Button("放弃行动", role: .destructive) {
+            Button("放弃任务", role: .destructive) {
                 if let mission = abandonTarget {
                     Task { await store.cancelMission(missionId: mission.id) }
                 }
@@ -273,12 +360,39 @@ struct RootView: View {
         let raw = mission.goalRaw.trimmingCharacters(in: .whitespacesAndNewlines)
         let base = refined.isEmpty ? raw : refined
         let firstLine = base.split(whereSeparator: \.isNewline).first.map(String.init) ?? base
-        return firstLine.isEmpty ? "未命名行动" : String(firstLine.prefix(16))
+        return firstLine.isEmpty ? "未命名任务" : String(firstLine.prefix(16))
     }
 
     private var isOnNewMission: Bool {
         if case .newMission = selection { return true }
         return false
+    }
+
+    private var shouldShowOnboarding: Bool {
+        guard !didCompleteOnboarding else { return false }
+        let regular = store.companions.filter { $0.kind == .regular }
+        let onlyBaseCow = !regular.isEmpty && regular.allSatisfy { $0.id == CowTemplate.baseCowId }
+        return store.missionList.isEmpty && onlyBaseCow
+    }
+
+    private var modelConnection: ModelConnectionViewState {
+        store.apiKeyPresent || store.webCredentialPresent ? .configured : .missing
+    }
+
+    private var onboardingCow: CowSummaryViewState {
+        if let dashboardCow = store.dashboard?.activeCow { return dashboardCow }
+        if let cow = store.companions.first(where: { $0.id == CowTemplate.baseCowId }) {
+            return .init(
+                id: cow.id, name: cow.name, role: "教学型 Coding 通才", colorName: cow.color,
+                specialties: ["需求整理", "简单网页", "小工具"], status: .idle,
+                lastActivity: nil, recentMission: nil, isSystemGuide: false
+            )
+        }
+        return .init(
+            id: CowTemplate.baseCowId, name: "基础牛", role: "教学型 Coding 通才", colorName: "amber",
+            specialties: ["需求整理", "简单网页", "小工具"], status: .idle,
+            lastActivity: nil, recentMission: nil, isSystemGuide: false
+        )
     }
 
     // MARK: - 营地分区
@@ -302,7 +416,7 @@ struct RootView: View {
             }
             .contextMenu {
                 if !camp.archived {
-                    Button("新行动…") {
+                    Button("发起放牛…") {
                         selection = .newMission(campId: camp.id)
                     }
                     .disabled(store.missionStartBlocked)
@@ -321,12 +435,12 @@ struct RootView: View {
             }
             if !camp.archived {
                 NavigationLink(value: Destination.newMission(campId: camp.id)) {
-                    Label("新行动…", systemImage: "flag")
+                    Label("发起放牛…", systemImage: "flag")
                         .foregroundStyle(Camp.inkSecondary)
                         .font(.callout)
                 }
                 .disabled(store.missionStartBlocked)
-                .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在这个营地开启新行动")
+                .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在这个营地发起放牛任务")
             }
         }
     }
@@ -383,7 +497,7 @@ struct RootView: View {
         }
         .contextMenu {
             if mission.status != .accepted && mission.status != .failed {
-                Button("放弃行动…", role: .destructive) {
+                Button("放弃任务…", role: .destructive) {
                     abandonTarget = mission // 二次确认（UX 审计 P1）
                 }
             }
@@ -395,7 +509,7 @@ struct RootView: View {
         let raw = mission.goalRaw.trimmingCharacters(in: .whitespacesAndNewlines)
         let base = refined.isEmpty ? raw : refined
         let firstLine = base.split(whereSeparator: \.isNewline).first.map(String.init) ?? base
-        return firstLine.isEmpty ? "未命名行动" : String(firstLine.prefix(24))
+        return firstLine.isEmpty ? "未命名任务" : String(firstLine.prefix(24))
     }
 
     private func missionColor(_ status: MissionStatus) -> Color {
@@ -412,8 +526,8 @@ struct RootView: View {
         switch status {
         case .planning: "规划中"
         case .executing: "进行中"
-        case .delivering: "可收营"
-        case .accepted: "已收营"
+        case .delivering: "待回营"
+        case .accepted: "已回营"
         case .failed: "已放弃"
         }
     }
@@ -433,7 +547,7 @@ private struct NewCampSheet: View {
                 Text("扎一个新营地")
                     .font(.headline)
                     .foregroundStyle(Camp.ink)
-                Text("营地就像频道：行动在营地里发起，经验沉淀在营地的笔记本里。")
+                Text("营地就像频道：放牛任务从这里发起，经验沉淀在营地笔记里。")
                     .font(.caption)
                     .foregroundStyle(Camp.inkSecondary)
             }
@@ -449,10 +563,10 @@ private struct NewCampSheet: View {
                 )
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("向导人设（可选）")
+                Text("营地管家人设（可选）")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Camp.inkSecondary)
-                TextField("这个营地的向导是什么样的人？留空用默认。", text: $guidePrompt, axis: .vertical)
+                TextField("这个营地的管家是什么样的人？留空用默认。", text: $guidePrompt, axis: .vertical)
                     .textFieldStyle(.plain)
                     .lineLimit(2...4)
                     .padding(10)

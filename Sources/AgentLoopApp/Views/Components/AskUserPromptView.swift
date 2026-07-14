@@ -83,7 +83,7 @@ struct AskUserPromptView: View {
                     .disabled(submitted || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 if submitted {
-                    Label("已答复，伙伴马上继续", systemImage: "checkmark.circle.fill")
+                    Label("已答复，牛马上继续", systemImage: "checkmark.circle.fill")
                         .font(.caption)
                         .foregroundStyle(Camp.moss)
                 }
@@ -133,7 +133,7 @@ struct AskUserPromptView: View {
                     }
                     .disabled(submitted)
                     if submitted {
-                        Label("已答复，伙伴马上继续", systemImage: "checkmark.circle.fill")
+                        Label("已答复，牛马上继续", systemImage: "checkmark.circle.fill")
                             .font(.caption)
                             .foregroundStyle(Camp.moss)
                     }

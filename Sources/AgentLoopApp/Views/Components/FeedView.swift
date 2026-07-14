@@ -39,7 +39,7 @@ struct FeedView: View {
                             Image(systemName: "tent")
                                 .font(.title2)
                                 .foregroundStyle(Camp.stone)
-                            Text("行动开始后，小队的一举一动都会出现在这里")
+                            Text("放牛开始后，牛群的真实进展都会出现在这里")
                                 .font(.caption)
                                 .foregroundStyle(Camp.inkSecondary)
                                 .multilineTextAlignment(.center)
@@ -122,7 +122,7 @@ struct FeedView: View {
                     } label: {
                         HStack {
                             Spacer()
-                            Label("收营", systemImage: "flag.checkered")
+                            Label("回营验收", systemImage: "flag.checkered")
                             Spacer()
                         }
                     }

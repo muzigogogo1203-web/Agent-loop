@@ -17,7 +17,7 @@ struct SettingsView: View {
                     Text("设置")
                         .font(.largeTitle.weight(.bold))
                         .foregroundStyle(Camp.ink)
-                    Text("接入方式与凭据，都存在本机。")
+                    Text("基础连接保持清晰，模型、工具和预算属于高级能力。凭据只存在本机。")
                         .font(.callout)
                         .foregroundStyle(Camp.inkSecondary)
                 }
@@ -122,7 +122,7 @@ struct SettingsView: View {
                 // M6-D11/D12：模型目录 + 默认/蒸馏/规划三档
                 VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("模型")
-                    Text("目录里的模型会出现在伙伴编辑器与下面三档选择里。")
+                    Text("目录里的模型会出现在牛的档案与下面三档选择里。")
                         .font(.caption)
                         .foregroundStyle(Camp.inkSecondary)
                     ForEach(store.modelChoices, id: \.self) { model in
@@ -208,8 +208,8 @@ struct SettingsView: View {
                         }
                     }
                     Text(store.searchKeyPresent
-                        ? "伙伴可以用 web_search 联网搜索（可在伙伴编辑器按人勾选）。"
-                        : "配置 Tavily API key 后，伙伴才能联网搜索；不配置则该工具不出现。")
+                        ? "牛可以用 web_search 联网搜索（可在牛的档案里逐只勾选）。"
+                        : "配置 Tavily API key 后，牛才能联网搜索；不配置则该工具不出现。")
                         .font(.caption)
                         .foregroundStyle(Camp.inkSecondary)
                     SecureField("tvly-…", text: $searchKey)
@@ -260,7 +260,7 @@ struct SettingsView: View {
                                     .stroke(Camp.line, lineWidth: 1)
                             )
                             .onSubmit(saveBudget)
-                        Text("tokens / 行动")
+                        Text("tokens / 放牛任务")
                             .font(.callout)
                             .foregroundStyle(Camp.inkSecondary)
                         Button {
@@ -280,7 +280,7 @@ struct SettingsView: View {
                             .foregroundStyle(Camp.charcoalRed)
                             .font(.caption)
                     }
-                    Text("新行动与向导组队提案的缺省预算；耗尽时行动暂停派发，可续预算 / 就地收成果 / 放弃。")
+                    Text("新放牛任务与营地管家提案的缺省预算；耗尽时任务暂停派发，可续预算 / 就地收成果 / 放弃。")
                         .font(.caption)
                         .foregroundStyle(Camp.inkSecondary)
                 }
