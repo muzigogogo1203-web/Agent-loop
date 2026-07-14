@@ -400,8 +400,9 @@ struct RuminationReviewView: View {
     var body: some View {
         GeometryReader { proxy in
             let wide = proxy.size.width >= 900
+            let compact = proxy.size.width < CampLayout.compactContentWidth
             VStack(spacing: 0) {
-                reviewHeader
+                reviewHeader(compact: compact)
                 Divider().overlay(Camp.line)
                 if wide {
                     HStack(spacing: 0) {
@@ -416,11 +417,18 @@ struct RuminationReviewView: View {
                     resultScroll
                         .sheet(isPresented: $sourceVisible) {
                             SourceEvidenceView(source: review.source)
-                                .frame(minWidth: 460, minHeight: 520)
+                                .frame(
+                                    minWidth: 360,
+                                    idealWidth: 520,
+                                    maxWidth: 680,
+                                    minHeight: 420,
+                                    idealHeight: 560,
+                                    maxHeight: 700
+                                )
                         }
                 }
                 Divider().overlay(Camp.line)
-                reviewFooter
+                reviewFooter(compact: compact)
             }
         }
         .background(Camp.canvas)
@@ -434,26 +442,46 @@ struct RuminationReviewView: View {
         }
     }
 
-    private var reviewHeader: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("检查反刍结果")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(Camp.ink)
-                Text("只把你确认过的内容收进营地。")
-                    .font(.caption)
-                    .foregroundStyle(Camp.inkSecondary)
+    @ViewBuilder private func reviewHeader(compact: Bool) -> some View {
+        Group {
+            if compact {
+                VStack(alignment: .leading, spacing: 10) {
+                    reviewHeaderIdentity
+                    HStack(spacing: 8) {
+                        Spacer(minLength: 0)
+                        reviewHeaderActions
+                    }
+                }
+            } else {
+                HStack(spacing: 12) {
+                    reviewHeaderIdentity
+                    Spacer(minLength: 8)
+                    reviewHeaderActions
+                }
             }
-            Spacer()
-            Button(sourceVisible ? "收起原文" : "查看原文") { sourceVisible.toggle() }
-                .buttonStyle(CampSecondaryButtonStyle())
-            Button("关闭", action: onClose)
-                .buttonStyle(CampSecondaryButtonStyle())
-                .keyboardShortcut(.cancelAction)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
         .background(Camp.surface)
+    }
+
+    private var reviewHeaderIdentity: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("检查反刍结果")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(Camp.ink)
+            Text("只把你确认过的内容收进营地。")
+                .font(.caption)
+                .foregroundStyle(Camp.inkSecondary)
+        }
+    }
+
+    @ViewBuilder private var reviewHeaderActions: some View {
+        Button(sourceVisible ? "收起原文" : "查看原文") { sourceVisible.toggle() }
+            .buttonStyle(CampSecondaryButtonStyle())
+        Button("关闭", action: onClose)
+            .buttonStyle(CampSecondaryButtonStyle())
+            .keyboardShortcut(.cancelAction)
     }
 
     private var resultScroll: some View {
@@ -533,35 +561,57 @@ struct RuminationReviewView: View {
         }
     }
 
-    private var reviewFooter: some View {
-        HStack(spacing: 10) {
-            Button("删除原文和结果", role: .destructive) { showDeleteConfirmation = true }
-                .buttonStyle(.plain)
-                .font(.caption)
-                .foregroundStyle(Camp.charcoalRed)
-            Button("暂不处理", action: onClose)
-                .buttonStyle(CampSecondaryButtonStyle())
-            Spacer()
-            Button("只收进营地") { Task { await materialize(.notesOnly) } }
-                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.moss))
-                .disabled(!review.canMaterialize || isRunning)
-            Button {
-                Task { await materialize(.notesAndMission) }
-            } label: {
-                if isRunning {
-                    ProgressView().controlSize(.small).tint(.white)
-                } else {
-                    Label("收进营地并放牛", systemImage: "flag.fill")
+    @ViewBuilder private func reviewFooter(compact: Bool) -> some View {
+        Group {
+            if compact {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        reviewSecondaryActions
+                    }
+                    HStack(spacing: 8) {
+                        Spacer(minLength: 0)
+                        reviewPrimaryActions
+                    }
+                }
+            } else {
+                HStack(spacing: 10) {
+                    reviewSecondaryActions
+                    Spacer(minLength: 8)
+                    reviewPrimaryActions
                 }
             }
-            .buttonStyle(CampPrimaryButtonStyle())
-            .keyboardShortcut(.defaultAction)
-            .disabled(!review.canMaterialize || review.missionDraft == nil || isRunning)
-            .opacity(review.canMaterialize && review.missionDraft != nil ? 1 : 0.5)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
         .background(Camp.surface)
+    }
+
+    @ViewBuilder private var reviewSecondaryActions: some View {
+        Button("删除原文和结果", role: .destructive) { showDeleteConfirmation = true }
+            .buttonStyle(.plain)
+            .font(.caption)
+            .foregroundStyle(Camp.charcoalRed)
+        Button("暂不处理", action: onClose)
+            .buttonStyle(CampSecondaryButtonStyle())
+    }
+
+    @ViewBuilder private var reviewPrimaryActions: some View {
+        Button("只收进营地") { Task { await materialize(.notesOnly) } }
+            .buttonStyle(CampSecondaryButtonStyle(tint: Camp.moss))
+            .disabled(!review.canMaterialize || isRunning)
+        Button {
+            Task { await materialize(.notesAndMission) }
+        } label: {
+            if isRunning {
+                ProgressView().controlSize(.small).tint(.white)
+            } else {
+                Label("收进营地并放牛", systemImage: "flag.fill")
+            }
+        }
+        .buttonStyle(CampPrimaryButtonStyle())
+        .keyboardShortcut(.defaultAction)
+        .disabled(!review.canMaterialize || review.missionDraft == nil || isRunning)
+        .opacity(review.canMaterialize && review.missionDraft != nil ? 1 : 0.5)
     }
 
     private var isRunning: Bool { actionState == .running }

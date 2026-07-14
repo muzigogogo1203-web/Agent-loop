@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CodingRanchHomeView: View {
+    @Environment(\.campWindowSize) private var windowSize
     let state: CampDashboardViewState
     let modelConnection: ModelConnectionViewState
     var onSubmitFeed: (FeedDraft, Bool) async throws -> FeedSubmissionResult
@@ -18,10 +19,12 @@ struct CodingRanchHomeView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let wide = proxy.size.width >= 980
+            let windowWidth = windowSize.width > 0 ? windowSize.width : proxy.size.width
+            let wide = windowWidth >= CampLayout.secondaryPanelWindowWidth
+            let compact = windowWidth < CampLayout.windowCompactWidth
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    campHeader
+                    campHeader(compact: compact)
                     feedHero
                     if wide {
                         HStack(alignment: .top, spacing: 14) {
@@ -64,32 +67,60 @@ struct CodingRanchHomeView: View {
                     showFeedComposer = false
                 }
             )
-            .frame(minWidth: 640, minHeight: 680)
+            .frame(
+                minWidth: 520,
+                idealWidth: 720,
+                maxWidth: 760,
+                minHeight: 560,
+                idealHeight: 680,
+                maxHeight: 760
+            )
         }
     }
 
-    private var campHeader: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Image(systemName: "tent.fill")
-                        .foregroundStyle(Camp.ember)
-                    Text(state.campName)
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(Camp.ink)
+    @ViewBuilder private func campHeader(compact: Bool) -> some View {
+        Group {
+            if compact {
+                VStack(alignment: .leading, spacing: 10) {
+                    campHeaderIdentity
+                    HStack(spacing: 8) {
+                        Spacer(minLength: 0)
+                        campHeaderActions
+                    }
                 }
-                Text(headerSubtitle)
-                    .font(.caption)
-                    .foregroundStyle(Camp.inkSecondary)
+            } else {
+                HStack(spacing: 12) {
+                    campHeaderIdentity
+                    Spacer(minLength: 8)
+                    campHeaderActions
+                }
             }
-            Spacer()
-            if state.pendingConfirmationCount > 0 {
-                CampChip(text: "\(state.pendingConfirmationCount) 项等你确认", color: Camp.amber, icon: "hand.raised.fill")
-            }
-            Button("牛棚", action: onOpenCowRoster)
-                .buttonStyle(CampSecondaryButtonStyle())
         }
         .campCard(padding: 12)
+    }
+
+    private var campHeaderIdentity: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: "tent.fill")
+                    .foregroundStyle(Camp.ember)
+                Text(state.campName)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(Camp.ink)
+                    .lineLimit(2)
+            }
+            Text(headerSubtitle)
+                .font(.caption)
+                .foregroundStyle(Camp.inkSecondary)
+        }
+    }
+
+    @ViewBuilder private var campHeaderActions: some View {
+        if state.pendingConfirmationCount > 0 {
+            CampChip(text: "\(state.pendingConfirmationCount) 项等你确认", color: Camp.amber, icon: "hand.raised.fill")
+        }
+        Button("牛棚", action: onOpenCowRoster)
+            .buttonStyle(CampSecondaryButtonStyle())
     }
 
     private var feedHero: some View {

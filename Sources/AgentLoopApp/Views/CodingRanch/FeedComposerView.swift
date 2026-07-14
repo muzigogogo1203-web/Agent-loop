@@ -279,13 +279,24 @@ struct FeedSourceFieldsView: View {
                 .padding(10)
                 .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: Camp.smallRadius).stroke(Camp.line))
-            HStack(spacing: 10) {
-                TextField("来源 URL", text: $draft.sourceURL)
-                    .textFieldStyle(.plain)
-                Divider().frame(height: 20)
-                TextField("作者或出处", text: $draft.author)
-                    .textFieldStyle(.plain)
-                    .frame(minWidth: 150)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    TextField("来源 URL", text: $draft.sourceURL)
+                        .textFieldStyle(.plain)
+                        .frame(minWidth: 180)
+                    Divider().frame(height: 20)
+                    TextField("作者或出处", text: $draft.author)
+                        .textFieldStyle(.plain)
+                        .frame(minWidth: 150)
+                }
+
+                VStack(spacing: 10) {
+                    TextField("来源 URL", text: $draft.sourceURL)
+                        .textFieldStyle(.plain)
+                    Divider()
+                    TextField("作者或出处", text: $draft.author)
+                        .textFieldStyle(.plain)
+                }
             }
             .padding(10)
             .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))

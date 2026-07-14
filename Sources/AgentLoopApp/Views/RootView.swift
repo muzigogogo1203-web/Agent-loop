@@ -23,23 +23,25 @@ enum Destination: Hashable {
 struct RootView: View {
     @Environment(AppStore.self) private var store
     @State private var selection: Destination?
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var columnVisibility: NavigationSplitViewVisibility = .detailOnly
     @State private var showNewCampSheet = false
     @State private var abandonTarget: MissionRecord?
     @State private var showResumeConfirmation = false
     @State private var pendingMissionDraft: MissionDraftViewState?
+    @State private var lastWindowWidth: CGFloat = 0
+    @State private var windowSize = CGSize(width: 640, height: 680)
     @AppStorage("codingRanch.didCompleteOnboarding") private var didCompleteOnboarding = false
 
     var body: some View {
         VStack(spacing: 0) {
             if store.showsGlobalHaltBanner {
-                globalHaltBanner
+                globalHaltBanner(compact: windowSize.width < CampLayout.windowCompactWidth)
                 Divider().overlay(Camp.charcoalRed.opacity(0.35))
             }
 
             NavigationSplitView(columnVisibility: $columnVisibility) {
-            VStack(spacing: 0) {
-                List(selection: $selection) {
+                VStack(spacing: 0) {
+                    List(selection: $selection) {
                     // 营地=频道（M5-0 C1）：每营地一个分区
                     ForEach(store.camps, id: \.id) { camp in
                         campSection(camp)
@@ -261,7 +263,19 @@ struct RootView: View {
             .background(Camp.canvas)
             // 统一 toast 通道（UX 审计 P2：跨视图反馈不再丢失）
             .campToast(store.knowledgeToast)
+        }
+        .navigationSplitViewStyle(.prominentDetail)
+        }
+        .background(CampWindowSizeReader(size: $windowSize))
+        .environment(\.campWindowSize, windowSize)
+        .onAppear {
+            if windowSize.width > 0 {
+                updateColumnVisibility(for: windowSize.width)
             }
+        }
+        .onChange(of: windowSize.width) { _, width in
+            guard width > 0 else { return }
+            updateColumnVisibility(for: width)
         }
         .confirmationDialog(
             "放弃「\(abandonTarget.map(Self.missionTitleStatic) ?? "")」？",
@@ -305,7 +319,31 @@ struct RootView: View {
         .tint(Camp.ember)
     }
 
-    private var globalHaltBanner: some View {
+    private func globalHaltBanner(compact: Bool) -> some View {
+        Group {
+            if compact {
+                VStack(alignment: .leading, spacing: 8) {
+                    haltBannerSummary
+                    HStack(spacing: 8) {
+                        Spacer(minLength: 0)
+                        haltBannerActions
+                    }
+                }
+            } else {
+                HStack(alignment: .center, spacing: 12) {
+                    haltBannerSummary
+                    Spacer(minLength: 12)
+                    haltBannerActions
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Camp.charcoalRed.opacity(0.08))
+        .accessibilityElement(children: .contain)
+    }
+
+    private var haltBannerSummary: some View {
         HStack(alignment: .center, spacing: 12) {
             Image(systemName: store.haltOperationState == .resuming
                   ? "arrow.clockwise.circle.fill"
@@ -323,31 +361,36 @@ struct RootView: View {
                     .foregroundStyle(store.haltErrorMessage == nil ? Camp.inkSecondary : Camp.charcoalRed)
                     .textSelection(.enabled)
             }
-
-            Spacer(minLength: 12)
-
-            switch store.haltOperationState {
-            case .stopping, .resuming:
-                ProgressView()
-                    .controlSize(.small)
-                    .accessibilityLabel(store.haltBannerTitle)
-            case .idle:
-                if store.haltPersistencePending {
-                    Button("重试保存停营") {
-                        store.emergencyStopCamp()
-                    }
-                    .buttonStyle(CampPrimaryButtonStyle(size: .small))
-                }
-                Button("恢复全部…") {
-                    showResumeConfirmation = true
-                }
-                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
-            }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Camp.charcoalRed.opacity(0.08))
-        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder private var haltBannerActions: some View {
+        switch store.haltOperationState {
+        case .stopping, .resuming:
+            ProgressView()
+                .controlSize(.small)
+                .accessibilityLabel(store.haltBannerTitle)
+        case .idle:
+            if store.haltPersistencePending {
+                Button("重试保存停营") {
+                    store.emergencyStopCamp()
+                }
+                .buttonStyle(CampPrimaryButtonStyle(size: .small))
+            }
+            Button("恢复全部…") {
+                showResumeConfirmation = true
+            }
+            .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+        }
+    }
+
+    private func updateColumnVisibility(for width: CGFloat) {
+        let wasCompact = lastWindowWidth > 0 && lastWindowWidth < CampLayout.navigationCollapseWidth
+        let isCompact = width < CampLayout.navigationCollapseWidth
+        if lastWindowWidth == 0 || wasCompact != isCompact {
+            columnVisibility = isCompact ? .detailOnly : .all
+        }
+        lastWindowWidth = width
     }
 
     private var haltAccessibilityAnnouncement: String {

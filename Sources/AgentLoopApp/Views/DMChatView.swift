@@ -4,6 +4,7 @@ import AgentLoopCore
 struct DMChatView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.campWindowSize) private var windowSize
     let companion: CompanionRecord
     var onEdit: () -> Void
     @State private var input = ""
@@ -11,7 +12,8 @@ struct DMChatView: View {
     var body: some View {
         GeometryReader { proxy in
             // 记忆抽屉宽度自适应（m3.3 规则）：窄窗口锁定收起
-            let tooNarrowForDrawer = proxy.size.width < 820
+            let windowWidth = windowSize.width > 0 ? windowSize.width : proxy.size.width
+            let tooNarrowForDrawer = windowWidth < CampLayout.secondaryPanelWindowWidth
             let showDrawer = store.memoryDrawerVisible && !tooNarrowForDrawer
 
             HStack(spacing: 0) {

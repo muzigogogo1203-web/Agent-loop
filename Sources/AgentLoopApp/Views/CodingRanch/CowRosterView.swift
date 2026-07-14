@@ -155,26 +155,17 @@ struct CowUnlockCard: View {
                     Text(cow.learningGoal).font(.caption).foregroundStyle(Camp.inkSecondary)
                 }
             }
-            HStack(alignment: .top, spacing: 22) {
-                VStack(alignment: .leading, spacing: 6) {
-                    CampSectionTitle("它能帮你")
-                    ForEach(cow.capabilities, id: \.self) { capability in
-                        Label(capability, systemImage: "checkmark.seal")
-                            .font(.caption)
-                            .foregroundStyle(Camp.ink)
-                    }
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 22) {
+                    capabilitiesColumn
+                        .fixedSize(horizontal: true, vertical: false)
+                    unlockConditionsColumn
+                        .fixedSize(horizontal: true, vertical: false)
                 }
-                VStack(alignment: .leading, spacing: 6) {
-                    CampSectionTitle("解锁条件")
-                    ForEach(progress.steps) { step in
-                        HStack(alignment: .top, spacing: 6) {
-                            Image(systemName: step.status == .completed ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(step.status == .completed ? Camp.moss : Camp.stone)
-                            Text(step.title)
-                                .font(.caption)
-                                .foregroundStyle(Camp.ink)
-                        }
-                    }
+
+                VStack(alignment: .leading, spacing: 14) {
+                    capabilitiesColumn
+                    unlockConditionsColumn
                 }
             }
             if progress.canUnlock {
@@ -196,6 +187,32 @@ struct CowUnlockCard: View {
             }
         }
         .campCard(highlighted: progress.canUnlock)
+    }
+
+    private var capabilitiesColumn: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            CampSectionTitle("它能帮你")
+            ForEach(cow.capabilities, id: \.self) { capability in
+                Label(capability, systemImage: "checkmark.seal")
+                    .font(.caption)
+                    .foregroundStyle(Camp.ink)
+            }
+        }
+    }
+
+    private var unlockConditionsColumn: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            CampSectionTitle("解锁条件")
+            ForEach(progress.steps) { step in
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: step.status == .completed ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(step.status == .completed ? Camp.moss : Camp.stone)
+                    Text(step.title)
+                        .font(.caption)
+                        .foregroundStyle(Camp.ink)
+                }
+            }
+        }
     }
 }
 

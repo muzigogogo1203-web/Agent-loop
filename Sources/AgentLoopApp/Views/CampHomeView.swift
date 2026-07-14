@@ -5,6 +5,7 @@ import AgentLoopCore
 struct CampHomeView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.campWindowSize) private var windowSize
     let campId: String
     var onEditGuide: () -> Void = {}
     var onNewMission: () -> Void = {}
@@ -19,12 +20,18 @@ struct CampHomeView: View {
     var body: some View {
         GeometryReader { proxy in
             // 窄窗口自动收起笔记本（m3.3 宽度自适应规则），用户偏好与自动收起互不覆盖。
-            // 量的是 detail 区宽度（不含侧栏）：340 笔记本 + ≥400 向导对话 + 间距。
-            let tooNarrowForNotes = proxy.size.width < 780
+            // 使用真实窗口宽度，避免 NavigationSplitView 的理想尺寸把可用空间报大。
+            let windowWidth = windowSize.width > 0 ? windowSize.width : proxy.size.width
+            let tooNarrowForNotes = windowWidth < CampLayout.secondaryPanelWindowWidth
             let showNotes = notesPaneVisible && !tooNarrowForNotes
+            let compactHeader = windowWidth < CampLayout.windowCompactWidth
 
             VStack(alignment: .leading, spacing: 12) {
-                header(notesVisible: showNotes, notesLocked: tooNarrowForNotes)
+                header(
+                    notesVisible: showNotes,
+                    notesLocked: tooNarrowForNotes,
+                    compact: compactHeader
+                )
 
                 HStack(alignment: .top, spacing: 14) {
                     if showNotes {
@@ -70,7 +77,14 @@ struct CampHomeView: View {
                     Task { await store.loadDashboard(campId: campId) }
                 }
             )
-            .frame(minWidth: 640, minHeight: 680)
+            .frame(
+                minWidth: 520,
+                idealWidth: 720,
+                maxWidth: 760,
+                minHeight: 560,
+                idealHeight: 680,
+                maxHeight: 760
+            )
         }
         .sheet(isPresented: $showRumination) {
             CampRuminationSheet(
@@ -91,7 +105,14 @@ struct CampHomeView: View {
                     }
                 }
             )
-            .frame(width: 820, height: 600)
+            .frame(
+                minWidth: 520,
+                idealWidth: 820,
+                maxWidth: 900,
+                minHeight: 500,
+                idealHeight: 600,
+                maxHeight: 760
+            )
         }
         .alert("重命名营地", isPresented: $renaming) {
             TextField("营地名字", text: $renameText)
@@ -243,93 +264,134 @@ struct CampHomeView: View {
         return String((base.split(whereSeparator: \.isNewline).first.map(String.init) ?? base).prefix(24))
     }
 
-    private func header(notesVisible: Bool, notesLocked: Bool) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Image(systemName: "tent.fill")
-                        .foregroundStyle(Camp.ember)
-                    Text(store.campName)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(Camp.ink)
-                }
-                .contextMenu {
-                    Button("重命名营地…") {
-                        renameText = store.campName
-                        renaming = true
+    @ViewBuilder
+    private func header(notesVisible: Bool, notesLocked: Bool, compact: Bool) -> some View {
+        Group {
+            if compact {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .top, spacing: 10) {
+                        headerIdentity
+                        Spacer(minLength: 8)
+                        guideAvatar
+                    }
+                    FlowLayoutLite(spacing: 8) {
+                        headerControls(
+                            notesVisible: notesVisible,
+                            notesLocked: notesLocked,
+                            includeGuide: false
+                        )
                     }
                 }
-                Text("任务经验和营地管家都在这儿")
-                    .font(.caption)
-                    .foregroundStyle(Camp.inkSecondary)
-            }
-            Spacer()
-            if store.missionStartBlocked {
-                CampChip(
-                    text: store.kernelStartupRecoveryPending ? "正在恢复上次状态" : "全部行动已暂停",
-                    color: Camp.charcoalRed,
-                    icon: store.kernelStartupRecoveryPending ? "arrow.clockwise" : "hand.raised.slash.fill"
-                )
-                    .help(store.missionStartBlockMessage)
-            }
-            Button {
-                showFeedComposer = true
-            } label: {
-                Label("喂牛", systemImage: "plus.rectangle.on.rectangle")
-            }
-            .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
-
-            Button {
-                showRumination = true
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                    Text("待反刍")
-                    if pendingRuminationCount > 0 {
-                        Text("\(pendingRuminationCount)")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Camp.ember, in: Capsule())
-                    }
-                }
-            }
-            .buttonStyle(CampSecondaryButtonStyle())
-
-            Button {
-                onNewMission()
-            } label: {
-                Label("发起放牛", systemImage: "flag.fill")
-            }
-            .buttonStyle(CampPrimaryButtonStyle(size: .small))
-            .disabled(store.missionStartBlocked)
-            .opacity(store.missionStartBlocked ? 0.5 : 1)
-            .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在这个营地发起放牛任务")
-
-            Button {
-                notesPaneVisible.toggle()
-            } label: {
-                Image(systemName: notesVisible ? "sidebar.leading" : "book.closed")
-                    .foregroundStyle(notesVisible ? Camp.inkSecondary : Camp.ember)
-            }
-            .buttonStyle(CampSecondaryButtonStyle())
-            .disabled(notesLocked)
-            .help(notesLocked ? "窗口太窄，加宽窗口后可展开笔记本" : (notesVisible ? "收起笔记本" : "展开笔记本"))
-
-            if let guide = store.guideCompanion {
-                CompanionAvatarView(
-                    name: guide.name,
-                    colorName: guide.color,
-                    state: guideAnimState,
-                    size: 34
-                )
-                .contextMenu {
-                    Button("编辑营地管家…", action: onEditGuide)
+            } else {
+                HStack(alignment: .center, spacing: 12) {
+                    headerIdentity
+                    Spacer(minLength: 8)
+                    headerControls(
+                        notesVisible: notesVisible,
+                        notesLocked: notesLocked,
+                        includeGuide: true
+                    )
                 }
             }
         }
         .campCard(padding: 12)
+    }
+
+    private var headerIdentity: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: "tent.fill")
+                    .foregroundStyle(Camp.ember)
+                Text(store.campName)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Camp.ink)
+                    .lineLimit(2)
+            }
+            .contextMenu {
+                Button("重命名营地…") {
+                    renameText = store.campName
+                    renaming = true
+                }
+            }
+            Text("任务经验和营地管家都在这儿")
+                .font(.caption)
+                .foregroundStyle(Camp.inkSecondary)
+        }
+    }
+
+    @ViewBuilder
+    private func headerControls(notesVisible: Bool, notesLocked: Bool, includeGuide: Bool) -> some View {
+        if store.missionStartBlocked {
+            CampChip(
+                text: store.kernelStartupRecoveryPending ? "正在恢复上次状态" : "全部行动已暂停",
+                color: Camp.charcoalRed,
+                icon: store.kernelStartupRecoveryPending ? "arrow.clockwise" : "hand.raised.slash.fill"
+            )
+            .help(store.missionStartBlockMessage)
+        }
+
+        Button {
+            showFeedComposer = true
+        } label: {
+            Label("喂牛", systemImage: "plus.rectangle.on.rectangle")
+        }
+        .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+
+        Button {
+            showRumination = true
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                Text("待反刍")
+                if pendingRuminationCount > 0 {
+                    Text("\(pendingRuminationCount)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Camp.ember, in: Capsule())
+                }
+            }
+        }
+        .buttonStyle(CampSecondaryButtonStyle())
+
+        Button {
+            onNewMission()
+        } label: {
+            Label("发起放牛", systemImage: "flag.fill")
+        }
+        .buttonStyle(CampPrimaryButtonStyle(size: .small))
+        .disabled(store.missionStartBlocked)
+        .opacity(store.missionStartBlocked ? 0.5 : 1)
+        .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在这个营地发起放牛任务")
+
+        Button {
+            notesPaneVisible.toggle()
+        } label: {
+            Image(systemName: notesVisible ? "sidebar.leading" : "book.closed")
+                .foregroundStyle(notesVisible ? Camp.inkSecondary : Camp.ember)
+        }
+        .buttonStyle(CampSecondaryButtonStyle())
+        .disabled(notesLocked)
+        .help(notesLocked ? "窗口太窄，加宽窗口后可展开笔记本" : (notesVisible ? "收起笔记本" : "展开笔记本"))
+
+        if includeGuide {
+            guideAvatar
+        }
+    }
+
+    @ViewBuilder private var guideAvatar: some View {
+        if let guide = store.guideCompanion {
+            CompanionAvatarView(
+                name: guide.name,
+                colorName: guide.color,
+                state: guideAnimState,
+                size: 34
+            )
+            .contextMenu {
+                Button("编辑营地管家…", action: onEditGuide)
+            }
+        }
     }
 
     private var pendingRuminationCount: Int {
@@ -435,46 +497,69 @@ private struct GuideChatColumn: View {
 
             Divider().overlay(Camp.line)
 
-            HStack(spacing: 8) {
-                Button {
-                    store.distillGuideChatNow()
-                } label: {
-                    if store.distillingGuideChat {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Label("沉淀笔记", systemImage: "sparkles")
-                    }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    distillButton
+                    guideMessageField
+                        .frame(minWidth: 240)
+                    sendButton
                 }
-                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.amber))
-                .disabled(store.distillingGuideChat)
-                .help("把这段对话里值得记的内容沉淀为营地笔记")
 
-                TextField("跟\(store.guideCompanion?.name ?? "营地管家")说点什么…", text: $input)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal, 11)
-                    .padding(.vertical, 7)
-                    .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
-                            .stroke(Camp.line, lineWidth: 1)
-                    )
-                    .onSubmit(send)
-                if store.guideStreaming {
-                    Button("停止") { store.stopGuideChat() }
-                        .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
-                        .keyboardShortcut(.cancelAction)
-                } else {
-                    Button("发送", action: send)
-                        .buttonStyle(CampPrimaryButtonStyle(size: .small))
-                        .disabled(input.isEmpty)
-                        .opacity(input.isEmpty ? 0.5 : 1)
+                VStack(spacing: 8) {
+                    guideMessageField
+                    HStack(spacing: 8) {
+                        distillButton
+                        Spacer(minLength: 8)
+                        sendButton
+                    }
                 }
             }
             .padding(10)
             .background(Camp.surface)
         }
         .background(Camp.surface)
+    }
+
+    private var distillButton: some View {
+        Button {
+            store.distillGuideChatNow()
+        } label: {
+            if store.distillingGuideChat {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Label("沉淀笔记", systemImage: "sparkles")
+            }
+        }
+        .buttonStyle(CampSecondaryButtonStyle(tint: Camp.amber))
+        .disabled(store.distillingGuideChat)
+        .help("把这段对话里值得记的内容沉淀为营地笔记")
+    }
+
+    private var guideMessageField: some View {
+        TextField("跟\(store.guideCompanion?.name ?? "营地管家")说点什么…", text: $input)
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                    .stroke(Camp.line, lineWidth: 1)
+            )
+            .onSubmit(send)
+    }
+
+    @ViewBuilder private var sendButton: some View {
+        if store.guideStreaming {
+            Button("停止") { store.stopGuideChat() }
+                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
+                .keyboardShortcut(.cancelAction)
+        } else {
+            Button("发送", action: send)
+                .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                .disabled(input.isEmpty)
+                .opacity(input.isEmpty ? 0.5 : 1)
+        }
     }
 
     private var scrollAnchor: String {

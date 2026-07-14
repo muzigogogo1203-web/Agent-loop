@@ -38,7 +38,7 @@ struct CardDetailInspector: View {
                 .padding(16)
             }
         }
-        .frame(width: 620, height: 640)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Camp.canvas)
         .fontDesign(.rounded)
         .task(id: card.id) {
@@ -66,11 +66,12 @@ struct CardDetailInspector: View {
                     if card.reviewFlag != nil {
                         CampChip(text: "待复核", color: Camp.amber, icon: "exclamationmark.circle.fill")
                     }
-                    Text("预期产出：\(card.expectedOutput)")
-                        .font(.caption)
-                        .foregroundStyle(Camp.inkSecondary)
-                        .lineLimit(1)
                 }
+                Text("预期产出：\(card.expectedOutput)")
+                    .font(.caption)
+                    .foregroundStyle(Camp.inkSecondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
             Button {

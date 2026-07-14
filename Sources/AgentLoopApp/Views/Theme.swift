@@ -57,6 +57,117 @@ enum Camp {
     }
 }
 
+// MARK: - 响应式布局
+
+/// App 层统一使用的窗口断点。只描述呈现策略，不承载业务状态。
+enum CampLayout {
+    /// 低于该宽度时优先保证详情可用，主侧栏自动收起。
+    static let navigationCollapseWidth: CGFloat = 900
+    /// 低于该真实窗口宽度时，复杂页头和工具条改为分行布局。
+    static let windowCompactWidth: CGFloat = 1200
+    /// 视图自身低于该宽度时使用紧凑布局（sheet 等独立容器使用）。
+    static let compactContentWidth: CGFloat = 700
+    /// 笔记、动态等辅助面板至少需要的真实窗口宽度。
+    static let secondaryPanelWindowWidth: CGFloat = 1180
+    static let edgePadding: CGFloat = 16
+
+    static func inspectorSize(in available: CGSize) -> CGSize {
+        CGSize(
+            width: min(620, max(320, available.width - edgePadding * 2)),
+            height: min(640, max(360, available.height - edgePadding * 2))
+        )
+    }
+}
+
+private struct CampWindowSizeKey: EnvironmentKey {
+    static let defaultValue = CGSize.zero
+}
+
+extension EnvironmentValues {
+    var campWindowSize: CGSize {
+        get { self[CampWindowSizeKey.self] }
+        set { self[CampWindowSizeKey.self] = newValue }
+    }
+}
+
+/// `NavigationSplitView` 的理想尺寸可能大于真实窗口，单靠 GeometryReader 会读到溢出后的宽度。
+/// 这个零尺寸 AppKit 探针读取真实 contentView 尺寸，并在窗口缩放时同步到 SwiftUI 环境。
+struct CampWindowSizeReader: NSViewRepresentable {
+    @Binding var size: CGSize
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(size: $size)
+    }
+
+    func makeNSView(context: Context) -> WindowProbeView {
+        let view = WindowProbeView(frame: .zero)
+        view.onWindowChange = { [weak coordinator = context.coordinator] window in
+            coordinator?.observe(window)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: WindowProbeView, context: Context) {
+        if context.coordinator.window !== nsView.window {
+            context.coordinator.observe(nsView.window)
+        }
+    }
+
+    static func dismantleNSView(_ nsView: WindowProbeView, coordinator: Coordinator) {
+        nsView.onWindowChange = nil
+        coordinator.stopObserving()
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        private let size: Binding<CGSize>
+        weak var window: NSWindow?
+
+        init(size: Binding<CGSize>) {
+            self.size = size
+        }
+
+        func observe(_ window: NSWindow?) {
+            guard self.window !== window else { return }
+            stopObserving()
+            self.window = window
+            if let window {
+                NotificationCenter.default.addObserver(
+                    self,
+                    selector: #selector(windowDidResize(_:)),
+                    name: NSWindow.didResizeNotification,
+                    object: window
+                )
+                publishSize()
+            }
+        }
+
+        func stopObserving() {
+            NotificationCenter.default.removeObserver(self, name: NSWindow.didResizeNotification, object: window)
+            window = nil
+        }
+
+        @objc private func windowDidResize(_ notification: Notification) {
+            publishSize()
+        }
+
+        private func publishSize() {
+            guard let next = window?.frame.size, next != size.wrappedValue else { return }
+            size.wrappedValue = next
+        }
+    }
+}
+
+@MainActor
+final class WindowProbeView: NSView {
+    var onWindowChange: ((NSWindow?) -> Void)?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        onWindowChange?(window)
+    }
+}
+
 // MARK: - 卡片容器
 
 struct CampCard: ViewModifier {

@@ -9,6 +9,7 @@ struct TaskRunView: View {
 
     @Environment(AppStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.campWindowSize) private var windowSize
     @State private var goal = ""
     @State private var workspace = ""
     @State private var selectedCompanionIds: [String] = []
@@ -64,35 +65,44 @@ struct TaskRunView: View {
     // 点背景或 Esc 关闭；Reduce Motion 时静态出现（spec §11.2）。
 
     @ViewBuilder private var cardDetailOverlay: some View {
-        if let card = selectedCard {
-            ZStack {
-                Camp.ink.opacity(0.22)
-                    .ignoresSafeArea()
-                    .contentShape(Rectangle())
-                    .onTapGesture { store.selectedCardId = nil }
-                    .transition(.opacity)
-                CardDetailInspector(card: card) {
-                    store.selectedCardId = nil
-                }
-                .clipShape(RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
-                        .stroke(Camp.line, lineWidth: 1)
+        GeometryReader { proxy in
+            if let card = selectedCard {
+                let availableSize = CGSize(
+                    width: windowSize.width > 0 ? min(proxy.size.width, windowSize.width) : proxy.size.width,
+                    height: windowSize.height > 0 ? min(proxy.size.height, windowSize.height) : proxy.size.height
                 )
-                .shadow(color: .black.opacity(0.25), radius: 28, y: 12)
-                .transition(reduceMotion
-                    ? .opacity
-                    : .scale(scale: 0.94).combined(with: .opacity))
+                let inspectorSize = CampLayout.inspectorSize(in: availableSize)
+
+                ZStack {
+                    Camp.ink.opacity(0.22)
+                        .ignoresSafeArea()
+                        .contentShape(Rectangle())
+                        .onTapGesture { store.selectedCardId = nil }
+                        .transition(.opacity)
+                    CardDetailInspector(card: card) {
+                        store.selectedCardId = nil
+                    }
+                    .frame(width: inspectorSize.width, height: inspectorSize.height)
+                    .clipShape(RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                            .stroke(Camp.line, lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.25), radius: 28, y: 12)
+                    .transition(reduceMotion
+                        ? .opacity
+                        : .scale(scale: 0.94).combined(with: .opacity))
+                }
+                // 弹出即接管键盘焦点：Esc 关闭（focusable 卡片行不再吞键）
+                .focusable()
+                .focused($detailFocused)
+                .focusEffectDisabled()
+                .onKeyPress(.escape) {
+                    store.selectedCardId = nil
+                    return .handled
+                }
+                .onAppear { detailFocused = true }
             }
-            // 弹出即接管键盘焦点：Esc 关闭（focusable 卡片行不再吞键）
-            .focusable()
-            .focused($detailFocused)
-            .focusEffectDisabled()
-            .onKeyPress(.escape) {
-                store.selectedCardId = nil
-                return .handled
-            }
-            .onAppear { detailFocused = true }
         }
     }
 
@@ -377,16 +387,22 @@ struct TaskRunView: View {
     private var missionView: some View {
         GeometryReader { proxy in
             // 窄窗口自动收起右栏，避免各栏互相挤压错乱；用户偏好与自动收起互不覆盖
-            let tooNarrowForFeed = proxy.size.width < 820
+            let windowWidth = windowSize.width > 0 ? windowSize.width : proxy.size.width
+            let tooNarrowForFeed = windowWidth < CampLayout.secondaryPanelWindowWidth
             let showFeed = store.feedPanelVisible && !tooNarrowForFeed
+            let compact = windowWidth < CampLayout.windowCompactWidth
 
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 14) {
-                    missionHeader
+                    missionHeader(compact: compact)
                     if store.currentMissionBudgetExhausted {
-                        budgetBanner
+                        budgetBanner(compact: compact)
                     }
-                    viewToggle(feedVisible: showFeed, feedLocked: tooNarrowForFeed)
+                    viewToggle(
+                        feedVisible: showFeed,
+                        feedLocked: tooNarrowForFeed,
+                        compact: compact
+                    )
 
                     if store.theaterMode {
                         CampfireTheaterView(
@@ -436,29 +452,53 @@ struct TaskRunView: View {
         }
     }
 
-    private var missionHeader: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(missionGoalLine)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(Camp.ink)
-                    .lineLimit(2)
-                HStack(spacing: 8) {
-                    statusChip
-                    if doneCount > 0 || store.missionCards.count > 0 {
-                        Text("\(doneCount)/\(store.missionCards.count) 张工作卡完成")
-                            .font(.caption)
-                            .foregroundStyle(Camp.inkSecondary)
+    @ViewBuilder private func missionHeader(compact: Bool) -> some View {
+        Group {
+            if compact {
+                VStack(alignment: .leading, spacing: 10) {
+                    missionTitle(lineLimit: 3)
+                    missionStatusSummary
+                    HStack(spacing: 10) {
+                        presentCompanions
+                        Spacer(minLength: 8)
+                        missionActions
                     }
-                    autonomyMenu
-                    spendChip
+                }
+            } else {
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        missionTitle(lineLimit: 2)
+                        missionStatusSummary
+                    }
+                    Spacer(minLength: 8)
+                    presentCompanions
+                    missionActions
                 }
             }
-            Spacer()
-            presentCompanions
-            missionActions
         }
         .campCard()
+    }
+
+    private func missionTitle(lineLimit: Int) -> some View {
+        Text(missionGoalLine)
+            .font(.title3.weight(.semibold))
+            .foregroundStyle(Camp.ink)
+            .lineLimit(lineLimit)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var missionStatusSummary: some View {
+        FlowLayoutLite(spacing: 8) {
+            statusChip
+            if doneCount > 0 || store.missionCards.count > 0 {
+                Text("\(doneCount)/\(store.missionCards.count) 张工作卡完成")
+                    .font(.caption)
+                    .foregroundStyle(Camp.inkSecondary)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            autonomyMenu
+            spendChip
+        }
     }
 
     // MARK: - 哨卡（M7）
@@ -624,8 +664,26 @@ struct TaskRunView: View {
     }
 
     /// 预算三选（M5-2，spec §13）：加预算 / 就地收成果 / 放弃
-    private var budgetBanner: some View {
-        HStack(spacing: 10) {
+    @ViewBuilder private func budgetBanner(compact: Bool) -> some View {
+        Group {
+            if compact {
+                VStack(alignment: .leading, spacing: 10) {
+                    budgetSummary
+                    budgetActions
+                }
+            } else {
+                HStack(spacing: 10) {
+                    budgetSummary
+                    Spacer(minLength: 8)
+                    budgetActions
+                }
+            }
+        }
+        .campCard(padding: 12, highlighted: true)
+    }
+
+    private var budgetSummary: some View {
+        HStack(alignment: .top, spacing: 10) {
             Image(systemName: "flame.circle.fill")
                 .foregroundStyle(Camp.amber)
             VStack(alignment: .leading, spacing: 2) {
@@ -636,7 +694,11 @@ struct TaskRunView: View {
                     .font(.caption)
                     .foregroundStyle(Camp.inkSecondary)
             }
-            Spacer()
+        }
+    }
+
+    private var budgetActions: some View {
+        HStack(spacing: 8) {
             Button {
                 store.addBudgetToCurrentMission()
             } label: {
@@ -650,7 +712,6 @@ struct TaskRunView: View {
             .help("取消未完成的工作卡，保留已有成果，直接进入回营验收")
             abandonButton
         }
-        .campCard(padding: 12, highlighted: true)
     }
 
     private var budgetLine: String {
@@ -677,48 +738,28 @@ struct TaskRunView: View {
         }
     }
 
-    private func viewToggle(feedVisible: Bool, feedLocked: Bool) -> some View {
-        HStack(spacing: 8) {
-            Picker("视图", selection: theaterBinding) {
-                Label("工作卡", systemImage: "checklist").tag(false)
-                Label("Coding 草原", systemImage: "leaf.fill").tag(true)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(width: 190)
-            Image(systemName: "sparkles")
-                .foregroundStyle(Camp.amber)
-                .opacity(theaterPulse ? 1 : 0)
-                .symbolEffect(.pulse, options: .repeat(2), value: theaterPulseToken)
-            Spacer()
-            // M7-D5 / D8：按钮保留在行动页，Cmd+. 由 App 全局 Commands 接管。
-            if !store.campHalted {
-                Button {
-                    store.emergencyStopCamp()
-                } label: {
-                    if store.haltOperationState == .stopping {
-                        HStack(spacing: 6) {
-                            ProgressView().controlSize(.small)
-                            Text("正在收哨…")
-                        }
-                    } else {
-                        Label("收哨", systemImage: "hand.raised.fill")
+    private func viewToggle(feedVisible: Bool, feedLocked: Bool, compact: Bool) -> some View {
+        Group {
+            if compact {
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        viewModePicker
+                        theaterPulseIndicator
+                        Spacer(minLength: 0)
+                    }
+                    HStack(spacing: 8) {
+                        Spacer(minLength: 0)
+                        missionToolbarActions(feedVisible: feedVisible, feedLocked: feedLocked)
                     }
                 }
-                .foregroundStyle(Camp.charcoalRed)
-                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
-                .disabled(!store.canRequestEmergencyStop)
-                .help("紧急收哨：暂停全部行动并终止子进程（全局 Cmd+.）")
+            } else {
+                HStack(spacing: 8) {
+                    viewModePicker
+                    theaterPulseIndicator
+                    Spacer(minLength: 8)
+                    missionToolbarActions(feedVisible: feedVisible, feedLocked: feedLocked)
+                }
             }
-            Button {
-                store.feedPanelVisible.toggle()
-            } label: {
-                Image(systemName: feedVisible ? "sidebar.trailing" : "text.bubble")
-                    .foregroundStyle(feedVisible ? Camp.inkSecondary : Camp.ember)
-            }
-            .buttonStyle(CampSecondaryButtonStyle())
-            .disabled(feedLocked)
-            .help(feedLocked ? "窗口太窄，加宽窗口后可展开小队动态" : (feedVisible ? "收起小队动态" : "展开小队动态"))
         }
         .task(id: pulseTaskKey) {
             theaterPulse = false
@@ -735,6 +776,56 @@ struct TaskRunView: View {
                 }
             }
         }
+    }
+
+    private var viewModePicker: some View {
+        Picker("视图", selection: theaterBinding) {
+            Label("工作卡", systemImage: "checklist").tag(false)
+            Label("Coding 草原", systemImage: "leaf.fill").tag(true)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .frame(width: 190)
+    }
+
+    private var theaterPulseIndicator: some View {
+        Image(systemName: "sparkles")
+            .foregroundStyle(Camp.amber)
+            .opacity(theaterPulse ? 1 : 0)
+            .symbolEffect(.pulse, options: .repeat(2), value: theaterPulseToken)
+    }
+
+    @ViewBuilder
+    private func missionToolbarActions(feedVisible: Bool, feedLocked: Bool) -> some View {
+        // M7-D5 / D8：按钮保留在行动页，Cmd+. 由 App 全局 Commands 接管。
+        if !store.campHalted {
+            Button {
+                store.emergencyStopCamp()
+            } label: {
+                if store.haltOperationState == .stopping {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small)
+                        Text("正在收哨…")
+                    }
+                } else {
+                    Label("收哨", systemImage: "hand.raised.fill")
+                }
+            }
+            .foregroundStyle(Camp.charcoalRed)
+            .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
+            .disabled(!store.canRequestEmergencyStop)
+            .help("紧急收哨：暂停全部行动并终止子进程（全局 Cmd+.）")
+        }
+
+        Button {
+            store.feedPanelVisible.toggle()
+        } label: {
+            Image(systemName: feedVisible ? "sidebar.trailing" : "text.bubble")
+                .foregroundStyle(feedVisible ? Camp.inkSecondary : Camp.ember)
+        }
+        .buttonStyle(CampSecondaryButtonStyle())
+        .disabled(feedLocked)
+        .help(feedLocked ? "窗口太窄，加宽窗口后可展开小队动态" : (feedVisible ? "收起小队动态" : "展开小队动态"))
     }
 
     private var cardList: some View {
