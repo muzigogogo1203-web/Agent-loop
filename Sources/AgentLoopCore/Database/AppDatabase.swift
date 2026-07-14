@@ -220,7 +220,7 @@ public final class AppDatabase: Sendable {
             }
         }
         // P0 durable halt: global kernel dispatch gate. This descriptive id is
-        // intentionally inserted before the v7/v8 ids reserved by M9/M10.
+        // intentionally inserted before the v7 id reserved by M9.
         m.registerMigration("v6-durable-halt") { db in
             try db.create(table: "kernel_control") { t in
                 t.primaryKey("id", .text).check(sql: "id = 'global'")
@@ -233,6 +233,16 @@ public final class AppDatabase: Sendable {
                 dispatchMode: .running,
                 updatedAt: Date()
             ).insert(db)
+        }
+        // M9-D4/D6: done-card review flags + camp archive bit. Both are projections;
+        // event history remains append-only.
+        m.registerMigration("v7") { db in
+            try db.alter(table: "card") { t in
+                t.add(column: "reviewFlag", .text)
+            }
+            try db.alter(table: "camp") { t in
+                t.add(column: "archived", .boolean).notNull().defaults(to: false)
+            }
         }
         return m
     }
@@ -309,6 +319,25 @@ public final class AppDatabase: Sendable {
             }
             camp.name = trimmed
             try camp.update(db)
+        }
+    }
+
+    public func setCampArchived(id: String, archived: Bool) throws {
+        try pool.write { db in
+            guard var camp = try CampRecord.fetchOne(db, key: id) else {
+                throw RecordNotFoundError(table: "camp", id: id)
+            }
+            guard camp.archived != archived else { return }
+            camp.archived = archived
+            try camp.update(db)
+            try Self.appendEvent(
+                db,
+                missionId: nil,
+                cardId: nil,
+                runId: nil,
+                kind: EventKind.campArchived,
+                payload: ["campId": .string(id), "archived": .bool(archived)]
+            )
         }
     }
 
@@ -435,6 +464,9 @@ public final class AppDatabase: Sendable {
         guard let camp = try camp(id: id) else {
             throw RecordNotFoundError(table: "camp", id: id)
         }
+        if camp.archived {
+            throw CampArchivedError(campId: id)
+        }
         return camp
     }
 
@@ -534,12 +566,125 @@ public final class AppDatabase: Sendable {
         try pool.read { db in try CardRecord.fetchOne(db, key: id) }
     }
 
+    public func clearCardReviewFlag(cardId: String) throws {
+        try pool.write { db in
+            guard var card = try CardRecord.fetchOne(db, key: cardId) else {
+                throw RecordNotFoundError(table: "card", id: cardId)
+            }
+            guard card.reviewFlag != nil else { return }
+            card.reviewFlag = nil
+            try card.update(db)
+            try Self.appendEvent(
+                db,
+                missionId: card.missionId,
+                cardId: card.id,
+                runId: nil,
+                kind: EventKind.cardReviewCleared,
+                payload: .object([:])
+            )
+        }
+    }
+
+    public func returnCardForRework(cardId: String, feedback: String) throws {
+        let trimmed = feedback.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        try pool.write { db in
+            guard var card = try CardRecord.fetchOne(db, key: cardId) else {
+                throw RecordNotFoundError(table: "card", id: cardId)
+            }
+            guard var mission = try MissionRecord.fetchOne(db, key: card.missionId) else {
+                throw RecordNotFoundError(table: "mission", id: card.missionId)
+            }
+            guard mission.status == .executing || mission.status == .delivering else {
+                throw MissionStateError(missionId: mission.id, from: mission.status, expected: .executing)
+            }
+            guard card.status.canTransition(to: .ready) else {
+                throw CardTransitionError(from: card.status, to: .ready)
+            }
+
+            let handoff = card.handoffJson.flatMap {
+                try? JSONDecoder().decode(HandoffPayload.self, from: Data($0.utf8))
+            }
+            let payload: JSONValue = [
+                "feedback": .string(trimmed),
+                "previousOutcome": .string(handoff?.outcome ?? ""),
+                "previousSummary": .string(handoff?.summary ?? ""),
+            ]
+
+            card.status = .ready
+            card.blockedReasonJson = nil
+            card.reviewFlag = nil
+            try card.update(db)
+            try Self.appendEvent(
+                db,
+                missionId: card.missionId,
+                cardId: card.id,
+                runId: nil,
+                kind: EventKind.cardReturned,
+                payload: payload
+            )
+
+            let downstream = try CardRecord
+                .filter(Column("missionId") == card.missionId && Column("status") == CardStatus.done.rawValue)
+                .fetchAll(db)
+            for var dependent in downstream where Self.dependsOn(card.id, dependsOnJson: dependent.dependsOnJson) {
+                dependent.reviewFlag = "stale_upstream"
+                try dependent.update(db)
+            }
+
+            let statuses = try CardRecord
+                .filter(Column("missionId") == mission.id)
+                .fetchAll(db)
+                .map(\.status)
+            let next = MissionStatus.rollup(current: mission.status, cards: statuses)
+            if next != mission.status {
+                let previous = mission.status
+                mission.status = next
+                try mission.update(db)
+                try Self.appendEvent(
+                    db,
+                    missionId: mission.id,
+                    cardId: nil,
+                    runId: nil,
+                    kind: EventKind.missionStatusChanged,
+                    payload: ["from": .string(previous.rawValue), "to": .string(next.rawValue)]
+                )
+            }
+        }
+    }
+
+    public func latestReturnFeedback(cardId: String) throws -> (feedback: String, previousOutcome: String, previousSummary: String)? {
+        try pool.read { db in
+            guard let event = try EventRecord
+                .filter(Column("cardId") == cardId && Column("kind") == EventKind.cardReturned)
+                .order(Column("createdAt").desc, Column.rowID.desc)
+                .fetchOne(db),
+                  let payload = try? JSONValue.decoded(from: event.payloadJson),
+                  let feedback = payload["feedback"]?.stringValue,
+                  !feedback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return nil
+            }
+            return (
+                feedback,
+                payload["previousOutcome"]?.stringValue ?? "",
+                payload["previousSummary"]?.stringValue ?? ""
+            )
+        }
+    }
+
     public func squad(forCard cardId: String) throws -> SquadRecord? {
         try pool.read { db in
             guard let card = try CardRecord.fetchOne(db, key: cardId),
                   let mission = try MissionRecord.fetchOne(db, key: card.missionId) else { return nil }
             return try SquadRecord.fetchOne(db, key: mission.squadId)
         }
+    }
+
+    private static func dependsOn(_ upstreamId: String, dependsOnJson: String) -> Bool {
+        guard let ids = try? JSONDecoder().decode([String].self, from: Data(dependsOnJson.utf8)) else {
+            return false
+        }
+        return ids.contains(upstreamId)
     }
 
     public func squad(forMission missionId: String) throws -> SquadRecord? {

@@ -13,7 +13,8 @@ public enum CardStatus: String, Sendable, Codable, CaseIterable {
              (.running, .blocked), (.blocked, .ready), (.blocked, .canceled),
              (.todo, .canceled), (.ready, .canceled), (.ready, .blocked),
              (.running, .ready),    // §14 crash-recovery: interrupt returns card to ready
-             (.running, .canceled): // §13 budget-exhausted early-close terminalization
+             (.running, .canceled), // §13 budget-exhausted early-close terminalization
+             (.done, .ready):       // M9-D4: user returns a completed card for rework
             return true
         default: return false
         }
@@ -106,17 +107,26 @@ public struct StaleKernelControlStateError: Error, Equatable, Sendable {
     }
 }
 
+public struct CampArchivedError: Error, Equatable, Sendable {
+    public let campId: String
+    public init(campId: String) {
+        self.campId = campId
+    }
+}
+
 // MARK: - Camp
 
 public struct CampRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "camp"
     public var id: String
     public var name: String
+    public var archived: Bool
     public var createdAt: Date
 
-    public init(id: String, name: String, createdAt: Date) {
+    public init(id: String, name: String, archived: Bool = false, createdAt: Date) {
         self.id = id
         self.name = name
+        self.archived = archived
         self.createdAt = createdAt
     }
 }
@@ -233,6 +243,8 @@ public struct CardRecord: Codable, Sendable, FetchableRecord, PersistableRecord 
     public var dependsOnJson: String
     public var handoffJson: String?
     public var stage: Int
+    /// M9-D4：上游退回后标记下游 done 卡「待复核」
+    public var reviewFlag: String?
     public var maxTurns: Int
     public var tokenBudget: Int
     public var createdAt: Date
@@ -240,7 +252,7 @@ public struct CardRecord: Codable, Sendable, FetchableRecord, PersistableRecord 
     public init(id: String, missionId: String, idemKey: String, title: String,
                 descriptionText: String, expectedOutput: String, assigneeId: String?,
                 status: CardStatus, blockedReasonJson: String?, dependsOnJson: String,
-                handoffJson: String?, stage: Int,
+                handoffJson: String?, stage: Int, reviewFlag: String? = nil,
                 maxTurns: Int, tokenBudget: Int, createdAt: Date) {
         self.id = id
         self.missionId = missionId
@@ -254,6 +266,7 @@ public struct CardRecord: Codable, Sendable, FetchableRecord, PersistableRecord 
         self.dependsOnJson = dependsOnJson
         self.handoffJson = handoffJson
         self.stage = stage
+        self.reviewFlag = reviewFlag
         self.maxTurns = maxTurns
         self.tokenBudget = tokenBudget
         self.createdAt = createdAt

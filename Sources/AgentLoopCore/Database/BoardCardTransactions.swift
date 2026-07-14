@@ -26,14 +26,18 @@ extension AppDatabase {
         guard card.status.canTransition(to: .done) else {
             throw CardTransitionError(from: card.status, to: .done)
         }
+        let isRework = try EventRecord
+            .filter(Column("cardId") == id && Column("kind") == EventKind.cardReturned)
+            .fetchCount(db) > 0
 
         for (decl, durablePath) in durableArtifacts {
+            let label = isRework && !decl.label.contains("重做") ? "\(decl.label) (重做)" : decl.label
             try ArtifactRecord(
                 id: UUID().uuidString,
                 cardId: id,
                 path: durablePath,
                 kind: decl.kind,
-                label: decl.label,
+                label: label,
                 createdAt: Date()
             ).insert(db)
         }

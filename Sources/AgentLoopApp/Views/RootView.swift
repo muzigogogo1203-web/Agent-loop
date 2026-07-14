@@ -6,6 +6,7 @@ enum Destination: Hashable {
     case newMission(campId: String)
     case camp(String)
     case mission(String)
+    case trophies
     case settings
     case chat(String)
     case editCompanion(String?)
@@ -32,6 +33,13 @@ struct RootView: View {
                     // 营地=频道（M5-0 C1）：每营地一个分区
                     ForEach(store.camps, id: \.id) { camp in
                         campSection(camp)
+                    }
+
+                    Section("归营") {
+                        NavigationLink(value: Destination.trophies) {
+                            Label("战利品", systemImage: "shippingbox.fill")
+                                .foregroundStyle(selection == .trophies ? Camp.ember : Camp.ink)
+                        }
                     }
 
                     Section("伙伴") {
@@ -135,6 +143,10 @@ struct RootView: View {
                             selection = .newMission(campId: campId)
                         }
                     })
+                case .trophies:
+                    TrophyCenterView { missionId in
+                        selection = .mission(missionId)
+                    }
                 case .settings:
                     SettingsView()
                 case .chat(let id):
@@ -282,25 +294,40 @@ struct RootView: View {
                     Text(camp.name)
                         .fontWeight(.medium)
                         .lineLimit(1)
+                    if camp.archived {
+                        CampChip(text: "归档", color: Camp.stone, icon: "archivebox")
+                    }
                     Spacer()
                 }
             }
             .contextMenu {
-                Button("新行动…") {
-                    selection = .newMission(campId: camp.id)
+                if !camp.archived {
+                    Button("新行动…") {
+                        selection = .newMission(campId: camp.id)
+                    }
+                    .disabled(store.missionStartBlocked)
+                    Divider()
+                    Button("归档营地") {
+                        store.setCampArchived(id: camp.id, archived: true)
+                    }
+                } else {
+                    Button("恢复营地") {
+                        store.setCampArchived(id: camp.id, archived: false)
+                    }
                 }
-                .disabled(store.missionStartBlocked)
             }
             ForEach(active, id: \.id) { mission in
                 missionRow(mission)
             }
-            NavigationLink(value: Destination.newMission(campId: camp.id)) {
-                Label("新行动…", systemImage: "flag")
-                    .foregroundStyle(Camp.inkSecondary)
-                    .font(.callout)
+            if !camp.archived {
+                NavigationLink(value: Destination.newMission(campId: camp.id)) {
+                    Label("新行动…", systemImage: "flag")
+                        .foregroundStyle(Camp.inkSecondary)
+                        .font(.callout)
+                }
+                .disabled(store.missionStartBlocked)
+                .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在这个营地开启新行动")
             }
-            .disabled(store.missionStartBlocked)
-            .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在这个营地开启新行动")
         }
     }
 

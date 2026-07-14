@@ -11,6 +11,11 @@ struct CardDetailInspector: View {
     @State private var cardArtifacts: [ArtifactRecord] = []
     @State private var handoffPayload: HandoffPayload?
     @State private var developerExpanded = false
+    @State private var returnEditorVisible = false
+    @State private var returnFeedback = ""
+    @State private var returnError: String?
+    @State private var returning = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,6 +24,9 @@ struct CardDetailInspector: View {
             Divider().overlay(Camp.line)
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
+                    if card.reviewFlag != nil || canReturnForRework {
+                        reviewSection
+                    }
                     if let handoffPayload {
                         handoffSection(handoffPayload)
                     } else if !cardArtifacts.isEmpty {
@@ -55,6 +63,9 @@ struct CardDetailInspector: View {
                     .lineLimit(3)
                 HStack(spacing: 8) {
                     CampChip(text: statusText, color: statusColor, icon: statusIcon)
+                    if card.reviewFlag != nil {
+                        CampChip(text: "待复核", color: Camp.amber, icon: "exclamationmark.circle.fill")
+                    }
                     Text("预期产出：\(card.expectedOutput)")
                         .font(.caption)
                         .foregroundStyle(Camp.inkSecondary)
@@ -71,6 +82,128 @@ struct CardDetailInspector: View {
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.cancelAction)
+        }
+    }
+
+    // MARK: - 归营复核
+
+    private var reviewSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: card.reviewFlag != nil ? "exclamationmark.circle.fill" : "arrow.uturn.backward.circle.fill")
+                    .foregroundStyle(card.reviewFlag != nil ? Camp.amber : Camp.ember)
+                CampSectionTitle(card.reviewFlag != nil ? "待复核" : "验收动作")
+                Spacer()
+                if card.reviewFlag != nil {
+                    Button {
+                        store.clearCardReviewFlag(cardId: card.id)
+                    } label: {
+                        Label("标记已复核", systemImage: "checkmark.circle")
+                    }
+                    .buttonStyle(CampSecondaryButtonStyle(tint: Camp.moss))
+                }
+            }
+
+            if card.reviewFlag != nil {
+                Text("上游交付已经进入重做，这张交付可能需要重新检查。")
+                    .font(.callout)
+                    .foregroundStyle(Camp.ink)
+            }
+
+            if canReturnForRework {
+                if returnEditorVisible {
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextEditor(text: $returnFeedback)
+                            .font(.callout)
+                            .scrollContentBackground(.hidden)
+                            .frame(minHeight: 78)
+                            .padding(8)
+                            .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                    .stroke(returnError == nil ? Camp.line : Camp.charcoalRed.opacity(0.65), lineWidth: 1)
+                            )
+                        if let returnError {
+                            Label(returnError, systemImage: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                                .foregroundStyle(Camp.charcoalRed)
+                        }
+                        HStack(spacing: 8) {
+                            Button {
+                                submitReturnForRework()
+                            } label: {
+                                if returning {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Label("退回重做", systemImage: "arrow.uturn.backward")
+                                }
+                            }
+                            .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                            .disabled(returning || returnFeedback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                            Button("取消") {
+                                withOptionalAnimation {
+                                    returnEditorVisible = false
+                                    returnError = nil
+                                }
+                            }
+                            .buttonStyle(CampSecondaryButtonStyle())
+                        }
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                } else {
+                    Button {
+                        withOptionalAnimation {
+                            returnEditorVisible = true
+                            returnError = nil
+                        }
+                    } label: {
+                        Label("退回重做", systemImage: "arrow.uturn.backward")
+                    }
+                    .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .campCard(highlighted: card.reviewFlag != nil)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: returnEditorVisible)
+    }
+
+    private var canReturnForRework: Bool {
+        guard card.status == .done,
+              let mission = store.missionList.first(where: { $0.id == store.currentMissionId }) else {
+            return false
+        }
+        return mission.status == .executing || mission.status == .delivering
+    }
+
+    private func submitReturnForRework() {
+        let feedback = returnFeedback.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !feedback.isEmpty else {
+            returnError = "先写一句退回意见"
+            return
+        }
+        returning = true
+        returnError = nil
+        Task { @MainActor in
+            if let error = await store.returnCardForRework(cardId: card.id, feedback: feedback) {
+                returning = false
+                returnError = error
+            } else {
+                returning = false
+                onClose()
+            }
+        }
+    }
+
+    private func withOptionalAnimation(_ updates: @escaping () -> Void) {
+        if reduceMotion {
+            updates()
+        } else {
+            withAnimation(.snappy(duration: 0.2)) {
+                updates()
+            }
         }
     }
 

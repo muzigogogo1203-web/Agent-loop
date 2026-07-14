@@ -48,4 +48,9 @@ public enum EventKind {
 
     // 驿路（M8）：MCP server 停摆（挂在受影响行动上，UI 可渲染）
     public static let mcpServerDown = "mcp_server_down"
+
+    // 归营清点（M9）：退回重做 / 待复核 / 营地归档
+    public static let cardReturned = "card_returned"
+    public static let cardReviewCleared = "card_review_cleared"
+    public static let campArchived = "camp_archived"
 }

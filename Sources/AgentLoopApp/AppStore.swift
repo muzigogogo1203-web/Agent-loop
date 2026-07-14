@@ -20,6 +20,7 @@ final class AppStore {
     let db: AppDatabase
     let keychain: KeychainStore
     let artifactStoreRoot: URL
+    let reportStoreRoot: URL
     let orchestrator: Orchestrator
     /// MCP 驿站（M8-D8：绞杀第二刀，领域状态独立成 store）
     let mcp: McpStore
@@ -196,6 +197,8 @@ final class AppStore {
     var missionList: [MissionRecord] = []
     var missionCards: [CardRecord] = []
     var missionArtifacts: [ArtifactRecord] = []
+    var artifactLedgerItems: [ArtifactLedgerItem] = []
+    var artifactLedgerIncludeArchived = true
     var cardCompanions: [String: CompanionRecord] = [:]
     var cardLatest: [String: String] = [:]
     var cardActivity: [String: [ActivityItem]] = [:]
@@ -286,6 +289,7 @@ final class AppStore {
             fatalError("AgentLoop 状态目录初始化失败：\(error.localizedDescription)")
         }
         artifactStoreRoot = appSupport.appendingPathComponent("artifacts")
+        reportStoreRoot = appSupport.appendingPathComponent("reports")
         let database = try! AppDatabase(path: appSupport.appendingPathComponent("agentloop.sqlite").path)
         db = database
         do {
@@ -406,12 +410,13 @@ final class AppStore {
         camps = (try? db.camps()) ?? []
         apiKeyPresent = !Self.isUIPreview
             && Self.nonEmptyCredential(try? keychain.get(account: Self.apiKeyAccount)) != nil
-        webCredentialPresent = !Self.isUIPreview
-            && Self.nonEmptyCredential(try? keychain.get(account: Self.oauthAccessTokenAccount)) != nil
         searchKeyPresent = Self.isUIPreview
             ? false
             : (((try? keychain.get(account: "tavily-api-key")) ?? nil).map { !$0.isEmpty } ?? false)
+        webCredentialPresent = !Self.isUIPreview
+            && Self.nonEmptyCredential(try? keychain.get(account: Self.oauthAccessTokenAccount)) != nil
         reloadMissionList()
+        reloadArtifactLedger()
     }
 
     func saveAPIKey(_ key: String) {
@@ -863,6 +868,7 @@ final class AppStore {
                 try await orchestrator.closeout(currentMissionId, distillModel: effectiveDistillModel)
                 reloadMission(missionId: currentMissionId)
                 reloadMissionList()
+                reloadArtifactLedger()
             } catch {
                 missionPhase = .error(readableError(error))
             }
@@ -930,6 +936,34 @@ final class AppStore {
             } catch {
                 missionPhase = .error(readableError(error))
             }
+        }
+    }
+
+    func returnCardForRework(cardId: String, feedback: String) async -> String? {
+        do {
+            try await orchestrator.returnCardForRework(cardId: cardId, feedback: feedback)
+            if let currentMissionId {
+                reloadMission(missionId: currentMissionId)
+            }
+            reloadMissionList()
+            reloadArtifactLedger()
+            showToast("已退回重做")
+            return nil
+        } catch {
+            return readableError(error)
+        }
+    }
+
+    func clearCardReviewFlag(cardId: String) {
+        do {
+            try db.clearCardReviewFlag(cardId: cardId)
+            if let currentMissionId {
+                reloadMission(missionId: currentMissionId)
+            }
+            reloadMissionList()
+            showToast("已标记为复核过")
+        } catch {
+            showToast("清除复核标记失败：\(readableError(error))")
         }
     }
 
@@ -1129,6 +1163,7 @@ final class AppStore {
         }
         missionCards = (try? db.cards(missionId: missionId)) ?? []
         missionArtifacts = (try? db.missionArtifacts(missionId: missionId)) ?? []
+        reloadArtifactLedger()
         pendingRequests = (try? db.pendingUserRequests(missionId: missionId)) ?? []
         let companionIds: [String]
         if let squad = try? db.squad(forMission: missionId),
@@ -1171,6 +1206,13 @@ final class AppStore {
             byCamp[camp.id] = (try? db.missions(campId: camp.id)) ?? []
         }
         missionsByCamp = byCamp
+    }
+
+    func reloadArtifactLedger(includeArchived: Bool? = nil) {
+        if let includeArchived {
+            artifactLedgerIncludeArchived = includeArchived
+        }
+        artifactLedgerItems = (try? db.artifactLedger(includeArchived: artifactLedgerIncludeArchived)) ?? []
     }
 
     private func handleCardEvent(cardId: String, event: AgentEvent) {
@@ -1300,8 +1342,55 @@ final class AppStore {
         return String(describing: error)
     }
 
+    private static func missionTitle(_ mission: MissionRecord) -> String {
+        let refined = mission.goalRefined.trimmingCharacters(in: .whitespacesAndNewlines)
+        let raw = mission.goalRaw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = refined.isEmpty ? raw : refined
+        let firstLine = base.split(whereSeparator: \.isNewline).first.map(String.init) ?? base
+        return firstLine.isEmpty ? "未命名行动" : String(firstLine.prefix(36))
+    }
+
     func revealArtifact(_ artifact: ArtifactRecord) {
-        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: artifact.path)])
+        revealPath(artifact.path)
+    }
+
+    func revealPath(_ path: String) {
+        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+    }
+
+    func openPath(_ path: String) {
+        NSWorkspace.shared.open(URL(fileURLWithPath: path))
+    }
+
+    func reportURL(missionId: String) -> URL {
+        reportStoreRoot.appendingPathComponent("\(missionId).md")
+    }
+
+    @discardableResult
+    func ensureReport(missionId: String) -> URL? {
+        let url = reportURL(missionId: missionId)
+        if FileManager.default.fileExists(atPath: url.path) {
+            return url
+        }
+        do {
+            let input = try db.expeditionReportInput(missionId: missionId)
+            try FileManager.default.createDirectory(at: reportStoreRoot, withIntermediateDirectories: true)
+            try ExpeditionReport.markdown(input).write(to: url, atomically: true, encoding: .utf8)
+            return url
+        } catch {
+            showToast("报告生成失败：\(readableError(error))")
+            return nil
+        }
+    }
+
+    func openReport(missionId: String) {
+        guard let url = ensureReport(missionId: missionId) else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    func revealReport(missionId: String) {
+        guard let url = ensureReport(missionId: missionId) else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     /// 返回是否受理（未受理时调用方不应清空输入——UX 审计 P1：无 key 静默吞消息）
@@ -1457,6 +1546,16 @@ final class AppStore {
         reload()
         if campId == id, let camp = try? db.camp(id: id) {
             campName = camp.name
+        }
+    }
+
+    func setCampArchived(id: String, archived: Bool) {
+        do {
+            try db.setCampArchived(id: id, archived: archived)
+            reload()
+            showToast(archived ? "营地已归档" : "营地已恢复")
+        } catch {
+            showToast("营地状态修改失败：\(readableError(error))")
         }
     }
 

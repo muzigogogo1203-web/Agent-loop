@@ -96,6 +96,7 @@ public actor Orchestrator {
     /// M6-D7：搜索 key 派发时解析（沿 makeProvider 注入模式），Core 不直连 Keychain 细节
     private let searchKeyProvider: @Sendable () -> String?
     private let artifactStoreRoot: URL
+    private let reportStoreRoot: URL
     private var running: [String: RunningEntry] = [:]
     private var planningTasks: [String: Task<Void, Never>] = [:]
     private var distillTasks: [String: Task<Void, Never>] = [:]
@@ -163,6 +164,7 @@ public actor Orchestrator {
         self.db = db
         self.makeProvider = makeProvider
         self.artifactStoreRoot = artifactStoreRoot
+        self.reportStoreRoot = artifactStoreRoot.deletingLastPathComponent().appendingPathComponent("reports")
         self.tickInterval = tickInterval
         self.searchKeyProvider = searchKeyProvider
         self.rateLimitCooldownDuration = rateLimitCooldown
@@ -859,6 +861,15 @@ public actor Orchestrator {
         await reconcile()
     }
 
+    /// M9：用户退回已完成小目标，保留上一版交付作为重做上下文，并立即重新调度。
+    public func returnCardForRework(cardId: String, feedback: String) async throws {
+        try db.returnCardForRework(cardId: cardId, feedback: feedback)
+        if let missionId = try db.card(id: cardId)?.missionId {
+            emit(.missionChanged(missionId: missionId))
+        }
+        await reconcile()
+    }
+
     /// 提案确认（spec §10.2，plan D5/D10）：先 CAS（pending→confirmed）再建队；
     /// 建队失败补偿回滚 pending。重复确认在 CAS 处抛 StaleProposalError——宁可回滚，绝不重复建队。
     public func confirmSquadProposal(
@@ -973,7 +984,22 @@ public actor Orchestrator {
             )
         }
         emit(.missionChanged(missionId: missionId))
+        writeExpeditionReport(missionId: missionId)
         scheduleCloseoutDistillation(missionId: missionId, model: distillModel)
+    }
+
+    /// M9：验收后写入确定性远征报告。报告失败只进入内核错误事件，不反向阻塞收营。
+    private func writeExpeditionReport(missionId: String) {
+        do {
+            let input = try db.expeditionReportInput(missionId: missionId)
+            try FileManager.default.createDirectory(at: reportStoreRoot, withIntermediateDirectories: true)
+            let url = reportStoreRoot.appendingPathComponent("\(missionId).md")
+            try ExpeditionReport.markdown(input).write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            let message = "远征报告写入失败：\(String(describing: error))"
+            db.appendKernelErrorEvent(missionId: missionId, message: message)
+            emit(.kernelError(missionId: missionId, message: message))
+        }
     }
 
     /// 收营蒸馏旁路（spec §9-1，plan D1）：绝不阻塞收营；任何路径都产出一张笔记。
@@ -1030,10 +1056,103 @@ public actor Orchestrator {
             }
             emit(.campNoteCreated(missionId: missionId, noteId: record.id))
             emit(.missionChanged(missionId: missionId))
+            await distillCoworkNotes(missionId: missionId, model: model)
         } catch {
             let message = "收营蒸馏落库失败：\(String(describing: error))"
             db.appendKernelErrorEvent(missionId: missionId, message: message)
             emit(.kernelError(missionId: missionId, message: message))
+        }
+    }
+
+    /// M9：把一次行动中每位伙伴实际完成的小目标沉淀成伙伴记忆。失败静默跳过，留给人工复盘。
+    private func distillCoworkNotes(missionId: String, model: String) async {
+        let inputs: [CoworkDistillInput]
+        do {
+            inputs = try await db.pool.read { database in
+                guard let mission = try MissionRecord.fetchOne(database, key: missionId) else {
+                    throw RecordNotFoundError(table: "mission", id: missionId)
+                }
+                let goal = mission.goalRefined.isEmpty ? mission.goalRaw : mission.goalRefined
+                let cards = try CardRecord
+                    .filter(Column("missionId") == missionId && Column("status") == CardStatus.done.rawValue)
+                    .order(Column("stage"))
+                    .fetchAll(database)
+                var grouped: [String: [CoworkCardDigest]] = [:]
+                for card in cards {
+                    guard let assigneeId = card.assigneeId else { continue }
+                    let handoff = card.handoffJson.flatMap {
+                        try? JSONDecoder().decode(HandoffPayload.self, from: Data($0.utf8))
+                    }
+                    grouped[assigneeId, default: []].append(
+                        CoworkCardDigest(
+                            title: card.title,
+                            outcome: handoff?.outcome ?? "（无交接包）",
+                            summary: handoff?.summary ?? "",
+                            risks: handoff?.risks ?? []
+                        )
+                    )
+                }
+
+                var collected: [CoworkDistillInput] = []
+                for assigneeId in grouped.keys.sorted() {
+                    guard let companion = try CompanionRecord.fetchOne(database, key: assigneeId),
+                          let digests = grouped[assigneeId], !digests.isEmpty else {
+                        continue
+                    }
+                    let messages = digests.map { digest in
+                        var lines = [
+                            "行动目标：\(goal)",
+                            "小目标：\(digest.title)",
+                            "结果：\(digest.outcome)",
+                        ]
+                        if !digest.summary.isEmpty {
+                            lines.append("摘要：\(digest.summary)")
+                        }
+                        if !digest.risks.isEmpty {
+                            lines.append("风险：" + digest.risks.joined(separator: "；"))
+                        }
+                        return (role: "companion", text: lines.joined(separator: "\n"))
+                    }
+                    collected.append(CoworkDistillInput(companion: companion, messages: messages))
+                }
+                return collected
+            }
+        } catch {
+            return
+        }
+
+        guard !inputs.isEmpty else { return }
+        let distiller = Distiller(provider: makeProvider(model))
+        for input in inputs {
+            do {
+                guard let note = try await distiller.distillMemory(
+                    companionName: input.companion.name,
+                    rolePrompt: input.companion.rolePrompt,
+                    messages: input.messages
+                ) else {
+                    continue
+                }
+                let record = CompanionNoteRecord.new(
+                    companionId: input.companion.id,
+                    title: note.title,
+                    bodyMd: note.bodyMd
+                )
+                try await db.pool.write { database in
+                    try record.insert(database)
+                    try AppDatabase.appendEvent(
+                        database, missionId: missionId, cardId: nil, runId: nil,
+                        kind: EventKind.companionNoteCreated,
+                        payload: [
+                            "noteId": .string(record.id),
+                            "companionId": .string(input.companion.id),
+                            "source": .string("cowork"),
+                        ]
+                    )
+                }
+                emit(.missionChanged(missionId: missionId))
+            } catch {
+                continue
+            }
         }
     }
 
@@ -1089,8 +1208,18 @@ public actor Orchestrator {
             try Task.checkCancellation()
             guard dispatchPhase.permitsDispatch else { throw CancellationError() }
             let upstream = try loadUpstreamHandoffs(for: candidate.card)
-            let answeredRequests = try db.answeredRequests(cardId: candidate.card.id)
+            var answeredRequests = try db.answeredRequests(cardId: candidate.card.id)
                 .map { (prompt: $0.prompt, answer: $0.humanAnswer()) }
+            if let returned = try db.latestReturnFeedback(cardId: candidate.card.id) {
+                let previous = [
+                    returned.previousOutcome.isEmpty ? nil : "上次结果：\(returned.previousOutcome)",
+                    returned.previousSummary.isEmpty ? nil : "上次摘要：\(returned.previousSummary)",
+                ].compactMap { $0 }.joined(separator: "\n")
+                answeredRequests.append((
+                    prompt: "上次交付被用户退回，请按意见重做。",
+                    answer: [returned.feedback, previous].filter { !$0.isEmpty }.joined(separator: "\n")
+                ))
+            }
             // 知识注入（spec §6.2-5/6）：营地笔记 + 该伙伴的记忆
             let campId = try db.squad(forCard: candidate.card.id)?.campId
             let campNotes = loadCampNotes(campId: campId)
@@ -1342,6 +1471,18 @@ public actor Orchestrator {
         let task: Task<Void, Never>
         let assigneeId: String
         let missionId: String
+    }
+
+    private struct CoworkCardDigest: Sendable {
+        let title: String
+        let outcome: String
+        let summary: String
+        let risks: [String]
+    }
+
+    private struct CoworkDistillInput: Sendable {
+        let companion: CompanionRecord
+        let messages: [(role: String, text: String)]
     }
 
     private struct KernelErrorRecord: Sendable {
