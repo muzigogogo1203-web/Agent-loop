@@ -41,6 +41,9 @@ struct CardRowView: View {
                                 .foregroundStyle(card.status == .canceled ? Camp.inkSecondary : Camp.ink)
                                 .strikethrough(card.status == .canceled)
                             CampChip(text: statusText, color: color, icon: statusIcon)
+                            if card.reviewFlag != nil {
+                                CampChip(text: "待复核", color: Camp.amber, icon: "exclamationmark.circle.fill")
+                            }
                         }
                         if let companion {
                             Text(companion.name)
@@ -70,7 +73,7 @@ struct CardRowView: View {
             }
             .padding(.leading, 10)
         }
-        .campCard(padding: 12, highlighted: pendingRequest != nil)
+        .campCard(padding: 12, highlighted: pendingRequest != nil || card.reviewFlag != nil)
         // 营地风选中/焦点/悬停三态（替代系统蓝色焦点环——与暖色设计语言不符）：
         // 悬停 = 余烬淡描边微升起；键盘焦点/选中 = 余烬描边 + 底色微染
         .overlay(
@@ -113,6 +116,9 @@ struct CardRowView: View {
     }
 
     private var detailText: String {
+        if card.reviewFlag != nil {
+            return "上游交付已退回重做，这张交付需要复核"
+        }
         if card.status == .blocked, pendingRequest == nil, let detail = blockedDetail {
             return CampCopy.humanizeBlockedDetail(detail)
         }
@@ -153,6 +159,7 @@ struct CardRowView: View {
     }
 
     private var color: Color {
+        if card.reviewFlag != nil { return Camp.amber }
         switch card.status {
         case .done: return Camp.moss
         case .blocked: return Camp.amber

@@ -25,6 +25,15 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("API 端点")
+                    Picker("接口格式", selection: $store.apiFormat) {
+                        ForEach(ProviderAPIFormat.allCases, id: \.rawValue) { format in
+                            Text(format.displayName).tag(format)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    Label("鉴权 header 按接口格式自动处理", systemImage: "wand.and.stars")
+                        .foregroundStyle(Camp.inkSecondary)
+                        .font(.caption)
                     TextField(AppStore.defaultBaseURL, text: $store.apiBaseURL)
                         .textFieldStyle(.plain)
                         .autocorrectionDisabled()
@@ -39,12 +48,14 @@ struct SettingsView: View {
                         Label("URL 无效：需要 http(s):// 开头的完整地址", systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(Camp.charcoalRed)
                             .font(.caption)
-                    } else if store.apiBaseURL != AppStore.defaultBaseURL {
-                        Label("自定义端点：任何 Anthropic Messages API 兼容服务（官方 / 中转网关 / 本地代理）", systemImage: "point.3.connected.trianglepath.dotted")
+                    } else if store.apiBaseURL != AppStore.defaultBaseURL || store.apiFormat != .anthropicMessages {
+                        Label("自定义接入：端点会按所选接口格式自动补齐请求路径", systemImage: "point.3.connected.trianglepath.dotted")
                             .foregroundStyle(Camp.inkSecondary)
                             .font(.caption)
                         Button("恢复官方端点") {
                             store.apiBaseURL = AppStore.defaultBaseURL
+                            store.apiFormat = .anthropicMessages
+                            store.apiAuthScheme = .automatic
                         }
                         .buttonStyle(CampSecondaryButtonStyle())
                     }
@@ -53,12 +64,35 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        CampSectionTitle("API Key")
+                        CampSectionTitle("认证")
                         Spacer()
+                        if store.webCredentialPresent {
+                            CampChip(text: "网页登录已授权", color: Camp.moss, icon: "checkmark.seal.fill")
+                        }
                         if store.apiKeyPresent {
-                            CampChip(text: "已配置", color: Camp.moss, icon: "checkmark.seal.fill")
+                            CampChip(text: "API Key 已保存", color: Camp.moss, icon: "key.fill")
                         }
                     }
+                    HStack(spacing: 10) {
+                        Button {
+                            store.openProviderAuth()
+                        } label: {
+                            Label(store.apiFormat == .openAIChatCompletions ? "OpenAI Auth 登录" : "网页登录授权", systemImage: "arrow.up.forward.app")
+                        }
+                        .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                        .disabled(!store.apiBaseURLValid)
+                        .opacity(store.apiBaseURLValid ? 1 : 0.5)
+                        Text(store.webCredentialPresent ? "优先使用网页登录凭据" : store.authHintText)
+                            .font(.caption)
+                            .foregroundStyle(Camp.inkSecondary)
+                    }
+                    if let status = store.oauthLoginStatus {
+                        Label(status, systemImage: store.webCredentialPresent ? "checkmark.circle.fill" : "info.circle")
+                            .foregroundStyle(store.webCredentialPresent ? Camp.moss : Camp.inkSecondary)
+                            .font(.caption)
+                    }
+                    Divider()
+                    CampSectionTitle("API Key")
                     SecureField("sk-ant-… 或网关分发的 key", text: $key)
                         .textFieldStyle(.plain)
                         .font(.body.monospaced())
@@ -161,6 +195,69 @@ struct SettingsView: View {
                     Text("谨慎=写入即审批；标准=危险操作（跑命令）才审批；放手=预算内全放行。每个行动出发时可单独调整，进行中也能改。")
                         .font(.caption)
                         .foregroundStyle(Camp.inkSecondary)
+                }
+                .campCard()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        CampSectionTitle("长明火")
+                        Spacer()
+                        CampChip(
+                            text: store.menuBarResident ? "菜单栏常驻" : "普通模式",
+                            color: store.menuBarResident ? Camp.ember : Camp.stone,
+                            icon: store.menuBarResident ? "flame.fill" : "macwindow"
+                        )
+                    }
+                    Toggle(isOn: $store.menuBarResident) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("关窗后保留菜单栏篝火")
+                                .foregroundStyle(Camp.ink)
+                            Text("定时行动只在 App 运行期间触发；开启后可从菜单栏打开营地、查看下次日程和紧急收哨。")
+                                .font(.caption)
+                                .foregroundStyle(Camp.inkSecondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                }
+                .campCard()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        CampSectionTitle("更新")
+                        Spacer()
+                        CampChip(
+                            text: store.sparkleConfigured ? "已接入 Sparkle" : "未配置更新源",
+                            color: store.sparkleConfigured ? Camp.moss : Camp.stone,
+                            icon: store.sparkleConfigured ? "checkmark.seal.fill" : "exclamationmark.triangle"
+                        )
+                    }
+                    Toggle(isOn: $store.sparkleAutomaticallyChecksForUpdates) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("自动检查更新")
+                                .foregroundStyle(Camp.ink)
+                            Text(store.sparkleConfigured
+                                ? "Sparkle 会按发布 feed 检查新版本。"
+                                : "打包时传入 APPCAST_URL 和 SPARKLE_PUBLIC_KEY 后启用。")
+                                .font(.caption)
+                                .foregroundStyle(Camp.inkSecondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                    .disabled(!store.sparkleConfigured)
+
+                    HStack(spacing: 10) {
+                        Button {
+                            store.checkForUpdates()
+                        } label: {
+                            Label("检查更新", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                        .disabled(!store.sparkleConfigured || !store.sparkleCanCheckForUpdates)
+                        .opacity(store.sparkleConfigured && store.sparkleCanCheckForUpdates ? 1 : 0.5)
+                        Text("需要公开 appcast；私有仓库 release 资产不能作为更新源。")
+                            .font(.caption)
+                            .foregroundStyle(Camp.inkSecondary)
+                    }
                 }
                 .campCard()
 
@@ -317,5 +414,24 @@ struct SettingsView: View {
         }
         if store.distillModel == model { store.distillModel = "" }
         if store.plannerModel == model { store.plannerModel = "" }
+    }
+}
+
+private extension AppStore {
+    var authHintText: String {
+        apiFormat == .openAIChatCompletions
+            ? "会打开 OpenAI 登录页"
+            : "会打开当前端点对应的登录页"
+    }
+}
+
+private extension ProviderAPIFormat {
+    var displayName: String {
+        switch self {
+        case .anthropicMessages:
+            return "Anthropic"
+        case .openAIChatCompletions:
+            return "OpenAI"
+        }
     }
 }

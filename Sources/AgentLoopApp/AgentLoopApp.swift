@@ -10,6 +10,9 @@ struct AgentLoopApp: App {
             RootView()
                 .environment(store)
                 .frame(minWidth: 1060, minHeight: 680)
+                .onOpenURL { url in
+                    store.handleOAuthCallback(url)
+                }
                 // 开发用：AGENTLOOP_FORCE_DARK=1 强制暗色（篝火夜景验证）
                 .preferredColorScheme(
                     ProcessInfo.processInfo.environment["AGENTLOOP_FORCE_DARK"] == "1" ? .dark : nil
@@ -22,5 +25,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        !UserDefaults.standard.bool(forKey: "menuBarResident")
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag, let window = sender.windows.first(where: { $0.canBecomeKey }) {
+            window.makeKeyAndOrderFront(nil)
+        }
+        return true
     }
 }

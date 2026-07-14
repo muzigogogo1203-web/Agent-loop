@@ -1,4 +1,8 @@
 import SwiftUI
+import CryptoKit
+import Network
+import Security
+@preconcurrency import UserNotifications
 import AgentLoopCore
 
 @MainActor @Observable
@@ -16,6 +20,7 @@ final class AppStore {
     let db: AppDatabase
     let keychain: KeychainStore
     let artifactStoreRoot: URL
+    let reportStoreRoot: URL
     let orchestrator: Orchestrator
     /// MCP 驿站（M8-D8：绞杀第二刀，领域状态独立成 store）
     let mcp: McpStore
@@ -26,6 +31,11 @@ final class AppStore {
     /// 侧栏用：各营地的行动列表（含历史，UI 侧再分组）
     var missionsByCamp: [String: [MissionRecord]] = [:]
     var apiKeyPresent = false
+    var webCredentialPresent = false
+    var preferredCredentialSource: ProviderCredentialSource = .apiKey {
+        didSet { UserDefaults.standard.set(preferredCredentialSource.rawValue, forKey: "preferredCredentialSource") }
+    }
+    var oauthLoginStatus: String?
     /// M6-D8：Tavily key 在场与否决定 web_search 是否可用（编辑器置灰提示用）
     var searchKeyPresent = false
     /// M6-D11：默认模型持久化（修「重启复位」bug）
@@ -33,7 +43,14 @@ final class AppStore {
         didSet { UserDefaults.standard.set(defaultModel, forKey: "defaultModel") }
     }
     /// M6-D11：模型目录从硬编码数组改为可编辑 + 持久化
-    static let factoryModelChoices = ["claude-sonnet-4-6", "claude-fable-5", "claude-haiku-4-5-20251001"]
+    static let factoryModelChoices = [
+        "claude-sonnet-4-6",
+        "claude-fable-5",
+        "claude-haiku-4-5-20251001",
+        "gpt-4.1",
+        "gpt-4o",
+        "DeepSeek-V4-Flash-Third",
+    ]
     var modelChoices: [String] = AppStore.factoryModelChoices {
         didSet { UserDefaults.standard.set(modelChoices, forKey: "modelChoices") }
     }
@@ -56,6 +73,36 @@ final class AppStore {
         didSet { UserDefaults.standard.set(defaultAutonomy.rawValue, forKey: "defaultAutonomy") }
     }
 
+    private struct StoredCredential: Sendable {
+        var value: String
+        var source: ProviderCredentialSource
+
+        var authScheme: ProviderAuthScheme {
+            switch source {
+            case .apiKey:
+                return .automatic
+            case .webLogin:
+                return .oauthBearer
+            }
+        }
+    }
+
+    nonisolated private static let apiKeyAccount = "anthropic-api-key"
+    nonisolated private static let oauthAccessTokenAccount = "oauth-access-token"
+    nonisolated private static let oauthRefreshTokenAccount = "oauth-refresh-token"
+    nonisolated private static let oauthCodeVerifierAccount = "oauth-code-verifier"
+    nonisolated private static let preferredCredentialSourceKey = "preferredCredentialSource"
+    nonisolated private static let oauthStateKey = "oauthState"
+    nonisolated private static let genericOAuthClientID = "agentloop"
+    nonisolated private static let genericOAuthRedirectURI = "agentloop://oauth/callback"
+    nonisolated private static let openAIAuthClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
+    nonisolated private static let openAIAuthCallbackPort: UInt16 = 1455
+    nonisolated private static let openAIAuthRedirectURI = "http://localhost:1455/auth/callback"
+    nonisolated private static let openAIAuthURL = URL(string: "https://auth.openai.com/oauth/authorize")!
+    nonisolated private static let openAIAuthTokenURL = URL(string: "https://auth.openai.com/oauth/token")!
+    nonisolated private static let oauthCallbackQueue = DispatchQueue(label: "com.muzi.agentloop.oauth-callback")
+    nonisolated private static let menuBarResidentKey = "menuBarResident"
+
     /// 默认行动预算（M5-2，spec §13：设置页可改；propose_squad 缺省随之）
     var defaultMissionBudget: Int = KernelDefaults.missionBudget {
         didSet { UserDefaults.standard.set(defaultMissionBudget, forKey: "defaultMissionBudget") }
@@ -65,7 +112,13 @@ final class AppStore {
     var apiBaseURL: String = AppStore.defaultBaseURL {
         didSet { UserDefaults.standard.set(apiBaseURL, forKey: "apiBaseURL") }
     }
-    var apiBaseURLValid: Bool { AnthropicProvider.normalizedBaseURL(apiBaseURL) != nil }
+    var apiFormat: ProviderAPIFormat = .anthropicMessages {
+        didSet { UserDefaults.standard.set(apiFormat.rawValue, forKey: "apiFormat") }
+    }
+    var apiAuthScheme: ProviderAuthScheme = .automatic {
+        didSet { UserDefaults.standard.set(apiAuthScheme.rawValue, forKey: "apiAuthScheme") }
+    }
+    var apiBaseURLValid: Bool { ProviderEndpoint.normalizedBaseURL(apiBaseURL) != nil }
 
     enum MissionPhase: Equatable {
         case idle
@@ -82,6 +135,22 @@ final class AppStore {
     var missionList: [MissionRecord] = []
     var missionCards: [CardRecord] = []
     var missionArtifacts: [ArtifactRecord] = []
+    var artifactLedgerItems: [ArtifactLedgerItem] = []
+    var artifactLedgerIncludeArchived = true
+    var campSchedules: [ScheduledMissionRecord] = []
+    var menuBarResident = false {
+        didSet {
+            UserDefaults.standard.set(menuBarResident, forKey: Self.menuBarResidentKey)
+            updateStatusItem()
+        }
+    }
+    var sparkleConfigured = false
+    var sparkleCanCheckForUpdates = false
+    var sparkleAutomaticallyChecksForUpdates = false {
+        didSet {
+            sparkleUpdater?.automaticallyChecksForUpdates = sparkleAutomaticallyChecksForUpdates
+        }
+    }
     var cardCompanions: [String: CompanionRecord] = [:]
     var cardLatest: [String: String] = [:]
     var cardActivity: [String: [ActivityItem]] = [:]
@@ -97,6 +166,13 @@ final class AppStore {
     var selectedCardId: String?
     private var missionTask: Task<Void, Never>?
     private var kernelEventsTask: Task<Void, Never>?
+    private var oauthCallbackListener: NWListener?
+    @ObservationIgnored private var missionScheduler: MissionScheduler?
+    @ObservationIgnored private var sparkleUpdater: SparkleUpdater?
+    @ObservationIgnored private var sparkleStateTask: Task<Void, Never>?
+    @ObservationIgnored private var statusItem: NSStatusItem?
+    @ObservationIgnored private var statusMenuTarget: StatusMenuTarget?
+    @ObservationIgnored private var notifiedMissionEvents: Set<String> = []
 
     /// 新行动表单草稿（按营地暂存，防切页丢输入——UX 审计 P2）
     struct MissionDraft {
@@ -151,6 +227,14 @@ final class AppStore {
     init() {
         let keychainStore = KeychainStore()
         keychain = keychainStore
+        apiFormat = ProviderAPIFormat(
+            rawValue: UserDefaults.standard.string(forKey: "apiFormat") ?? ""
+        ) ?? .anthropicMessages
+        apiAuthScheme = .automatic
+        UserDefaults.standard.set(ProviderAuthScheme.automatic.rawValue, forKey: "apiAuthScheme")
+        preferredCredentialSource = ProviderCredentialSource(
+            rawValue: UserDefaults.standard.string(forKey: Self.preferredCredentialSourceKey) ?? ""
+        ) ?? .apiKey
         // 开发用状态目录覆盖（UI 预览时指向临时库，避免污染真实数据）
         let appSupport = ProcessInfo.processInfo.environment["AGENTLOOP_STATE_DIR"]
             .map { URL(fileURLWithPath: $0) }
@@ -158,6 +242,7 @@ final class AppStore {
                 .appendingPathComponent("AgentLoop")
         try! FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
         artifactStoreRoot = appSupport.appendingPathComponent("artifacts")
+        reportStoreRoot = appSupport.appendingPathComponent("reports")
         let database = try! AppDatabase(path: appSupport.appendingPathComponent("agentloop.sqlite").path)
         db = database
         let defaultBaseURL = Self.defaultBaseURL
@@ -174,10 +259,19 @@ final class AppStore {
         orchestrator = Orchestrator(
             db: database,
             makeProvider: { model in
-                let key = (try? keychainStore.get(account: "anthropic-api-key")) ?? ""
+                let credential = Self.storedProviderCredential(using: keychainStore)
                 let rawBase = UserDefaults.standard.string(forKey: "apiBaseURL") ?? defaultBaseURL
-                let base = AnthropicProvider.normalizedBaseURL(rawBase) ?? URL(string: defaultBaseURL)!
-                return AnthropicProvider(apiKey: key, model: model, baseURL: base)
+                let base = ProviderEndpoint.normalizedBaseURL(rawBase) ?? URL(string: defaultBaseURL)!
+                let format = ProviderAPIFormat(
+                    rawValue: UserDefaults.standard.string(forKey: "apiFormat") ?? ""
+                ) ?? .anthropicMessages
+                return LLMProviderFactory.make(
+                    format: format,
+                    authScheme: credential?.authScheme ?? .automatic,
+                    credential: credential?.value ?? "",
+                    model: model,
+                    baseURL: base
+                )
             },
             artifactStoreRoot: artifactStoreRoot,
             searchKeyProvider: {
@@ -210,6 +304,7 @@ final class AppStore {
            let autonomy = MissionAutonomy(rawValue: storedAutonomy) {
             defaultAutonomy = autonomy
         }
+        menuBarResident = UserDefaults.standard.bool(forKey: Self.menuBarResidentKey)
         // M7-D5：退出时终止 shell/MCP 子进程，防僵尸（同步、最要紧的一件）
         NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
@@ -217,12 +312,37 @@ final class AppStore {
             ShellProcessRegistry.shared.terminateAll()
         }
         mcp.onToast = { [weak self] message in self?.showToast(message) }
+        if !Self.isUIPreview, SparkleUpdater.bundleHasUpdateConfiguration {
+            sparkleUpdater = SparkleUpdater()
+            sparkleConfigured = true
+            sparkleCanCheckForUpdates = sparkleUpdater?.canCheckForUpdates ?? false
+            sparkleAutomaticallyChecksForUpdates = sparkleUpdater?.automaticallyChecksForUpdates ?? false
+            startSparkleStatePolling()
+        }
+        if !Self.isUIPreview {
+            missionScheduler = MissionScheduler(
+                db: database,
+                orchestrator: orchestrator,
+                plannerModel: { [weak self] in self?.effectivePlannerModel ?? Self.factoryModelChoices[0] },
+                onMissionStarted: { [weak self] missionId in
+                    self?.selectMission(missionId)
+                    self?.reload()
+                },
+                onNotice: { [weak self] message in
+                    self?.showToast(message)
+                    self?.postNotification(title: "AgentLoop", body: message, missionId: nil)
+                }
+            )
+        }
         reload()
+        updateStatusItem()
         startKernelEventListener()
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
         if !Self.isUIPreview {
             // M5-1 启动恢复：收编崩溃遗留的 running 孤儿卡 + 提案自愈，再照常调度
             Task { await orchestrator.recoverAndReconcile() }
+            missionScheduler?.recordMissedSchedules()
+            missionScheduler?.reload()
         }
     }
 
@@ -232,20 +352,52 @@ final class AppStore {
     static let previewMissionId = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_MISSION"]
     static let previewTheater = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_THEATER"] == "1"
 
+    nonisolated private static func nonEmptyCredential(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else { return nil }
+        return trimmed
+    }
+
+    nonisolated private static func storedProviderCredential(using keychain: KeychainStore) -> StoredCredential? {
+        let preferred = ProviderCredentialSource(
+            rawValue: UserDefaults.standard.string(forKey: preferredCredentialSourceKey) ?? ""
+        ) ?? .apiKey
+        let apiKey = nonEmptyCredential(try? keychain.get(account: apiKeyAccount))
+        let oauthToken = nonEmptyCredential(try? keychain.get(account: oauthAccessTokenAccount))
+
+        switch preferred {
+        case .webLogin:
+            if let oauthToken { return StoredCredential(value: oauthToken, source: .webLogin) }
+            if let apiKey { return StoredCredential(value: apiKey, source: .apiKey) }
+        case .apiKey:
+            if let apiKey { return StoredCredential(value: apiKey, source: .apiKey) }
+            if let oauthToken { return StoredCredential(value: oauthToken, source: .webLogin) }
+        }
+        return nil
+    }
+
     func reload() {
         companions = (try? db.regularCompanions()) ?? []
         camps = (try? db.camps()) ?? []
-        apiKeyPresent = Self.isUIPreview
-            ? false
-            : ((try? keychain.get(account: "anthropic-api-key")) ?? nil) != nil
+        apiKeyPresent = !Self.isUIPreview
+            && Self.nonEmptyCredential(try? keychain.get(account: Self.apiKeyAccount)) != nil
         searchKeyPresent = Self.isUIPreview
             ? false
             : (((try? keychain.get(account: "tavily-api-key")) ?? nil).map { !$0.isEmpty } ?? false)
+        webCredentialPresent = !Self.isUIPreview
+            && Self.nonEmptyCredential(try? keychain.get(account: Self.oauthAccessTokenAccount)) != nil
         reloadMissionList()
+        reloadArtifactLedger()
+        reloadCampSchedules()
+        updateStatusItem()
     }
 
     func saveAPIKey(_ key: String) {
-        try? keychain.set(key.trimmingCharacters(in: .whitespacesAndNewlines), account: "anthropic-api-key")
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        try? keychain.set(trimmed, account: Self.apiKeyAccount)
+        preferredCredentialSource = .apiKey
+        oauthLoginStatus = nil
         reload()
     }
 
@@ -260,20 +412,372 @@ final class AppStore {
         reload()
     }
 
-    func provider(model: String) -> AnthropicProvider? {
-        // 预览模式语义 = 不读钥匙串（避免系统授权弹窗）；LLM 动作统一得到「请先填 key」提示
-        guard !Self.isUIPreview, let key = try? keychain.get(account: "anthropic-api-key") else {
+    func provider(model: String) -> (any LLMProvider)? {
+        // 预览模式语义 = 不读钥匙串（避免系统授权弹窗）；LLM 动作统一得到「请先配置凭据」提示
+        guard !Self.isUIPreview,
+              let credential = Self.storedProviderCredential(using: keychain) else {
             return nil
         }
-        let base = AnthropicProvider.normalizedBaseURL(apiBaseURL)
+        let base = ProviderEndpoint.normalizedBaseURL(apiBaseURL)
             ?? URL(string: Self.defaultBaseURL)!
-        return AnthropicProvider(apiKey: key, model: model, baseURL: base)
+        return LLMProviderFactory.make(
+            format: apiFormat,
+            authScheme: credential.authScheme,
+            credential: credential.value,
+            model: model,
+            baseURL: base
+        )
+    }
+
+    func openProviderAuth() {
+        guard apiBaseURLValid else {
+            oauthLoginStatus = "请先填一个有效的 API 端点"
+            return
+        }
+        if apiFormat == .openAIChatCompletions {
+            guard let url = openAIAuthLoginURL() else {
+                return
+            }
+            oauthLoginStatus = NSWorkspace.shared.open(url)
+                ? "已在浏览器打开 OpenAI 登录页"
+                : "无法打开浏览器"
+            return
+        }
+        guard let url = providerAuthURL() else {
+            oauthLoginStatus = "无法生成网页登录地址"
+            return
+        }
+        oauthLoginStatus = NSWorkspace.shared.open(url)
+            ? "已在浏览器打开登录页"
+            : "无法打开浏览器"
+    }
+
+    func handleOAuthCallback(_ url: URL) {
+        guard url.scheme?.lowercased() == "agentloop",
+              url.host()?.lowercased() == "oauth" else { return }
+        finishOAuthCallback(
+            params: Self.callbackParameters(from: url),
+            tokenEndpoint: oauthTokenEndpoint(),
+            redirectURI: Self.genericOAuthRedirectURI,
+            clientID: Self.genericOAuthClientID
+        )
+    }
+
+    private func openAIAuthLoginURL() -> URL? {
+        guard startOpenAIAuthCallbackListener() else { return nil }
+
+        let state = Self.randomURLSafeString(byteCount: 24)
+        let codeVerifier = Self.randomURLSafeString(byteCount: 32)
+        UserDefaults.standard.set(state, forKey: Self.oauthStateKey)
+        try? keychain.set(codeVerifier, account: Self.oauthCodeVerifierAccount)
+
+        var components = URLComponents(url: Self.openAIAuthURL, resolvingAgainstBaseURL: false)
+        components?.queryItems = [
+            URLQueryItem(name: "response_type", value: "code"),
+            URLQueryItem(name: "client_id", value: Self.openAIAuthClientID),
+            URLQueryItem(name: "redirect_uri", value: Self.openAIAuthRedirectURI),
+            URLQueryItem(name: "state", value: state),
+            URLQueryItem(name: "code_challenge", value: Self.codeChallenge(for: codeVerifier)),
+            URLQueryItem(name: "code_challenge_method", value: "S256"),
+            URLQueryItem(name: "codex_streamlined_login", value: "true"),
+        ]
+        return components?.url
+    }
+
+    private func startOpenAIAuthCallbackListener() -> Bool {
+        stopOpenAIAuthCallbackListener()
+        guard let port = NWEndpoint.Port(rawValue: Self.openAIAuthCallbackPort) else {
+            oauthLoginStatus = "OpenAI Auth 回调端口无效"
+            return false
+        }
+        do {
+            let listener = try NWListener(using: .tcp, on: port)
+            listener.newConnectionHandler = { [weak self] connection in
+                let store = self
+                connection.start(queue: Self.oauthCallbackQueue)
+                Self.receiveOAuthCallback(connection: connection) { url in
+                    Task { @MainActor in
+                        store?.handleOpenAIAuthLocalCallback(url)
+                    }
+                }
+            }
+            listener.stateUpdateHandler = { [weak self] state in
+                if case .failed(let error) = state {
+                    Task { @MainActor [weak self] in
+                        self?.oauthLoginStatus = "OpenAI Auth 回调监听失败：\(error.localizedDescription)"
+                        self?.stopOpenAIAuthCallbackListener()
+                    }
+                }
+            }
+            listener.start(queue: Self.oauthCallbackQueue)
+            oauthCallbackListener = listener
+            return true
+        } catch {
+            oauthLoginStatus = "OpenAI Auth 需要本机端口 \(Self.openAIAuthCallbackPort)，当前无法监听：\(readableError(error))"
+            return false
+        }
+    }
+
+    private func stopOpenAIAuthCallbackListener() {
+        oauthCallbackListener?.cancel()
+        oauthCallbackListener = nil
+    }
+
+    private func handleOpenAIAuthLocalCallback(_ url: URL) {
+        finishOAuthCallback(
+            params: Self.callbackParameters(from: url),
+            tokenEndpoint: Self.openAIAuthTokenURL,
+            redirectURI: Self.openAIAuthRedirectURI,
+            clientID: Self.openAIAuthClientID
+        )
+    }
+
+    private func finishOAuthCallback(
+        params: [String: String],
+        tokenEndpoint: URL?,
+        redirectURI: String,
+        clientID: String
+    ) {
+        if let error = Self.nonEmptyCredential(params["error"]) {
+            oauthLoginStatus = "网页登录失败：\(params["error_description"] ?? error)"
+            stopOpenAIAuthCallbackListener()
+            return
+        }
+        guard let expectedState = UserDefaults.standard.string(forKey: Self.oauthStateKey) else {
+            oauthLoginStatus = "网页登录状态已过期，请重新授权"
+            stopOpenAIAuthCallbackListener()
+            return
+        }
+        guard params["state"] == expectedState else {
+            oauthLoginStatus = "网页登录回调校验失败"
+            stopOpenAIAuthCallbackListener()
+            return
+        }
+        if let accessToken = Self.nonEmptyCredential(params["access_token"]) {
+            saveWebCredential(accessToken: accessToken, refreshToken: params["refresh_token"])
+            return
+        }
+        if let code = Self.nonEmptyCredential(params["code"]) {
+            oauthLoginStatus = "已收到授权码，正在完成授权"
+            Task {
+                await exchangeOAuthCode(
+                    code,
+                    tokenEndpoint: tokenEndpoint,
+                    redirectURI: redirectURI,
+                    clientID: clientID
+                )
+            }
+            return
+        }
+        oauthLoginStatus = "网页登录没有返回可用凭据"
+        stopOpenAIAuthCallbackListener()
+    }
+
+    private func providerAuthURL() -> URL? {
+        guard let base = ProviderEndpoint.normalizedBaseURL(apiBaseURL),
+              let host = base.host()?.lowercased() else { return nil }
+
+        if host == "api.anthropic.com" {
+            return URL(string: "https://console.anthropic.com/settings/keys")
+        }
+        if host == "api.openai.com" {
+            return URL(string: "https://platform.openai.com/api-keys")
+        }
+
+        let state = Self.randomURLSafeString(byteCount: 24)
+        let codeVerifier = Self.randomURLSafeString(byteCount: 32)
+        UserDefaults.standard.set(state, forKey: Self.oauthStateKey)
+        try? keychain.set(codeVerifier, account: Self.oauthCodeVerifierAccount)
+
+        var components = URLComponents(
+            url: base.appending(path: "oauth").appending(path: "authorize"),
+            resolvingAgainstBaseURL: false
+        )
+        components?.queryItems = [
+            URLQueryItem(name: "response_type", value: "code"),
+            URLQueryItem(name: "client_id", value: Self.genericOAuthClientID),
+            URLQueryItem(name: "redirect_uri", value: Self.genericOAuthRedirectURI),
+            URLQueryItem(name: "state", value: state),
+            URLQueryItem(name: "code_challenge", value: Self.codeChallenge(for: codeVerifier)),
+            URLQueryItem(name: "code_challenge_method", value: "S256"),
+        ]
+        return components?.url
+    }
+
+    private func oauthTokenEndpoint() -> URL? {
+        guard let base = ProviderEndpoint.normalizedBaseURL(apiBaseURL),
+              let host = base.host()?.lowercased(),
+              host != "api.anthropic.com",
+              host != "api.openai.com" else { return nil }
+        return base.appending(path: "oauth").appending(path: "token")
+    }
+
+    private func exchangeOAuthCode(
+        _ code: String,
+        tokenEndpoint: URL?,
+        redirectURI: String,
+        clientID: String
+    ) async {
+        guard let endpoint = tokenEndpoint else {
+            oauthLoginStatus = "服务方没有提供可自动换取 token 的 OAuth 入口"
+            stopOpenAIAuthCallbackListener()
+            return
+        }
+        guard let codeVerifier = Self.nonEmptyCredential(try? keychain.get(account: Self.oauthCodeVerifierAccount)) else {
+            oauthLoginStatus = "网页登录状态已过期，请重新授权"
+            stopOpenAIAuthCallbackListener()
+            return
+        }
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Self.formURLEncoded([
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirectURI,
+            "client_id": clientID,
+            "code_verifier": codeVerifier,
+        ])
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            guard (200..<300).contains(status) else {
+                let body = String(data: Data(data.prefix(240)), encoding: .utf8) ?? ""
+                oauthLoginStatus = "OAuth 换 token 失败（HTTP \(status)）：\(body)"
+                stopOpenAIAuthCallbackListener()
+                return
+            }
+            let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            guard let accessToken = Self.nonEmptyCredential(object?["access_token"] as? String) else {
+                oauthLoginStatus = "OAuth 响应里没有 access_token"
+                stopOpenAIAuthCallbackListener()
+                return
+            }
+            saveWebCredential(accessToken: accessToken, refreshToken: object?["refresh_token"] as? String)
+        } catch {
+            oauthLoginStatus = "OAuth 换 token 失败：\(readableError(error))"
+            stopOpenAIAuthCallbackListener()
+        }
+    }
+
+    private func saveWebCredential(accessToken: String, refreshToken: String?) {
+        try? keychain.set(accessToken, account: Self.oauthAccessTokenAccount)
+        if let refreshToken = Self.nonEmptyCredential(refreshToken) {
+            try? keychain.set(refreshToken, account: Self.oauthRefreshTokenAccount)
+        }
+        try? keychain.delete(account: Self.oauthCodeVerifierAccount)
+        UserDefaults.standard.removeObject(forKey: Self.oauthStateKey)
+        preferredCredentialSource = .webLogin
+        oauthLoginStatus = "网页登录授权已完成"
+        stopOpenAIAuthCallbackListener()
+        reload()
+    }
+
+    nonisolated private static func callbackParameters(from url: URL) -> [String: String] {
+        var result: [String: String] = [:]
+        func collect(_ items: [URLQueryItem]?) {
+            for item in items ?? [] {
+                if let value = item.value {
+                    result[item.name] = value
+                }
+            }
+        }
+        collect(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems)
+        if let fragment = url.fragment, !fragment.isEmpty {
+            collect(URLComponents(string: "agentloop://oauth/callback?\(fragment)")?.queryItems)
+        }
+        return result
+    }
+
+    nonisolated private static func receiveOAuthCallback(
+        connection: NWConnection,
+        onCallback: @escaping @Sendable (URL) -> Void
+    ) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { data, _, _, _ in
+            guard let data,
+                  let request = String(data: data, encoding: .utf8),
+                  let target = Self.httpRequestTarget(from: request),
+                  let url = URL(string: "http://localhost:\(Self.openAIAuthCallbackPort)\(target)") else {
+                Self.respondToOAuthCallback(connection: connection, ok: false)
+                return
+            }
+            onCallback(url)
+            Self.respondToOAuthCallback(connection: connection, ok: true)
+        }
+    }
+
+    nonisolated private static func httpRequestTarget(from request: String) -> String? {
+        guard let firstLine = request.split(separator: "\r\n", maxSplits: 1).first else { return nil }
+        let parts = firstLine.split(separator: " ")
+        guard parts.count >= 2,
+              parts[0] == "GET",
+              parts[1].hasPrefix("/auth/callback") else { return nil }
+        return String(parts[1])
+    }
+
+    nonisolated private static func respondToOAuthCallback(connection: NWConnection, ok: Bool) {
+        let title = ok ? "AgentLoop 登录完成" : "AgentLoop 登录失败"
+        let message = ok ? "可以回到 AgentLoop 继续了。" : "AgentLoop 没有识别这次登录回调，请重新授权。"
+        let body = """
+        <!doctype html>
+        <html>
+        <head><meta charset="utf-8"><title>\(title)</title></head>
+        <body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:32px">
+        <h2>\(title)</h2>
+        <p>\(message)</p>
+        </body>
+        </html>
+        """
+        let bodyData = Data(body.utf8)
+        let header = """
+        HTTP/1.1 \(ok ? "200 OK" : "400 Bad Request")\r
+        Content-Type: text/html; charset=utf-8\r
+        Content-Length: \(bodyData.count)\r
+        Connection: close\r
+        \r
+
+        """
+        var response = Data(header.utf8)
+        response.append(bodyData)
+        connection.send(content: response, completion: .contentProcessed { _ in
+            connection.cancel()
+        })
+    }
+
+    nonisolated private static func formURLEncoded(_ values: [String: String]) -> Data {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        let pairs = values
+            .sorted { $0.key < $1.key }
+            .map { key, value in
+                let k = key.addingPercentEncoding(withAllowedCharacters: allowed) ?? key
+                let v = value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+                return "\(k)=\(v)"
+            }
+        return Data(pairs.joined(separator: "&").utf8)
+    }
+
+    nonisolated private static func randomURLSafeString(byteCount: Int) -> String {
+        var bytes = [UInt8](repeating: 0, count: byteCount)
+        let status = bytes.withUnsafeMutableBytes {
+            SecRandomCopyBytes(kSecRandomDefault, byteCount, $0.baseAddress!)
+        }
+        guard status == errSecSuccess else {
+            return UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        }
+        return Data(bytes).base64URLEncodedString()
+    }
+
+    nonisolated private static func codeChallenge(for verifier: String) -> String {
+        Data(SHA256.hash(data: Data(verifier.utf8))).base64URLEncodedString()
     }
 
     func startMission(goal: String, companionIds: [String], workspacePath: String?, campId: String? = nil,
                       autonomy: MissionAutonomy? = nil) {
-        guard ((try? keychain.get(account: "anthropic-api-key")) ?? nil) != nil else {
-            missionPhase = .error("请先在设置里填入 API key")
+        guard Self.storedProviderCredential(using: keychain) != nil else {
+            missionPhase = .error("请先在设置里保存 API Key 或网页登录授权")
             return
         }
         currentMissionId = nil
@@ -332,6 +836,7 @@ final class AppStore {
                 try await orchestrator.closeout(currentMissionId, distillModel: effectiveDistillModel)
                 reloadMission(missionId: currentMissionId)
                 reloadMissionList()
+                reloadArtifactLedger()
             } catch {
                 missionPhase = .error(readableError(error))
             }
@@ -399,6 +904,34 @@ final class AppStore {
             } catch {
                 missionPhase = .error(readableError(error))
             }
+        }
+    }
+
+    func returnCardForRework(cardId: String, feedback: String) async -> String? {
+        do {
+            try await orchestrator.returnCardForRework(cardId: cardId, feedback: feedback)
+            if let currentMissionId {
+                reloadMission(missionId: currentMissionId)
+            }
+            reloadMissionList()
+            reloadArtifactLedger()
+            showToast("已退回重做")
+            return nil
+        } catch {
+            return readableError(error)
+        }
+    }
+
+    func clearCardReviewFlag(cardId: String) {
+        do {
+            try db.clearCardReviewFlag(cardId: cardId)
+            if let currentMissionId {
+                reloadMission(missionId: currentMissionId)
+            }
+            reloadMissionList()
+            showToast("已标记为复核过")
+        } catch {
+            showToast("清除复核标记失败：\(readableError(error))")
         }
     }
 
@@ -528,6 +1061,7 @@ final class AppStore {
         }
         missionCards = (try? db.cards(missionId: missionId)) ?? []
         missionArtifacts = (try? db.missionArtifacts(missionId: missionId)) ?? []
+        reloadArtifactLedger()
         pendingRequests = (try? db.pendingUserRequests(missionId: missionId)) ?? []
         var seenAssigneeIds = Set<String>()
         let assigneeIds = missionCards.compactMap(\.assigneeId).filter { seenAssigneeIds.insert($0).inserted }
@@ -550,6 +1084,7 @@ final class AppStore {
         case .failed:
             missionPhase = .failed
         }
+        notifyMissionMilestonesIfNeeded(mission)
         recomputeAnimStates()
     }
 
@@ -563,6 +1098,150 @@ final class AppStore {
             byCamp[camp.id] = (try? db.missions(campId: camp.id)) ?? []
         }
         missionsByCamp = byCamp
+    }
+
+    func reloadArtifactLedger(includeArchived: Bool? = nil) {
+        if let includeArchived {
+            artifactLedgerIncludeArchived = includeArchived
+        }
+        artifactLedgerItems = (try? db.artifactLedger(includeArchived: artifactLedgerIncludeArchived)) ?? []
+    }
+
+    func checkForUpdates() {
+        guard let sparkleUpdater else {
+            showToast("当前构建没有配置更新源")
+            return
+        }
+        sparkleUpdater.checkForUpdates()
+        refreshSparkleState()
+    }
+
+    private func startSparkleStatePolling() {
+        sparkleStateTask?.cancel()
+        sparkleStateTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                self?.refreshSparkleState()
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
+    }
+
+    private func refreshSparkleState() {
+        guard let sparkleUpdater else {
+            sparkleConfigured = false
+            sparkleCanCheckForUpdates = false
+            return
+        }
+        sparkleConfigured = true
+        sparkleCanCheckForUpdates = sparkleUpdater.canCheckForUpdates
+        let upstreamAutoCheck = sparkleUpdater.automaticallyChecksForUpdates
+        if sparkleAutomaticallyChecksForUpdates != upstreamAutoCheck {
+            sparkleAutomaticallyChecksForUpdates = upstreamAutoCheck
+        }
+    }
+
+    func reloadCampSchedules(campId targetCampId: String? = nil) {
+        guard let targetCampId = targetCampId ?? campId else {
+            campSchedules = []
+            return
+        }
+        campSchedules = (try? db.scheduledMissions(campId: targetCampId)) ?? []
+        updateStatusItem()
+    }
+
+    @discardableResult
+    func createScheduledMission(
+        name: String,
+        goal: String,
+        companionIds: [String],
+        workspacePath: String?,
+        budgetTokens: Int,
+        autonomy: MissionAutonomy,
+        campId: String,
+        frequency: ScheduleFrequency,
+        hour: Int,
+        minute: Int,
+        weekday: Int?
+    ) -> String? {
+        do {
+            _ = try db.createScheduledMission(
+                name: name,
+                goal: goal,
+                companionIds: companionIds,
+                workspacePath: workspacePath,
+                budgetTokens: budgetTokens,
+                autonomy: autonomy,
+                campId: campId,
+                frequency: frequency,
+                hour: hour,
+                minute: minute,
+                weekday: weekday
+            )
+            requestScheduleNotificationsIfNeeded()
+            reloadCampSchedules(campId: campId)
+            missionScheduler?.reload()
+            showToast("日程已点亮")
+            return nil
+        } catch {
+            return readableScheduleError(error)
+        }
+    }
+
+    func setScheduleEnabled(id: String, enabled: Bool) {
+        do {
+            try db.setScheduleEnabled(id: id, enabled: enabled)
+            if enabled {
+                requestScheduleNotificationsIfNeeded()
+            }
+            reloadCampSchedules()
+            missionScheduler?.reload()
+            showToast(enabled ? "日程已开启" : "日程已暂停")
+        } catch {
+            showToast("日程修改失败：\(readableScheduleError(error))")
+        }
+    }
+
+    func deleteSchedule(id: String) {
+        do {
+            try db.deleteSchedule(id: id)
+            reloadCampSchedules()
+            missionScheduler?.reload()
+            showToast("日程已收起")
+        } catch {
+            showToast("日程删除失败：\(readableScheduleError(error))")
+        }
+    }
+
+    func runScheduleNow(id: String) {
+        guard missionScheduler != nil else {
+            showToast("预览模式不会触发定时行动")
+            return
+        }
+        missionScheduler?.fireNow(scheduleId: id)
+    }
+
+    func scheduleCaption(_ scheduled: ScheduledMissionRecord) -> String {
+        let time = String(format: "%02d:%02d", scheduled.schedule.hour, scheduled.schedule.minute)
+        switch scheduled.schedule.frequency {
+        case .daily:
+            return "每天 \(time)"
+        case .weekly:
+            return "\(Self.weekdayName(scheduled.schedule.weekday ?? 1)) \(time)"
+        }
+    }
+
+    func nextScheduleCaption(_ scheduled: ScheduledMissionRecord) -> String {
+        guard scheduled.schedule.enabled,
+              let next = try? ScheduleRules.nextFireDate(
+                after: Date(),
+                frequency: scheduled.schedule.frequency,
+                hour: scheduled.schedule.hour,
+                minute: scheduled.schedule.minute,
+                weekday: scheduled.schedule.weekday
+              ) else {
+            return "已暂停"
+        }
+        return Self.shortDateTimeFormatter.string(from: next)
     }
 
     private func handleCardEvent(cardId: String, event: AgentEvent) {
@@ -687,8 +1366,257 @@ final class AppStore {
         return String(describing: error)
     }
 
+    private func readableScheduleError(_ error: Error) -> String {
+        if let validation = error as? ScheduleValidationError {
+            switch validation {
+            case .emptyName:
+                return "日程需要一个名字"
+            case .emptyGoal:
+                return "目标不能为空"
+            case .emptyCompanions:
+                return "至少选择一位伙伴"
+            case .invalidBudget:
+                return "预算需要是正整数"
+            case .freeAutonomyNotAllowed:
+                return "定时行动不能使用放手档"
+            case .invalidTime:
+                return "时间无效"
+            case .missingWeekday:
+                return "每周日程需要选择星期"
+            }
+        }
+        return readableError(error)
+    }
+
+    private func notifyMissionMilestonesIfNeeded(_ mission: MissionRecord) {
+        let title = Self.missionTitle(mission)
+        switch mission.status {
+        case .accepted:
+            notifyMissionOnce(
+                key: "\(mission.id):accepted",
+                missionId: mission.id,
+                title: "行动已收营",
+                body: title,
+                guideText: "行动「\(title)」已经收营，远征报告和交付物都已归档。"
+            )
+        case .failed:
+            notifyMissionOnce(
+                key: "\(mission.id):failed",
+                missionId: mission.id,
+                title: "行动失败",
+                body: title,
+                guideText: "行动「\(title)」没有顺利完成，回营后可以查看受阻原因。"
+            )
+        case .executing where mission.spentTokens >= mission.budgetTokens:
+            notifyMissionOnce(
+                key: "\(mission.id):budget",
+                missionId: mission.id,
+                title: "预算已耗尽",
+                body: title,
+                guideText: "行动「\(title)」预算已经耗尽，已暂停继续派发。"
+            )
+        case .planning, .executing, .delivering:
+            break
+        }
+    }
+
+    private func notifyMissionOnce(
+        key: String,
+        missionId: String,
+        title: String,
+        body: String,
+        guideText: String
+    ) {
+        guard !notifiedMissionEvents.contains(key) else { return }
+        notifiedMissionEvents.insert(key)
+        postNotification(title: title, body: body, missionId: missionId)
+        if let campId = camp(forMission: missionId) {
+            try? db.appendGuideBroadcast(campId: campId, text: guideText)
+            if self.campId == campId {
+                reloadGuideMessages()
+            }
+        }
+    }
+
+    private func requestScheduleNotificationsIfNeeded() {
+        guard !Self.isUIPreview else { return }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    private func postNotification(title: String, body: String, missionId: String?) {
+        guard !Self.isUIPreview else { return }
+        let center = UNUserNotificationCenter.current()
+        let addRequest: @Sendable () -> Void = {
+            let content = UNMutableNotificationContent()
+            content.title = title
+            content.body = body
+            content.sound = .default
+            if let missionId {
+                content.userInfo = ["missionId": missionId]
+            }
+            let request = UNNotificationRequest(
+                identifier: UUID().uuidString,
+                content: content,
+                trigger: nil
+            )
+            UNUserNotificationCenter.current().add(request)
+        }
+        center.getNotificationSettings { settings in
+            switch settings.authorizationStatus {
+            case .authorized, .provisional:
+                addRequest()
+            case .notDetermined:
+                center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+                    if granted { addRequest() }
+                }
+            case .denied:
+                break
+            @unknown default:
+                break
+            }
+        }
+    }
+
+    private func updateStatusItem() {
+        guard menuBarResident else {
+            if let statusItem {
+                NSStatusBar.system.removeStatusItem(statusItem)
+            }
+            statusItem = nil
+            statusMenuTarget = nil
+            return
+        }
+
+        if statusItem == nil {
+            statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+            statusItem?.button?.image = NSImage(systemSymbolName: "flame.fill", accessibilityDescription: "AgentLoop")
+            statusItem?.button?.imagePosition = .imageOnly
+        }
+        let target = statusMenuTarget ?? StatusMenuTarget(
+            openCamp: { [weak self] in self?.showMainWindow() },
+            emergencyStop: { [weak self] in self?.emergencyStopCamp() },
+            resumeCamp: { [weak self] in self?.resumeCamp() },
+            quit: { NSApp.terminate(nil) }
+        )
+        statusMenuTarget = target
+
+        let menu = NSMenu()
+        let title = NSMenuItem(title: "AgentLoop", action: nil, keyEquivalent: "")
+        title.isEnabled = false
+        menu.addItem(title)
+        menu.addItem(withTitle: "打开营地", action: #selector(StatusMenuTarget.openCampAction), keyEquivalent: "").target = target
+        let nextItem = NSMenuItem(
+            title: Self.nextScheduleMenuItemTitle(from: (try? db.enabledScheduledMissions()) ?? []),
+            action: nil,
+            keyEquivalent: ""
+        )
+        nextItem.isEnabled = false
+        menu.addItem(nextItem)
+        menu.addItem(.separator())
+        let haltTitle = campHalted ? "恢复营火" : "紧急收哨"
+        let haltAction = campHalted ? #selector(StatusMenuTarget.resumeCampAction) : #selector(StatusMenuTarget.emergencyStopAction)
+        menu.addItem(withTitle: haltTitle, action: haltAction, keyEquivalent: "").target = target
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "退出", action: #selector(StatusMenuTarget.quitAction), keyEquivalent: "q").target = target
+        statusItem?.menu = menu
+    }
+
+    private func showMainWindow() {
+        if let window = NSApp.windows.first(where: { $0.canBecomeKey }) {
+            window.makeKeyAndOrderFront(nil)
+        }
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private static let shortDateTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
+    nonisolated static func weekdayName(_ value: Int) -> String {
+        switch value {
+        case 1: return "周日"
+        case 2: return "周一"
+        case 3: return "周二"
+        case 4: return "周三"
+        case 5: return "周四"
+        case 6: return "周五"
+        case 7: return "周六"
+        default: return "每周"
+        }
+    }
+
+    private static func nextScheduleMenuItemTitle(from schedules: [ScheduledMissionRecord]) -> String {
+        let now = Date()
+        let next = schedules.compactMap { scheduled -> (Date, String)? in
+            guard let date = try? ScheduleRules.nextFireDate(
+                after: now,
+                frequency: scheduled.schedule.frequency,
+                hour: scheduled.schedule.hour,
+                minute: scheduled.schedule.minute,
+                weekday: scheduled.schedule.weekday
+            ) else {
+                return nil
+            }
+            return (date, scheduled.template.name)
+        }
+        .min { $0.0 < $1.0 }
+        guard let next else { return "没有启用的日程" }
+        return "下次：\(next.1) · \(shortDateTimeFormatter.string(from: next.0))"
+    }
+
+    private static func missionTitle(_ mission: MissionRecord) -> String {
+        let refined = mission.goalRefined.trimmingCharacters(in: .whitespacesAndNewlines)
+        let raw = mission.goalRaw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = refined.isEmpty ? raw : refined
+        let firstLine = base.split(whereSeparator: \.isNewline).first.map(String.init) ?? base
+        return firstLine.isEmpty ? "未命名行动" : String(firstLine.prefix(36))
+    }
+
     func revealArtifact(_ artifact: ArtifactRecord) {
-        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: artifact.path)])
+        revealPath(artifact.path)
+    }
+
+    func revealPath(_ path: String) {
+        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+    }
+
+    func openPath(_ path: String) {
+        NSWorkspace.shared.open(URL(fileURLWithPath: path))
+    }
+
+    func reportURL(missionId: String) -> URL {
+        reportStoreRoot.appendingPathComponent("\(missionId).md")
+    }
+
+    @discardableResult
+    func ensureReport(missionId: String) -> URL? {
+        let url = reportURL(missionId: missionId)
+        if FileManager.default.fileExists(atPath: url.path) {
+            return url
+        }
+        do {
+            let input = try db.expeditionReportInput(missionId: missionId)
+            try FileManager.default.createDirectory(at: reportStoreRoot, withIntermediateDirectories: true)
+            try ExpeditionReport.markdown(input).write(to: url, atomically: true, encoding: .utf8)
+            return url
+        } catch {
+            showToast("报告生成失败：\(readableError(error))")
+            return nil
+        }
+    }
+
+    func openReport(missionId: String) {
+        guard let url = ensureReport(missionId: missionId) else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    func revealReport(missionId: String) {
+        guard let url = ensureReport(missionId: missionId) else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     /// 返回是否受理（未受理时调用方不应清空输入——UX 审计 P1：无 key 静默吞消息）
@@ -698,7 +1626,7 @@ final class AppStore {
             return false
         }
         guard let provider = provider(model: companion.model) else {
-            showToast("请先在设置里填入 API key")
+            showToast("请先在设置里保存 API Key 或网页登录授权")
             return false
         }
         chatStreamID += 1
@@ -823,6 +1751,7 @@ final class AppStore {
         guideCompanion = try? db.guide(campId: camp.id)
         reloadCampKnowledge()
         reloadGuideMessages()
+        reloadCampSchedules(campId: camp.id)
         reloadMissionList()
     }
 
@@ -847,8 +1776,84 @@ final class AppStore {
         }
     }
 
+    func setCampArchived(id: String, archived: Bool) {
+        do {
+            try db.setCampArchived(id: id, archived: archived)
+            reload()
+            showToast(archived ? "营地已归档" : "营地已恢复")
+        } catch {
+            showToast("营地状态修改失败：\(readableError(error))")
+        }
+    }
+
     func camp(forMission missionId: String) -> String? {
         (try? db.squad(forMission: missionId))?.campId
+    }
+
+    func seedStarterCompanions(campId targetCampId: String? = nil) {
+        do {
+            let camp = try targetCampId.flatMap { try db.camp(id: $0) } ?? db.ensureDefaultCamp()
+            let existingNames = Set(((try? db.regularCompanions()) ?? []).map(\.name))
+            if !existingNames.contains("斥候") {
+                var scout = CompanionRecord.new(
+                    name: "斥候",
+                    color: "teal",
+                    rolePrompt: "你负责快速探路、查资料、读写文件和验证环境。先说明风险，再动手。",
+                    model: defaultModel,
+                    campId: camp.id
+                )
+                scout.toolsJson = ToolAccess.explicitJson(allow: Set(ToolAccess.builtinCapabilityNames))
+                try db.saveCompanion(scout)
+            }
+            if !existingNames.contains("文书") {
+                var scribe = CompanionRecord.new(
+                    name: "文书",
+                    color: "amber",
+                    rolePrompt: "你负责整理结论、写摘要、校对交付物和发现遗漏。不要直接改文件。",
+                    model: defaultModel,
+                    campId: camp.id
+                )
+                scribe.toolsJson = ToolAccess.explicitJson(
+                    allow: Set(ToolAccess.builtinCapabilityNames).subtracting(["write_file", "run_shell"])
+                )
+                try db.saveCompanion(scribe)
+            }
+            reload()
+            showToast("预设伙伴已入营")
+        } catch {
+            showToast("预设伙伴创建失败：\(readableError(error))")
+        }
+    }
+
+    func startQuickstartMission(campId targetCampId: String? = nil) {
+        do {
+            let camp = try targetCampId.flatMap { try db.camp(id: $0) } ?? db.ensureDefaultCamp()
+            if (try? db.regularCompanions().isEmpty) == true {
+                seedStarterCompanions(campId: camp.id)
+            }
+            var companions = try db.regularCompanions()
+            var selected = companions
+                .filter { $0.campId == nil || $0.campId == camp.id }
+                .prefix(2)
+                .map(\.id)
+            if selected.isEmpty {
+                seedStarterCompanions(campId: camp.id)
+                companions = try db.regularCompanions()
+                selected = companions
+                    .filter { $0.campId == nil || $0.campId == camp.id }
+                    .prefix(2)
+                    .map(\.id)
+            }
+            startMission(
+                goal: "把这个营地的用法整理成一份 quickstart.md",
+                companionIds: Array(selected),
+                workspacePath: nil,
+                campId: camp.id,
+                autonomy: .careful
+            )
+        } catch {
+            showToast("首个行动启动失败：\(readableError(error))")
+        }
     }
 
     private func reloadGuideMessages() {
@@ -861,7 +1866,7 @@ final class AppStore {
     func sendGuideChat(text: String) {
         guard !text.isEmpty, !guideStreaming, let campId else { return }
         guard let provider = provider(model: defaultModel) else {
-            showToast("请先在设置里填入 API key")
+            showToast("请先在设置里保存 API Key 或网页登录授权")
             return
         }
         guideStreamID += 1
@@ -922,7 +1927,7 @@ final class AppStore {
     func confirmProposal(messageId: String) {
         guard !confirmingProposals.contains(messageId) else { return }
         guard provider(model: defaultModel) != nil else {
-            showToast("请先在设置里填入 API key")
+            showToast("请先在设置里保存 API Key 或网页登录授权")
             return
         }
         confirmingProposals.insert(messageId)
@@ -961,7 +1966,7 @@ final class AppStore {
     func distillGuideChatNow() {
         guard let campId, !distillingGuideChat else { return }
         guard let provider = provider(model: effectiveDistillModel) else {
-            showToast("请先在设置里填入 API key")
+            showToast("请先在设置里保存 API Key 或网页登录授权")
             return
         }
         distillingGuideChat = true
@@ -1005,7 +2010,7 @@ final class AppStore {
     func distillMemoryNow(companion: CompanionRecord) {
         guard !distillingMemory else { return }
         guard let provider = provider(model: effectiveDistillModel) else {
-            showToast("请先在设置里填入 API key")
+            showToast("请先在设置里保存 API Key 或网页登录授权")
             return
         }
         distillingMemory = true
@@ -1074,5 +2079,14 @@ final class AppStore {
         case "propose_squad": return "向导在拟组队提案…"
         default: return "向导在忙…"
         }
+    }
+}
+
+private extension Data {
+    func base64URLEncodedString() -> String {
+        base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
 }

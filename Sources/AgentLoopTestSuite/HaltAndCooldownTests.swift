@@ -45,6 +45,18 @@ private func globalEvents(_ db: AppDatabase, kind: String) throws -> Int {
     }
 }
 
+private func waitForGlobalEvent(
+    _ db: AppDatabase, kind: String, count: Int, timeout: Duration = .seconds(5)
+) async throws -> Bool {
+    let clock = ContinuousClock()
+    let deadline = clock.now + timeout
+    while clock.now < deadline {
+        if try globalEvents(db, kind: kind) == count { return true }
+        try await Task.sleep(for: .milliseconds(30))
+    }
+    return try globalEvents(db, kind: kind) == count
+}
+
 /// 立抛 429 的替身：AgentLoop 层 429 不重试（provider 层已重试过），错误直达 Orchestrator
 private struct RateLimitedProvider: LLMProvider {
     func streamTurn(system: String, history: [APIMessage], tools: [ToolDef],
@@ -114,7 +126,7 @@ private struct RateLimitedProvider: LLMProvider {
     // 429 → 卡片按错误路径 blocked + 冷却事件
     let blocked = try await waitForCard(db, first.cardId, status: .blocked)
     #expect(blocked)
-    #expect(try globalEvents(db, kind: "rate_limit_cooldown") == 1)
+    #expect(try await waitForGlobalEvent(db, kind: "rate_limit_cooldown", count: 1))
 
     // 冷却期内：第二个行动不派发
     let second = try db.createSingleCardMission(

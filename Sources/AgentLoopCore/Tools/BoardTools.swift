@@ -40,7 +40,7 @@ public struct BoardTools: Sendable {
                 guard FileManager.default.fileExists(atPath: source.path) else {
                     return .error("声明的产物 \(decl.relativePath) 在工作目录中不存在。请先用 write_file 写入，或修正 relativePath。")
                 }
-                let destination = artifactDestination(for: decl.relativePath)
+                let destination = uniqueArtifactDestination(for: decl.relativePath)
                 copies.append((decl: decl, source: source, destination: destination))
             }
         }
@@ -52,9 +52,6 @@ public struct BoardTools: Sendable {
                     at: copy.destination.deletingLastPathComponent(),
                     withIntermediateDirectories: true
                 )
-                if FileManager.default.fileExists(atPath: copy.destination.path) {
-                    try FileManager.default.removeItem(at: copy.destination)
-                }
                 try FileManager.default.copyItem(at: copy.source, to: copy.destination)
                 copied.append(copy.destination)
             }
@@ -180,6 +177,27 @@ public struct BoardTools: Sendable {
             .appendingPathComponent(cardId)
             .appendingPathComponent(relativePath)
             .standardizedFileURL
+    }
+
+    private func uniqueArtifactDestination(for relativePath: String) -> URL {
+        let original = artifactDestination(for: relativePath)
+        guard FileManager.default.fileExists(atPath: original.path) else {
+            return original
+        }
+
+        let directory = original.deletingLastPathComponent()
+        let ext = original.pathExtension
+        let base = ext.isEmpty
+            ? original.lastPathComponent
+            : String(original.lastPathComponent.dropLast(ext.count + 1))
+        for index in 2...999 {
+            let filename = ext.isEmpty ? "\(base) (\(index))" : "\(base) (\(index)).\(ext)"
+            let candidate = directory.appendingPathComponent(filename)
+            if !FileManager.default.fileExists(atPath: candidate.path) {
+                return candidate
+            }
+        }
+        return directory.appendingPathComponent("\(base) (\(UUID().uuidString))" + (ext.isEmpty ? "" : ".\(ext)"))
     }
 }
 

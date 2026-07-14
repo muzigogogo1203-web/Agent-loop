@@ -771,7 +771,17 @@ struct TaskRunView: View {
                 CampSectionTitle("交付物")
                 if !store.missionArtifacts.isEmpty {
                     CampChip(text: "\(store.missionArtifacts.count) 件", color: Camp.moss, icon: "doc.fill")
-                    Spacer()
+                }
+                Spacer()
+                if let mission = currentMission, !store.missionCards.isEmpty {
+                    Button {
+                        store.openReport(missionId: mission.id)
+                    } label: {
+                        Label("远征报告", systemImage: "doc.text")
+                    }
+                    .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+                }
+                if !store.missionArtifacts.isEmpty {
                     Button {
                         if reduceMotion {
                             artifactsCollapsed.toggle()

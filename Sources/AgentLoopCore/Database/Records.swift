@@ -13,7 +13,8 @@ public enum CardStatus: String, Sendable, Codable, CaseIterable {
              (.running, .blocked), (.blocked, .ready), (.blocked, .canceled),
              (.todo, .canceled), (.ready, .canceled), (.ready, .blocked),
              (.running, .ready),    // §14 crash-recovery: interrupt returns card to ready
-             (.running, .canceled): // §13 budget-exhausted early-close terminalization
+             (.running, .canceled), // §13 budget-exhausted early-close terminalization
+             (.done, .ready):       // M9-D4: user returns a completed card for rework
             return true
         default: return false
         }
@@ -75,17 +76,26 @@ public struct StaleUserRequestError: Error, Equatable, Sendable {
     }
 }
 
+public struct CampArchivedError: Error, Equatable, Sendable {
+    public let campId: String
+    public init(campId: String) {
+        self.campId = campId
+    }
+}
+
 // MARK: - Camp
 
 public struct CampRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "camp"
     public var id: String
     public var name: String
+    public var archived: Bool
     public var createdAt: Date
 
-    public init(id: String, name: String, createdAt: Date) {
+    public init(id: String, name: String, archived: Bool = false, createdAt: Date) {
         self.id = id
         self.name = name
+        self.archived = archived
         self.createdAt = createdAt
     }
 }
@@ -202,6 +212,8 @@ public struct CardRecord: Codable, Sendable, FetchableRecord, PersistableRecord 
     public var dependsOnJson: String
     public var handoffJson: String?
     public var stage: Int
+    /// M9-D4：上游退回后标记下游 done 卡「待复核」
+    public var reviewFlag: String?
     public var maxTurns: Int
     public var tokenBudget: Int
     public var createdAt: Date
@@ -209,7 +221,7 @@ public struct CardRecord: Codable, Sendable, FetchableRecord, PersistableRecord 
     public init(id: String, missionId: String, idemKey: String, title: String,
                 descriptionText: String, expectedOutput: String, assigneeId: String?,
                 status: CardStatus, blockedReasonJson: String?, dependsOnJson: String,
-                handoffJson: String?, stage: Int,
+                handoffJson: String?, stage: Int, reviewFlag: String? = nil,
                 maxTurns: Int, tokenBudget: Int, createdAt: Date) {
         self.id = id
         self.missionId = missionId
@@ -223,6 +235,7 @@ public struct CardRecord: Codable, Sendable, FetchableRecord, PersistableRecord 
         self.dependsOnJson = dependsOnJson
         self.handoffJson = handoffJson
         self.stage = stage
+        self.reviewFlag = reviewFlag
         self.maxTurns = maxTurns
         self.tokenBudget = tokenBudget
         self.createdAt = createdAt
@@ -652,5 +665,99 @@ public struct CampMcpEnableRecord: Codable, Sendable, Equatable, FetchableRecord
     public init(campId: String, serverId: String) {
         self.campId = campId
         self.serverId = serverId
+    }
+}
+
+// MARK: - Mission Schedule（M10 长明火）
+
+public enum ScheduleFrequency: String, Codable, Sendable, CaseIterable {
+    case daily
+    case weekly
+
+    public var displayName: String {
+        switch self {
+        case .daily: return "每天"
+        case .weekly: return "每周"
+        }
+    }
+}
+
+public enum ScheduleValidationError: Error, Sendable, Equatable {
+    case emptyName
+    case emptyGoal
+    case emptyCompanions
+    case invalidBudget
+    case freeAutonomyNotAllowed
+    case invalidTime
+    case missingWeekday
+}
+
+public struct MissionTemplateRecord: Codable, Sendable, Equatable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "mission_template"
+    public var id: String
+    public var name: String
+    public var goal: String
+    public var companionIdsJson: String
+    public var workspacePath: String?
+    public var budgetTokens: Int
+    public var autonomy: MissionAutonomy
+    public var campId: String
+    public var createdAt: Date
+
+    public init(
+        id: String,
+        name: String,
+        goal: String,
+        companionIdsJson: String,
+        workspacePath: String?,
+        budgetTokens: Int,
+        autonomy: MissionAutonomy,
+        campId: String,
+        createdAt: Date
+    ) {
+        self.id = id
+        self.name = name
+        self.goal = goal
+        self.companionIdsJson = companionIdsJson
+        self.workspacePath = workspacePath
+        self.budgetTokens = budgetTokens
+        self.autonomy = autonomy
+        self.campId = campId
+        self.createdAt = createdAt
+    }
+}
+
+public struct ScheduleRecord: Codable, Sendable, Equatable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "schedule"
+    public var id: String
+    public var templateId: String
+    public var frequency: ScheduleFrequency
+    public var hour: Int
+    public var minute: Int
+    public var weekday: Int?
+    public var enabled: Bool
+    public var lastFiredAt: Date?
+    public var createdAt: Date
+
+    public init(
+        id: String,
+        templateId: String,
+        frequency: ScheduleFrequency,
+        hour: Int,
+        minute: Int,
+        weekday: Int?,
+        enabled: Bool,
+        lastFiredAt: Date?,
+        createdAt: Date
+    ) {
+        self.id = id
+        self.templateId = templateId
+        self.frequency = frequency
+        self.hour = hour
+        self.minute = minute
+        self.weekday = weekday
+        self.enabled = enabled
+        self.lastFiredAt = lastFiredAt
+        self.createdAt = createdAt
     }
 }

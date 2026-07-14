@@ -34,6 +34,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.11.0"),
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.9.0"),
     ],
     targets: [
         .target(
@@ -50,7 +51,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "AgentLoopApp",
-            dependencies: ["AgentLoopCore"]
+            dependencies: [
+                "AgentLoopCore",
+                .product(name: "Sparkle", package: "Sparkle"),
+            ]
         ),
         .testTarget(
             name: "AgentLoopCoreTests",
