@@ -239,6 +239,10 @@ extension AppStore: CodingRanchStoreProtocol {
     private func submitFeed(
         _ draft: FeedDraft, startRumination: Bool, allowDuplicate: Bool
     ) async throws -> FeedSubmissionResult {
+        if try isCampArchived(id: draft.campId) {
+            showToast("营地已归档,恢复后才能继续喂牛")
+            throw CampArchivedError(campId: draft.campId)
+        }
         let submission = try FeedService(db: db).submit(
             campId: draft.campId, rawText: draft.body, title: draft.title,
             sourceURL: draft.sourceURL, author: draft.author, userIntent: draft.userIntent,

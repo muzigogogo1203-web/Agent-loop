@@ -26,6 +26,7 @@ struct RootView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .detailOnly
     @State private var showNewCampSheet = false
     @State private var abandonTarget: MissionRecord?
+    @State private var archiveTarget: CampRecord?
     @State private var showResumeConfirmation = false
     @State private var pendingMissionDraft: MissionDraftViewState?
     @State private var lastWindowWidth: CGFloat = 0
@@ -307,6 +308,24 @@ struct RootView: View {
         } message: {
             Text("等待中的规划和小目标可能会立即继续调用模型与工具，并产生新的花销。")
         }
+        .confirmationDialog(
+            "归档营地「\(archiveTarget?.name ?? "")」?",
+            isPresented: Binding(
+                get: { archiveTarget != nil },
+                set: { if !$0 { archiveTarget = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("归档", role: .destructive) {
+                if let camp = archiveTarget {
+                    store.setCampArchived(id: camp.id, archived: true)
+                }
+                archiveTarget = nil
+            }
+            Button("再想想", role: .cancel) { archiveTarget = nil }
+        } message: {
+            Text("归档后不能发起新的放牛,资料和历史保留;可随时恢复。")
+        }
         .onChange(of: haltAccessibilityAnnouncement) { _, announcement in
             AccessibilityNotification.Announcement(announcement).post()
         }
@@ -465,7 +484,7 @@ struct RootView: View {
                     .disabled(store.missionStartBlocked)
                     Divider()
                     Button("归档营地") {
-                        store.setCampArchived(id: camp.id, archived: true)
+                        archiveTarget = camp
                     }
                 } else {
                     Button("恢复营地") {

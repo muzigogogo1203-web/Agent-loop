@@ -1672,6 +1672,26 @@ final class AppStore {
         }
     }
 
+    func isCampArchived(id: String) throws -> Bool {
+        guard let camp = try db.camp(id: id) else {
+            throw RecordNotFoundError(table: "camp", id: id)
+        }
+        return camp.archived
+    }
+
+    private func canWriteCamp(id: String, archivedMessage: String) -> Bool {
+        do {
+            if try isCampArchived(id: id) {
+                showToast(archivedMessage)
+                return false
+            }
+            return true
+        } catch {
+            showToast("营地状态读取失败：\(readableError(error))")
+            return false
+        }
+    }
+
     func camp(forMission missionId: String) -> String? {
         (try? db.squad(forMission: missionId))?.campId
     }
@@ -1685,6 +1705,7 @@ final class AppStore {
 
     func sendGuideChat(text: String) {
         guard !text.isEmpty, !guideStreaming, let campId else { return }
+        guard canWriteCamp(id: campId, archivedMessage: "营地已归档,恢复后才能继续对话") else { return }
         guard let provider = provider(model: defaultModel) else {
             showToast("请先在设置里保存 API Key 或网页登录授权")
             return
@@ -1806,23 +1827,43 @@ final class AppStore {
     // MARK: - 营地笔记 CRUD（M4）
 
     func saveCampNoteEdits(_ note: CampNoteRecord) {
+        guard canWriteCamp(id: note.campId, archivedMessage: "营地已归档,恢复后才能编辑笔记") else { return }
         var updated = note
         updated.updatedAt = Date()
-        try? db.saveCampNote(updated)
-        reloadCampKnowledge()
+        do {
+            try db.saveCampNote(updated)
+            reloadCampKnowledge()
+        } catch {
+            showToast("笔记保存失败：\(readableError(error))")
+        }
     }
 
     func deleteCampNote(id: String) {
-        try? db.deleteCampNote(id: id)
-        reloadCampKnowledge()
+        do {
+            guard let note = try db.pool.read({ database in
+                try CampNoteRecord.fetchOne(database, key: id)
+            }) else {
+                throw RecordNotFoundError(table: "camp_note", id: id)
+            }
+            guard canWriteCamp(id: note.campId, archivedMessage: "营地已归档,恢复后才能删除笔记") else { return }
+            try db.deleteCampNote(id: id)
+            reloadCampKnowledge()
+        } catch {
+            showToast("笔记删除失败：\(readableError(error))")
+        }
     }
 
     func toggleCampNotePin(_ note: CampNoteRecord) {
+        guard canWriteCamp(id: note.campId, archivedMessage: "营地已归档,恢复后才能编辑笔记") else { return }
         var updated = note
         updated.pinned.toggle()
         updated.updatedAt = Date()
-        try? db.saveCampNote(updated)
-        reloadCampKnowledge()
+        do {
+            try db.saveCampNote(updated)
+            reloadCampKnowledge()
+        } catch {
+            showToast("笔记保存失败：\(readableError(error))")
+        }
     }
 
     // MARK: - 伙伴记忆（M4）

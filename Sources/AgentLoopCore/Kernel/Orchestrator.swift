@@ -1067,12 +1067,14 @@ public actor Orchestrator {
     /// M9：把一次行动中每位伙伴实际完成的小目标沉淀成伙伴记忆。失败静默跳过，留给人工复盘。
     private func distillCoworkNotes(missionId: String, model: String) async {
         let inputs: [CoworkDistillInput]
+        let actionName: String
         do {
-            inputs = try await db.pool.read { database in
+            (inputs, actionName) = try await db.pool.read { database in
                 guard let mission = try MissionRecord.fetchOne(database, key: missionId) else {
                     throw RecordNotFoundError(table: "mission", id: missionId)
                 }
                 let goal = mission.goalRefined.isEmpty ? mission.goalRaw : mission.goalRefined
+                let actionName = String(goal.trimmingCharacters(in: .whitespacesAndNewlines).prefix(20))
                 let cards = try CardRecord
                     .filter(Column("missionId") == missionId && Column("status") == CardStatus.done.rawValue)
                     .order(Column("stage"))
@@ -1115,7 +1117,7 @@ public actor Orchestrator {
                     }
                     collected.append(CoworkDistillInput(companion: companion, messages: messages))
                 }
-                return collected
+                return (collected, actionName)
             }
         } catch {
             return
@@ -1134,7 +1136,7 @@ public actor Orchestrator {
                 }
                 let record = CompanionNoteRecord.new(
                     companionId: input.companion.id,
-                    title: note.title,
+                    title: "共事·\(actionName):\(note.title)",
                     bodyMd: note.bodyMd
                 )
                 try await db.pool.write { database in
