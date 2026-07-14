@@ -36,6 +36,8 @@ final class AppStore {
     let artifactStoreRoot: URL
     let reportStoreRoot: URL
     let orchestrator: Orchestrator
+    let scheduledMissionNotifier: ScheduledMissionNotifier
+    let missionScheduler: MissionScheduler
     /// MCP 驿站（M8-D8：绞杀第二刀，领域状态独立成 store）
     let mcp: McpStore
 
@@ -96,6 +98,7 @@ final class AppStore {
     var haltPersistencePending = false
     var haltErrorMessage: String?
     var kernelStartupRecoveryPending = false
+    var pendingScheduleCatchups: [ScheduleCatchup] = []
 
     var missionStartBlocked: Bool {
         kernelStartupRecoveryPending || campHalted || haltOperationState != .idle
@@ -230,6 +233,7 @@ final class AppStore {
     private var missionTask: Task<Void, Never>?
     private var kernelEventsTask: Task<Void, Never>?
     private var oauthCallbackListener: NWListener?
+    private var sentScheduledMissionNotifications: Set<String> = []
 
     /// 新行动表单草稿（按营地暂存，防切页丢输入——UX 审计 P2）
     struct MissionDraft {
@@ -369,6 +373,14 @@ final class AppStore {
             mcpManager: mcpManager,
             requiresStartupRecovery: !isPreview
         )
+        let notifier = ScheduledMissionNotifier()
+        scheduledMissionNotifier = notifier
+        missionScheduler = MissionScheduler(
+            db: database,
+            orchestrator: orchestrator,
+            notifier: notifier,
+            plannerModel: { AppStore.scheduledPlannerModelFromDefaults() }
+        )
         try! db.ensureCodingRanchBootstrap()
         apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
         let storedBudget = UserDefaults.standard.integer(forKey: "defaultMissionBudget")
@@ -397,6 +409,16 @@ final class AppStore {
             ShellProcessRegistry.shared.terminateAll()
         }
         mcp.onToast = { [weak self] message in self?.showToast(message) }
+        missionScheduler.onPendingCatchupsChanged = { [weak self] catchups in
+            self?.pendingScheduleCatchups = catchups
+            if !catchups.isEmpty {
+                self?.showToast("有定时行动错过了触发点，等待你确认是否补跑")
+            }
+        }
+        missionScheduler.onScheduleFired = { [weak self] missionId in
+            self?.reloadMissionList()
+            self?.notifyScheduledMissionOutcomeIfNeeded(missionId: missionId)
+        }
         reload()
         startKernelEventListener(recoverKernel: !Self.isUIPreview)
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
@@ -408,6 +430,13 @@ final class AppStore {
     /// 预览直达（截图循环用）：启动即打开指定行动，可选直接进小剧场
     static let previewMissionId = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_MISSION"]
     static let previewTheater = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_THEATER"] == "1"
+
+    nonisolated private static func scheduledPlannerModelFromDefaults() -> String {
+        let planner = UserDefaults.standard.string(forKey: "plannerModel") ?? ""
+        if !planner.isEmpty { return planner }
+        let storedDefault = UserDefaults.standard.string(forKey: "defaultModel") ?? ""
+        return storedDefault.isEmpty ? "claude-sonnet-4-6" : storedDefault
+    }
 
     nonisolated private static func nonEmptyCredential(_ value: String?) -> String? {
         guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -530,6 +559,82 @@ final class AppStore {
             baseURL: base,
             tokenRefresher: Self.tokenRefresher(for: openAIOAuthSession)
         )
+    }
+
+    // MARK: - 定时行动逻辑接线（UI 由 Claude 单独实现）
+
+    func saveScheduledMissionTemplate(_ template: MissionTemplateRecord) -> String? {
+        do {
+            try db.saveMissionTemplate(template)
+            return nil
+        } catch {
+            return readableError(error)
+        }
+    }
+
+    func saveMissionSchedule(_ schedule: ScheduleRecord) {
+        Task { [weak self] in
+            guard let self else { return }
+            if schedule.enabled {
+                await scheduledMissionNotifier.requestAuthorizationOnFirstScheduleEnable()
+            }
+            do {
+                try db.saveSchedule(schedule)
+                missionScheduler.refresh()
+            } catch {
+                showToast("保存日程失败：\(readableError(error))")
+            }
+        }
+    }
+
+    func setMissionScheduleEnabled(id: String, enabled: Bool) {
+        Task { [weak self] in
+            guard let self else { return }
+            if enabled {
+                await scheduledMissionNotifier.requestAuthorizationOnFirstScheduleEnable()
+            }
+            do {
+                _ = try db.setScheduleEnabled(id: id, enabled: enabled)
+                missionScheduler.refresh()
+            } catch {
+                showToast("修改日程失败：\(readableError(error))")
+            }
+        }
+    }
+
+    func deleteMissionSchedule(id: String) {
+        do {
+            try db.deleteSchedule(id: id)
+            missionScheduler.refresh()
+        } catch {
+            showToast("删除日程失败：\(readableError(error))")
+        }
+    }
+
+    func nextScheduleMenuTitle(now: Date = Date()) -> String {
+        let items = (try? db.enabledSchedules()) ?? []
+        let calendar = Calendar(identifier: .gregorian)
+        let timeZone = TimeZone.current
+        let next = items.compactMap { item -> (Date, String)? in
+            guard let date = ScheduleMath.nextFireDate(
+                after: now,
+                frequency: item.schedule.frequency,
+                hour: item.schedule.hour,
+                minute: item.schedule.minute,
+                weekday: item.schedule.weekday,
+                calendar: calendar,
+                timeZone: timeZone
+            ) else {
+                return nil
+            }
+            return (date, item.template.name)
+        }.min { $0.0 < $1.0 }
+        guard let next else { return "下次日程：暂无" }
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "M/d HH:mm"
+        return "下次日程：\(formatter.string(from: next.0)) \(next.1)"
     }
 
     func openProviderAuth() {
@@ -1133,6 +1238,7 @@ final class AppStore {
                 await orchestrator.recoverAndReconcile()
                 campHalted = await orchestrator.isHalted
                 kernelStartupRecoveryPending = false
+                missionScheduler.start()
             }
             for await event in stream {
                 handleKernelEvent(event)
@@ -1148,6 +1254,7 @@ final class AppStore {
             missionPhase = .planning
         case .planCompleted(let missionId, _), .missionChanged(let missionId):
             reloadMissionList()
+            notifyScheduledMissionOutcomeIfNeeded(missionId: missionId)
             guard currentMissionId == missionId else { return }
             reloadMission(missionId: missionId)
         case .cardEvent(let cardId, let agentEvent):
@@ -1453,6 +1560,74 @@ final class AppStore {
             return description
         }
         return String(describing: error)
+    }
+
+    private func notifyScheduledMissionOutcomeIfNeeded(missionId: String) {
+        guard (try? db.scheduledOrigin(missionId: missionId)) != nil,
+              let mission = try? db.mission(id: missionId) else {
+            return
+        }
+        let title = Self.missionTitle(mission)
+        let campId = (try? db.squad(forMission: missionId))?.campId
+        let events = (try? db.events(missionId: missionId, limit: 200)) ?? []
+
+        if events.contains(where: { $0.kind == EventKind.missionBudgetExhausted }) {
+            emitScheduledMissionNotificationOnce(
+                key: "budget:\(missionId)",
+                missionId: missionId,
+                campId: campId,
+                broadcastText: "定时行动「\(title)」预算用尽，已暂停派发。"
+            ) { notifier in
+                await notifier.postBudgetExhausted(missionId: missionId, title: title)
+            }
+        }
+
+        switch mission.status {
+        case .accepted:
+            emitScheduledMissionNotificationOnce(
+                key: "closeout:\(missionId)",
+                missionId: missionId,
+                campId: campId,
+                broadcastText: "定时行动「\(title)」已收营。"
+            ) { notifier in
+                await notifier.postCloseout(missionId: missionId, title: title)
+            }
+        case .failed:
+            emitScheduledMissionNotificationOnce(
+                key: "failure:\(missionId)",
+                missionId: missionId,
+                campId: campId,
+                broadcastText: "定时行动「\(title)」失败了，请回来查看原因。"
+            ) { notifier in
+                await notifier.postFailure(missionId: missionId, title: title)
+            }
+        case .planning, .executing, .delivering:
+            break
+        }
+    }
+
+    private func emitScheduledMissionNotificationOnce(
+        key: String,
+        missionId: String,
+        campId: String?,
+        broadcastText: String,
+        post: @escaping @MainActor (ScheduledMissionNotifier) async -> Void
+    ) {
+        guard sentScheduledMissionNotifications.insert(key).inserted else { return }
+        if let campId {
+            do {
+                try db.appendGuideBroadcast(campId: campId, text: broadcastText)
+                if self.campId == campId {
+                    reloadGuideMessages()
+                }
+            } catch {
+                showToast("管家播报失败：\(readableError(error))")
+            }
+        }
+        let notifier = scheduledMissionNotifier
+        Task { @MainActor in
+            await post(notifier)
+        }
     }
 
     private static func missionTitle(_ mission: MissionRecord) -> String {
