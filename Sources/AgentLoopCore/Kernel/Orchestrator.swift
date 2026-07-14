@@ -26,7 +26,71 @@ public struct MissionStateError: Error, Sendable, Equatable {
     }
 }
 
+public struct KernelHaltedError: LocalizedError, Sendable, Equatable {
+    public init() {}
+
+    public var errorDescription: String? {
+        "全部行动已紧急收哨，请先恢复后再出发。"
+    }
+}
+
+public struct HaltPersistenceError: LocalizedError, Sendable, Equatable {
+    public let detail: String
+
+    public init(detail: String) {
+        self.detail = detail
+    }
+
+    public var errorDescription: String? {
+        "当前行动工作已经停止，但持久化收哨状态未能保存。请勿退出 AgentLoop，修复存储问题后重试保存。详情：\(detail)"
+    }
+}
+
+public struct PlanningHaltCleanupError: LocalizedError, Sendable, Equatable {
+    public let detail: String
+
+    public init(detail: String) {
+        self.detail = detail
+    }
+
+    public var errorDescription: String? {
+        "当前行动工作已经停止，但被中断的规划未能安全收口。全部行动仍保持暂停；修复存储问题后重试恢复。详情：\(detail)"
+    }
+}
+
+public struct HaltRecoveryError: LocalizedError, Sendable, Equatable {
+    public let detail: String
+
+    public init(detail: String) {
+        self.detail = detail
+    }
+
+    public var errorDescription: String? {
+        "恢复前的中断任务收编失败。全部行动仍保持暂停，没有启动新工作；修复存储问题后重试恢复。详情：\(detail)"
+    }
+}
+
+public struct KernelTransitionInProgressError: LocalizedError, Sendable, Equatable {
+    public init() {}
+
+    public var errorDescription: String? {
+        "停营或恢复状态正在由另一项操作处理，请确认当前状态后重试。"
+    }
+}
+
 public actor Orchestrator {
+    private enum DispatchPhase: Sendable, Equatable {
+        case running
+        case halting
+        case halted
+        case resuming
+        case shuttingDown
+
+        var permitsDispatch: Bool {
+            self == .running
+        }
+    }
+
     private let db: AppDatabase
     private let makeProvider: @Sendable (String) -> any LLMProvider
     /// M6-D7：搜索 key 派发时解析（沿 makeProvider 注入模式），Core 不直连 Keychain 细节
@@ -43,13 +107,31 @@ public actor Orchestrator {
     private var cancelling: Set<String> = []
     /// 预算耗尽已通知的行动（加预算后移除，避免每次 reconcile 重复发事件）
     private var budgetNotified: Set<String> = []
-    /// M7-D5：紧急收哨标志——reconcile 全停，直到 resume
-    private var halted = false
+    /// Durable dispatch mode is projected in SQLite. Transitional phases stay
+    /// fail-closed across actor reentrancy while stop/resume await cleanup.
+    private var dispatchPhase: DispatchPhase
+    /// Ownership token for actor methods that cross await boundaries. Phase values
+    /// can repeat (resuming -> halted -> resuming), so the enum alone cannot prevent ABA.
+    private var dispatchTransitionToken = UUID()
+    /// App startup can opt into a one-shot bootstrap gate. It closes dispatch in
+    /// init, before the asynchronous recovery task has a chance to enter the actor.
+    private let enforcesStartupRecovery: Bool
+    private var startupRecoveryPending: Bool
+    private var startupDispatchModeError: String?
+    /// A stop that closed this process but failed to persist may be explicitly retried.
+    private var haltPersistencePending = false
     /// M7-D8：429 全局冷却截止点（在途不动，只挡新派发）
     private var cooldownUntil: ContinuousClock.Instant?
     private let rateLimitCooldownDuration: Duration
     /// M8-D4：MCP 驿站管理（nil = 未接驿路，一切照旧）
     private let mcpManager: McpServerManager?
+    /// Deterministic test seam for the post-database/pre-dispatch race. Nil in production.
+    private let reconcilePostDatabaseGate: (@Sendable () async -> Void)?
+    /// Deterministic test seam after a planner response and before its commit gate.
+    private let planningPostProviderGate: (@Sendable () async -> Void)?
+    /// Deterministic seams for transition-ownership regression tests. Nil in production.
+    private let recoveryPostAdoptionGate: (@Sendable () async -> Void)?
+    private let resumePreAdoptionGate: (@Sendable () async -> Void)?
     private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "orchestrator")
 
     public init(
@@ -59,8 +141,25 @@ public actor Orchestrator {
         tickInterval: Duration? = .seconds(5),
         searchKeyProvider: @escaping @Sendable () -> String? = { nil },
         rateLimitCooldown: Duration = KernelDefaults.rateLimitCooldown,
-        mcpManager: McpServerManager? = nil
+        mcpManager: McpServerManager? = nil,
+        reconcilePostDatabaseGate: (@Sendable () async -> Void)? = nil,
+        planningPostProviderGate: (@Sendable () async -> Void)? = nil,
+        recoveryPostAdoptionGate: (@Sendable () async -> Void)? = nil,
+        resumePreAdoptionGate: (@Sendable () async -> Void)? = nil,
+        requiresStartupRecovery: Bool = false
     ) {
+        let initialPhase: DispatchPhase
+        let initialError: String?
+        do {
+            let mode = try db.dispatchMode()
+            initialPhase = mode == .running
+                ? (requiresStartupRecovery ? .resuming : .running)
+                : .halted
+            initialError = nil
+        } catch {
+            initialPhase = .halted
+            initialError = "读取持久化停营状态失败：\(String(describing: error))"
+        }
         self.db = db
         self.makeProvider = makeProvider
         self.artifactStoreRoot = artifactStoreRoot
@@ -68,6 +167,14 @@ public actor Orchestrator {
         self.searchKeyProvider = searchKeyProvider
         self.rateLimitCooldownDuration = rateLimitCooldown
         self.mcpManager = mcpManager
+        self.reconcilePostDatabaseGate = reconcilePostDatabaseGate
+        self.planningPostProviderGate = planningPostProviderGate
+        self.recoveryPostAdoptionGate = recoveryPostAdoptionGate
+        self.resumePreAdoptionGate = resumePreAdoptionGate
+        self.enforcesStartupRecovery = requiresStartupRecovery
+        self.startupRecoveryPending = requiresStartupRecovery
+        self.dispatchPhase = initialPhase
+        self.startupDispatchModeError = initialError
     }
 
     public func events() -> AsyncStream<KernelEvent> {
@@ -89,6 +196,7 @@ public actor Orchestrator {
         campId: String? = nil,
         autonomy: MissionAutonomy = .standard
     ) async throws -> String {
+        try requireDispatchRunning()
         ensureTickStarted()
         let missionId = try db.createMissionShell(
             goal: goal, companionIds: companionIds,
@@ -97,12 +205,21 @@ public actor Orchestrator {
         emit(.planningStarted(missionId: missionId))
         let task = Task {
             do {
+                try Task.checkCancellation()
+                guard self.dispatchPhase.permitsDispatch else { throw CancellationError() }
                 let roster = try db.companions(ids: companionIds)
                 let planner = Planner(provider: makeProvider(plannerModel))
                 // 开工带经验（spec §9-2）：规划上下文附带营地笔记
                 let campNotes = self.loadCampNotes(campId: try db.squad(forMission: missionId)?.campId)
                 let result = try await planner.propose(
                     goal: goal, roster: roster, workspacePath: workspacePath, campNotes: campNotes)
+                if let planningPostProviderGate {
+                    await planningPostProviderGate()
+                }
+                // A provider may ignore cancellation. Never let a stale planning result
+                // account tokens or create cards after a stop has closed the gate.
+                try Task.checkCancellation()
+                guard self.dispatchPhase.permitsDispatch else { throw CancellationError() }
                 // M6-D13：规划轮入账（fallback 路径已消耗的部分也在 result.usage 里）
                 if result.usage.inputTokens + result.usage.outputTokens > 0 {
                     try db.recordPlanningTokens(
@@ -115,8 +232,8 @@ public actor Orchestrator {
                     try db.recordPlanFallback(missionId: missionId, reason: reason)
                 }
                 try db.planMission(missionId: missionId, goalRefined: result.proposal.goalRefined, drafts: result.proposal.cards)
-                await emitFromTask(.planCompleted(missionId: missionId, fallback: result.fallbackReason != nil))
-                await emitFromTask(.missionChanged(missionId: missionId))
+                emitFromTask(.planCompleted(missionId: missionId, fallback: result.fallbackReason != nil))
+                emitFromTask(.missionChanged(missionId: missionId))
                 await reconcile()
             } catch is CancellationError {
             } catch {
@@ -124,7 +241,7 @@ public actor Orchestrator {
                 db.appendKernelErrorEvent(missionId: missionId, message: message)
                 await emitFromTask(.kernelError(missionId: missionId, message: message))
             }
-            await finishPlanning(missionId)
+            finishPlanning(missionId)
         }
         planningTasks[missionId] = task
         return missionId
@@ -133,56 +250,144 @@ public actor Orchestrator {
     /// 启动恢复（M5-1，spec §14/§16-M5）：先收编崩溃遗留的孤儿，再照常调度。
     /// 杀进程重启后行动续跑的入口——替代裸 reconcile() 作为 App 启动调用。
     public func recoverAndReconcile() async {
-        await adoptOrphans()
+        if enforcesStartupRecovery {
+            guard startupRecoveryPending else { return }
+            guard dispatchPhase != .halting, dispatchPhase != .shuttingDown else {
+                startupRecoveryPending = false
+                return
+            }
+            // Claim the one permitted bootstrap call. stop/resume/shutdown can
+            // invalidate its transition token while it is suspended.
+            startupRecoveryPending = false
+        } else {
+            guard !haltPersistencePending,
+                  dispatchPhase != .halting,
+                  dispatchPhase != .resuming,
+                  dispatchPhase != .shuttingDown else {
+                return
+            }
+        }
+        let durableMode: DispatchMode?
+        let recoveryPhase: DispatchPhase
+        do {
+            let mode = try db.dispatchMode()
+            durableMode = mode
+            startupDispatchModeError = nil
+            haltPersistencePending = false
+            // Keep a running projection temporarily closed until crash residue has
+            // been recovered. No start may race through an awaited recovery write.
+            recoveryPhase = mode == .running ? .resuming : .halted
+            if mode == .halted {
+                emit(.haltStateChanged(true))
+            }
+        } catch {
+            durableMode = nil
+            recoveryPhase = .halted
+            let detail = startupDispatchModeError ?? "读取持久化停营状态失败：\(String(describing: error))"
+            let message = "\(detail)，已保持停止"
+            startupDispatchModeError = message
+            Self.logger.error("\(message, privacy: .public)")
+            db.appendKernelErrorEvent(missionId: "", message: message)
+            emit(.haltStateChanged(true))
+            emit(.kernelError(missionId: "", message: message))
+        }
+        let recoveryToken = beginTransition(recoveryPhase)
+        do {
+            try await adoptOrphans()
+        } catch {
+            guard ownsTransition(recoveryToken, phase: recoveryPhase) else { return }
+            dispatchPhase = .halted
+            tickTask?.cancel()
+            tickTask = nil
+            let message = "启动领养失败，已保持停止：\(String(describing: error))"
+            Self.logger.error("\(message, privacy: .public)")
+            db.appendKernelErrorEvent(missionId: "", message: message)
+            emit(.haltStateChanged(true))
+            emit(.kernelError(missionId: "", message: message))
+            return
+        }
+        if let recoveryPostAdoptionGate {
+            await recoveryPostAdoptionGate()
+        }
+        guard ownsTransition(recoveryToken, phase: recoveryPhase) else { return }
+        healOrphanedConfirmedProposals()
+        guard let durableMode else {
+            tickTask?.cancel()
+            tickTask = nil
+            return
+        }
+        guard durableMode == .running else {
+            tickTask?.cancel()
+            tickTask = nil
+            do {
+                try await terminalizeInterruptedPlanningMissions(
+                    limitedTo: nil,
+                    excluding: Set(planningTasks.keys)
+                )
+            } catch {
+                guard ownsTransition(recoveryToken, phase: .halted) else { return }
+                reportPlanningCleanupFailure(error, prefix: "停营启动恢复")
+            }
+            return
+        }
+        guard ownsTransition(recoveryToken, phase: .resuming) else { return }
+        dispatchPhase = .running
+        emit(.haltStateChanged(false))
         await reconcile()
     }
 
     /// 收编孤儿：DB 里 running 但不在内存注册表的卡（崩溃/强杀遗留）→ ready 续跑，
     /// 其未收口的 run 标记 interrupted；confirmed-无-missionId 的提案回滚 pending 可重确认。
-    private func adoptOrphans() async {
+    private func adoptOrphans() async throws {
         let activeCardIds = Set(running.keys)
-        do {
-            let adopted = try await db.pool.write { database -> [(cardId: String, missionId: String)] in
-                let stuck = try CardRecord
-                    .filter(Column("status") == CardStatus.running.rawValue)
-                    .fetchAll(database)
-                    .filter { !activeCardIds.contains($0.id) }
-                for card in stuck {
-                    try database.execute(
-                        sql: """
-                            UPDATE run SET outcome = 'interrupted', endedAt = ?
-                            WHERE cardId = ? AND outcome IS NULL
-                            """,
-                        arguments: [Date(), card.id]
-                    )
-                    try self.db.transitionCard(
-                        database,
-                        id: card.id,
-                        to: .ready,
-                        eventKind: EventKind.cardInterrupted,
-                        payload: ["reason": "crash_recovery"]
-                    )
-                }
-                return stuck.map { (cardId: $0.id, missionId: $0.missionId) }
+        let adopted = try await db.pool.write { database -> [(cardId: String, missionId: String)] in
+            let stuck = try CardRecord
+                .filter(Column("status") == CardStatus.running.rawValue)
+                .fetchAll(database)
+                .filter { !activeCardIds.contains($0.id) }
+            for card in stuck {
+                try database.execute(
+                    sql: """
+                        UPDATE run SET outcome = 'interrupted', endedAt = ?
+                        WHERE cardId = ? AND outcome IS NULL
+                        """,
+                    arguments: [Date(), card.id]
+                )
+                try self.db.transitionCard(
+                    database,
+                    id: card.id,
+                    to: .ready,
+                    eventKind: EventKind.cardInterrupted,
+                    payload: ["reason": "crash_recovery"]
+                )
             }
-            for orphan in adopted {
-                Self.logger.info("adopted orphaned running card \(orphan.cardId, privacy: .public)")
-                emit(.missionChanged(missionId: orphan.missionId))
+            return stuck.map { (cardId: $0.id, missionId: $0.missionId) }
+        }
+        for orphan in adopted {
+            Self.logger.info("adopted orphaned running card \(orphan.cardId, privacy: .public)")
+            emit(.missionChanged(missionId: orphan.missionId))
+        }
+    }
+
+    private func healOrphanedConfirmedProposals() {
+        // 提案自愈（M4 评审遗留的崩溃窗口：CAS 确认后、建队前崩溃）
+        do {
+            let healed = try db.healOrphanedConfirmedProposals()
+            if !healed.isEmpty {
+                Self.logger.info("healed \(healed.count, privacy: .public) orphaned confirmed proposals")
             }
         } catch {
-            emit(.kernelError(missionId: "", message: "启动领养失败：\(String(describing: error))"))
-        }
-
-        // 提案自愈（M4 评审遗留的崩溃窗口：CAS 确认后、建队前崩溃）
-        if let healed = try? await db.healOrphanedConfirmedProposals(), !healed.isEmpty {
-            Self.logger.info("healed \(healed.count, privacy: .public) orphaned confirmed proposals")
+            let message = "提案自愈失败：\(String(describing: error))"
+            Self.logger.error("\(message, privacy: .public)")
+            db.appendKernelErrorEvent(missionId: "", message: message)
+            emit(.kernelError(missionId: "", message: message))
         }
     }
 
     public func reconcile() async {
+        // Check before tick creation: a restored halt must remain completely quiet.
+        guard dispatchPhase.permitsDispatch else { return }
         ensureTickStarted()
-        // M7-D5：收哨期间不做任何调度（含 todo→ready 提升）
-        guard !halted else { return }
         guard !reconciling else {
             reconcilePending = true
             return
@@ -191,6 +396,10 @@ public actor Orchestrator {
         defer { reconciling = false }
 
         repeat {
+            guard dispatchPhase.permitsDispatch else {
+                reconcilePending = false
+                break
+            }
             reconcilePending = false
             await reconcileOnce()
         } while reconcilePending
@@ -283,6 +492,12 @@ public actor Orchestrator {
             return
         }
 
+        if let reconcilePostDatabaseGate {
+            await reconcilePostDatabaseGate()
+        }
+        // The database write above suspends. A stop may have committed while it was in flight.
+        guard dispatchPhase.permitsDispatch else { return }
+
         for error in plan.kernelErrors {
             db.appendKernelErrorEvent(missionId: error.missionId, message: error.message)
             emit(.kernelError(missionId: error.missionId, message: error.message))
@@ -306,6 +521,7 @@ public actor Orchestrator {
 
         var busy = Set(running.values.map(\.assigneeId))
         for candidate in plan.candidates {
+            guard dispatchPhase.permitsDispatch else { break }
             // 全局并发节流（M5-2）
             guard running.count < KernelDefaults.maxConcurrentCardRuns else { break }
             guard !busy.contains(candidate.assigneeId),
@@ -328,47 +544,185 @@ public actor Orchestrator {
 
     // MARK: - 紧急收哨（M7-D5）
 
-    public var isHalted: Bool { halted }
+    public var isHalted: Bool { !dispatchPhase.permitsDispatch }
 
     /// 一键停营：取消全部在途（卡片走既有 card_interrupted → ready 领养语义）+
     /// 终止子进程 + 停派发。恢复用 resume()。
-    public func emergencyStop() async {
-        guard !halted else { return }
-        halted = true
+    public func emergencyStop() async throws {
+        let stopToken = UUID()
+        switch dispatchPhase {
+        case .halting, .shuttingDown:
+            return
+        case .halted:
+            guard haltPersistencePending else { return }
+            startupRecoveryPending = false
+            dispatchTransitionToken = stopToken
+            dispatchPhase = .halting
+            do {
+                _ = try db.transitionDispatchMode(from: .running, to: .halted)
+                haltPersistencePending = false
+            } catch {
+                dispatchPhase = .halted
+                let message = "持久化停营状态重试失败；当前进程仍保持停止：\(String(describing: error))"
+                Self.logger.error("\(message, privacy: .public)")
+                db.appendKernelErrorEvent(missionId: "", message: message)
+                emit(.kernelError(missionId: "", message: message))
+                throw HaltPersistenceError(detail: String(describing: error))
+            }
+            do {
+                try await terminalizeInterruptedPlanningMissions(
+                    limitedTo: nil,
+                    excluding: Set(planningTasks.keys)
+                )
+            } catch {
+                guard ownsTransition(stopToken, phase: .halting) else { return }
+                dispatchPhase = .halted
+                reportPlanningCleanupFailure(error, prefix: "重试保存停营后")
+                throw PlanningHaltCleanupError(detail: String(describing: error))
+            }
+            guard ownsTransition(stopToken, phase: .halting) else { return }
+            dispatchPhase = .halted
+            return
+        case .running, .resuming:
+            startupRecoveryPending = false
+            dispatchTransitionToken = stopToken
+            dispatchPhase = .halting
+        }
 
-        for (_, task) in planningTasks { task.cancel() }
-        let planningSnapshot = planningTasks.values
-        planningTasks.removeAll()
-        for task in planningSnapshot { await task.value }
+        var persistenceFailure: Error?
+        do {
+            _ = try db.transitionDispatchMode(from: .running, to: .halted)
+        } catch {
+            persistenceFailure = error
+        }
+        haltPersistencePending = persistenceFailure != nil
 
+        let interruptedPlanningIds = Set(planningTasks.keys)
+        let planningSnapshot = Array(planningTasks.values)
         let runningSnapshot = running
+
+        // Cancellation requests must fan out before awaiting either group. A planner
+        // that ignores cancellation must never delay cancellation of active card work.
+        for (_, task) in planningTasks { task.cancel() }
         for (_, entry) in runningSnapshot { entry.task.cancel() }
+        tickTask?.cancel()
+        tickTask = nil
+
+        // Prioritize external-effecting card cleanup before waiting for planners.
         for (cardId, entry) in runningSnapshot {
             await entry.task.value
             running.removeValue(forKey: cardId)
         }
+        for task in planningSnapshot { await task.value }
+        guard ownsTransition(stopToken, phase: .halting) else { return }
+
+        var planningCleanupFailure: Error?
+        do {
+            try await terminalizeInterruptedPlanningMissions(
+                limitedTo: interruptedPlanningIds,
+                excluding: []
+            )
+        } catch {
+            planningCleanupFailure = error
+        }
+        guard ownsTransition(stopToken, phase: .halting) else { return }
 
         // M8：先优雅停驿站（状态回 stopped，恢复后可自动再启），再扫尾杀残余子进程；
         // 直接 terminateAll 会让驿站走「意外死亡」路径卡在 down（down 只能手动重启）。
         await mcpManager?.stopAll()
+        guard ownsTransition(stopToken, phase: .halting) else { return }
         ShellProcessRegistry.shared.terminateAll()
-        try? await db.pool.write { database in
-            try AppDatabase.appendEvent(
-                database, missionId: nil, cardId: nil, runId: nil,
-                kind: EventKind.campHalted, payload: .object([:]))
-        }
+        dispatchPhase = .halted
         emit(.haltStateChanged(true))
+
+        if let persistenceFailure {
+            var detail = String(describing: persistenceFailure)
+            if let planningCleanupFailure {
+                detail += "；同时规划收口失败：\(String(describing: planningCleanupFailure))"
+                reportPlanningCleanupFailure(planningCleanupFailure, prefix: "紧急收哨")
+            }
+            let failure = HaltPersistenceError(detail: detail)
+            let message = failure.errorDescription ?? detail
+            Self.logger.error("\(message, privacy: .public)")
+            db.appendKernelErrorEvent(missionId: "", message: message)
+            emit(.kernelError(missionId: "", message: message))
+            throw failure
+        }
+        if let planningCleanupFailure {
+            reportPlanningCleanupFailure(planningCleanupFailure, prefix: "紧急收哨")
+            throw PlanningHaltCleanupError(detail: String(describing: planningCleanupFailure))
+        }
     }
 
     /// 解除收哨并立即调度（中断的卡已在 ready，直接续跑）
-    public func resume() async {
-        guard halted else { return }
-        halted = false
-        try? await db.pool.write { database in
-            try AppDatabase.appendEvent(
-                database, missionId: nil, cardId: nil, runId: nil,
-                kind: EventKind.campResumed, payload: .object([:]))
+    public func resume() async throws {
+        switch dispatchPhase {
+        case .running:
+            return
+        case .resuming:
+            throw KernelTransitionInProgressError()
+        case .halted:
+            break
+        case .halting, .shuttingDown:
+            throw KernelHaltedError()
         }
+        startupRecoveryPending = false
+        let resumeToken = beginTransition(.resuming)
+
+        do {
+            try await terminalizeInterruptedPlanningMissions(
+                limitedTo: nil,
+                excluding: Set(planningTasks.keys)
+            )
+        } catch {
+            guard ownsTransition(resumeToken, phase: .resuming) else {
+                throw KernelTransitionInProgressError()
+            }
+            dispatchPhase = .halted
+            reportPlanningCleanupFailure(error, prefix: "恢复前")
+            emit(.haltStateChanged(true))
+            throw PlanningHaltCleanupError(detail: String(describing: error))
+        }
+        try requireTransition(resumeToken, phase: .resuming)
+
+        if let resumePreAdoptionGate {
+            await resumePreAdoptionGate()
+        }
+        try requireTransition(resumeToken, phase: .resuming)
+
+        // Recover crash residue while the gate is still closed. Opening the durable
+        // projection first would let unrelated starts race ahead of failed recovery.
+        do {
+            try await adoptOrphans()
+        } catch {
+            guard ownsTransition(resumeToken, phase: .resuming) else {
+                throw KernelTransitionInProgressError()
+            }
+            dispatchPhase = .halted
+            let message = "恢复前领养失败，已保持停止：\(String(describing: error))"
+            Self.logger.error("\(message, privacy: .public)")
+            db.appendKernelErrorEvent(missionId: "", message: message)
+            emit(.haltStateChanged(true))
+            emit(.kernelError(missionId: "", message: message))
+            throw HaltRecoveryError(detail: String(describing: error))
+        }
+        try requireTransition(resumeToken, phase: .resuming)
+        healOrphanedConfirmedProposals()
+
+        do {
+            _ = try db.transitionDispatchMode(from: .halted, to: .running)
+        } catch {
+            dispatchPhase = .halted
+            let message = "恢复全部行动失败，系统仍保持停止：\(String(describing: error))"
+            Self.logger.error("\(message, privacy: .public)")
+            db.appendKernelErrorEvent(missionId: "", message: message)
+            emit(.kernelError(missionId: "", message: message))
+            throw error
+        }
+
+        startupDispatchModeError = nil
+        haltPersistencePending = false
+        dispatchPhase = .running
         emit(.haltStateChanged(false))
         await reconcile()
     }
@@ -512,6 +866,7 @@ public actor Orchestrator {
         fallbackBudget: Int = KernelDefaults.missionBudget,
         autonomy: MissionAutonomy = .standard
     ) async throws -> String {
+        try requireDispatchRunning()
         let block = try db.confirmProposalBlock(messageId: messageId)
         do {
             // 提案建队归属向导所在营地（M5-0：从提案消息所在线程推导）
@@ -626,7 +981,7 @@ public actor Orchestrator {
         guard distillTasks[missionId] == nil else { return }
         let task = Task {
             await self.runCloseoutDistillation(missionId: missionId, model: model)
-            await self.finishDistillation(missionId)
+            self.finishDistillation(missionId)
         }
         distillTasks[missionId] = task
     }
@@ -696,6 +1051,9 @@ public actor Orchestrator {
     }
 
     public func shutdown() async {
+        startupRecoveryPending = false
+        dispatchTransitionToken = UUID()
+        dispatchPhase = .shuttingDown
         tickTask?.cancel()
         tickTask = nil
         for (_, task) in planningTasks {
@@ -728,6 +1086,8 @@ public actor Orchestrator {
 
     private func run(candidate: DispatchCandidate, provider: any LLMProvider) async {
         do {
+            try Task.checkCancellation()
+            guard dispatchPhase.permitsDispatch else { throw CancellationError() }
             let upstream = try loadUpstreamHandoffs(for: candidate.card)
             let answeredRequests = try db.answeredRequests(cardId: candidate.card.id)
                 .map { (prompt: $0.prompt, answer: $0.humanAnswer()) }
@@ -735,15 +1095,26 @@ public actor Orchestrator {
             let campId = try db.squad(forCard: candidate.card.id)?.campId
             let campNotes = loadCampNotes(campId: campId)
             let companionNotes = loadCompanionNotes(companionId: candidate.assigneeId)
-            // M6-D4：白名单解析失败回退全量并留痕，坏 JSON 不瘫痪卡片
+            // M6-D4：白名单解析失败必须 fail-closed，只保留内核板工具并留痕。
             let toolAccess = ToolAccess.parse(toolsJson: candidate.toolsJson)
+            let externalTools: [ExternalTool]
             if toolAccess.parseFailed {
+                let message = "伙伴「\(candidate.companionName)」工具白名单解析失败，本次仅保留行动板工具"
+                Self.logger.error("\(message, privacy: .public)")
                 db.appendKernelErrorEvent(
                     missionId: candidate.card.missionId,
-                    message: "伙伴「\(candidate.companionName)」工具白名单解析失败，本次按全量工具执行")
+                    message: message)
+                // MCP server 是进程级能力。配置损坏时连装配都不进入，避免先启动再过滤。
+                externalTools = []
+            } else {
+                externalTools = await assembleMcpTools(
+                    campId: campId, missionId: candidate.card.missionId,
+                    cardId: candidate.card.id)
             }
-            let externalTools = await assembleMcpTools(
-                campId: campId, missionId: candidate.card.missionId, cardId: candidate.card.id)
+            // MCP assembly suspends and may ignore cancellation while a server starts.
+            // Re-check before CardRunner atomically claims ready -> running.
+            try Task.checkCancellation()
+            guard dispatchPhase.permitsDispatch else { throw CancellationError() }
             let stream = try CardRunner(
                 db: db,
                 provider: provider,
@@ -849,6 +1220,81 @@ public actor Orchestrator {
 
     private func finishPlanning(_ missionId: String) {
         planningTasks.removeValue(forKey: missionId)
+    }
+
+    private func requireDispatchRunning() throws {
+        guard dispatchPhase.permitsDispatch else {
+            throw KernelHaltedError()
+        }
+    }
+
+    private func beginTransition(_ phase: DispatchPhase) -> UUID {
+        let token = UUID()
+        dispatchTransitionToken = token
+        dispatchPhase = phase
+        return token
+    }
+
+    private func ownsTransition(_ token: UUID, phase: DispatchPhase) -> Bool {
+        dispatchTransitionToken == token && dispatchPhase == phase
+    }
+
+    private func requireTransition(_ token: UUID, phase: DispatchPhase) throws {
+        guard ownsTransition(token, phase: phase) else {
+            throw KernelTransitionInProgressError()
+        }
+    }
+
+    /// A bounded, honest terminal outcome for planning interrupted by emergency halt.
+    /// Exact planning continuation requires a persisted attempt ledger and is intentionally deferred.
+    private func terminalizeInterruptedPlanningMissions(
+        limitedTo missionIds: Set<String>?,
+        excluding liveMissionIds: Set<String>
+    ) async throws {
+        let changed = try await db.pool.write { database -> [String] in
+            let planning = try MissionRecord
+                .filter(Column("status") == MissionStatus.planning.rawValue)
+                .fetchAll(database)
+                .filter { mission in
+                    !liveMissionIds.contains(mission.id)
+                        && (missionIds?.contains(mission.id) ?? true)
+                }
+            for var mission in planning {
+                let previous = mission.status
+                mission.status = .failed
+                try mission.update(database)
+                try AppDatabase.appendEvent(
+                    database,
+                    missionId: mission.id,
+                    cardId: nil,
+                    runId: nil,
+                    kind: EventKind.missionFailed,
+                    payload: ["reason": "emergency_halt_during_planning"]
+                )
+                try AppDatabase.appendEvent(
+                    database,
+                    missionId: mission.id,
+                    cardId: nil,
+                    runId: nil,
+                    kind: EventKind.missionStatusChanged,
+                    payload: [
+                        "from": .string(previous.rawValue),
+                        "to": .string(MissionStatus.failed.rawValue),
+                    ]
+                )
+            }
+            return planning.map(\.id)
+        }
+        for missionId in changed {
+            emit(.missionChanged(missionId: missionId))
+        }
+    }
+
+    private func reportPlanningCleanupFailure(_ error: Error, prefix: String) {
+        let message = "\(prefix)的规划收口失败，已保持停止：\(String(describing: error))"
+        Self.logger.error("\(message, privacy: .public)")
+        db.appendKernelErrorEvent(missionId: "", message: message)
+        emit(.kernelError(missionId: "", message: message))
     }
 
     private func ensureTickStarted() {

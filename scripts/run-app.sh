@@ -5,10 +5,35 @@
 #
 # 用法：
 #   scripts/run-app.sh            # 构建并启动（真实数据库）
-#   scripts/run-app.sh --preview  # UI 预览模式（不读钥匙串、不调度；配合 AGENTLOOP_STATE_DIR）
+#   scripts/run-app.sh --preview  # UI 预览模式（不读钥匙串、不调度；默认使用隔离状态目录）
 #   scripts/run-app.sh --dark     # 追加强制暗色
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+PREVIEW=false
+FORCE_DARK=false
+for arg in "$@"; do
+  case "$arg" in
+    --preview) PREVIEW=true ;;
+    --dark)    FORCE_DARK=true ;;
+    *)
+      print -u2 -- "未知参数：${arg}"
+      exit 2
+      ;;
+  esac
+done
+
+# LaunchServices 复用现有实例时会忽略本次 `open --env`，而脚本无法可靠判断现有
+# 进程究竟是 production、preview 还是自定义状态目录。所有脚本启动都要求冷启动，
+# 避免两个方向的模式混淆（例如 preview→默认启动仍继续复用 preview 进程）。
+ensure_cold_launch() {
+  if pgrep -x 'AgentLoop|AgentLoopApp' >/dev/null; then
+    print -u2 -- "AgentLoop 已在运行；脚本无法安全切换或确认现有进程的运行模式。请先退出现有实例，再重新启动。"
+    exit 1
+  fi
+}
+
+ensure_cold_launch
 
 BUILD_FLAGS=()
 # CLT-only 机器沙箱内构建需要重定向 Clang module cache（沿用测试跑法约定）
@@ -42,6 +67,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   </array>
   <key>NSHighResolutionCapable</key><true/>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSMultipleInstancesProhibited</key><true/>
   <key>NSAppTransportSecurity</key>
   <dict>
     <key>NSExceptionDomains</key>
@@ -57,14 +83,19 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 PLIST
 codesign --force -s - "$APP"
 
-OPEN_ARGS=(-n "$APP")
-for arg in "$@"; do
-  case "$arg" in
-    --preview) OPEN_ARGS+=(--env AGENTLOOP_UI_PREVIEW=1) ;;
-    --dark)    OPEN_ARGS+=(--env AGENTLOOP_FORCE_DARK=1) ;;
-  esac
-done
+OPEN_ARGS=("$APP")
+if [[ "$PREVIEW" == true ]]; then
+  OPEN_ARGS+=(--env AGENTLOOP_UI_PREVIEW=1)
+fi
+if [[ "$FORCE_DARK" == true ]]; then
+  OPEN_ARGS+=(--env AGENTLOOP_FORCE_DARK=1)
+fi
 if [[ -n "${AGENTLOOP_STATE_DIR:-}" ]]; then
   OPEN_ARGS+=(--env "AGENTLOOP_STATE_DIR=${AGENTLOOP_STATE_DIR}")
+elif [[ "$PREVIEW" == true ]]; then
+  OPEN_ARGS+=(--env "AGENTLOOP_STATE_DIR=${PWD}/.build/AgentLoopPreviewState")
 fi
+# 构建与签名期间可能有另一个实例启动；交给 LaunchServices 前再次验证，缩小
+# 现有进程静默吞掉本次模式/状态目录参数的竞态窗口。
+ensure_cold_launch
 exec open "${OPEN_ARGS[@]}"

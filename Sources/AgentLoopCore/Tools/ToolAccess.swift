@@ -24,7 +24,7 @@ public struct ToolAccess: Sendable, Equatable {
 
     /// 解析后的能力工具集合（已应用「空=全量(仅内置)」）。
     public let capabilities: Set<String>
-    /// toolsJson 解析失败（已回退全量）；调用方应记 kernel_error 事件。
+    /// toolsJson 解析失败（已收紧为零能力工具）；调用方应记 kernel_error 事件。
     public let parseFailed: Bool
 
     public static let full = ToolAccess(
@@ -46,7 +46,7 @@ public struct ToolAccess: Sendable, Equatable {
                 capabilities: Set(legacy).intersection(builtinCapabilityNames),
                 parseFailed: false)
         }
-        return ToolAccess(capabilities: Set(builtinCapabilityNames), parseFailed: true)
+        return ToolAccess(capabilities: [], parseFailed: true)
     }
 
     /// 编辑器保存格式（D5b）：显式 v2 列表，排序保证字节确定。
@@ -54,8 +54,12 @@ public struct ToolAccess: Sendable, Equatable {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let list = ExplicitList(v: 2, allow: allow.sorted())
-        guard let data = try? encoder.encode(list) else { return "[]" }
-        return String(decoding: data, as: UTF8.self)
+        do {
+            let data = try encoder.encode(list)
+            return String(decoding: data, as: UTF8.self)
+        } catch {
+            preconditionFailure("ToolAccess v2 encoding failed: \(error)")
+        }
     }
 
     public func allows(_ name: String) -> Bool {

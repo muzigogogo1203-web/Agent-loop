@@ -234,7 +234,23 @@ struct TaskRunView: View {
                     .campCard(padding: 10, highlighted: true)
                 }
 
+                if store.missionStartBlocked {
+                    HStack(spacing: 8) {
+                        Image(systemName: "hand.raised.slash.fill")
+                            .foregroundStyle(Camp.charcoalRed)
+                        Text(store.missionStartBlockMessage)
+                            .font(.callout)
+                            .foregroundStyle(Camp.inkSecondary)
+                        Spacer()
+                    }
+                    .campCard(padding: 10, highlighted: true)
+                }
+
                 Button {
+                    guard !store.missionStartBlocked else {
+                        submitError = store.missionStartBlockMessage
+                        return
+                    }
                     submitError = nil
                     submitting = true
                     store.startMission(
@@ -260,8 +276,14 @@ struct TaskRunView: View {
                 }
                 .buttonStyle(CampPrimaryButtonStyle())
                 .keyboardShortcut(.defaultAction)
-                .disabled(submitting || goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedCompanionIds.isEmpty)
-                .opacity(goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedCompanionIds.isEmpty ? 0.5 : 1)
+                .disabled(submitting
+                          || store.missionStartBlocked
+                          || goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                          || selectedCompanionIds.isEmpty)
+                .opacity(store.missionStartBlocked
+                         || goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                         || selectedCompanionIds.isEmpty ? 0.5 : 1)
+                .help(store.missionStartBlocked ? store.missionStartBlockMessage : "召集伙伴开启行动")
             }
             .frame(maxWidth: 620)
             .padding(24)
@@ -342,9 +364,6 @@ struct TaskRunView: View {
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 14) {
                     missionHeader
-                    if store.campHalted {
-                        haltedBanner
-                    }
                     if store.currentMissionBudgetExhausted {
                         budgetBanner
                     }
@@ -427,35 +446,6 @@ struct TaskRunView: View {
 
     private var currentMission: MissionRecord? {
         store.missionList.first { $0.id == store.currentMissionId }
-    }
-
-    /// 收哨横幅：全营停摆，给恢复入口
-    private var haltedBanner: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "hand.raised.slash.fill")
-                .foregroundStyle(Camp.charcoalRed)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("营地已紧急收哨")
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(Camp.ink)
-                Text("全部行动暂停派发，进行中的小目标已中断（恢复后自动续跑）。")
-                    .font(.caption)
-                    .foregroundStyle(Camp.inkSecondary)
-            }
-            Spacer()
-            Button {
-                store.resumeCamp()
-            } label: {
-                Label("恢复出哨", systemImage: "flag.fill")
-            }
-            .buttonStyle(CampPrimaryButtonStyle(size: .small))
-        }
-        .padding(12)
-        .background(Camp.charcoalRed.opacity(0.08), in: RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
-                .stroke(Camp.charcoalRed.opacity(0.4), lineWidth: 1)
-        )
     }
 
     /// 档位菜单（M7-D2）：行动执行中可改，收营后只读
@@ -606,6 +596,9 @@ struct TaskRunView: View {
                 Label("开启新行动", systemImage: "flag.fill")
             }
             .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+            .disabled(store.missionStartBlocked)
+            .opacity(store.missionStartBlocked ? 0.5 : 1)
+            .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在当前营地开启新行动")
         case .idle:
             EmptyView()
         }
@@ -679,17 +672,24 @@ struct TaskRunView: View {
                 .opacity(theaterPulse ? 1 : 0)
                 .symbolEffect(.pulse, options: .repeat(2), value: theaterPulseToken)
             Spacer()
-            // M7-D5：紧急收哨（全营停摆止损），Cmd+. 快捷键
+            // M7-D5 / D8：按钮保留在行动页，Cmd+. 由 App 全局 Commands 接管。
             if !store.campHalted {
                 Button {
                     store.emergencyStopCamp()
                 } label: {
-                    Label("收哨", systemImage: "hand.raised.fill")
-                        .foregroundStyle(Camp.charcoalRed)
+                    if store.haltOperationState == .stopping {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("正在收哨…")
+                        }
+                    } else {
+                        Label("收哨", systemImage: "hand.raised.fill")
+                    }
                 }
+                .foregroundStyle(Camp.charcoalRed)
                 .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
-                .keyboardShortcut(".", modifiers: .command)
-                .help("紧急收哨：暂停全部行动并终止子进程（Cmd+.）")
+                .disabled(!store.canRequestEmergencyStop)
+                .help("紧急收哨：暂停全部行动并终止子进程（全局 Cmd+.）")
             }
             Button {
                 store.feedPanelVisible.toggle()

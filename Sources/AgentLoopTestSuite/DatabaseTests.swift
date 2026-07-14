@@ -9,6 +9,167 @@ private func tempDB() throws -> AppDatabase {
     return try AppDatabase(path: dir.appendingPathComponent("test.sqlite").path)
 }
 
+private func kernelControl(_ appDatabase: AppDatabase) throws -> KernelControlRecord {
+    try appDatabase.pool.read { database in
+        try #require(try KernelControlRecord.fetchOne(database, key: "global"))
+    }
+}
+
+private func globalDispatchEvents(_ appDatabase: AppDatabase) throws -> [EventRecord] {
+    try appDatabase.pool.read { database in
+        try EventRecord
+            .filter(
+                Column("missionId") == nil
+                    && Column("cardId") == nil
+                    && Column("runId") == nil
+                    && ["camp_halted", "camp_resumed"].contains(Column("kind"))
+            )
+            .order(Column.rowID)
+            .fetchAll(database)
+    }
+}
+
+@Test func databaseUsesFiveSecondBusyTimeoutAndWAL() throws {
+    let appDatabase = try tempDB()
+    let (busyTimeout, journalMode) = try appDatabase.pool.writeWithoutTransaction { db in
+        let busyTimeout = try #require(try Int.fetchOne(db, sql: "PRAGMA busy_timeout"))
+        let journalMode = try #require(try String.fetchOne(db, sql: "PRAGMA journal_mode"))
+        return (busyTimeout, journalMode)
+    }
+
+    #expect(busyTimeout == 5_000)
+    #expect(journalMode.lowercased() == "wal")
+}
+
+@Test func durableHaltMigrationCreatesOneRunningSingletonAndReplays() throws {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    let pool = try DatabasePool(path: dir.appendingPathComponent("v6.sqlite").path)
+    let migrator = AppDatabase.migrator
+
+    #expect(migrator.migrations.contains("v6-durable-halt"))
+    #expect(migrator.migrations.firstIndex(of: "v6-durable-halt")
+            == migrator.migrations.firstIndex(of: "v6").map { $0 + 1 })
+
+    try migrator.migrate(pool, upTo: "v6")
+    #expect(try pool.read { try !$0.tableExists("kernel_control") })
+
+    try migrator.migrate(pool, upTo: "v6-durable-halt")
+    let first = try pool.read { database in
+        try #require(try KernelControlRecord.fetchOne(database, key: "global"))
+    }
+    #expect(first.dispatchMode == .running)
+    #expect(try pool.read { try KernelControlRecord.fetchCount($0) } == 1)
+
+    try migrator.migrate(pool)
+    try migrator.migrate(pool)
+
+    let replayed = try pool.read { database in
+        try #require(try KernelControlRecord.fetchOne(database, key: "global"))
+    }
+    #expect(replayed == first)
+    #expect(try pool.read { try KernelControlRecord.fetchCount($0) } == 1)
+}
+
+@Test func durableHaltCASIsAtomicIdempotentAndGloballyAudited() throws {
+    let appDatabase = try tempDB()
+
+    #expect(try appDatabase.dispatchMode() == .running)
+    #expect(try appDatabase.transitionDispatchMode(from: .running, to: .halted))
+    let haltedAt = try kernelControl(appDatabase).updatedAt
+    #expect(try !appDatabase.transitionDispatchMode(from: .running, to: .halted))
+    #expect(try kernelControl(appDatabase).updatedAt == haltedAt)
+
+    #expect(try appDatabase.transitionDispatchMode(from: .halted, to: .running))
+    let resumedAt = try kernelControl(appDatabase).updatedAt
+    #expect(try !appDatabase.transitionDispatchMode(from: .halted, to: .running))
+    #expect(try kernelControl(appDatabase).updatedAt == resumedAt)
+
+    let events = try globalDispatchEvents(appDatabase)
+    #expect(events.map(\.kind) == ["camp_halted", "camp_resumed"])
+    #expect(events.allSatisfy {
+        $0.missionId == nil && $0.cardId == nil && $0.runId == nil
+    })
+}
+
+@Test func durableHaltCASRejectsStaleExpectedMode() throws {
+    let appDatabase = try tempDB()
+
+    #expect(throws: StaleKernelControlStateError(expected: .halted, actual: .running)) {
+        try appDatabase.transitionDispatchMode(from: .halted, to: .halted)
+    }
+    #expect(try appDatabase.dispatchMode() == .running)
+    #expect(try globalDispatchEvents(appDatabase).isEmpty)
+}
+
+@Test func haltEventFailureRollsBackKernelControlProjection() throws {
+    let appDatabase = try tempDB()
+    try appDatabase.pool.write { database in
+        try database.execute(sql: """
+            CREATE TRIGGER fail_camp_halted_event
+            BEFORE INSERT ON event
+            WHEN NEW.kind = 'camp_halted' BEGIN
+                SELECT RAISE(ABORT, 'injected camp_halted failure');
+            END
+            """)
+    }
+
+    #expect(throws: DatabaseError.self) {
+        try appDatabase.transitionDispatchMode(from: .running, to: .halted)
+    }
+    #expect(try appDatabase.dispatchMode() == .running)
+    #expect(try globalDispatchEvents(appDatabase).isEmpty)
+}
+
+@Test func resumeEventFailureRollsBackKernelControlProjection() throws {
+    let appDatabase = try tempDB()
+    #expect(try appDatabase.transitionDispatchMode(from: .running, to: .halted))
+    try appDatabase.pool.write { database in
+        try database.execute(sql: """
+            CREATE TRIGGER fail_camp_resumed_event
+            BEFORE INSERT ON event
+            WHEN NEW.kind = 'camp_resumed' BEGIN
+                SELECT RAISE(ABORT, 'injected camp_resumed failure');
+            END
+            """)
+    }
+
+    #expect(throws: DatabaseError.self) {
+        try appDatabase.transitionDispatchMode(from: .halted, to: .running)
+    }
+    #expect(try appDatabase.dispatchMode() == .halted)
+    #expect(try globalDispatchEvents(appDatabase).map(\.kind) == ["camp_halted"])
+}
+
+@Test func missingKernelControlSingletonFailsExplicitly() throws {
+    let appDatabase = try tempDB()
+    try appDatabase.pool.write { database in
+        _ = try KernelControlRecord.deleteOne(database, key: "global")
+    }
+
+    #expect(throws: RecordNotFoundError(table: "kernel_control", id: "global")) {
+        try appDatabase.dispatchMode()
+    }
+    #expect(throws: RecordNotFoundError(table: "kernel_control", id: "global")) {
+        try appDatabase.transitionDispatchMode(from: .running, to: .halted)
+    }
+}
+
+@Test func invalidKernelControlModeNeverDefaultsToRunning() throws {
+    let appDatabase = try tempDB()
+    try appDatabase.pool.writeWithoutTransaction { database in
+        try database.execute(sql: "PRAGMA ignore_check_constraints = ON")
+        try database.execute(
+            sql: "UPDATE kernel_control SET dispatchMode = 'corrupt' WHERE id = 'global'"
+        )
+        try database.execute(sql: "PRAGMA ignore_check_constraints = OFF")
+    }
+
+    #expect(throws: (any Error).self) {
+        try appDatabase.dispatchMode()
+    }
+}
+
 @Test func migratesAndBootstraps() throws {
     let db = try tempDB()
     let camp = try db.ensureDefaultCamp()

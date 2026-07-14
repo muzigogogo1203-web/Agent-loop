@@ -11,6 +11,8 @@ public struct StaleProposalError: Error, Equatable, Sendable {
     }
 }
 
+private struct StaleMemoryDistillationError: Error {}
+
 extension AppDatabase {
     // MARK: - 营地笔记 CRUD
 
@@ -131,6 +133,46 @@ extension AppDatabase {
                     WHERE id IN (\(databaseQuestionMarks(count: messageIds.count)))
                     """,
                 arguments: StatementArguments(messageIds)
+            )
+        }
+    }
+
+    /// 原子持久化伙伴记忆：仅当所有捕获消息仍未蒸馏时，推进水位、写入记忆与审计事件。
+    /// 返回 false 表示另一蒸馏已抢先推进水位；本次事务已完整回滚。
+    @discardableResult
+    public func persistCompanionDistillation(
+        note: CompanionNoteRecord,
+        capturedMessageIds: [String]
+    ) throws -> Bool {
+        try persistDistillation(capturedMessageIds: capturedMessageIds) { db in
+            try note.insert(db)
+            try Self.appendEvent(
+                db, missionId: nil, cardId: nil, runId: nil,
+                kind: EventKind.companionNoteCreated,
+                payload: [
+                    "noteId": .string(note.id),
+                    "companionId": .string(note.companionId),
+                ]
+            )
+        }
+    }
+
+    /// 原子持久化向导沉淀：仅当所有捕获消息仍未蒸馏时，推进水位、写入营地笔记与审计事件。
+    /// 返回 false 表示另一蒸馏已抢先推进水位；本次事务已完整回滚。
+    @discardableResult
+    public func persistGuideDistillation(
+        note: CampNoteRecord,
+        capturedMessageIds: [String]
+    ) throws -> Bool {
+        try persistDistillation(capturedMessageIds: capturedMessageIds) { db in
+            try note.insert(db)
+            try Self.appendEvent(
+                db, missionId: nil, cardId: nil, runId: nil,
+                kind: EventKind.campNoteCreated,
+                payload: [
+                    "noteId": .string(note.id),
+                    "source": .string("guide_chat"),
+                ]
             )
         }
     }
@@ -273,6 +315,32 @@ extension AppDatabase {
     }
 
     // MARK: - Helpers
+
+    private func persistDistillation(
+        capturedMessageIds: [String],
+        persistNoteAndEvent: (Database) throws -> Void
+    ) throws -> Bool {
+        guard !capturedMessageIds.isEmpty else { return false }
+        do {
+            return try pool.write { db in
+                try db.execute(
+                    sql: """
+                        UPDATE chat_message SET distilled = 1
+                        WHERE distilled = 0
+                          AND id IN (\(databaseQuestionMarks(count: capturedMessageIds.count)))
+                        """,
+                    arguments: StatementArguments(capturedMessageIds)
+                )
+                guard db.changesCount == capturedMessageIds.count else {
+                    throw StaleMemoryDistillationError()
+                }
+                try persistNoteAndEvent(db)
+                return true
+            }
+        } catch is StaleMemoryDistillationError {
+            return false
+        }
+    }
 
     /// LIKE 通配符转义（\ % _），配合 ESCAPE '\' 使用。
     static func escapedForLike(_ text: String) -> String {

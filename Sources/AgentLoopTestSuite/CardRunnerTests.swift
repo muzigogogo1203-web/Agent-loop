@@ -295,3 +295,52 @@ private actor RunnerHangingProvider: LLMProvider {
     #expect(firstTurnTools.contains("read_file"))
     #expect(firstTurnTools.contains("complete_card"))
 }
+
+@Test func malformedWhitelistExposesOnlyBoardToolsFromRunner() async throws {
+    let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    let workspace = base.appendingPathComponent("ws")
+    try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+    let db = try AppDatabase(path: base.appendingPathComponent("t.sqlite").path)
+    let ids = try db.createSingleCardMission(
+        campName: "c", squadName: "s", goal: "g",
+        cardTitle: "t", cardDescription: "d", expectedOutput: "e",
+        assigneeId: nil, maxTurns: 10, workspacePath: workspace.path
+    )
+    let mock = MockProvider(script: [
+        TurnResult(
+            content: [.toolUse(id: "t1", name: "complete_card", input: [
+                "outcome": "o", "summary": "s",
+                "noArtifactReason": "无文件产物",
+                "verification": [["method": "自查", "passed": true, "note": "ok"]],
+                "risks": [],
+            ])],
+            stopReason: .toolUse
+        ),
+    ])
+    let runner = CardRunner(
+        db: db,
+        provider: mock,
+        artifactStoreRoot: base.appendingPathComponent("store")
+    )
+    let access = ToolAccess.parse(toolsJson: "malformed")
+    let external = ExternalTool(
+        def: ToolDef(
+            name: "mcp__test__read",
+            description: "test",
+            inputSchema: ["type": "object"]
+        ),
+        handler: ClosureToolHandler { _ in .result("ok") }
+    )
+
+    #expect(access.parseFailed)
+    for try await _ in try runner.run(
+        cardId: ids.cardId,
+        companionName: "n",
+        rolePrompt: "r",
+        toolAccess: access,
+        externalTools: [external]
+    ) {}
+
+    let firstTurnTools = Set(await mock.recordedTools.first?.map(\.name) ?? [])
+    #expect(firstTurnTools == ToolAccess.boardToolNames)
+}

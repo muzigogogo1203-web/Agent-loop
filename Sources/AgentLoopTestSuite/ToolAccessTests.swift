@@ -29,10 +29,22 @@ import AgentLoopCore
     #expect(!access.parseFailed)
 }
 
-@Test func garbageJsonFallsBackToFullWithFlag() {
-    // D4：解析失败回退全量，调用方记 kernel_error 事件；卡片不因坏白名单瘫痪
+@Test func garbageJsonFailsClosedWithFlag() {
+    // 解析失败时只保留板工具，调用方记 kernel_error 事件
     let access = ToolAccess.parse(toolsJson: "not json at all")
-    #expect(access.capabilities == Set(ToolAccess.builtinCapabilityNames))
+    #expect(access.capabilities.isEmpty)
+    #expect(access.parseFailed)
+}
+
+@Test func unsupportedObjectVersionFailsClosedWithFlag() {
+    let access = ToolAccess.parse(toolsJson: #"{"v":3,"allow":["write_file"]}"#)
+    #expect(access.capabilities.isEmpty)
+    #expect(access.parseFailed)
+}
+
+@Test func malformedV2ObjectFailsClosedWithFlag() {
+    let access = ToolAccess.parse(toolsJson: #"{"v":2,"allow":"write_file"}"#)
+    #expect(access.capabilities.isEmpty)
     #expect(access.parseFailed)
 }
 
@@ -43,6 +55,16 @@ import AgentLoopCore
         #expect(none.allows(board))
     }
     #expect(!none.allows("write_file"))
+}
+
+@Test func parseFailureRetainsOnlyBoardTools() {
+    let failed = ToolAccess.parse(toolsJson: "malformed")
+    for board in ToolAccess.boardToolNames {
+        #expect(failed.allows(board))
+    }
+    for capability in ToolAccess.builtinCapabilityNames {
+        #expect(!failed.allows(capability))
+    }
 }
 
 @Test func explicitJsonRoundTripsAndIsDeterministic() {

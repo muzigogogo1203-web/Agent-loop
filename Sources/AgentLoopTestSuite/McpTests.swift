@@ -596,6 +596,53 @@ private func runCardCollectingTools(
     #expect(names.contains("complete_card"))
 }
 
+@Test func malformedToolAccessSkipsMcpStartupAndRecordsKernelDiagnostic() async throws {
+    let transports = LockedArrayBox<FakeMcpTransport>()
+    let (db, manager, camp, _) = try makeManagerFixture(transportBox: transports)
+
+    var companion = CompanionRecord.new(
+        name: "坏配置伙伴", color: "red", rolePrompt: "执行", model: "m", campId: camp.id)
+    companion.toolsJson = #"{"v":2,"allow":"not-an-array"}"#
+    try db.saveCompanion(companion)
+    let ids = try db.createSingleCardMission(
+        campName: camp.name, squadName: "s", goal: "g",
+        cardTitle: "t", cardDescription: "d", expectedOutput: "e",
+        assigneeId: companion.id, maxTurns: 5, campId: camp.id)
+
+    let provider = MockProvider(script: [
+        TurnResult(
+            content: [.toolUse(id: "done", name: "complete_card", input: [
+                "outcome": "完成",
+                "summary": "仅使用行动板工具完成",
+                "artifacts": [],
+                "noArtifactReason": "无文件",
+                "verification": [],
+                "risks": [],
+            ])],
+            stopReason: .toolUse
+        ),
+    ])
+    let artifactRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: artifactRoot, withIntermediateDirectories: true)
+    let orchestrator = Orchestrator(
+        db: db,
+        makeProvider: { _ in provider },
+        artifactStoreRoot: artifactRoot,
+        tickInterval: nil,
+        mcpManager: manager
+    )
+
+    await orchestrator.reconcile()
+    await orchestrator.waitUntilIdle()
+
+    #expect(try db.card(id: ids.cardId)?.status == .done)
+    #expect(transports.values.isEmpty)
+    let diagnostic = try db.events(missionId: ids.missionId).first { $0.kind == EventKind.kernelError }
+    #expect(diagnostic?.payloadJson.contains("工具白名单解析失败") == true)
+    #expect(diagnostic?.payloadJson.contains("仅保留行动板工具") == true)
+    await orchestrator.shutdown()
+}
+
 // MARK: - 桥接
 
 @Test func mcpBridgeWrapsSuccessInExternalContentEnvelope() async throws {

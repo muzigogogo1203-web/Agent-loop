@@ -18,6 +18,25 @@ struct AgentLoopApp: App {
                     ProcessInfo.processInfo.environment["AGENTLOOP_FORCE_DARK"] == "1" ? .dark : nil
                 )
         }
+        .commands {
+            CommandMenu("行动") {
+                Button {
+                    store.emergencyStopCamp()
+                } label: {
+                    if store.haltPersistencePending {
+                        Text("重试保存停营")
+                    } else if store.haltOperationState == .stopping {
+                        Text("正在收哨…")
+                    } else if store.haltOperationState == .resuming {
+                        Text("正在恢复…")
+                    } else {
+                        Text("紧急收哨")
+                    }
+                }
+                .keyboardShortcut(".", modifiers: .command)
+                .disabled(!store.canRequestEmergencyStop)
+            }
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import Accessibility
 import AgentLoopCore
 
 enum Destination: Hashable {
@@ -16,9 +17,16 @@ struct RootView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var showNewCampSheet = false
     @State private var abandonTarget: MissionRecord?
+    @State private var showResumeConfirmation = false
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
+        VStack(spacing: 0) {
+            if store.showsGlobalHaltBanner {
+                globalHaltBanner
+                Divider().overlay(Camp.charcoalRed.opacity(0.35))
+            }
+
+            NavigationSplitView(columnVisibility: $columnVisibility) {
             VStack(spacing: 0) {
                 List(selection: $selection) {
                     // 营地=频道（M5-0 C1）：每营地一个分区
@@ -154,6 +162,7 @@ struct RootView: View {
             .background(Camp.canvas)
             // 统一 toast 通道（UX 审计 P2：跨视图反馈不再丢失）
             .campToast(store.knowledgeToast)
+            }
         }
         .confirmationDialog(
             "放弃「\(abandonTarget.map(Self.missionTitleStatic) ?? "")」？",
@@ -173,8 +182,78 @@ struct RootView: View {
         } message: {
             Text("未完成的小目标会作废，已产出的交付物保留。")
         }
+        .confirmationDialog(
+            "恢复全部行动？",
+            isPresented: $showResumeConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("恢复全部行动") {
+                store.resumeCamp()
+            }
+            Button("继续暂停", role: .cancel) {}
+        } message: {
+            Text("等待中的规划和小目标可能会立即继续调用模型与工具，并产生新的花销。")
+        }
+        .onChange(of: haltAccessibilityAnnouncement) { _, announcement in
+            AccessibilityNotification.Announcement(announcement).post()
+        }
+        .onAppear {
+            if store.showsGlobalHaltBanner {
+                AccessibilityNotification.Announcement(haltAccessibilityAnnouncement).post()
+            }
+        }
         .fontDesign(.rounded)
         .tint(Camp.ember)
+    }
+
+    private var globalHaltBanner: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: store.haltOperationState == .resuming
+                  ? "arrow.clockwise.circle.fill"
+                  : "hand.raised.slash.fill")
+                .font(.title3)
+                .foregroundStyle(Camp.charcoalRed)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(store.haltBannerTitle)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(Camp.ink)
+                    .accessibilityAddTraits(.isHeader)
+                Text(store.haltBannerMessage)
+                    .font(.caption)
+                    .foregroundStyle(store.haltErrorMessage == nil ? Camp.inkSecondary : Camp.charcoalRed)
+                    .textSelection(.enabled)
+            }
+
+            Spacer(minLength: 12)
+
+            switch store.haltOperationState {
+            case .stopping, .resuming:
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityLabel(store.haltBannerTitle)
+            case .idle:
+                if store.haltPersistencePending {
+                    Button("重试保存停营") {
+                        store.emergencyStopCamp()
+                    }
+                    .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                }
+                Button("恢复全部…") {
+                    showResumeConfirmation = true
+                }
+                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Camp.charcoalRed.opacity(0.08))
+        .accessibilityElement(children: .contain)
+    }
+
+    private var haltAccessibilityAnnouncement: String {
+        guard store.showsGlobalHaltBanner else { return "全部行动已恢复" }
+        return "\(store.haltBannerTitle)。\(store.haltBannerMessage)"
     }
 
     static func missionTitleStatic(_ mission: MissionRecord) -> String {
@@ -210,6 +289,7 @@ struct RootView: View {
                 Button("新行动…") {
                     selection = .newMission(campId: camp.id)
                 }
+                .disabled(store.missionStartBlocked)
             }
             ForEach(active, id: \.id) { mission in
                 missionRow(mission)
@@ -219,6 +299,8 @@ struct RootView: View {
                     .foregroundStyle(Camp.inkSecondary)
                     .font(.callout)
             }
+            .disabled(store.missionStartBlocked)
+            .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在这个营地开启新行动")
         }
     }
 

@@ -1,8 +1,8 @@
 import Foundation
 import os
 
-/// 记忆沉淀协调（spec §10.1/§10.2，plan D7/D9）：读取未蒸馏增量 → Distiller → 落库 + 推水位 + 事件。
-/// 失败静默（留水位下次再试）；skip（模型判定无内容）也推水位，避免琐碎增量反复送蒸。
+/// 记忆沉淀协调（spec §10.1/§10.2，plan D7/D9）：读取未蒸馏增量 → Distiller → 原子落库 + 推水位 + 事件。
+/// 失败记日志并留水位下次再试；skip（模型判定无内容）也推水位，避免琐碎增量反复送蒸。
 public struct MemoryDistillService: Sendable {
     /// 切走触发的最小增量条数（D7：防琐碎单句成本）；手动触发用 1。
     public static let autoMinMessages = 4
@@ -17,7 +17,7 @@ public struct MemoryDistillService: Sendable {
     }
 
     /// DM 私聊沉淀 → 伙伴记忆。minMessages：手动=1，切走自动=autoMinMessages。
-    /// 返回新记忆；nil = 无增量 / 不足阈值 / skip / 失败（静默留水位）。
+    /// 返回新记忆；nil = 无增量 / 不足阈值 / skip / 失败（记日志并留水位）。
     @discardableResult
     public func distillDM(companionId: String, minMessages: Int) async -> CompanionNoteRecord? {
         guard let companion = try? db.companion(id: companionId),
@@ -33,30 +33,28 @@ public struct MemoryDistillService: Sendable {
                 rolePrompt: companion.rolePrompt,
                 messages: undistilled.map { (role: $0.role, text: $0.text) }
             )
-            try db.markDistilled(messageIds: distilledIds)
-            guard let note else { return nil }
+            guard let note else {
+                try db.markDistilled(messageIds: distilledIds)
+                return nil
+            }
             let record = CompanionNoteRecord.new(
                 companionId: companionId, sourceThreadId: thread.id,
                 title: note.title, bodyMd: note.bodyMd)
-            try db.saveCompanionNote(record)
-            try? await db.pool.write { database in
-                try AppDatabase.appendEvent(
-                    database, missionId: nil, cardId: nil, runId: nil,
-                    kind: EventKind.companionNoteCreated,
-                    payload: [
-                        "noteId": .string(record.id),
-                        "companionId": .string(companionId),
-                    ]
-                )
+            guard try db.persistCompanionDistillation(
+                note: record,
+                capturedMessageIds: distilledIds
+            ) else {
+                Self.logger.info("memory distillation lost watermark race; duplicate note suppressed")
+                return nil
             }
             return record
         } catch {
-            Self.logger.info("memory distillation failed, watermark kept: \(String(describing: error), privacy: .public)")
+            Self.logger.error("memory distillation failed, watermark kept: \(String(describing: error), privacy: .public)")
             return nil
         }
     }
 
-    /// 向导对话手动沉淀 → 营地笔记（D9）。语义同 distillDM（skip 推水位、失败静默）。
+    /// 向导对话手动沉淀 → 营地笔记（D9）。语义同 distillDM（skip 推水位、失败记日志）。
     @discardableResult
     public func distillGuideChat(campId: String) async -> CampNoteRecord? {
         guard let thread = try? db.findOrCreateGuideThread(campId: campId),
@@ -74,23 +72,21 @@ public struct MemoryDistillService: Sendable {
         }
         do {
             let note = try await Distiller(provider: provider).distillGuideChat(messages: messages)
-            try db.markDistilled(messageIds: distilledIds)
-            guard let note else { return nil }
+            guard let note else {
+                try db.markDistilled(messageIds: distilledIds)
+                return nil
+            }
             let record = CampNoteRecord.new(campId: campId, title: note.title, bodyMd: note.bodyMd)
-            try db.saveCampNote(record)
-            try? await db.pool.write { database in
-                try AppDatabase.appendEvent(
-                    database, missionId: nil, cardId: nil, runId: nil,
-                    kind: EventKind.campNoteCreated,
-                    payload: [
-                        "noteId": .string(record.id),
-                        "source": .string("guide_chat"),
-                    ]
-                )
+            guard try db.persistGuideDistillation(
+                note: record,
+                capturedMessageIds: distilledIds
+            ) else {
+                Self.logger.info("guide chat distillation lost watermark race; duplicate note suppressed")
+                return nil
             }
             return record
         } catch {
-            Self.logger.info("guide chat distillation failed, watermark kept: \(String(describing: error), privacy: .public)")
+            Self.logger.error("guide chat distillation failed, watermark kept: \(String(describing: error), privacy: .public)")
             return nil
         }
     }

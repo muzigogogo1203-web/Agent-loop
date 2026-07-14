@@ -62,6 +62,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   </array>
   <key>NSHighResolutionCapable</key><true/>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSMultipleInstancesProhibited</key><true/>
   <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
   <key>NSHumanReadableCopyright</key><string>© 2026 Muzi</string>
   <key>NSAppTransportSecurity</key>

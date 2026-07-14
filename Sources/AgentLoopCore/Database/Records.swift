@@ -75,6 +75,37 @@ public struct StaleUserRequestError: Error, Equatable, Sendable {
     }
 }
 
+// MARK: - Kernel Control
+
+/// Stable, durable dispatch modes. In-process transition phases such as
+/// halting/resuming intentionally do not belong in this projection.
+public enum DispatchMode: String, Codable, Sendable {
+    case running, halted
+}
+
+public struct KernelControlRecord: Codable, Sendable, Equatable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "kernel_control"
+    public var id: String
+    public var dispatchMode: DispatchMode
+    public var updatedAt: Date
+
+    public init(id: String, dispatchMode: DispatchMode, updatedAt: Date) {
+        self.id = id
+        self.dispatchMode = dispatchMode
+        self.updatedAt = updatedAt
+    }
+}
+
+public struct StaleKernelControlStateError: Error, Equatable, Sendable {
+    public let expected: DispatchMode
+    public let actual: DispatchMode
+
+    public init(expected: DispatchMode, actual: DispatchMode) {
+        self.expected = expected
+        self.actual = actual
+    }
+}
+
 // MARK: - Camp
 
 public struct CampRecord: Codable, Sendable, FetchableRecord, PersistableRecord {

@@ -614,28 +614,21 @@ private let doneHandoff: JSONValue = [
         content: [.text("done"), .toolUse(id: "c1", name: "complete_card", input: doneHandoff)],
         stopReason: .toolUse
     )
-    // 时间参数余量：总时长(7×150ms=1050ms) > timeout(600ms) 才真正证明「事件重置 deadline」；
-    // 间隔(150ms) 相对 timeout 留 4× 绝对余量，避免全量测试并行时协作线程池过载导致的假超时
-    //（曾以 25ms/80ms 在满载真机稳定假失败、单跑全绿）。
+    var activeEvents = (0..<24).map { ProviderEvent.textDelta("\($0)") }
+    activeEvents.append(.turn(finalTurn))
+    // 总时长(25×50ms=1250ms) > timeout(1000ms)，仍能证明每个事件重置 deadline；
+    // 单次间隔相对 timeout 留 20× 余量，避免并行全量构建/测试把调度延迟误判为空闲。
     let provider = IdlePatternProvider(steps: [
         .events(
-            [
-                .textDelta("a"),
-                .textDelta("b"),
-                .textDelta("c"),
-                .textDelta("d"),
-                .textDelta("e"),
-                .textDelta("f"),
-                .turn(finalTurn),
-            ],
-            interval: .milliseconds(150)
+            activeEvents,
+            interval: .milliseconds(50)
         ),
     ])
 
     let result = try await runLoop(
         provider: provider,
         handlers: ["complete_card": StubHandler([.completed(handoff)])],
-        turnTimeout: .milliseconds(600)
+        turnTimeout: .seconds(1)
     )
 
     guard case .completed = result.outcome else {

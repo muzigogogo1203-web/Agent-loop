@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 import AgentLoopCore
+import Darwin
 
 @Test func keychainRoundTrip() throws {
     let store = KeychainStore(service: "com.muzi.agentloop.tests.\(UUID().uuidString)")
@@ -10,6 +11,31 @@ import AgentLoopCore
     #expect(try store.get(account: "k") == "sk-abc")
     try store.set("sk-def", account: "k")
     #expect(try store.get(account: "k") == "sk-def")
+}
+
+@Test func stateDirectoryLockRejectsSecondFileDescriptionAndReleases() throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    var first: StateDirectoryLock? = try StateDirectoryLock(directoryURL: directory)
+    let expectedPath = try #require(first?.lockFileURL.path)
+    do {
+        _ = try StateDirectoryLock(directoryURL: directory)
+        Issue.record("第二个独立 file description 不应取得同一状态目录锁")
+    } catch let error as StateDirectoryLockError {
+        guard case .alreadyLocked(let path, let code) = error else {
+            Issue.record("应报告 alreadyLocked，实际为 \(error)")
+            return
+        }
+        #expect(path == expectedPath)
+        #expect(code == EWOULDBLOCK || code == EAGAIN || code == EACCES)
+    } catch {
+        Issue.record("应报告 StateDirectoryLockError，实际为 \(error)")
+    }
+
+    first = nil
+    let replacement = try StateDirectoryLock(directoryURL: directory)
+    #expect(replacement.lockFileURL.path == expectedPath)
 }
 
 @Test func coalescerBatchesDeltas() async throws {

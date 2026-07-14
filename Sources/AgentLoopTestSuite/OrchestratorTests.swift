@@ -506,6 +506,31 @@ private func orchestrationRuns(_ db: AppDatabase, missionId: String) throws -> [
     await orch.shutdown()
 }
 
+@Test func startupProposalHealingFailureIsPersistedAndEmitted() async throws {
+    let db = try orchestratorTempDB()
+    try await db.pool.write { database in
+        try database.drop(table: "chat_message")
+    }
+    let orch = try orchestrator(db: db, provider: MockProvider(script: []))
+    let stream = await orch.events()
+    let emittedError = Task { () -> String? in
+        for await event in stream {
+            if case .kernelError(_, let message) = event,
+               message.contains("提案自愈失败") {
+                return message
+            }
+        }
+        return nil
+    }
+
+    await orch.recoverAndReconcile()
+    await orch.shutdown()
+
+    #expect(await emittedError.value?.contains("提案自愈失败") == true)
+    let persisted = try db.events(missionId: "").first { $0.kind == EventKind.kernelError }
+    #expect(persisted?.payloadJson.contains("提案自愈失败") == true)
+}
+
 @Test func retryBlockedCardRedispatches() async throws {
     let db = try orchestratorTempDB()
     let companion = try orchestrationCompanions(db)[0]

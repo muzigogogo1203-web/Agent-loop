@@ -221,12 +221,23 @@ struct CampHomeView: View {
                     .foregroundStyle(Camp.inkSecondary)
             }
             Spacer()
+            if store.missionStartBlocked {
+                CampChip(
+                    text: store.kernelStartupRecoveryPending ? "正在恢复上次状态" : "全部行动已暂停",
+                    color: Camp.charcoalRed,
+                    icon: store.kernelStartupRecoveryPending ? "arrow.clockwise" : "hand.raised.slash.fill"
+                )
+                    .help(store.missionStartBlockMessage)
+            }
             Button {
                 onNewMission()
             } label: {
                 Label("新行动", systemImage: "flag.fill")
             }
             .buttonStyle(CampPrimaryButtonStyle(size: .small))
+            .disabled(store.missionStartBlocked)
+            .opacity(store.missionStartBlocked ? 0.5 : 1)
+            .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在这个营地开启新行动")
 
             Button {
                 notesPaneVisible.toggle()
@@ -558,28 +569,35 @@ struct ProposalCardView: View {
     @ViewBuilder private var footer: some View {
         switch proposal.status {
         case .pending:
-            HStack(spacing: 8) {
-                Button {
-                    store.confirmProposal(messageId: messageId)
-                } label: {
-                    if confirming {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(.white)
-                    } else {
-                        Label("就这么办", systemImage: "flame.fill")
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Button {
+                        store.confirmProposal(messageId: messageId)
+                    } label: {
+                        if confirming {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(.white)
+                        } else {
+                            Label("就这么办", systemImage: "flame.fill")
+                        }
                     }
-                }
-                .buttonStyle(CampPrimaryButtonStyle(size: .small))
-                .disabled(confirming || hasGhostMembers)
-                .opacity(hasGhostMembers ? 0.5 : 1)
-                .help(hasGhostMembers ? "提案里有已删除的伙伴，无法开工" : "确认后立即建队开工")
+                    .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                    .disabled(confirming || hasGhostMembers || store.missionStartBlocked)
+                    .opacity(hasGhostMembers || store.missionStartBlocked ? 0.5 : 1)
+                    .help(proposalConfirmationHelp)
 
-                Button("先不") {
-                    store.dismissProposal(messageId: messageId)
+                    Button("先不") {
+                        store.dismissProposal(messageId: messageId)
+                    }
+                    .buttonStyle(CampSecondaryButtonStyle())
+                    .disabled(confirming)
                 }
-                .buttonStyle(CampSecondaryButtonStyle())
-                .disabled(confirming)
+                if store.missionStartBlocked {
+                    Text(store.missionStartBlockMessage)
+                        .font(.caption2)
+                        .foregroundStyle(Camp.charcoalRed)
+                }
             }
         case .confirmed:
             if let missionId = proposal.missionId {
@@ -607,5 +625,11 @@ struct ProposalCardView: View {
 
     private static func compactTokens(_ value: Int) -> String {
         value >= 1000 ? "\(value / 1000)k" : "\(value)"
+    }
+
+    private var proposalConfirmationHelp: String {
+        if store.missionStartBlocked { return store.missionStartBlockMessage }
+        if hasGhostMembers { return "提案里有已删除的伙伴，无法开工" }
+        return "确认后立即建队开工"
     }
 }

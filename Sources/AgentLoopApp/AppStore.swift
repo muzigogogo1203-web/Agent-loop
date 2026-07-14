@@ -16,6 +16,7 @@ final class AppStore {
         }
     }
 
+    private let stateDirectoryLock: StateDirectoryLock
     let db: AppDatabase
     let keychain: KeychainStore
     let artifactStoreRoot: URL
@@ -64,8 +65,71 @@ final class AppStore {
 
     // MARK: 哨卡（M7）
 
-    /// 紧急收哨状态（内核事件驱动）
+    enum HaltOperationState: Equatable {
+        case idle
+        case stopping
+        case resuming
+    }
+
+    /// 持久化内核门的 UI 投影；启动时会在首次 reload 前同步回读。
     var campHalted = false
+    var haltOperationState: HaltOperationState = .idle
+    var haltRestoredFromPreviousSession = false
+    var haltPersistencePending = false
+    var haltErrorMessage: String?
+    var kernelStartupRecoveryPending = false
+
+    var missionStartBlocked: Bool {
+        kernelStartupRecoveryPending || campHalted || haltOperationState != .idle
+    }
+
+    var missionStartBlockMessage: String {
+        if kernelStartupRecoveryPending {
+            return "正在检查并收编上次中断的任务，完成前不能启动新行动。"
+        }
+        switch haltOperationState {
+        case .stopping:
+            return "正在收哨，新的行动暂时不能开工。"
+        case .resuming:
+            return "正在安全恢复，完成前不会启动新的行动。"
+        case .idle:
+            return "全部行动已暂停。恢复全部行动后才能开工。"
+        }
+    }
+
+    var showsGlobalHaltBanner: Bool {
+        campHalted || haltOperationState != .idle
+    }
+
+    var canRequestEmergencyStop: Bool {
+        haltOperationState == .idle && (!campHalted || haltPersistencePending)
+    }
+
+    var haltBannerTitle: String {
+        switch haltOperationState {
+        case .stopping: return "正在收哨…"
+        case .resuming: return "正在恢复…"
+        case .idle: return "全部行动已暂停"
+        }
+    }
+
+    var haltBannerMessage: String {
+        switch haltOperationState {
+        case .stopping:
+            if haltPersistencePending {
+                return "当前行动工作仍保持停止，正在重试保存持久化收哨状态。"
+            }
+            return "正在停止行动规划、行动内模型调用和工具进程。完成前不会派发新的行动工作。"
+        case .resuming:
+            return "正在安全收编中断任务并持久化恢复状态。成功之前不会启动新的行动工作。"
+        case .idle:
+            if let haltErrorMessage { return haltErrorMessage }
+            if haltRestoredFromPreviousSession {
+                return "上次退出时仍处于收哨状态。为安全起见，没有自动恢复任何行动。"
+            }
+            return "行动规划、行动内模型调用和工具派发均已停止。私聊和手动沉淀仍可使用；恢复后，等待中的行动可能继续调用模型并产生花销。"
+        }
+    }
     /// 新行动的默认自主档位（M7-D2）
     var defaultAutonomy: MissionAutonomy = .standard {
         didSet { UserDefaults.standard.set(defaultAutonomy.rawValue, forKey: "defaultAutonomy") }
@@ -215,13 +279,29 @@ final class AppStore {
             .map { URL(fileURLWithPath: $0) }
             ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("AgentLoop")
-        try! FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        do {
+            try FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+            stateDirectoryLock = try StateDirectoryLock(directoryURL: appSupport)
+        } catch {
+            fatalError("AgentLoop 状态目录初始化失败：\(error.localizedDescription)")
+        }
         artifactStoreRoot = appSupport.appendingPathComponent("artifacts")
         let database = try! AppDatabase(path: appSupport.appendingPathComponent("agentloop.sqlite").path)
         db = database
+        do {
+            let initialMode = try database.dispatchMode()
+            let initiallyHalted = initialMode == .halted
+            campHalted = initiallyHalted
+            haltRestoredFromPreviousSession = initiallyHalted
+        } catch {
+            // 读取不出持久化门时必须 fail-closed，不得在第一帧短暂显示为可运行。
+            campHalted = true
+            haltErrorMessage = "无法确认上次的收哨状态。为安全起见，全部行动保持暂停：\(error.localizedDescription)"
+        }
         let defaultBaseURL = Self.defaultBaseURL
         // M8-D5：MCP 敏感 env 从 Keychain 解析（account mcp-<serverId>-<key>）；预览模式不读钥匙串
         let isPreview = ProcessInfo.processInfo.environment["AGENTLOOP_UI_PREVIEW"] == "1"
+        kernelStartupRecoveryPending = !isPreview
         let mcpManager = McpServerManager(
             db: database,
             secretProvider: { serverId, key in
@@ -255,7 +335,8 @@ final class AppStore {
                       !key.isEmpty else { return nil }
                 return key
             },
-            mcpManager: mcpManager
+            mcpManager: mcpManager,
+            requiresStartupRecovery: !isPreview
         )
         try! db.ensureDefaultCamp()
         apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
@@ -286,12 +367,8 @@ final class AppStore {
         }
         mcp.onToast = { [weak self] message in self?.showToast(message) }
         reload()
-        startKernelEventListener()
+        startKernelEventListener(recoverKernel: !Self.isUIPreview)
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
-        if !Self.isUIPreview {
-            // M5-1 启动恢复：收编崩溃遗留的 running 孤儿卡 + 提案自愈，再照常调度
-            Task { await orchestrator.recoverAndReconcile() }
-        }
     }
 
     /// 环境变量 AGENTLOOP_UI_PREVIEW=1 时为 UI 预览模式：不读钥匙串、不调度任务
@@ -721,6 +798,11 @@ final class AppStore {
 
     func startMission(goal: String, companionIds: [String], workspacePath: String?, campId: String? = nil,
                       autonomy: MissionAutonomy? = nil) {
+        guard !missionStartBlocked else {
+            missionPhase = .error(missionStartBlockMessage)
+            showToast(missionStartBlockMessage)
+            return
+        }
         guard Self.storedProviderCredential(using: keychain) != nil else {
             missionPhase = .error("请先在设置里保存 API Key 或网页登录授权")
             return
@@ -894,10 +976,17 @@ final class AppStore {
         theaterMode = false
     }
 
-    private func startKernelEventListener() {
+    private func startKernelEventListener(recoverKernel: Bool) {
         kernelEventsTask = Task { @MainActor [weak self] in
             guard let self else { return }
             let stream = await orchestrator.events()
+            if recoverKernel {
+                // Subscribe before recovery so fail-closed startup events cannot race
+                // past the UI listener. AsyncStream buffers events until this loop starts.
+                await orchestrator.recoverAndReconcile()
+                campHalted = await orchestrator.isHalted
+                kernelStartupRecoveryPending = false
+            }
             for await event in stream {
                 handleKernelEvent(event)
             }
@@ -923,6 +1012,11 @@ final class AppStore {
             }
         case .kernelError(let missionId, let message):
             reloadMissionList()
+            // Action-layer typed errors are more actionable than the parallel
+            // diagnostic event. Preserve whichever classified message won first.
+            if missionId.isEmpty && campHalted && haltErrorMessage == nil {
+                haltErrorMessage = message
+            }
             if currentMissionId == missionId || missionId.isEmpty {
                 if let currentMissionId {
                     reloadMission(missionId: currentMissionId)
@@ -933,6 +1027,11 @@ final class AppStore {
             reloadCampKnowledge()
         case .haltStateChanged(let halted):
             campHalted = halted
+            if !halted {
+                haltRestoredFromPreviousSession = false
+                haltPersistencePending = false
+                haltErrorMessage = nil
+            }
             reloadMissionList()
             if let currentMissionId { reloadMission(missionId: currentMissionId) }
         }
@@ -941,11 +1040,55 @@ final class AppStore {
     // MARK: 哨卡动作（M7-D5/D2/D7）
 
     func emergencyStopCamp() {
-        Task { await orchestrator.emergencyStop() }
+        guard canRequestEmergencyStop else { return }
+        haltOperationState = .stopping
+        haltRestoredFromPreviousSession = false
+        haltErrorMessage = nil
+        Task { [weak self] in
+            guard let self else { return }
+            defer { haltOperationState = .idle }
+            do {
+                try await orchestrator.emergencyStop()
+                campHalted = true
+                haltPersistencePending = false
+                haltErrorMessage = nil
+                showToast("全部行动已暂停")
+            } catch {
+                // Core 保证持久化或规划收口失败也会停掉当前进程内的行动工作。
+                campHalted = true
+                haltPersistencePending = error is HaltPersistenceError
+                haltErrorMessage = readableError(error)
+                showToast(haltPersistencePending
+                          ? "当前行动工作已停止，但收哨状态未能保存"
+                          : "当前行动工作已停止，但安全收口未完成")
+            }
+            reloadMissionList()
+            if let currentMissionId { reloadMission(missionId: currentMissionId) }
+        }
     }
 
     func resumeCamp() {
-        Task { await orchestrator.resume() }
+        guard campHalted, haltOperationState == .idle else { return }
+        haltOperationState = .resuming
+        haltErrorMessage = nil
+        Task { [weak self] in
+            guard let self else { return }
+            defer { haltOperationState = .idle }
+            do {
+                try await orchestrator.resume()
+                campHalted = false
+                haltRestoredFromPreviousSession = false
+                haltPersistencePending = false
+                haltErrorMessage = nil
+                showToast("全部行动已恢复")
+            } catch {
+                campHalted = true
+                haltErrorMessage = "恢复失败，全部行动仍保持暂停，没有启动新的行动工作：\(readableError(error))"
+                showToast("恢复失败，全部行动仍保持暂停")
+            }
+            reloadMissionList()
+            if let currentMissionId { reloadMission(missionId: currentMissionId) }
+        }
     }
 
     /// 当前行动档位中途可改（记 autonomy_changed 事件）
@@ -1148,6 +1291,11 @@ final class AppStore {
     private func readableError(_ error: Error) -> String {
         if let urlError = error as? URLError {
             return urlError.localizedDescription
+        }
+        if let localizedError = error as? LocalizedError,
+           let description = localizedError.errorDescription,
+           !description.isEmpty {
+            return description
         }
         return String(describing: error)
     }
@@ -1386,6 +1534,10 @@ final class AppStore {
 
     func confirmProposal(messageId: String) {
         guard !confirmingProposals.contains(messageId) else { return }
+        guard !missionStartBlocked else {
+            showToast(missionStartBlockMessage)
+            return
+        }
         guard provider(model: defaultModel) != nil else {
             showToast("请先在设置里保存 API Key 或网页登录授权")
             return

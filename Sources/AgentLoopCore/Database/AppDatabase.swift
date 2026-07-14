@@ -1,14 +1,17 @@
 import Foundation
 import GRDB
+import os
 
 // MARK: - AppDatabase
 
 public final class AppDatabase: Sendable {
     public let pool: DatabasePool
+    private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "database")
 
     public init(path: String) throws {
         var cfg = Configuration()
         cfg.journalMode = .wal
+        cfg.busyMode = .timeout(5)
         pool = try DatabasePool(path: path, configuration: cfg)
         try Self.migrator.migrate(pool)
     }
@@ -215,6 +218,21 @@ public final class AppDatabase: Sendable {
                 t.column("serverId", .text).notNull().references("mcp_server")
                 t.primaryKey(["campId", "serverId"])
             }
+        }
+        // P0 durable halt: global kernel dispatch gate. This descriptive id is
+        // intentionally inserted before the v7/v8 ids reserved by M9/M10.
+        m.registerMigration("v6-durable-halt") { db in
+            try db.create(table: "kernel_control") { t in
+                t.primaryKey("id", .text).check(sql: "id = 'global'")
+                t.column("dispatchMode", .text).notNull()
+                    .check(sql: "dispatchMode IN ('running', 'halted')")
+                t.column("updatedAt", .datetime).notNull()
+            }
+            try KernelControlRecord(
+                id: "global",
+                dispatchMode: .running,
+                updatedAt: Date()
+            ).insert(db)
         }
         return m
     }
@@ -919,14 +937,20 @@ public final class AppDatabase: Sendable {
     }
 
     public func appendKernelErrorEvent(missionId: String, message: String) {
-        try? pool.write { db in
-            try Self.appendEvent(
-                db,
-                missionId: missionId,
-                cardId: nil,
-                runId: nil,
-                kind: EventKind.kernelError,
-                payload: ["message": .string(message)]
+        do {
+            try pool.write { db in
+                try Self.appendEvent(
+                    db,
+                    missionId: missionId,
+                    cardId: nil,
+                    runId: nil,
+                    kind: EventKind.kernelError,
+                    payload: ["message": .string(message)]
+                )
+            }
+        } catch {
+            Self.logger.error(
+                "failed to persist kernel error event for mission \(missionId, privacy: .public): \(String(describing: error), privacy: .public)"
             )
         }
     }

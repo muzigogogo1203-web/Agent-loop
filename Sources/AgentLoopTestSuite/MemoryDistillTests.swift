@@ -23,6 +23,49 @@ private func seedDM(_ db: AppDatabase, count: Int) throws -> CompanionRecord {
     return companion
 }
 
+private actor MemoryGatedProvider: LLMProvider {
+    private var pending: AsyncThrowingStream<ProviderEvent, Error>.Continuation?
+    private var started = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    nonisolated func streamTurn(
+        system: String,
+        history: [APIMessage],
+        tools: [ToolDef],
+        toolChoice: ToolChoice,
+        maxTokens: Int
+    ) -> AsyncThrowingStream<ProviderEvent, Error> {
+        AsyncThrowingStream { continuation in
+            Task { await self.enqueue(continuation) }
+        }
+    }
+
+    func waitUntilStarted() async {
+        if started { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func release(_ turn: TurnResult) {
+        guard let pending else { return }
+        self.pending = nil
+        for block in turn.content {
+            if case .text(let text) = block {
+                pending.yield(.textDelta(text))
+            }
+        }
+        pending.yield(.turn(turn))
+        pending.finish()
+    }
+
+    private func enqueue(_ continuation: AsyncThrowingStream<ProviderEvent, Error>.Continuation) {
+        pending = continuation
+        started = true
+        let current = waiters
+        waiters.removeAll()
+        for waiter in current { waiter.resume() }
+    }
+}
+
 // MARK: - DM 沉淀（D7）
 
 @Test func manualDistillCreatesMemoryAndAdvancesWatermark() async throws {
@@ -92,6 +135,121 @@ private func seedDM(_ db: AppDatabase, count: Int) throws -> CompanionRecord {
     #expect(try db.undistilledMessages(threadId: thread.id).count == 4)
 }
 
+@Test func dmNoteInsertFailureRollsBackWatermarkAndEvent() async throws {
+    let db = try memoryTempDB()
+    let companion = try seedDM(db, count: 2)
+    let thread = try db.findOrCreateDMThread(companionId: companion.id)
+    try await db.pool.write { database in
+        try database.execute(sql: """
+            CREATE TRIGGER fail_companion_note_insert
+            BEFORE INSERT ON companion_note BEGIN
+                SELECT RAISE(ABORT, 'injected companion note failure');
+            END
+            """)
+    }
+    let service = MemoryDistillService(
+        db: db,
+        provider: MockProvider(script: [noteTurn(title: "不应落库", body: "x")])
+    )
+
+    let record = await service.distillDM(companionId: companion.id, minMessages: 1)
+
+    #expect(record == nil)
+    #expect(try db.undistilledMessages(threadId: thread.id).count == 2)
+    #expect(try db.companionNotes(companionId: companion.id).isEmpty)
+    let events = try await db.pool.read { database in
+        try EventRecord.filter(Column("kind") == "companion_note_created").fetchAll(database)
+    }
+    #expect(events.isEmpty)
+}
+
+@Test func distillationEventInsertFailureRollsBackNoteAndWatermark() async throws {
+    let db = try memoryTempDB()
+    let companion = try seedDM(db, count: 2)
+    let thread = try db.findOrCreateDMThread(companionId: companion.id)
+    try await db.pool.write { database in
+        try database.execute(sql: """
+            CREATE TRIGGER fail_companion_note_event_insert
+            BEFORE INSERT ON event
+            WHEN NEW.kind = 'companion_note_created' BEGIN
+                SELECT RAISE(ABORT, 'injected companion note event failure');
+            END
+            """)
+    }
+    let service = MemoryDistillService(
+        db: db,
+        provider: MockProvider(script: [noteTurn(title: "不应落库", body: "x")])
+    )
+
+    let record = await service.distillDM(companionId: companion.id, minMessages: 1)
+
+    #expect(record == nil)
+    #expect(try db.undistilledMessages(threadId: thread.id).count == 2)
+    #expect(try db.companionNotes(companionId: companion.id).isEmpty)
+    let events = try await db.pool.read { database in
+        try EventRecord.filter(Column("kind") == "companion_note_created").fetchAll(database)
+    }
+    #expect(events.isEmpty)
+}
+
+@Test func staleDistillationCASRollsBackWithoutDuplicateNote() async throws {
+    let db = try memoryTempDB()
+    let companion = try seedDM(db, count: 2)
+    let thread = try db.findOrCreateDMThread(companionId: companion.id)
+    let capturedIds = try db.undistilledMessages(threadId: thread.id).map(\.id)
+    // 模型工作期间新到的消息不属于本次水位。
+    try db.appendChatMessage(threadId: thread.id, role: "user", text: "模型工作期间到达")
+
+    let winner = CompanionNoteRecord.new(
+        companionId: companion.id,
+        sourceThreadId: thread.id,
+        title: "赢家",
+        bodyMd: "first"
+    )
+    let loser = CompanionNoteRecord.new(
+        companionId: companion.id,
+        sourceThreadId: thread.id,
+        title: "输家",
+        bodyMd: "second"
+    )
+
+    #expect(try db.persistCompanionDistillation(
+        note: winner,
+        capturedMessageIds: capturedIds
+    ))
+    #expect(try !db.persistCompanionDistillation(
+        note: loser,
+        capturedMessageIds: capturedIds
+    ))
+
+    let notes = try db.companionNotes(companionId: companion.id)
+    #expect(notes.map(\.title) == ["赢家"])
+    #expect(try db.undistilledMessages(threadId: thread.id).map(\.text) == ["模型工作期间到达"])
+    let events = try await db.pool.read { database in
+        try EventRecord.filter(Column("kind") == "companion_note_created").fetchAll(database)
+    }
+    #expect(events.count == 1)
+    #expect(events.first?.payloadJson.contains(winner.id) == true)
+}
+
+@Test func messageArrivingDuringModelWorkRemainsUndistilled() async throws {
+    let db = try memoryTempDB()
+    let companion = try seedDM(db, count: 2)
+    let thread = try db.findOrCreateDMThread(companionId: companion.id)
+    let provider = MemoryGatedProvider()
+    let service = MemoryDistillService(db: db, provider: provider)
+
+    let distillation = Task {
+        await service.distillDM(companionId: companion.id, minMessages: 1)
+    }
+    await provider.waitUntilStarted()
+    try db.appendChatMessage(threadId: thread.id, role: "user", text: "模型工作期间到达")
+    await provider.release(noteTurn(title: "已捕获增量", body: "旧消息"))
+
+    #expect(await distillation.value?.title == "已捕获增量")
+    #expect(try db.undistilledMessages(threadId: thread.id).map(\.text) == ["模型工作期间到达"])
+}
+
 // MARK: - 向导对话沉淀（D9）
 
 @Test func guideChatDistillCreatesCampNote() async throws {
@@ -124,4 +282,33 @@ private func seedDM(_ db: AppDatabase, count: Int) throws -> CompanionRecord {
     let record = await service.distillGuideChat(campId: camp.id)
     #expect(record == nil)
     #expect(try db.campNotes(campId: camp.id).isEmpty)
+}
+
+@Test func guideNoteInsertFailureRollsBackWatermarkAndEvent() async throws {
+    let db = try memoryTempDB()
+    let camp = try db.ensureDefaultCamp()
+    let thread = try db.findOrCreateGuideThread(campId: camp.id)
+    try db.appendChatMessage(threadId: thread.id, role: "user", text: "需要沉淀")
+    try await db.pool.write { database in
+        try database.execute(sql: """
+            CREATE TRIGGER fail_camp_note_insert
+            BEFORE INSERT ON camp_note BEGIN
+                SELECT RAISE(ABORT, 'injected camp note failure');
+            END
+            """)
+    }
+    let service = MemoryDistillService(
+        db: db,
+        provider: MockProvider(script: [noteTurn(title: "不应落库", body: "x")])
+    )
+
+    let record = await service.distillGuideChat(campId: camp.id)
+
+    #expect(record == nil)
+    #expect(try db.undistilledMessages(threadId: thread.id).count == 1)
+    #expect(try db.campNotes(campId: camp.id).isEmpty)
+    let events = try await db.pool.read { database in
+        try EventRecord.filter(Column("kind") == "camp_note_created").fetchAll(database)
+    }
+    #expect(events.isEmpty)
 }
