@@ -143,9 +143,11 @@ CLANG_MODULE_CACHE_PATH=/private/tmp/agentloop-clang-cache swift run --disable-s
 swift build --product AgentLoopApp
 ```
 
-## Open questions(待你拍板,拍板前不触发实现)
+## 拍板记录(用户 2026-07-14「按照你的推荐来」)
 
-1. **V1.1b 首批范围**:推荐 Codex 打通全链路 + Claude Code 紧随(同轮);若你只要 Codex 先上,Claude 挪到下一轮——选哪个?
-2. **放手档对 CLI 不升级**(仍 workspace-write,永不 yolo)——确认这个硬约束?
-3. **切档案对账**:推荐「不自动改写 + 派单 fail-closed + 对账 sheet」;另一个选项是切换时一键把所有 inherit 化(更省事但隐式改行为)——按推荐走?
-4. **UI 命名**:runtime profile 在牧场语言里叫什么?候选:「供给线」(货源感)/「草料棚」(饲料来源)/中性的「模型档案」。
+1. **V1.1b 首批范围**:Codex 打通全链路 + Claude Code 同轮紧随;stream-json 差异超预期时 Claude 适配器降级为该轮遗留项。
+2. **放手档对 CLI 永不 yolo**:确认为硬约束,禁用清单进常量表并测试钉住。
+3. **切档案对账**:不自动改写 + 派单 fail-closed + 对账 sheet。
+4. **UI 命名**:**供给线**(内核代码保持 RuntimeProfile 中性命名;「草料棚」与喂牛/草料概念冲突,弃)。
+
+Open questions 已清空,计划生效,从 main(3128293)开 feat/v1.1 实施。
