@@ -163,6 +163,7 @@ struct RuntimeProfileSection: View {
         case .anthropicAPI: "Anthropic API / 网关"
         case .openAIAPI: "OpenAI API"
         case .chatGPTOAuth: "ChatGPT 登录"
+        default: "CLI 牧工"  // V1.1b cli_* kinds;专属 UI 在 V1.1b UI 轮
         }
     }
 
@@ -171,6 +172,7 @@ struct RuntimeProfileSection: View {
         case .anthropicAPI: "shippingbox"
         case .openAIAPI: "shippingbox.fill"
         case .chatGPTOAuth: "person.crop.circle.badge.checkmark"
+        default: "terminal"
         }
     }
 }
@@ -214,7 +216,8 @@ private struct ProfileEditorSheet: View {
             VStack(alignment: .leading, spacing: 6) {
                 CampSectionTitle("类型")
                 Picker("类型", selection: $draft.kind) {
-                    ForEach(RuntimeProfileKind.allCases, id: \.self) { kind in
+                    // 编辑器暂只提供 API/OAuth 三类;CLI 供给线在 V1.1b UI 轮有专属入口
+                    ForEach([RuntimeProfileKind.anthropicAPI, .openAIAPI, .chatGPTOAuth], id: \.self) { kind in
                         Text(RuntimeProfileSection.kindLabel(kind)).tag(kind)
                     }
                 }

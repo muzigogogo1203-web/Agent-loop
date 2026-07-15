@@ -37,3 +37,7 @@ swift build --product AgentLoopApp
 ## 完成定义
 
 全量测试绿(389 基线 + 新增);App 构建过;Views/ 未触碰;不 commit;不重置工作区;impl-report.md + verify.log 落本目录。若 CLI 旗标/输出格式与本契约不符,以本机实测为准并在 impl-report 记偏差(codex 0.132.0 / claude 2.1.81 已安装可实测 --help)。
+
+## Blocker 答复(2026-07-14,Claude)
+
+RuntimeProfileViews.swift 的穷举 switch 已由 Claude 预改为带 default 分支(kindLabel→「CLI 牧工」、kindIcon→terminal),编辑器 kind picker 改为显式三类白名单。**新增 cli_codex/cli_claude case 不会再破坏 Views 编译**,继续按契约实现,Views 仍然不许改。
