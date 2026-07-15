@@ -317,14 +317,16 @@ final class AppStore {
         )
         keychain = keychainStore
         openAIOAuthSession = openAISession
-        apiFormat = ProviderAPIFormat(
+        let initialAPIFormat = ProviderAPIFormat(
             rawValue: UserDefaults.standard.string(forKey: "apiFormat") ?? ""
         ) ?? .anthropicMessages
+        apiFormat = initialAPIFormat
         apiAuthScheme = .automatic
         UserDefaults.standard.set(ProviderAuthScheme.automatic.rawValue, forKey: "apiAuthScheme")
-        preferredCredentialSource = ProviderCredentialSource(
+        let initialPreferredCredentialSource = ProviderCredentialSource(
             rawValue: UserDefaults.standard.string(forKey: Self.preferredCredentialSourceKey) ?? ""
         ) ?? .apiKey
+        preferredCredentialSource = initialPreferredCredentialSource
         // 开发用状态目录覆盖（UI 预览时指向临时库，避免污染真实数据）
         let appSupport = ProcessInfo.processInfo.environment["AGENTLOOP_STATE_DIR"]
             .map { URL(fileURLWithPath: $0) }
@@ -347,21 +349,21 @@ final class AppStore {
         let initialOAuthTokenPresent = !Self.isUIPreview
             && Self.nonEmptyCredential(try? keychainStore.get(account: Self.oauthAccessTokenAccount)) != nil
         do {
-            currentRuntimeProfile = try RuntimeProfileBootstrap(
+            let seededProfile = try RuntimeProfileBootstrap(
                 db: database,
                 defaults: scopedDefaults
             ).ensureSeeded(
                 inputs: RuntimeProfileBootstrap.SeedInputs(
                     apiKeyPresent: initialAPIKeyPresent,
-                    apiFormat: apiFormat,
+                    apiFormat: initialAPIFormat,
                     apiBaseURL: initialAPIBaseURL,
                     oauthTokenPresent: initialOAuthTokenPresent,
-                    preferredSource: preferredCredentialSource
+                    preferredSource: initialPreferredCredentialSource
                 ),
                 fallbackModelChoices: Self.factoryModelChoices
             )
             runtimeProfiles = (try? database.runtimeProfiles()) ?? []
-            currentRuntimeProfile = (try? database.defaultProfile()) ?? currentRuntimeProfile
+            currentRuntimeProfile = (try? database.defaultProfile()) ?? seededProfile
         } catch {
             fatalError("运行时供给线初始化失败：\(error.localizedDescription)")
         }
@@ -456,7 +458,7 @@ final class AppStore {
     }
 
     /// 环境变量 AGENTLOOP_UI_PREVIEW=1 时为 UI 预览模式：不读钥匙串、不调度任务
-    static let isUIPreview = ProcessInfo.processInfo.environment["AGENTLOOP_UI_PREVIEW"] == "1"
+    nonisolated static let isUIPreview = ProcessInfo.processInfo.environment["AGENTLOOP_UI_PREVIEW"] == "1"
     /// 预览直达（截图循环用）：启动即打开指定行动，可选直接进小剧场
     static let previewMissionId = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_MISSION"]
     static let previewTheater = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_THEATER"] == "1"
@@ -672,7 +674,7 @@ final class AppStore {
     func provider(model: String, companionId: String?) -> (any LLMProvider)? {
         let failureHandler = RuntimeProfileResolutionFailureHandler()
         failureHandler.store = self
-        Self.resolveProvider(
+        return Self.resolveProvider(
             model: model,
             companionId: companionId,
             db: db,
@@ -681,6 +683,108 @@ final class AppStore {
             tokenRefresher: Self.tokenRefresher(for: openAIOAuthSession),
             reportFailure: { message in failureHandler.report(message) }
         )
+    }
+
+    nonisolated static func credentialAccount(for kind: RuntimeProfileKind) -> String? {
+        switch kind {
+        case .anthropicAPI, .openAIAPI:
+            return Self.apiKeyAccount
+        case .chatGPTOAuth:
+            return Self.oauthAccessTokenAccount
+        }
+    }
+
+    func saveRuntimeProfileAndReload(_ profile: RuntimeProfileRecord) {
+        do {
+            try db.saveRuntimeProfile(profile)
+            reloadRuntimeProfiles(loadModelDefaults: false)
+        } catch {
+            showToast("保存供给线失败：\(readableError(error))")
+        }
+    }
+
+    func deleteRuntimeProfileAndReload(id: String) {
+        do {
+            try db.deleteRuntimeProfile(id: id)
+            reloadRuntimeProfiles(loadModelDefaults: false)
+        } catch {
+            showToast(readableError(error))
+        }
+    }
+
+    func reconciliationItems(switchingTo profileId: String) -> [ReconciliationItem] {
+        (try? db.reconciliationReport(
+            switchingTo: profileId,
+            defaults: ProfileScopedDefaults()
+        )) ?? []
+    }
+
+    /// V1.1a-D3:切默认供给线——先按用户对账选择改写,再切换;未勾选的保持不动(派单 fail-closed)。
+    func switchDefaultRuntimeProfile(
+        id: String,
+        inheritCompanionIds: Set<String>,
+        resetSettingScopes: Set<String>
+    ) {
+        for companionId in inheritCompanionIds {
+            guard var companion = try? db.companion(id: companionId) else { continue }
+            companion.modelPolicy = .inherit
+            try? db.saveCompanion(companion)
+        }
+        if !resetSettingScopes.isEmpty {
+            let defaults = ProfileScopedDefaults()
+            let catalogFirst = (try? db.runtimeProfile(id: id)).flatMap { profile in
+                catalogChoices(profile: profile).first
+            }
+            for item in reconciliationItems(switchingTo: id) where resetSettingScopes.contains(item.id) {
+                switch item.scope {
+                case .companion: continue
+                case .defaultModel:
+                    if let catalogFirst {
+                        defaults.setString(catalogFirst, profileID: id, suffix: "defaultModel")
+                    }
+                case .distillModel:
+                    defaults.setString("", profileID: id, suffix: "distillModel")
+                case .plannerModel:
+                    defaults.setString("", profileID: id, suffix: "plannerModel")
+                }
+            }
+        }
+        setDefaultRuntimeProfile(id: id)
+        reload()
+    }
+
+    /// 目录选项(伙伴编辑器/对账用):可信目录 ∪ 手动 id;都拿不到时回退当前 modelChoices。
+    func catalogChoices(profile: RuntimeProfileRecord) -> [String] {
+        let defaults = ProfileScopedDefaults()
+        if let trusted = ModelCatalogService.trustedCatalog(profile: profile, defaults: defaults) {
+            return trusted
+        }
+        let cached = defaults.cachedCatalog(profileID: profile.id) ?? []
+        let manual = defaults.manualModels(profileID: profile.id)
+        let merged = ProfileScopedDefaults.uniqueModels(cached + manual)
+        return merged.isEmpty ? modelChoices : merged
+    }
+
+    /// 刷新目录;返回人话结果供设置页展示。
+    func refreshCatalog(profileId: String) async -> String? {
+        guard let profile = try? db.runtimeProfile(id: profileId) else { return "供给线不存在" }
+        let credential: String
+        if profile.kind == .chatGPTOAuth {
+            credential = ""
+        } else if let value = Self.nonEmptyCredential(
+            try? keychain.get(account: profile.credentialAccount ?? Self.apiKeyAccount)
+        ) {
+            credential = value
+        } else {
+            return "「\(profile.name)」还没有可用凭据,先保存 API Key"
+        }
+        do {
+            let models = try await ModelCatalogService().refresh(profile: profile, credential: credential)
+            reloadRuntimeProfiles(loadModelDefaults: profile.isDefault)
+            return "「\(profile.name)」目录已更新:\(models.count) 个模型"
+        } catch {
+            return "刷新失败:\(readableError(error))(保留上次缓存)"
+        }
     }
 
     func setDefaultRuntimeProfile(id: String) {

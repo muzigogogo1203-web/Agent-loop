@@ -147,6 +147,10 @@ struct SettingsView: View {
                 }
                 .campCard()
 
+                // V1.1a:供给线管理
+                RuntimeProfileSection()
+                    .campCard()
+
                 // M6-D11/D12：模型目录 + 默认/蒸馏/规划三档
                 VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("模型")

@@ -11,6 +11,9 @@ struct CompanionEditorView: View {
     @State private var rolePrompt = ""
     @State private var modelChoice = "claude-sonnet-4-6"
     @State private var customModel = ""
+    /// V1.1a:供给线选择("" = 跟随默认供给线)与模型策略
+    @State private var profileChoice = ""
+    @State private var modelPolicy: CompanionModelPolicy = .pinned
     @State private var enabledTools: Set<String> = Set(ToolAccess.builtinCapabilityNames)
     @State private var saveError: String?
     /// 各驿站的已知工具（连接后取自 Manager 缓存）
@@ -25,8 +28,17 @@ struct CompanionEditorView: View {
             : modelChoice
     }
 
+    /// V1.1a:钉住模型的候选 = 所选供给线的目录(拿不到时回退全局 modelChoices)
+    private var editorModelChoices: [String] {
+        let profile = profileChoice.isEmpty
+            ? store.currentRuntimeProfile
+            : store.runtimeProfiles.first { $0.id == profileChoice }
+        guard let profile else { return store.modelChoices }
+        return store.catalogChoices(profile: profile)
+    }
+
     private var canSave: Bool {
-        !name.isEmpty && !rolePrompt.isEmpty && !resolvedModel.isEmpty
+        !name.isEmpty && !rolePrompt.isEmpty && (modelPolicy == .inherit || !resolvedModel.isEmpty)
     }
 
     var body: some View {
@@ -73,8 +85,22 @@ struct CompanionEditorView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("模型")
+                    Picker("供给线", selection: $profileChoice) {
+                        Text("跟随默认供给线").tag("")
+                        ForEach(store.runtimeProfiles) { profile in
+                            Text(profile.name).tag(profile.id)
+                        }
+                    }
+                    Picker("模型策略", selection: $modelPolicy) {
+                        Text("跟随供给线默认").tag(CompanionModelPolicy.inherit)
+                        Text("钉住指定模型").tag(CompanionModelPolicy.pinned)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(maxWidth: 260)
+                    if modelPolicy == .pinned {
                     Picker("模型", selection: $modelChoice) {
-                        ForEach(store.modelChoices, id: \.self) { model in
+                        ForEach(editorModelChoices, id: \.self) { model in
                             Text(model).tag(model)
                         }
                         Text("自定义…").tag(Self.customTag)
@@ -91,6 +117,7 @@ struct CompanionEditorView: View {
                                 RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
                                     .stroke(Camp.line, lineWidth: 1)
                             )
+                    }
                     }
                 }
                 .campCard()
@@ -322,7 +349,9 @@ struct CompanionEditorView: View {
         color = companion.color
         rolePrompt = companion.rolePrompt
         enabledTools = ToolAccess.parse(toolsJson: companion.toolsJson).capabilities
-        if store.modelChoices.contains(companion.model) {
+        profileChoice = companion.runtimeProfileId ?? ""
+        modelPolicy = companion.modelPolicy
+        if editorModelChoices.contains(companion.model) {
             modelChoice = companion.model
             customModel = ""
         } else {
@@ -343,7 +372,9 @@ struct CompanionEditorView: View {
                 companion.name = name
                 companion.color = color
                 companion.rolePrompt = rolePrompt
-                companion.model = resolvedModel
+                if modelPolicy == .pinned { companion.model = resolvedModel }
+                companion.runtimeProfileId = profileChoice.isEmpty ? nil : profileChoice
+                companion.modelPolicy = modelPolicy
                 companion.toolsJson = toolsJson
                 try store.db.saveCompanion(companion)
             } else {
@@ -351,8 +382,10 @@ struct CompanionEditorView: View {
                     name: name,
                     color: color,
                     rolePrompt: rolePrompt,
-                    model: resolvedModel
+                    model: modelPolicy == .pinned ? resolvedModel : (editorModelChoices.first ?? resolvedModel)
                 )
+                companion.runtimeProfileId = profileChoice.isEmpty ? nil : profileChoice
+                companion.modelPolicy = modelPolicy
                 companion.toolsJson = toolsJson
                 try store.db.saveCompanion(companion)
             }
