@@ -122,7 +122,7 @@ private func planTurn(goal: String) -> TurnResult {
     let cardProvider = MockProvider(script: [])
     let orch = Orchestrator(
         db: db,
-        makeProvider: { model in
+        makeProvider: { model, _ in
             switch model {
             case "planner-home": plannerHome
             case "planner-north": plannerNorth
@@ -192,7 +192,7 @@ private func planTurn(goal: String) -> TurnResult {
 
     let orch = Orchestrator(
         db: db,
-        makeProvider: { _ in MockProvider(script: []) },
+        makeProvider: { _, _ in MockProvider(script: []) },
         artifactStoreRoot: try multiCampArtifactRoot(),
         tickInterval: nil
     )

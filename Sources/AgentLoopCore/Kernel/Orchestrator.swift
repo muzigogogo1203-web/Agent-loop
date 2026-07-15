@@ -34,6 +34,23 @@ public struct KernelHaltedError: LocalizedError, Sendable, Equatable {
     }
 }
 
+public struct ProviderUnavailableError: LocalizedError, Sendable, Equatable {
+    public let model: String
+    public let companionId: String?
+
+    public init(model: String, companionId: String?) {
+        self.model = model
+        self.companionId = companionId
+    }
+
+    public var errorDescription: String? {
+        if let companionId {
+            return "伙伴 \(companionId) 的供给线没有可用模型或凭据：\(model)"
+        }
+        return "默认供给线没有可用模型或凭据：\(model)"
+    }
+}
+
 public struct HaltPersistenceError: LocalizedError, Sendable, Equatable {
     public let detail: String
 
@@ -92,7 +109,7 @@ public actor Orchestrator {
     }
 
     private let db: AppDatabase
-    private let makeProvider: @Sendable (String) -> any LLMProvider
+    private let makeProvider: @Sendable (String, String?) -> (any LLMProvider)?
     /// M6-D7：搜索 key 派发时解析（沿 makeProvider 注入模式），Core 不直连 Keychain 细节
     private let searchKeyProvider: @Sendable () -> String?
     private let artifactStoreRoot: URL
@@ -137,7 +154,7 @@ public actor Orchestrator {
 
     public init(
         db: AppDatabase,
-        makeProvider: @escaping @Sendable (String) -> any LLMProvider,
+        makeProvider: @escaping @Sendable (String, String?) -> (any LLMProvider)?,
         artifactStoreRoot: URL,
         tickInterval: Duration? = .seconds(5),
         searchKeyProvider: @escaping @Sendable () -> String? = { nil },
@@ -210,7 +227,10 @@ public actor Orchestrator {
                 try Task.checkCancellation()
                 guard self.dispatchPhase.permitsDispatch else { throw CancellationError() }
                 let roster = try db.companions(ids: companionIds)
-                let planner = Planner(provider: makeProvider(plannerModel))
+                guard let provider = makeProvider(plannerModel, nil) else {
+                    throw ProviderUnavailableError(model: plannerModel, companionId: nil)
+                }
+                let planner = Planner(provider: provider)
                 // 开工带经验（spec §9-2）：规划上下文附带营地笔记
                 let campNotes = self.loadCampNotes(campId: try db.squad(forMission: missionId)?.campId)
                 let result = try await planner.propose(
@@ -531,7 +551,25 @@ public actor Orchestrator {
                   running[candidate.card.id] == nil else {
                 continue
             }
-            let provider = makeProvider(candidate.model)
+            guard let provider = makeProvider(candidate.model, candidate.assigneeId) else {
+                let message = "伙伴「\(candidate.companionName)」的供给线没有可用模型或凭据，卡片已暂停派发"
+                do {
+                    try db.blockCard(
+                        id: candidate.card.id,
+                        runId: nil,
+                        reason: "other",
+                        detail: message
+                    )
+                    db.appendKernelErrorEvent(missionId: candidate.card.missionId, message: message)
+                    emit(.kernelError(missionId: candidate.card.missionId, message: message))
+                    emit(.missionChanged(missionId: candidate.card.missionId))
+                } catch {
+                    let detail = String(describing: error)
+                    db.appendKernelErrorEvent(missionId: candidate.card.missionId, message: detail)
+                    emit(.kernelError(missionId: candidate.card.missionId, message: detail))
+                }
+                continue
+            }
             let task = Task {
                 await self.run(candidate: candidate, provider: provider)
             }
@@ -1038,7 +1076,10 @@ public actor Orchestrator {
                 return (squad.campId, goal, digests)
             }
 
-            let distiller = Distiller(provider: makeProvider(model))
+            guard let provider = makeProvider(model, nil) else {
+                throw ProviderUnavailableError(model: model, companionId: nil)
+            }
+            let distiller = Distiller(provider: provider)
             let (note, fallback) = await distiller.distillCloseout(goal: input.goal, cards: input.cards)
             let record = CampNoteRecord.new(
                 campId: input.campId, missionId: missionId,
@@ -1124,7 +1165,13 @@ public actor Orchestrator {
         }
 
         guard !inputs.isEmpty else { return }
-        let distiller = Distiller(provider: makeProvider(model))
+        guard let provider = makeProvider(model, nil) else {
+            let message = ProviderUnavailableError(model: model, companionId: nil).errorDescription ?? "供给线不可用"
+            db.appendKernelErrorEvent(missionId: missionId, message: message)
+            emit(.kernelError(missionId: missionId, message: message))
+            return
+        }
+        let distiller = Distiller(provider: provider)
         for input in inputs {
             do {
                 guard let note = try await distiller.distillMemory(

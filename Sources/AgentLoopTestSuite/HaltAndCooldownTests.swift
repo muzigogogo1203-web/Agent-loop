@@ -181,7 +181,7 @@ private struct RateLimitedProvider: LLMProvider {
     )
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in MockProvider(script: completeScript()) },
+        makeProvider: { _, _ in MockProvider(script: completeScript()) },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil
     )
@@ -233,7 +233,7 @@ private struct RateLimitedProvider: LLMProvider {
     let provider = MockProvider(script: completeScript())
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: .milliseconds(1),
         mcpManager: manager
@@ -271,7 +271,7 @@ private struct RateLimitedProvider: LLMProvider {
     let provider = MockProvider(script: completeScript())
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil,
         requiresStartupRecovery: true
@@ -318,7 +318,7 @@ private struct RateLimitedProvider: LLMProvider {
     let provider = MockProvider(script: completeScript())
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil,
         requiresStartupRecovery: true
@@ -357,7 +357,7 @@ private struct RateLimitedProvider: LLMProvider {
     let provider = MockProvider(script: completeScript())
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil,
         requiresStartupRecovery: true
@@ -388,7 +388,7 @@ private struct RateLimitedProvider: LLMProvider {
     let provider = MockProvider(script: completeScript())
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: .milliseconds(1)
     )
@@ -417,7 +417,7 @@ private struct RateLimitedProvider: LLMProvider {
     let provider = MockProvider(script: completeScript())
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil
     )
@@ -449,7 +449,7 @@ private struct RateLimitedProvider: LLMProvider {
     let gate = HaltGate()
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil,
         reconcilePostDatabaseGate: { await gate.suspend() }
@@ -479,7 +479,7 @@ private struct RateLimitedProvider: LLMProvider {
     let gate = HaltGate()
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil,
         reconcilePostDatabaseGate: { await gate.suspend() }
@@ -517,7 +517,7 @@ private struct RateLimitedProvider: LLMProvider {
     let provider = HaltHangingProvider()
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil
     )
@@ -540,7 +540,7 @@ private struct RateLimitedProvider: LLMProvider {
     let gate = HaltGate()
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil,
         planningPostProviderGate: { await gate.suspend() }
@@ -577,7 +577,7 @@ private struct RateLimitedProvider: LLMProvider {
     let gate = HaltGate()
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { model in
+        makeProvider: { model, _ in
             if model == "planner" { return planner }
             return runner
         },
@@ -620,7 +620,7 @@ private struct RateLimitedProvider: LLMProvider {
     let gate = HaltGate()
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { model in
+        makeProvider: { model, _ in
             if model == "planner" { return planner }
             return runner
         },
@@ -716,7 +716,7 @@ private struct RateLimitedProvider: LLMProvider {
     let provider = HaltHangingProvider()
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil
     )
@@ -762,7 +762,7 @@ private struct RateLimitedProvider: LLMProvider {
     let provider = MockProvider(script: completeScript())
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil
     )
@@ -804,7 +804,7 @@ private struct RateLimitedProvider: LLMProvider {
     let resumeGate = HaltGate()
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil,
         resumePreAdoptionGate: { await resumeGate.suspend() }
@@ -868,7 +868,7 @@ private struct RateLimitedProvider: LLMProvider {
     let provider = MockProvider(script: completeScript())
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil
     )
@@ -911,7 +911,7 @@ private struct RateLimitedProvider: LLMProvider {
     let provider = MockProvider(script: completeScript())
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil,
         recoveryPostAdoptionGate: { await recoveryGate.suspend() },
@@ -975,7 +975,7 @@ private struct RateLimitedProvider: LLMProvider {
     let provider = MockProvider(script: planningScript())
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil
     )
@@ -1017,7 +1017,7 @@ private struct RateLimitedProvider: LLMProvider {
     let counter = CallCounter()
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in
+        makeProvider: { _, _ in
             if counter.next() == 0 {
                 return RateLimitedProvider()
             }

@@ -68,7 +68,7 @@ private func firstUserText(_ histories: [[APIMessage]]) -> String {
 
     let orch = Orchestrator(
         db: db,
-        makeProvider: { model in
+        makeProvider: { model, _ in
             switch model {
             case "distill-model": distillProvider
             case "planner-model": plannerProvider
@@ -129,7 +129,7 @@ private func firstUserText(_ histories: [[APIMessage]]) -> String {
     let cardProvider = MockProvider(script: [completeTurn(summary: "校对完成")])
     let orch = Orchestrator(
         db: db,
-        makeProvider: { _ in cardProvider },
+        makeProvider: { _, _ in cardProvider },
         artifactStoreRoot: try knowledgeArtifactRoot(),
         tickInterval: nil
     )

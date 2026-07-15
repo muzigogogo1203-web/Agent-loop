@@ -17,6 +17,16 @@ private final class OpenAIOAuthReloginHandler: @unchecked Sendable {
     }
 }
 
+private final class RuntimeProfileResolutionFailureHandler: @unchecked Sendable {
+    @MainActor weak var store: AppStore?
+
+    func report(_ message: String) {
+        Task { @MainActor [weak self] in
+            self?.store?.showToast(message)
+        }
+    }
+}
+
 @MainActor @Observable
 final class AppStore {
     struct ActivityItem: Identifiable, Equatable {
@@ -50,6 +60,8 @@ final class AppStore {
     var codingRanchInbox = RuminationInboxViewState(loadState: .idle, items: [])
     var apiKeyPresent = false
     var webCredentialPresent = false
+    var runtimeProfiles: [RuntimeProfileRecord] = []
+    var currentRuntimeProfile: RuntimeProfileRecord?
     var preferredCredentialSource: ProviderCredentialSource = .apiKey {
         didSet { UserDefaults.standard.set(preferredCredentialSource.rawValue, forKey: "preferredCredentialSource") }
     }
@@ -59,7 +71,7 @@ final class AppStore {
     var searchKeyPresent = false
     /// M6-D11：默认模型持久化（修「重启复位」bug）
     var defaultModel = "claude-sonnet-4-6" {
-        didSet { UserDefaults.standard.set(defaultModel, forKey: "defaultModel") }
+        didSet { persistProfileString(defaultModel, suffix: "defaultModel") }
     }
     /// M6-D11：模型目录从硬编码数组改为可编辑 + 持久化
     static let factoryModelChoices = [
@@ -71,14 +83,14 @@ final class AppStore {
         "DeepSeek-V4-Flash-Third",
     ]
     var modelChoices: [String] = AppStore.factoryModelChoices {
-        didSet { UserDefaults.standard.set(modelChoices, forKey: "modelChoices") }
+        didSet { persistProfileModels(modelChoices, suffix: "modelChoices") }
     }
     /// M6-D12：轻任务模型（空 = 跟随默认模型）——蒸馏与规划是最便宜的降档位
     var distillModel: String = "" {
-        didSet { UserDefaults.standard.set(distillModel, forKey: "distillModel") }
+        didSet { persistProfileString(distillModel, suffix: "distillModel") }
     }
     var plannerModel: String = "" {
-        didSet { UserDefaults.standard.set(plannerModel, forKey: "plannerModel") }
+        didSet { persistProfileString(plannerModel, suffix: "plannerModel") }
     }
     var effectiveDistillModel: String { distillModel.isEmpty ? defaultModel : distillModel }
     var effectivePlannerModel: String { plannerModel.isEmpty ? defaultModel : plannerModel }
@@ -175,8 +187,8 @@ final class AppStore {
         }
     }
 
-    nonisolated private static let apiKeyAccount = "anthropic-api-key"
-    nonisolated private static let oauthAccessTokenAccount = "oauth-access-token"
+    nonisolated private static let apiKeyAccount = RuntimeProfileBootstrap.apiKeyCredentialAccount
+    nonisolated private static let oauthAccessTokenAccount = RuntimeProfileBootstrap.oauthAccessTokenCredentialAccount
     nonisolated private static let oauthRefreshTokenAccount = "oauth-refresh-token"
     nonisolated private static let oauthIDTokenAccount = "oauth-id-token"
     nonisolated private static let oauthChatGPTAccountIDAccount = "oauth-chatgpt-account-id"
@@ -192,7 +204,7 @@ final class AppStore {
         didSet { UserDefaults.standard.set(defaultMissionBudget, forKey: "defaultMissionBudget") }
     }
 
-    static let defaultBaseURL = "https://api.anthropic.com"
+    nonisolated static let defaultBaseURL = RuntimeProfileBootstrap.defaultAnthropicBaseURL
     var apiBaseURL: String = AppStore.defaultBaseURL {
         didSet { UserDefaults.standard.set(apiBaseURL, forKey: "apiBaseURL") }
     }
@@ -292,6 +304,7 @@ final class AppStore {
     init() {
         let keychainStore = KeychainStore()
         let reloginHandler = OpenAIOAuthReloginHandler()
+        let runtimeProfileFailureHandler = RuntimeProfileResolutionFailureHandler()
         let openAISession = Self.isUIPreview ? nil : OpenAIOAuthSession(
             store: keychainStore,
             accessTokenAccount: Self.oauthAccessTokenAccount,
@@ -327,6 +340,31 @@ final class AppStore {
         reportStoreRoot = appSupport.appendingPathComponent("reports")
         let database = try! AppDatabase(path: appSupport.appendingPathComponent("agentloop.sqlite").path)
         db = database
+        let scopedDefaults = ProfileScopedDefaults()
+        let initialAPIBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
+        let initialAPIKeyPresent = !Self.isUIPreview
+            && Self.nonEmptyCredential(try? keychainStore.get(account: Self.apiKeyAccount)) != nil
+        let initialOAuthTokenPresent = !Self.isUIPreview
+            && Self.nonEmptyCredential(try? keychainStore.get(account: Self.oauthAccessTokenAccount)) != nil
+        do {
+            currentRuntimeProfile = try RuntimeProfileBootstrap(
+                db: database,
+                defaults: scopedDefaults
+            ).ensureSeeded(
+                inputs: RuntimeProfileBootstrap.SeedInputs(
+                    apiKeyPresent: initialAPIKeyPresent,
+                    apiFormat: apiFormat,
+                    apiBaseURL: initialAPIBaseURL,
+                    oauthTokenPresent: initialOAuthTokenPresent,
+                    preferredSource: preferredCredentialSource
+                ),
+                fallbackModelChoices: Self.factoryModelChoices
+            )
+            runtimeProfiles = (try? database.runtimeProfiles()) ?? []
+            currentRuntimeProfile = (try? database.defaultProfile()) ?? currentRuntimeProfile
+        } catch {
+            fatalError("运行时供给线初始化失败：\(error.localizedDescription)")
+        }
         do {
             let initialMode = try database.dispatchMode()
             let initiallyHalted = initialMode == .halted
@@ -351,19 +389,17 @@ final class AppStore {
         mcp = McpStore(db: database, manager: mcpManager, keychain: keychainStore)
         orchestrator = Orchestrator(
             db: database,
-            makeProvider: { model in
-                let credential = Self.storedProviderCredential(using: keychainStore)
-                let rawBase = UserDefaults.standard.string(forKey: "apiBaseURL") ?? defaultBaseURL
-                let base = ProviderEndpoint.normalizedBaseURL(rawBase) ?? URL(string: defaultBaseURL)!
-                let format = ProviderAPIFormat(
-                    rawValue: UserDefaults.standard.string(forKey: "apiFormat") ?? ""
-                ) ?? .anthropicMessages
-                return Self.makeProvider(
-                    credential: credential,
-                    format: format,
+            makeProvider: { model, companionId in
+                Self.resolveProvider(
                     model: model,
-                    baseURL: base,
-                    tokenRefresher: Self.tokenRefresher(for: openAISession)
+                    companionId: companionId,
+                    db: database,
+                    keychain: keychainStore,
+                    defaultBaseURL: defaultBaseURL,
+                    tokenRefresher: Self.tokenRefresher(for: openAISession),
+                    reportFailure: { message in
+                        runtimeProfileFailureHandler.report(message)
+                    }
                 )
             },
             artifactStoreRoot: artifactStoreRoot,
@@ -382,7 +418,7 @@ final class AppStore {
         missionScheduler = MissionScheduler(
             db: database,
             orchestrator: orchestrator,
-            plannerModel: { AppStore.scheduledPlannerModelFromDefaults() }
+            plannerModel: { AppStore.scheduledPlannerModelFromDefaults(database: database) }
         )
         try! db.ensureCodingRanchBootstrap()
         apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
@@ -390,17 +426,7 @@ final class AppStore {
         if storedBudget > 0 {
             defaultMissionBudget = storedBudget
         }
-        // M6-D11/D12：模型目录与各档模型回读
-        if let storedChoices = UserDefaults.standard.stringArray(forKey: "modelChoices"),
-           !storedChoices.isEmpty {
-            modelChoices = storedChoices
-        }
-        if let storedDefault = UserDefaults.standard.string(forKey: "defaultModel"),
-           !storedDefault.isEmpty {
-            defaultModel = storedDefault
-        }
-        distillModel = UserDefaults.standard.string(forKey: "distillModel") ?? ""
-        plannerModel = UserDefaults.standard.string(forKey: "plannerModel") ?? ""
+        loadModelDefaultsForCurrentProfile()
         if let storedAutonomy = UserDefaults.standard.string(forKey: "defaultAutonomy"),
            let autonomy = MissionAutonomy(rawValue: storedAutonomy) {
             defaultAutonomy = autonomy
@@ -426,6 +452,7 @@ final class AppStore {
         startKernelEventListener(recoverKernel: !Self.isUIPreview)
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
         reloginHandler.store = self
+        runtimeProfileFailureHandler.store = self
     }
 
     /// 环境变量 AGENTLOOP_UI_PREVIEW=1 时为 UI 预览模式：不读钥匙串、不调度任务
@@ -434,11 +461,14 @@ final class AppStore {
     static let previewMissionId = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_MISSION"]
     static let previewTheater = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_THEATER"] == "1"
 
-    nonisolated private static func scheduledPlannerModelFromDefaults() -> String {
-        let planner = UserDefaults.standard.string(forKey: "plannerModel") ?? ""
+    nonisolated private static func scheduledPlannerModelFromDefaults(database: AppDatabase) -> String {
+        let defaults = ProfileScopedDefaults()
+        guard let profile = try? database.defaultProfile() else {
+            return KernelDefaults.defaultGuideModel
+        }
+        let planner = defaults.plannerModel(profileID: profile.id)
         if !planner.isEmpty { return planner }
-        let storedDefault = UserDefaults.standard.string(forKey: "defaultModel") ?? ""
-        return storedDefault.isEmpty ? "claude-sonnet-4-6" : storedDefault
+        return defaults.defaultModel(profileID: profile.id, fallback: KernelDefaults.defaultGuideModel)
     }
 
     nonisolated private static func nonEmptyCredential(_ value: String?) -> String? {
@@ -464,12 +494,93 @@ final class AppStore {
         switch preferred {
         case .webLogin:
             if let oauthToken { return StoredCredential(value: oauthToken, source: .webLogin, chatGPTAccountID: chatGPTAccountID) }
-            if let apiKey { return StoredCredential(value: apiKey, source: .apiKey, chatGPTAccountID: nil) }
         case .apiKey:
             if let apiKey { return StoredCredential(value: apiKey, source: .apiKey, chatGPTAccountID: nil) }
-            if let oauthToken { return StoredCredential(value: oauthToken, source: .webLogin, chatGPTAccountID: chatGPTAccountID) }
         }
         return nil
+    }
+
+    nonisolated private static func resolveProvider(
+        model requestedModel: String,
+        companionId: String?,
+        db: AppDatabase,
+        keychain: KeychainStore,
+        defaultBaseURL: String,
+        tokenRefresher: (@Sendable () async throws -> String)?,
+        reportFailure: (@Sendable (String) -> Void)? = nil
+    ) -> (any LLMProvider)? {
+        guard !Self.isUIPreview else { return nil }
+        let defaults = ProfileScopedDefaults()
+        let defaultProfile = try? db.defaultProfile()
+        let companion = companionId.flatMap { try? db.companion(id: $0) }
+        let profile: RuntimeProfileRecord?
+        if let runtimeProfileId = companion?.runtimeProfileId {
+            profile = (try? db.runtimeProfile(id: runtimeProfileId)) ?? defaultProfile
+        } else {
+            profile = defaultProfile
+        }
+        guard let profile else { return nil }
+
+        let policy = companion?.modelPolicy ?? .pinned
+        let model = policy == .inherit
+            ? defaults.defaultModel(profileID: profile.id, fallback: KernelDefaults.defaultGuideModel)
+            : requestedModel.trimmingCharacters(in: .whitespacesAndNewlines)
+        let effectiveModel = model.isEmpty
+            ? defaults.defaultModel(profileID: profile.id, fallback: KernelDefaults.defaultGuideModel)
+            : model
+
+        if let catalog = ModelCatalogService.trustedCatalog(profile: profile, defaults: defaults),
+           !catalog.contains(effectiveModel) {
+            let message: String
+            if let companion {
+                message = "\(companion.name)钉着 \(effectiveModel)，供给线「\(profile.name)」没有这个模型"
+            } else {
+                message = "供给线「\(profile.name)」没有模型 \(effectiveModel)"
+            }
+            db.appendKernelErrorEvent(missionId: "", message: message)
+            reportFailure?(message)
+            return nil
+        }
+
+        guard let credential = runtimeProfileCredential(profile: profile, keychain: keychain) else {
+            return nil
+        }
+        let base = ProviderEndpoint.normalizedBaseURL(profile.baseURL ?? defaultBaseURL)
+            ?? URL(string: defaultBaseURL)!
+        let format: ProviderAPIFormat = switch profile.kind {
+        case .anthropicAPI:
+            .anthropicMessages
+        case .openAIAPI, .chatGPTOAuth:
+            .openAIChatCompletions
+        }
+        return makeProvider(
+            credential: credential,
+            format: format,
+            model: effectiveModel,
+            baseURL: base,
+            tokenRefresher: tokenRefresher
+        )
+    }
+
+    nonisolated private static func runtimeProfileCredential(
+        profile: RuntimeProfileRecord,
+        keychain: KeychainStore
+    ) -> StoredCredential? {
+        switch profile.kind {
+        case .anthropicAPI, .openAIAPI:
+            guard let account = profile.credentialAccount,
+                  let value = nonEmptyCredential(try? keychain.get(account: account)) else {
+                return nil
+            }
+            return StoredCredential(value: value, source: .apiKey, chatGPTAccountID: nil)
+        case .chatGPTOAuth:
+            guard let account = profile.credentialAccount,
+                  let value = nonEmptyCredential(try? keychain.get(account: account)) else {
+                return nil
+            }
+            let chatGPTAccountID = nonEmptyCredential(try? keychain.get(account: oauthChatGPTAccountIDAccount))
+            return StoredCredential(value: value, source: .webLogin, chatGPTAccountID: chatGPTAccountID)
+        }
     }
 
     nonisolated private static func makeProvider(
@@ -507,6 +618,12 @@ final class AppStore {
     }
 
     func reload() {
+        let previousDefaultProfileId = currentRuntimeProfile?.id
+        runtimeProfiles = (try? db.runtimeProfiles()) ?? []
+        currentRuntimeProfile = (try? db.defaultProfile()) ?? runtimeProfiles.first
+        if previousDefaultProfileId != currentRuntimeProfile?.id {
+            loadModelDefaultsForCurrentProfile()
+        }
         companions = (try? db.regularCompanions()) ?? []
         camps = (try? db.camps()) ?? []
         apiKeyPresent = !Self.isUIPreview
@@ -531,6 +648,7 @@ final class AppStore {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         try? keychain.set(trimmed, account: Self.apiKeyAccount)
+        attachAPIKeyToEmptyDefaultProfileIfNeeded()
         preferredCredentialSource = .apiKey
         oauthLoginStatus = nil
         reload()
@@ -548,20 +666,73 @@ final class AppStore {
     }
 
     func provider(model: String) -> (any LLMProvider)? {
-        // 预览模式语义 = 不读钥匙串（避免系统授权弹窗）；LLM 动作统一得到「请先配置凭据」提示
-        guard !Self.isUIPreview,
-              let credential = Self.storedProviderCredential(using: keychain) else {
-            return nil
-        }
-        let base = ProviderEndpoint.normalizedBaseURL(apiBaseURL)
-            ?? URL(string: Self.defaultBaseURL)!
-        return Self.makeProvider(
-            credential: credential,
-            format: apiFormat,
+        provider(model: model, companionId: nil)
+    }
+
+    func provider(model: String, companionId: String?) -> (any LLMProvider)? {
+        let failureHandler = RuntimeProfileResolutionFailureHandler()
+        failureHandler.store = self
+        Self.resolveProvider(
             model: model,
-            baseURL: base,
-            tokenRefresher: Self.tokenRefresher(for: openAIOAuthSession)
+            companionId: companionId,
+            db: db,
+            keychain: keychain,
+            defaultBaseURL: Self.defaultBaseURL,
+            tokenRefresher: Self.tokenRefresher(for: openAIOAuthSession),
+            reportFailure: { message in failureHandler.report(message) }
         )
+    }
+
+    func setDefaultRuntimeProfile(id: String) {
+        do {
+            try db.setDefaultProfile(id: id)
+            reloadRuntimeProfiles(loadModelDefaults: true)
+        } catch {
+            showToast("供给线切换失败：\(readableError(error))")
+        }
+    }
+
+    private func reloadRuntimeProfiles(loadModelDefaults: Bool) {
+        runtimeProfiles = (try? db.runtimeProfiles()) ?? []
+        currentRuntimeProfile = (try? db.defaultProfile()) ?? runtimeProfiles.first
+        if loadModelDefaults {
+            loadModelDefaultsForCurrentProfile()
+        }
+    }
+
+    private func loadModelDefaultsForCurrentProfile() {
+        guard let profile = currentRuntimeProfile else { return }
+        let defaults = ProfileScopedDefaults()
+        let choices = defaults.modelChoices(profileID: profile.id, fallback: Self.factoryModelChoices)
+        modelChoices = choices
+        defaultModel = defaults.defaultModel(
+            profileID: profile.id,
+            fallback: choices.first ?? KernelDefaults.defaultGuideModel
+        )
+        distillModel = defaults.distillModel(profileID: profile.id)
+        plannerModel = defaults.plannerModel(profileID: profile.id)
+    }
+
+    private func persistProfileString(_ value: String, suffix: String) {
+        guard let profileId = currentRuntimeProfile?.id else { return }
+        ProfileScopedDefaults().setString(value, profileID: profileId, suffix: suffix)
+    }
+
+    private func persistProfileModels(_ values: [String], suffix: String) {
+        guard let profileId = currentRuntimeProfile?.id else { return }
+        ProfileScopedDefaults().setStringArray(values, profileID: profileId, suffix: suffix)
+    }
+
+    private func attachAPIKeyToEmptyDefaultProfileIfNeeded() {
+        guard var profile = currentRuntimeProfile,
+              (profile.kind == .anthropicAPI || profile.kind == .openAIAPI),
+              profile.credentialAccount == nil else {
+            return
+        }
+        profile.credentialAccount = Self.apiKeyAccount
+        try? db.saveRuntimeProfile(profile)
+        currentRuntimeProfile = profile
+        runtimeProfiles = (try? db.runtimeProfiles()) ?? runtimeProfiles
     }
 
     // MARK: - 定时行动逻辑接线（UI 由 Claude 单独实现）
@@ -678,9 +849,9 @@ final class AppStore {
                     self?.modelConnectionTestStatus = "连接正常（\(model)）"
                 }
             } catch {
-                let message = (error as? ProviderError)?.description ?? String(describing: error)
                 await MainActor.run { [weak self] in
-                    self?.modelConnectionTestStatus = "连接失败：\(message)"
+                    guard let self else { return }
+                    self.modelConnectionTestStatus = "连接失败：\(self.readableError(error))"
                 }
             }
         }
@@ -1101,7 +1272,7 @@ final class AppStore {
             showToast(missionStartBlockMessage)
             return
         }
-        guard Self.storedProviderCredential(using: keychain) != nil else {
+        guard provider(model: effectivePlannerModel) != nil else {
             missionPhase = .error("请先在设置里保存 API Key 或网页登录授权")
             return
         }
@@ -1626,6 +1797,11 @@ final class AppStore {
     }
 
     private func readableError(_ error: Error) -> String {
+        if let providerError = error as? ProviderError, providerError == .unauthorized {
+            return currentRuntimeProfile?.kind == .chatGPTOAuth
+                ? "ChatGPT 登录已过期，请在设置重新登录"
+                : "API key 无效或无权限"
+        }
         if let urlError = error as? URLError {
             return urlError.localizedDescription
         }
@@ -1762,7 +1938,7 @@ final class AppStore {
         guard !text.isEmpty, !chatStreaming else {
             return false
         }
-        guard let provider = provider(model: companion.model) else {
+        guard let provider = provider(model: companion.model, companionId: companion.id) else {
             showToast("请先在设置里保存 API Key 或网页登录授权")
             return false
         }

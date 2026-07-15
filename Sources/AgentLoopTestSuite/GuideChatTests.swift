@@ -209,7 +209,7 @@ private func runGuideChat(
     // 规划走回退（空脚本）也不影响建队
     let orch = Orchestrator(
         db: db,
-        makeProvider: { _ in MockProvider(script: []) },
+        makeProvider: { _, _ in MockProvider(script: []) },
         artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
         tickInterval: nil
     )

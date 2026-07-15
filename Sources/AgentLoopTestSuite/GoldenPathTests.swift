@@ -110,7 +110,7 @@ private func goldenCardDraftInput(
     let modelCalls = ModelCallLog()
     let orch = Orchestrator(
         db: db,
-        makeProvider: { model in
+        makeProvider: { model, _ in
             modelCalls.append(model)
             switch model {
             case "planner-model": return plannerProvider
@@ -219,7 +219,7 @@ private func goldenCardDraftInput(
     ])
     let orch = Orchestrator(
         db: db,
-        makeProvider: { model in
+        makeProvider: { model, _ in
             switch model {
             case "planner-model": return plannerProvider
             case "model-a": return providerA

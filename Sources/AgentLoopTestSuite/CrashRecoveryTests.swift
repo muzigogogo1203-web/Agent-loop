@@ -85,7 +85,7 @@ private actor RecoveryHangingProvider: LLMProvider {
     // 「重启」：全新 Orchestrator（内存注册表为空）→ 启动恢复
     let orch = Orchestrator(
         db: db,
-        makeProvider: { _ in MockProvider(script: [recoveryDoneTurn()]) },
+        makeProvider: { _, _ in MockProvider(script: [recoveryDoneTurn()]) },
         artifactStoreRoot: try recoveryArtifactRoot(),
         tickInterval: nil
     )
@@ -116,7 +116,7 @@ private actor RecoveryHangingProvider: LLMProvider {
     let hanging = RecoveryHangingProvider()
     let orch = Orchestrator(
         db: db,
-        makeProvider: { _ in hanging },
+        makeProvider: { _, _ in hanging },
         artifactStoreRoot: try recoveryArtifactRoot(),
         tickInterval: nil
     )

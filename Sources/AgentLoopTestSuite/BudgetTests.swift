@@ -76,7 +76,7 @@ private actor BudgetHangingProvider: LLMProvider {
 
     let orch = Orchestrator(
         db: db,
-        makeProvider: { _ in MockProvider(script: [budgetDoneTurn()]) },
+        makeProvider: { _, _ in MockProvider(script: [budgetDoneTurn()]) },
         artifactStoreRoot: try budgetArtifactRoot(),
         tickInterval: nil
     )
@@ -100,7 +100,7 @@ private actor BudgetHangingProvider: LLMProvider {
 
     let orch = Orchestrator(
         db: db,
-        makeProvider: { _ in MockProvider(script: [budgetDoneTurn()]) },
+        makeProvider: { _, _ in MockProvider(script: [budgetDoneTurn()]) },
         artifactStoreRoot: try budgetArtifactRoot(),
         tickInterval: nil
     )
@@ -144,7 +144,7 @@ private actor BudgetHangingProvider: LLMProvider {
 
     let orch = Orchestrator(
         db: db,
-        makeProvider: { _ in MockProvider(script: []) },
+        makeProvider: { _, _ in MockProvider(script: []) },
         artifactStoreRoot: try budgetArtifactRoot(),
         tickInterval: nil
     )
@@ -174,7 +174,7 @@ private actor BudgetHangingProvider: LLMProvider {
 
     let orch = Orchestrator(
         db: db,
-        makeProvider: { _ in MockProvider(script: []) },
+        makeProvider: { _, _ in MockProvider(script: []) },
         artifactStoreRoot: try budgetArtifactRoot(),
         tickInterval: nil
     )
@@ -202,7 +202,7 @@ private actor BudgetHangingProvider: LLMProvider {
 
     let orch = Orchestrator(
         db: db,
-        makeProvider: { _ in BudgetHangingProvider() },
+        makeProvider: { _, _ in BudgetHangingProvider() },
         artifactStoreRoot: try budgetArtifactRoot(),
         tickInterval: nil
     )

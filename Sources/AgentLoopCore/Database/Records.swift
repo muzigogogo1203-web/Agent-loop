@@ -133,6 +133,97 @@ public struct CampRecord: Codable, Sendable, FetchableRecord, PersistableRecord 
 
 // MARK: - Companion
 
+public enum RuntimeProfileKind: String, Codable, Sendable, CaseIterable {
+    case anthropicAPI = "anthropic_api"
+    case openAIAPI = "openai_api"
+    case chatGPTOAuth = "chatgpt_oauth"
+}
+
+public enum CompanionModelPolicy: String, Codable, Sendable, CaseIterable {
+    case inherit
+    case pinned
+}
+
+public struct RuntimeProfileRecord: Codable, Sendable, FetchableRecord, PersistableRecord, Identifiable, Equatable {
+    public static let databaseTableName = "runtime_profile"
+
+    public var id: String
+    public var kind: RuntimeProfileKind
+    public var name: String
+    public var baseURL: String?
+    public var credentialAccount: String?
+    public var isDefault: Bool
+    public var createdAt: Date
+
+    public init(
+        id: String,
+        kind: RuntimeProfileKind,
+        name: String,
+        baseURL: String?,
+        credentialAccount: String?,
+        isDefault: Bool,
+        createdAt: Date
+    ) {
+        self.id = id
+        self.kind = kind
+        self.name = name
+        self.baseURL = baseURL
+        self.credentialAccount = credentialAccount
+        self.isDefault = isDefault
+        self.createdAt = createdAt
+    }
+
+    public static func new(
+        kind: RuntimeProfileKind,
+        name: String,
+        baseURL: String? = nil,
+        credentialAccount: String? = nil,
+        isDefault: Bool = false
+    ) -> RuntimeProfileRecord {
+        RuntimeProfileRecord(
+            id: UUID().uuidString,
+            kind: kind,
+            name: name,
+            baseURL: baseURL,
+            credentialAccount: credentialAccount,
+            isDefault: isDefault,
+            createdAt: Date()
+        )
+    }
+}
+
+public struct ReconciliationItem: Sendable, Equatable, Identifiable {
+    public enum Scope: Sendable, Equatable {
+        case companion(id: String, name: String)
+        case defaultModel
+        case distillModel
+        case plannerModel
+    }
+
+    public let id: String
+    public let scope: Scope
+    public let model: String
+    public let profileId: String
+    public let profileName: String
+
+    public init(scope: Scope, model: String, profileId: String, profileName: String) {
+        self.scope = scope
+        self.model = model
+        self.profileId = profileId
+        self.profileName = profileName
+        switch scope {
+        case .companion(let id, _):
+            self.id = "companion:\(id):\(profileId):\(model)"
+        case .defaultModel:
+            self.id = "default:\(profileId):\(model)"
+        case .distillModel:
+            self.id = "distill:\(profileId):\(model)"
+        case .plannerModel:
+            self.id = "planner:\(profileId):\(model)"
+        }
+    }
+}
+
 public struct CompanionRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "companion"
 
@@ -148,10 +239,14 @@ public struct CompanionRecord: Codable, Sendable, FetchableRecord, PersistableRe
     public var toolsJson: String
     public var kind: Kind
     public var campId: String?
+    public var runtimeProfileId: String?
+    public var modelPolicy: CompanionModelPolicy
     public var createdAt: Date
 
     public init(id: String, name: String, color: String, rolePrompt: String,
-                model: String, toolsJson: String, kind: Kind, campId: String?, createdAt: Date) {
+                model: String, toolsJson: String, kind: Kind, campId: String?,
+                runtimeProfileId: String? = nil, modelPolicy: CompanionModelPolicy = .pinned,
+                createdAt: Date) {
         self.id = id
         self.name = name
         self.color = color
@@ -160,6 +255,8 @@ public struct CompanionRecord: Codable, Sendable, FetchableRecord, PersistableRe
         self.toolsJson = toolsJson
         self.kind = kind
         self.campId = campId
+        self.runtimeProfileId = runtimeProfileId
+        self.modelPolicy = modelPolicy
         self.createdAt = createdAt
     }
 
