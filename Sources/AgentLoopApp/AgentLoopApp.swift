@@ -1,10 +1,15 @@
 import SwiftUI
 @preconcurrency import UserNotifications
+import AgentLoopCore
 
 @main
 struct AgentLoopApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @State private var store = AppStore()
+
+    init() {
+        BoardServerBridgeMain.exitIfRequested()
+    }
 
     var body: some Scene {
         WindowGroup("Coding 牧场") {

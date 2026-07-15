@@ -48,7 +48,7 @@ private func askOrchestrator(
 ) -> Orchestrator {
     Orchestrator(
         db: db,
-        makeProvider: { model in providers[model] ?? MockProvider(script: []) },
+        makeProvider: { model, _ in providers[model] ?? MockProvider(script: []) },
         artifactStoreRoot: root.appendingPathComponent("artifacts"),
         tickInterval: nil
     )

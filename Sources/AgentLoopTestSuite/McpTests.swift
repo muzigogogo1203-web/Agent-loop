@@ -626,7 +626,7 @@ private func runCardCollectingTools(
     try FileManager.default.createDirectory(at: artifactRoot, withIntermediateDirectories: true)
     let orchestrator = Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: artifactRoot,
         tickInterval: nil,
         mcpManager: manager

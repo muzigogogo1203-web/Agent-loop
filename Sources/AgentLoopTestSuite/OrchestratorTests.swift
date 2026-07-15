@@ -70,7 +70,7 @@ private func doneTurn(summary: String = "done") -> TurnResult {
 private func orchestrator(db: AppDatabase, provider: any LLMProvider) throws -> Orchestrator {
     try Orchestrator(
         db: db,
-        makeProvider: { _ in provider },
+        makeProvider: { _, _ in provider },
         artifactStoreRoot: artifactRoot(),
         tickInterval: nil
     )
@@ -278,7 +278,7 @@ private func orchestrationRuns(_ db: AppDatabase, missionId: String) throws -> [
     ]
     let orch = try Orchestrator(
         db: db,
-        makeProvider: { model in
+        makeProvider: { model, _ in
             switch model {
             case "model-0": providers[0]
             case "model-1": providers[1]
@@ -321,7 +321,7 @@ private func orchestrationRuns(_ db: AppDatabase, missionId: String) throws -> [
     let providerB = GatedProvider(script: [doneTurn(summary: "B1")])
     let orch = try Orchestrator(
         db: db,
-        makeProvider: { model in model == "model-0" ? providerA : providerB },
+        makeProvider: { model, _ in model == "model-0" ? providerA : providerB },
         artifactStoreRoot: artifactRoot(),
         tickInterval: nil
     )
@@ -355,7 +355,7 @@ private func orchestrationRuns(_ db: AppDatabase, missionId: String) throws -> [
     let providerB = GatedProvider(script: [doneTurn(summary: "B1")])
     let orch = try Orchestrator(
         db: db,
-        makeProvider: { model in model == "model-0" ? providerA : providerB },
+        makeProvider: { model, _ in model == "model-0" ? providerA : providerB },
         artifactStoreRoot: artifactRoot(),
         tickInterval: nil
     )
@@ -385,7 +385,7 @@ private func orchestrationRuns(_ db: AppDatabase, missionId: String) throws -> [
     let providerB = GatedProvider(script: [doneTurn(summary: "B")])
     let orch = try Orchestrator(
         db: db,
-        makeProvider: { model in model == "model-0" ? providerA : providerB },
+        makeProvider: { model, _ in model == "model-0" ? providerA : providerB },
         artifactStoreRoot: artifactRoot(),
         tickInterval: nil
     )
