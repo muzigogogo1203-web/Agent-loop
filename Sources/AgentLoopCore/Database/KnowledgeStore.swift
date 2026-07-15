@@ -213,6 +213,17 @@ extension AppDatabase {
         return id
     }
 
+    /// 系统播报进营地管家线程：纯本地注入 role=guide 消息，不走 LLM。
+    @discardableResult
+    public func appendGuideBroadcast(campId: String, text: String) throws -> String {
+        let thread = try findOrCreateGuideThread(campId: campId)
+        return try appendChatMessage(
+            threadId: thread.id,
+            role: "guide",
+            contentJson: try JSONValue.object(["text": .string(text)]).encodedString()
+        )
+    }
+
     public func updateChatMessageContent(id: String, contentJson: String) throws {
         try pool.write { db in
             guard var message = try ChatMessageRecord.fetchOne(db, key: id) else {

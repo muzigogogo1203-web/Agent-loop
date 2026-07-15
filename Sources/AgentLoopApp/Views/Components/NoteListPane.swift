@@ -51,6 +51,7 @@ struct NoteListPane: View {
     let title: String
     let items: [NoteItem]
     let emptyText: String
+    var isReadOnly = false
     var onSave: (_ id: String, _ title: String, _ body: String) -> Void
     var onTogglePin: (_ id: String) -> Void
     var onDelete: (_ id: String) -> Void
@@ -141,6 +142,7 @@ struct NoteListPane: View {
                 if let item = pendingDelete { onDelete(item.id) }
                 pendingDelete = nil
             }
+            .disabled(isReadOnly)
             Button("再想想", role: .cancel) { pendingDelete = nil }
         } message: {
             Text("删除后不可恢复。")
@@ -148,6 +150,7 @@ struct NoteListPane: View {
         .sheet(item: $editingItem) { item in
             NoteEditorSheet(
                 item: item,
+                isReadOnly: isReadOnly,
                 onSave: { title, body in
                     onSave(item.id, title, body)
                     editingItem = nil
@@ -233,6 +236,8 @@ struct NoteListPane: View {
             .contentShape(RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
         }
         .buttonStyle(.plain)
+        .disabled(isReadOnly)
+        .help(isReadOnly ? "营地已归档，恢复后才能编辑笔记" : "")
         .background(
             RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
                 .fill(Camp.ember.opacity(editingItem?.id == item.id ? 0.08 : 0))
@@ -241,13 +246,16 @@ struct NoteListPane: View {
             Button(item.pinned ? "取消置顶" : "置顶") {
                 onTogglePin(item.id)
             }
+            .disabled(isReadOnly)
             Button("编辑…") {
                 editingItem = item
             }
+            .disabled(isReadOnly)
             Divider()
             Button("删除…", role: .destructive) {
                 pendingDelete = item // 二次确认（UX 审计 P2：沉淀成果不可误删）
             }
+            .disabled(isReadOnly)
         }
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
@@ -256,6 +264,7 @@ struct NoteListPane: View {
 /// 行内编辑 sheet：标题 + 正文 + 删除
 private struct NoteEditorSheet: View {
     let item: NoteItem
+    let isReadOnly: Bool
     var onSave: (_ title: String, _ body: String) -> Void
     var onDelete: () -> Void
     var onCancel: () -> Void
@@ -288,6 +297,7 @@ private struct NoteEditorSheet: View {
                     RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
                         .stroke(Camp.line, lineWidth: 1)
                 )
+                .disabled(isReadOnly)
 
             TextEditor(text: $bodyText)
                 .font(.callout)
@@ -299,6 +309,7 @@ private struct NoteEditorSheet: View {
                     RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
                         .stroke(Camp.line, lineWidth: 1)
                 )
+                .disabled(isReadOnly)
 
             HStack {
                 if confirmingDelete {
@@ -306,6 +317,7 @@ private struct NoteEditorSheet: View {
                         onDelete()
                     }
                     .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
+                    .disabled(isReadOnly)
                     Button("再想想") {
                         confirmingDelete = false
                     }
@@ -317,6 +329,7 @@ private struct NoteEditorSheet: View {
                         confirmingDelete = true
                     }
                     .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
+                    .disabled(isReadOnly)
                 }
                 Spacer()
                 Button("取消", action: onCancel)
@@ -327,7 +340,7 @@ private struct NoteEditorSheet: View {
                 }
                 .buttonStyle(CampPrimaryButtonStyle(size: .small))
                 .keyboardShortcut(.defaultAction)
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(isReadOnly || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .padding(18)

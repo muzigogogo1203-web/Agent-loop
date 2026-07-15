@@ -4,6 +4,19 @@ import Network
 import Security
 import AgentLoopCore
 
+private final class OpenAIOAuthReloginHandler: @unchecked Sendable {
+    @MainActor weak var store: AppStore?
+
+    func markPermanentFailure() {
+        Task { @MainActor [weak self] in
+            guard let store = self?.store else { return }
+            store.oauthNeedsRelogin = true
+            store.oauthLoginStatus = "ChatGPT 登录已过期，请在设置里重新登录"
+            store.reload()
+        }
+    }
+}
+
 @MainActor @Observable
 final class AppStore {
     struct ActivityItem: Identifiable, Equatable {
@@ -19,9 +32,12 @@ final class AppStore {
     private let stateDirectoryLock: StateDirectoryLock
     let db: AppDatabase
     let keychain: KeychainStore
+    private let openAIOAuthSession: OpenAIOAuthSession?
     let artifactStoreRoot: URL
     let reportStoreRoot: URL
     let orchestrator: Orchestrator
+    let scheduledMissionNotifier: ScheduledMissionNotifier
+    let missionScheduler: MissionScheduler
     /// MCP 驿站（M8-D8：绞杀第二刀，领域状态独立成 store）
     let mcp: McpStore
 
@@ -38,6 +54,7 @@ final class AppStore {
         didSet { UserDefaults.standard.set(preferredCredentialSource.rawValue, forKey: "preferredCredentialSource") }
     }
     var oauthLoginStatus: String?
+    var oauthNeedsRelogin = false
     /// M6-D8：Tavily key 在场与否决定 web_search 是否可用（编辑器置灰提示用）
     var searchKeyPresent = false
     /// M6-D11：默认模型持久化（修「重启复位」bug）
@@ -81,6 +98,11 @@ final class AppStore {
     var haltPersistencePending = false
     var haltErrorMessage: String?
     var kernelStartupRecoveryPending = false
+    var pendingScheduleCatchups: [ScheduleCatchup] = []
+    /// 反刍真实阶段(内存态,UI 展示用;key=ingestionId)
+    var ruminationStages: [String: RuminationStage] = [:]
+    /// 设置页「测试连接」状态文案
+    var modelConnectionTestStatus: String?
 
     var missionStartBlocked: Bool {
         kernelStartupRecoveryPending || campHalted || haltOperationState != .idle
@@ -215,6 +237,7 @@ final class AppStore {
     private var missionTask: Task<Void, Never>?
     private var kernelEventsTask: Task<Void, Never>?
     private var oauthCallbackListener: NWListener?
+    private var sentScheduledMissionNotifications: Set<String> = []
 
     /// 新行动表单草稿（按营地暂存，防切页丢输入——UX 审计 P2）
     struct MissionDraft {
@@ -268,7 +291,19 @@ final class AppStore {
 
     init() {
         let keychainStore = KeychainStore()
+        let reloginHandler = OpenAIOAuthReloginHandler()
+        let openAISession = Self.isUIPreview ? nil : OpenAIOAuthSession(
+            store: keychainStore,
+            accessTokenAccount: Self.oauthAccessTokenAccount,
+            refreshTokenAccount: Self.oauthRefreshTokenAccount,
+            idTokenAccount: Self.oauthIDTokenAccount,
+            chatGPTAccountIDAccount: Self.oauthChatGPTAccountIDAccount,
+            onPermanentFailure: {
+                reloginHandler.markPermanentFailure()
+            }
+        )
         keychain = keychainStore
+        openAIOAuthSession = openAISession
         apiFormat = ProviderAPIFormat(
             rawValue: UserDefaults.standard.string(forKey: "apiFormat") ?? ""
         ) ?? .anthropicMessages
@@ -327,7 +362,8 @@ final class AppStore {
                     credential: credential,
                     format: format,
                     model: model,
-                    baseURL: base
+                    baseURL: base,
+                    tokenRefresher: Self.tokenRefresher(for: openAISession)
                 )
             },
             artifactStoreRoot: artifactStoreRoot,
@@ -340,6 +376,13 @@ final class AppStore {
             },
             mcpManager: mcpManager,
             requiresStartupRecovery: !isPreview
+        )
+        let notifier = ScheduledMissionNotifier()
+        scheduledMissionNotifier = notifier
+        missionScheduler = MissionScheduler(
+            db: database,
+            orchestrator: orchestrator,
+            plannerModel: { AppStore.scheduledPlannerModelFromDefaults() }
         )
         try! db.ensureCodingRanchBootstrap()
         apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
@@ -369,9 +412,20 @@ final class AppStore {
             ShellProcessRegistry.shared.terminateAll()
         }
         mcp.onToast = { [weak self] message in self?.showToast(message) }
+        missionScheduler.onPendingCatchupsChanged = { [weak self] catchups in
+            self?.pendingScheduleCatchups = catchups
+            if !catchups.isEmpty {
+                self?.showToast("有定时行动错过了触发点，等待你确认是否补跑")
+            }
+        }
+        missionScheduler.onScheduleFired = { [weak self] missionId in
+            self?.reloadMissionList()
+            self?.notifyScheduledMissionOutcomeIfNeeded(missionId: missionId)
+        }
         reload()
         startKernelEventListener(recoverKernel: !Self.isUIPreview)
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
+        reloginHandler.store = self
     }
 
     /// 环境变量 AGENTLOOP_UI_PREVIEW=1 时为 UI 预览模式：不读钥匙串、不调度任务
@@ -379,6 +433,13 @@ final class AppStore {
     /// 预览直达（截图循环用）：启动即打开指定行动，可选直接进小剧场
     static let previewMissionId = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_MISSION"]
     static let previewTheater = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_THEATER"] == "1"
+
+    nonisolated private static func scheduledPlannerModelFromDefaults() -> String {
+        let planner = UserDefaults.standard.string(forKey: "plannerModel") ?? ""
+        if !planner.isEmpty { return planner }
+        let storedDefault = UserDefaults.standard.string(forKey: "defaultModel") ?? ""
+        return storedDefault.isEmpty ? "claude-sonnet-4-6" : storedDefault
+    }
 
     nonisolated private static func nonEmptyCredential(_ value: String?) -> String? {
         guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -415,14 +476,16 @@ final class AppStore {
         credential: StoredCredential?,
         format: ProviderAPIFormat,
         model: String,
-        baseURL: URL
+        baseURL: URL,
+        tokenRefresher: (@Sendable () async throws -> String)? = nil
     ) -> any LLMProvider {
         if format == .openAIChatCompletions,
            credential?.source == .webLogin {
             return OpenAIResponsesProvider(
                 accessToken: credential?.value ?? "",
                 accountID: credential?.chatGPTAccountID ?? "",
-                model: model
+                model: model,
+                tokenRefresher: tokenRefresher
             )
         }
         return LLMProviderFactory.make(
@@ -432,6 +495,15 @@ final class AppStore {
             model: model,
             baseURL: baseURL
         )
+    }
+
+    nonisolated private static func tokenRefresher(
+        for session: OpenAIOAuthSession?
+    ) -> (@Sendable () async throws -> String)? {
+        guard let session else { return nil }
+        return {
+            try await session.refreshedAccessToken()
+        }
     }
 
     func reload() {
@@ -487,8 +559,157 @@ final class AppStore {
             credential: credential,
             format: apiFormat,
             model: model,
-            baseURL: base
+            baseURL: base,
+            tokenRefresher: Self.tokenRefresher(for: openAIOAuthSession)
         )
+    }
+
+    // MARK: - 定时行动逻辑接线（UI 由 Claude 单独实现）
+
+    func saveScheduledMissionTemplate(_ template: MissionTemplateRecord) -> String? {
+        do {
+            try db.saveMissionTemplate(template)
+            return nil
+        } catch {
+            return readableError(error)
+        }
+    }
+
+    func saveMissionSchedule(_ schedule: ScheduleRecord) {
+        Task { [weak self] in
+            guard let self else { return }
+            if schedule.enabled {
+                await scheduledMissionNotifier.requestAuthorizationOnFirstScheduleEnable()
+            }
+            do {
+                try db.saveSchedule(schedule)
+                missionScheduler.refresh()
+            } catch {
+                showToast("保存日程失败：\(readableError(error))")
+            }
+        }
+    }
+
+    func setMissionScheduleEnabled(id: String, enabled: Bool) {
+        Task { [weak self] in
+            guard let self else { return }
+            if enabled {
+                await scheduledMissionNotifier.requestAuthorizationOnFirstScheduleEnable()
+            }
+            do {
+                _ = try db.setScheduleEnabled(id: id, enabled: enabled)
+                missionScheduler.refresh()
+            } catch {
+                showToast("修改日程失败：\(readableError(error))")
+            }
+        }
+    }
+
+    func deleteMissionSchedule(id: String) {
+        do {
+            try db.deleteSchedule(id: id)
+            missionScheduler.refresh()
+        } catch {
+            showToast("删除日程失败：\(readableError(error))")
+        }
+    }
+
+    func scheduleGroups(campId: String) -> [(template: MissionTemplateRecord, schedules: [ScheduleRecord])] {
+        let templates = (try? db.missionTemplates(campId: campId)) ?? []
+        let schedules = (try? db.schedules(campId: campId)) ?? []
+        return templates.map { template in
+            (template, schedules.filter { $0.templateId == template.id })
+        }
+    }
+
+    func deleteScheduledMissionTemplate(id: String) {
+        do {
+            try db.deleteMissionTemplate(id: id)
+            missionScheduler.refresh()
+        } catch {
+            showToast("删除模板失败：\(readableError(error))")
+        }
+    }
+
+    func runScheduleNow(id: String) {
+        Task { [weak self] in
+            guard let self else { return }
+            await missionScheduler.runNow(scheduleId: id)
+            reloadMissionList()
+        }
+    }
+
+    func resolveScheduleCatchup(_ catchup: ScheduleCatchup, run: Bool) {
+        Task { [weak self] in
+            guard let self else { return }
+            await missionScheduler.resolveCatchup(catchup, run: run)
+            reloadMissionList()
+        }
+    }
+
+    func scheduleCatchupTitle(_ catchup: ScheduleCatchup) -> String {
+        if let name = (try? db.missionTemplate(id: catchup.templateId))?.name {
+            return "定时行动「\(name)」"
+        }
+        return "定时行动"
+    }
+
+    /// 设置页「测试连接」:用当前凭据发一次最小请求,人话化报告结果。
+    func testModelConnection() {
+        guard let provider = provider(model: defaultModel) else {
+            modelConnectionTestStatus = "还没有可用凭据——先保存 API Key 或完成网页登录"
+            return
+        }
+        modelConnectionTestStatus = "正在测试连接…"
+        let model = defaultModel
+        Task { [weak self] in
+            do {
+                let stream = provider.streamTurn(
+                    system: "Connectivity check. Reply with OK.",
+                    history: [.user("ping")],
+                    tools: [],
+                    toolChoice: .auto,
+                    maxTokens: 8
+                )
+                for try await event in stream {
+                    if case .turn = event { break }
+                }
+                await MainActor.run { [weak self] in
+                    self?.modelConnectionTestStatus = "连接正常（\(model)）"
+                }
+            } catch {
+                let message = (error as? ProviderError)?.description ?? String(describing: error)
+                await MainActor.run { [weak self] in
+                    self?.modelConnectionTestStatus = "连接失败：\(message)"
+                }
+            }
+        }
+    }
+
+    func nextScheduleMenuTitle(now: Date = Date()) -> String {
+        let items = (try? db.enabledSchedules()) ?? []
+        let calendar = Calendar(identifier: .gregorian)
+        let timeZone = TimeZone.current
+        let next = items.compactMap { item -> (Date, String)? in
+            guard let date = ScheduleMath.nextFireDate(
+                after: now,
+                frequency: item.schedule.frequency,
+                hour: item.schedule.hour,
+                minute: item.schedule.minute,
+                weekday: item.schedule.weekday,
+                calendar: calendar,
+                timeZone: timeZone
+            ) else {
+                return nil
+            }
+            return (date, item.template.name)
+        }.min { $0.0 < $1.0 }
+        guard let next else { return "下次日程：暂无" }
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "M/d HH:mm"
+        return "下次日程：\(formatter.string(from: next.0)) \(next.1)"
     }
 
     func openProviderAuth() {
@@ -568,7 +789,7 @@ final class AppStore {
             oauthCallbackListener = listener
             return true
         } catch {
-            oauthLoginStatus = "OpenAI Auth 需要本机端口 \(OpenAIChatGPTAuth.callbackPort)，当前无法监听：\(readableError(error))"
+            oauthLoginStatus = "OpenAI Auth 需要本机端口 1455，当前被占用（可能是 Codex CLI 或上次未完成的登录）；请关闭占用程序后重试"
             return false
         }
     }
@@ -693,13 +914,21 @@ final class AppStore {
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("codex-cli", forHTTPHeaderField: "User-Agent")
-        request.httpBody = Self.formURLEncoded([
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": redirectURI,
-            "client_id": clientID,
-            "code_verifier": codeVerifier,
-        ])
+        let requestBody: Data? = clientID == OpenAIChatGPTAuth.clientID
+            ? OpenAIChatGPTAuth.tokenRequestBody(code: code, codeVerifier: codeVerifier)
+            : Self.formURLEncoded([
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": redirectURI,
+                "client_id": clientID,
+                "code_verifier": codeVerifier,
+            ])
+        guard let requestBody else {
+            oauthLoginStatus = "无法编码 OAuth 请求体"
+            stopOpenAIAuthCallbackListener()
+            return
+        }
+        request.httpBody = requestBody
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -760,6 +989,7 @@ final class AppStore {
         try? keychain.delete(account: Self.oauthCodeVerifierAccount)
         UserDefaults.standard.removeObject(forKey: Self.oauthStateKey)
         preferredCredentialSource = .webLogin
+        oauthNeedsRelogin = false
         oauthLoginStatus = "网页登录授权已完成"
         stopOpenAIAuthCallbackListener()
         reload()
@@ -1083,6 +1313,7 @@ final class AppStore {
                 await orchestrator.recoverAndReconcile()
                 campHalted = await orchestrator.isHalted
                 kernelStartupRecoveryPending = false
+                missionScheduler.start()
             }
             for await event in stream {
                 handleKernelEvent(event)
@@ -1098,6 +1329,7 @@ final class AppStore {
             missionPhase = .planning
         case .planCompleted(let missionId, _), .missionChanged(let missionId):
             reloadMissionList()
+            notifyScheduledMissionOutcomeIfNeeded(missionId: missionId)
             guard currentMissionId == missionId else { return }
             reloadMission(missionId: missionId)
         case .cardEvent(let cardId, let agentEvent):
@@ -1405,6 +1637,74 @@ final class AppStore {
         return String(describing: error)
     }
 
+    private func notifyScheduledMissionOutcomeIfNeeded(missionId: String) {
+        guard (try? db.scheduledOrigin(missionId: missionId)) != nil,
+              let mission = try? db.mission(id: missionId) else {
+            return
+        }
+        let title = Self.missionTitle(mission)
+        let campId = (try? db.squad(forMission: missionId))?.campId
+        let events = (try? db.events(missionId: missionId, limit: 200)) ?? []
+
+        if events.contains(where: { $0.kind == EventKind.missionBudgetExhausted }) {
+            emitScheduledMissionNotificationOnce(
+                key: "budget:\(missionId)",
+                missionId: missionId,
+                campId: campId,
+                broadcastText: "定时行动「\(title)」预算用尽，已暂停派发。"
+            ) { notifier in
+                await notifier.postBudgetExhausted(missionId: missionId, title: title)
+            }
+        }
+
+        switch mission.status {
+        case .accepted:
+            emitScheduledMissionNotificationOnce(
+                key: "closeout:\(missionId)",
+                missionId: missionId,
+                campId: campId,
+                broadcastText: "定时行动「\(title)」已收营。"
+            ) { notifier in
+                await notifier.postCloseout(missionId: missionId, title: title)
+            }
+        case .failed:
+            emitScheduledMissionNotificationOnce(
+                key: "failure:\(missionId)",
+                missionId: missionId,
+                campId: campId,
+                broadcastText: "定时行动「\(title)」失败了，请回来查看原因。"
+            ) { notifier in
+                await notifier.postFailure(missionId: missionId, title: title)
+            }
+        case .planning, .executing, .delivering:
+            break
+        }
+    }
+
+    private func emitScheduledMissionNotificationOnce(
+        key: String,
+        missionId: String,
+        campId: String?,
+        broadcastText: String,
+        post: @escaping @MainActor (ScheduledMissionNotifier) async -> Void
+    ) {
+        guard sentScheduledMissionNotifications.insert(key).inserted else { return }
+        if let campId {
+            do {
+                try db.appendGuideBroadcast(campId: campId, text: broadcastText)
+                if self.campId == campId {
+                    reloadGuideMessages()
+                }
+            } catch {
+                showToast("管家播报失败：\(readableError(error))")
+            }
+        }
+        let notifier = scheduledMissionNotifier
+        Task { @MainActor in
+            await post(notifier)
+        }
+    }
+
     private static func missionTitle(_ mission: MissionRecord) -> String {
         let refined = mission.goalRefined.trimmingCharacters(in: .whitespacesAndNewlines)
         let raw = mission.goalRaw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1622,6 +1922,26 @@ final class AppStore {
         }
     }
 
+    func isCampArchived(id: String) throws -> Bool {
+        guard let camp = try db.camp(id: id) else {
+            throw RecordNotFoundError(table: "camp", id: id)
+        }
+        return camp.archived
+    }
+
+    private func canWriteCamp(id: String, archivedMessage: String) -> Bool {
+        do {
+            if try isCampArchived(id: id) {
+                showToast(archivedMessage)
+                return false
+            }
+            return true
+        } catch {
+            showToast("营地状态读取失败：\(readableError(error))")
+            return false
+        }
+    }
+
     func camp(forMission missionId: String) -> String? {
         (try? db.squad(forMission: missionId))?.campId
     }
@@ -1635,6 +1955,7 @@ final class AppStore {
 
     func sendGuideChat(text: String) {
         guard !text.isEmpty, !guideStreaming, let campId else { return }
+        guard canWriteCamp(id: campId, archivedMessage: "营地已归档,恢复后才能继续对话") else { return }
         guard let provider = provider(model: defaultModel) else {
             showToast("请先在设置里保存 API Key 或网页登录授权")
             return
@@ -1756,23 +2077,43 @@ final class AppStore {
     // MARK: - 营地笔记 CRUD（M4）
 
     func saveCampNoteEdits(_ note: CampNoteRecord) {
+        guard canWriteCamp(id: note.campId, archivedMessage: "营地已归档,恢复后才能编辑笔记") else { return }
         var updated = note
         updated.updatedAt = Date()
-        try? db.saveCampNote(updated)
-        reloadCampKnowledge()
+        do {
+            try db.saveCampNote(updated)
+            reloadCampKnowledge()
+        } catch {
+            showToast("笔记保存失败：\(readableError(error))")
+        }
     }
 
     func deleteCampNote(id: String) {
-        try? db.deleteCampNote(id: id)
-        reloadCampKnowledge()
+        do {
+            guard let note = try db.pool.read({ database in
+                try CampNoteRecord.fetchOne(database, key: id)
+            }) else {
+                throw RecordNotFoundError(table: "camp_note", id: id)
+            }
+            guard canWriteCamp(id: note.campId, archivedMessage: "营地已归档,恢复后才能删除笔记") else { return }
+            try db.deleteCampNote(id: id)
+            reloadCampKnowledge()
+        } catch {
+            showToast("笔记删除失败：\(readableError(error))")
+        }
     }
 
     func toggleCampNotePin(_ note: CampNoteRecord) {
+        guard canWriteCamp(id: note.campId, archivedMessage: "营地已归档,恢复后才能编辑笔记") else { return }
         var updated = note
         updated.pinned.toggle()
         updated.updatedAt = Date()
-        try? db.saveCampNote(updated)
-        reloadCampKnowledge()
+        do {
+            try db.saveCampNote(updated)
+            reloadCampKnowledge()
+        } catch {
+            showToast("笔记保存失败：\(readableError(error))")
+        }
     }
 
     // MARK: - 伙伴记忆（M4）

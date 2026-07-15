@@ -231,6 +231,33 @@ private func globalDispatchEvents(_ appDatabase: AppDatabase) throws -> [EventRe
     }
 }
 
+@Test func cardStatusTransitionMatrixKeepsReturnForReworkConservative() {
+    func key(_ from: CardStatus, _ to: CardStatus) -> String {
+        "\(from.rawValue)->\(to.rawValue)"
+    }
+    let allowed: Set<String> = [
+        key(.todo, .ready),
+        key(.ready, .running),
+        key(.running, .done),
+        key(.running, .blocked),
+        key(.blocked, .ready),
+        key(.blocked, .canceled),
+        key(.todo, .canceled),
+        key(.ready, .canceled),
+        key(.ready, .blocked),
+        key(.running, .ready),
+        key(.running, .canceled),
+        key(.done, .ready),
+    ]
+
+    for from in CardStatus.allCases {
+        for to in CardStatus.allCases {
+            #expect(from.canTransition(to: to) == allowed.contains(key(from, to)))
+        }
+    }
+    #expect(CardStatus.done.canTransition(to: .ready))
+}
+
 // Fix 3: unknown ids throw instead of silent no-op
 @Test func transitionUnknownCardThrows() throws {
     let db = try tempDB()

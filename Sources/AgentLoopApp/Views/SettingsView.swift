@@ -59,6 +59,12 @@ struct SettingsView: View {
                         }
                         .buttonStyle(CampSecondaryButtonStyle())
                     }
+                    if store.apiFormat == .openAIChatCompletions,
+                       store.preferredCredentialSource == .webLogin {
+                        Label("网页登录固定使用 ChatGPT 官方后端，自定义端点仅对 API key 生效", systemImage: "lock.fill")
+                            .foregroundStyle(Camp.inkSecondary)
+                            .font(.caption)
+                    }
                 }
                 .campCard()
 
@@ -91,6 +97,11 @@ struct SettingsView: View {
                             .foregroundStyle(store.webCredentialPresent ? Camp.moss : Camp.inkSecondary)
                             .font(.caption)
                     }
+                    if store.oauthNeedsRelogin {
+                        Label("登录已过期", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Camp.ember)
+                            .font(.caption)
+                    }
                     Divider()
                     CampSectionTitle("API Key")
                     SecureField("sk-ant-… 或网关分发的 key", text: $key)
@@ -115,6 +126,23 @@ struct SettingsView: View {
                         Text("Key 只进系统钥匙串，不进配置文件。")
                             .font(.caption)
                             .foregroundStyle(Camp.inkSecondary)
+                    }
+                    Divider()
+                    HStack(spacing: 10) {
+                        Button {
+                            store.testModelConnection()
+                        } label: {
+                            Label("测试连接", systemImage: "bolt.horizontal")
+                        }
+                        .buttonStyle(CampSecondaryButtonStyle())
+                        if let status = store.modelConnectionTestStatus {
+                            Text(status)
+                                .font(.caption)
+                                .foregroundStyle(
+                                    status.hasPrefix("连接正常") ? Camp.moss
+                                        : status.hasPrefix("正在") ? Camp.inkSecondary : Camp.charcoalRed
+                                )
+                        }
                     }
                 }
                 .campCard()
@@ -245,6 +273,24 @@ struct SettingsView: View {
 
                 // M8-D6/D7：MCP 驿站（全局注册；营地首页启用；伙伴编辑器按人授权）
                 McpStationSection()
+
+                // M10-D4:菜单栏常驻(默认关;开启后关窗保活,日程照常触发)
+                VStack(alignment: .leading, spacing: 10) {
+                    CampSectionTitle("菜单栏常驻")
+                    Toggle(isOn: Binding(
+                        get: { (NSApp.delegate as? AppDelegate)?.menuBarResidencyEnabled ?? false },
+                        set: { (NSApp.delegate as? AppDelegate)?.setMenuBarResidencyEnabled($0) }
+                    )) {
+                        Text("篝火常驻菜单栏,关窗后牧场继续守着日程")
+                            .font(.callout)
+                            .foregroundStyle(Camp.ink)
+                    }
+                    .toggleStyle(.switch)
+                    Text("关闭时,关掉最后一个窗口即退出;定时行动只在 App 运行期间生效。")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                }
+                .campCard()
 
                 VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("默认预算")

@@ -630,3 +630,44 @@ private func orchestrationRuns(_ db: AppDatabase, missionId: String) throws -> [
     #expect(noteEvent?.payloadJson.contains(#""source":"closeout""#) == true)
     await orch.shutdown()
 }
+
+@Test func closeoutDistillsCoworkNoteWithMissionGoalPrefix() async throws {
+    let db = try orchestratorTempDB()
+    let camp = try db.ensureDefaultCamp()
+    let companion = CompanionRecord.new(
+        name: "甲",
+        color: "blue",
+        rolePrompt: "执行",
+        model: "model-a",
+        campId: camp.id
+    )
+    try db.saveCompanion(companion)
+    let ids = try db.createSingleCardMission(
+        campName: camp.name,
+        squadName: "远征队",
+        goal: "abcdefghijklmnopqrstuv",
+        cardTitle: "画地图",
+        cardDescription: "a",
+        expectedOutput: "o",
+        assigneeId: companion.id,
+        maxTurns: KernelDefaults.maxTurns,
+        campId: camp.id
+    )
+    try db.transitionCard(id: ids.cardId, to: .running, eventKind: "card_started", payload: .object([:]))
+    try db.completeCard(id: ids.cardId, runId: nil, handoff: HandoffPayload(
+        outcome: "完成", summary: "地图画好了", artifacts: [], noArtifactReason: "无", verification: [], risks: []
+    ), durableArtifacts: [])
+
+    let provider = MockProvider(script: [
+        TurnResult(content: [.text(###"{"title":"北岭复盘","body":"## 做了什么\n画了地图"}"###)], stopReason: .endTurn),
+        TurnResult(content: [.text(###"{"title":"协作经验","body":"- 先确认地形"}"###)], stopReason: .endTurn),
+    ])
+    let orch = try orchestrator(db: db, provider: provider)
+    try await orch.closeout(ids.missionId, distillModel: "distill-model")
+    await orch.waitUntilIdle()
+
+    let notes = try db.companionNotes(companionId: companion.id)
+    #expect(notes.count == 1)
+    #expect(notes.first?.title == "共事·abcdefghijklmnopqrst:协作经验")
+    await orch.shutdown()
+}

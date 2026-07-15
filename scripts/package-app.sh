@@ -1,17 +1,36 @@
 #!/bin/zsh
-# AgentLoop 分发打包（M5-5）：release 构建 → .app bundle（Info.plist/图标）→ 签名 → dist/
+# Coding 牧场分发打包(M10-D6'):release 构建 → .app bundle → 签名 →(可选)公证 → DMG + zip
 #
-# 用法：
-#   scripts/package-app.sh                # ad-hoc 签名（本机/亲友分发；跨机首启需右键打开过 Gatekeeper）
-#   SIGN_ID="Developer ID Application: …" scripts/package-app.sh   # 正式签名（有证书时）
+# 用法:
+#   scripts/package-app.sh                      # ad-hoc 签名(本机/亲友分发;跨机首启需右键打开过 Gatekeeper)
+#   scripts/package-app.sh --version 1.0.0      # 显式版本(默认取最新 git tag,无 tag 兜底 1.0.0)
+#   scripts/package-app.sh --feed-url <url>     # 写入 SUFeedURL(为将来 Sparkle 预留,当前无消费方)
+#   SIGN_ID="Developer ID Application: …" scripts/package-app.sh          # 正式签名(硬化运行时 + entitlements)
+#   SIGN_ID="…" NOTARY_PROFILE=<profile> scripts/package-app.sh           # 签名 + 公证 + staple
 #
-# 产出：dist/AgentLoop.app + dist/AgentLoop.zip
+# 公证凭据一次性配置(需要 Apple Developer 账号):
+#   xcrun notarytool store-credentials <profile> --apple-id <id> --team-id <team> --password <app专用密码>
+#
+# 产出:dist/Coding 牧场.app、dist/CodingRanch-<ver>.dmg、dist/CodingRanch-<ver>.zip
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="0.5.0"
+VERSION=""
+FEED_URL=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --version) VERSION="$2"; shift 2 ;;
+    --feed-url) FEED_URL="$2"; shift 2 ;;
+    *) echo "未知参数:$1" >&2; exit 1 ;;
+  esac
+done
+if [[ -z "$VERSION" ]]; then
+  VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)"
+  VERSION="${VERSION:-1.0.0}"
+fi
 BUILD_NUMBER="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 SIGN_ID="${SIGN_ID:--}"
+NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 
 BUILD_FLAGS=(-c release)
 if [[ -n "${CLANG_MODULE_CACHE_PATH:-}" ]]; then
@@ -20,11 +39,12 @@ fi
 echo "==> swift build ${BUILD_FLAGS[*]}"
 swift build "${BUILD_FLAGS[@]}"
 
-APP=dist/AgentLoop.app
+APP_NAME="Coding 牧场"
+APP="dist/${APP_NAME}.app"
 rm -rf dist && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/AgentLoopApp "$APP/Contents/MacOS/AgentLoop"
 
-# 图标：代码绘制 1024 → iconset → icns
+# 图标:代码绘制 1024 → iconset → icns
 echo "==> icon"
 ICON_TMP="$(mktemp -d)"
 swift scripts/make-icon.swift "$ICON_TMP" >/dev/null
@@ -37,6 +57,11 @@ for s in 16 32 128 256 512; do
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 
+FEED_URL_PLIST=""
+if [[ -n "$FEED_URL" ]]; then
+  FEED_URL_PLIST="  <key>SUFeedURL</key><string>${FEED_URL}</string>"
+fi
+
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -45,7 +70,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleExecutable</key><string>AgentLoop</string>
   <key>CFBundleIdentifier</key><string>com.muzi.agentloop</string>
   <key>CFBundleName</key><string>AgentLoop</string>
-  <key>CFBundleDisplayName</key><string>AgentLoop</string>
+  <key>CFBundleDisplayName</key><string>Coding 牧场</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleVersion</key><string>${BUILD_NUMBER}</string>
@@ -65,6 +90,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSMultipleInstancesProhibited</key><true/>
   <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
   <key>NSHumanReadableCopyright</key><string>© 2026 Muzi</string>
+${FEED_URL_PLIST}
   <key>NSAppTransportSecurity</key>
   <dict>
     <key>NSExceptionDomains</key>
@@ -79,12 +105,47 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-echo "==> codesign (${SIGN_ID})"
-codesign --force --options runtime -s "$SIGN_ID" "$APP" 2>/dev/null \
-  || codesign --force -s "$SIGN_ID" "$APP"
+if [[ "$SIGN_ID" != "-" ]]; then
+  echo "==> codesign (Developer ID: ${SIGN_ID})"
+  codesign --force --options runtime --timestamp \
+    --entitlements scripts/agentloop.entitlements \
+    -s "$SIGN_ID" "$APP"
+else
+  echo "==> codesign (ad-hoc;跨机首启需右键打开过 Gatekeeper)"
+  codesign --force -s - "$APP"
+fi
 
 echo "==> zip"
-ditto -c -k --keepParent "$APP" dist/AgentLoop.zip
+ZIP="dist/CodingRanch-${VERSION}.zip"
+ditto -c -k --keepParent "$APP" "$ZIP"
 
-echo "打包完成：$APP（v${VERSION} build ${BUILD_NUMBER}）"
+if [[ -n "$NOTARY_PROFILE" ]]; then
+  if [[ "$SIGN_ID" == "-" ]]; then
+    echo "!! 公证需要 Developer ID 签名(SIGN_ID),已跳过公证" >&2
+  else
+    echo "==> notarize (profile: ${NOTARY_PROFILE})"
+    xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" --wait
+    xcrun stapler staple "$APP"
+    # staple 后重打 zip,分发物带票据
+    ditto -c -k --keepParent "$APP" "$ZIP"
+  fi
+else
+  echo "==> 未配置 NOTARY_PROFILE,跳过公证(脚本头注释有一次性配置方法)"
+fi
+
+echo "==> DMG"
+DMG="dist/CodingRanch-${VERSION}.dmg"
+STAGING="$(mktemp -d)/CodingRanch"
+mkdir -p "$STAGING"
+cp -R "$APP" "$STAGING/"
+ln -s /Applications "$STAGING/Applications"
+hdiutil create -volname "Coding 牧场" -srcfolder "$STAGING" -format UDZO -ov "$DMG" >/dev/null
+if [[ -n "$NOTARY_PROFILE" && "$SIGN_ID" != "-" ]]; then
+  xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
+  xcrun stapler staple "$DMG"
+fi
+
+echo "打包完成:$APP(v${VERSION} build ${BUILD_NUMBER})"
+echo "  - $ZIP"
+echo "  - $DMG"
 codesign -dv "$APP" 2>&1 | head -3

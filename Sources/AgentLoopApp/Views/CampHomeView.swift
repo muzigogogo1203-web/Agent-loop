@@ -16,6 +16,7 @@ struct CampHomeView: View {
     @State private var enabledStations: Set<String> = []
     @State private var showFeedComposer = false
     @State private var showRumination = false
+    @State private var showSchedules = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -59,6 +60,12 @@ struct CampHomeView: View {
         .task(id: campId) {
             store.loadCampHome(campId: campId)
             await store.loadDashboard(campId: campId)
+        }
+        .sheet(isPresented: $showSchedules) {
+            ScheduleManagerView(campId: campId) {
+                showSchedules = false
+            }
+            .environment(store)
         }
         .sheet(isPresented: $showFeedComposer) {
             FeedComposerView(
@@ -128,6 +135,7 @@ struct CampHomeView: View {
                             title: "营地笔记",
                             items: store.campNotes.map(NoteItem.init),
                             emptyText: "还没有营地笔记——回营后会自动沉淀，或让营地管家帮你记。",
+                            isReadOnly: currentCampArchived,
                             onSave: { id, title, body in
                                 guard var record = store.campNotes.first(where: { $0.id == id }) else { return }
                                 record.title = title
@@ -336,6 +344,17 @@ struct CampHomeView: View {
             Label("喂牛", systemImage: "plus.rectangle.on.rectangle")
         }
         .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+        .disabled(currentCampArchived)
+        .opacity(currentCampArchived ? 0.5 : 1)
+        .help(currentCampArchived ? "营地已归档，恢复后才能喂牛" : "把资料或想法喂给这个营地")
+
+        Button {
+            showSchedules = true
+        } label: {
+            Label("日程", systemImage: "calendar.badge.clock")
+        }
+        .buttonStyle(CampSecondaryButtonStyle())
+        .help("任务模板与定时放牛")
 
         Button {
             showRumination = true
@@ -402,6 +421,10 @@ struct CampHomeView: View {
 
     private var modelConnection: ModelConnectionViewState {
         store.apiKeyPresent || store.webCredentialPresent ? .configured : .missing
+    }
+
+    private var currentCampArchived: Bool {
+        store.camps.first { $0.id == campId }?.archived ?? false
     }
 
     private var guideAnimState: CompanionAnimState {
@@ -537,7 +560,7 @@ private struct GuideChatColumn: View {
     }
 
     private var guideMessageField: some View {
-        TextField("跟\(store.guideCompanion?.name ?? "营地管家")说点什么…", text: $input)
+        TextField(guidePlaceholder, text: $input)
             .textFieldStyle(.plain)
             .padding(.horizontal, 11)
             .padding(.vertical, 7)
@@ -546,6 +569,7 @@ private struct GuideChatColumn: View {
                 RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
                     .stroke(Camp.line, lineWidth: 1)
             )
+            .disabled(campArchived)
             .onSubmit(send)
     }
 
@@ -557,8 +581,8 @@ private struct GuideChatColumn: View {
         } else {
             Button("发送", action: send)
                 .buttonStyle(CampPrimaryButtonStyle(size: .small))
-                .disabled(input.isEmpty)
-                .opacity(input.isEmpty ? 0.5 : 1)
+                .disabled(input.isEmpty || campArchived)
+                .opacity(input.isEmpty || campArchived ? 0.5 : 1)
         }
     }
 
@@ -569,9 +593,18 @@ private struct GuideChatColumn: View {
     }
 
     private func send() {
-        guard !input.isEmpty, !store.guideStreaming else { return }
+        guard !input.isEmpty, !store.guideStreaming, !campArchived else { return }
         store.sendGuideChat(text: input)
         input = ""
+    }
+
+    private var campArchived: Bool {
+        guard let campId = store.campId else { return false }
+        return store.camps.first { $0.id == campId }?.archived ?? false
+    }
+
+    private var guidePlaceholder: String {
+        campArchived ? "营地已归档" : "跟\(store.guideCompanion?.name ?? "营地管家")说点什么…"
     }
 
     private var emptyOpening: some View {

@@ -39,6 +39,17 @@ public enum OpenAIChatGPTAuth {
         return components.percentEncodedQuery?.data(using: .utf8)
     }
 
+    public static func refreshTokenRequestBody(refreshToken: String) -> Data? {
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "grant_type", value: "refresh_token"),
+            URLQueryItem(name: "client_id", value: clientID),
+            URLQueryItem(name: "refresh_token", value: refreshToken),
+            URLQueryItem(name: "scope", value: "openid profile email"),
+        ]
+        return components.percentEncodedQuery?.data(using: .utf8)
+    }
+
     public static func chatGPTAccountID(idToken: String, accessToken: String? = nil) -> String? {
         accountID(in: idToken) ?? accessToken.flatMap(accountID(in:))
     }

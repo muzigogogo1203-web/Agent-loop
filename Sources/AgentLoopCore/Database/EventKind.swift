@@ -62,4 +62,8 @@ public enum EventKind {
     public static let cardReturned = "card_returned"
     public static let cardReviewCleared = "card_review_cleared"
     public static let campArchived = "camp_archived"
+
+    // 长明火（M10）：定时行动触发 / 错过
+    public static let scheduleFired = "schedule_fired"
+    public static let scheduleMissed = "schedule_missed"
 }

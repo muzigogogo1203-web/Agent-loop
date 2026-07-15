@@ -68,3 +68,5 @@ public struct KeychainError: Error, Sendable {
         self.status = status
     }
 }
+
+extension KeychainStore: CredentialStore {}

@@ -301,6 +301,39 @@ public final class AppDatabase: Sendable {
             }
             try db.create(index: "action_candidate_camp_status", on: "action_candidate", columns: ["campId", "status"])
         }
+        // M10: 长明火定时行动。v8 已被 Coding 牧场 MVP 占用，本轮必须注册为 v9-evercamp。
+        m.registerMigration("v9-evercamp") { db in
+            try db.create(table: "mission_template") { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull()
+                t.column("goal", .text).notNull()
+                t.column("companionIdsJson", .text).notNull()
+                t.column("workspacePath", .text)
+                t.column("budgetTokens", .integer).notNull()
+                t.column("autonomy", .text).notNull()
+                t.column("campId", .text).notNull().references("camp")
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.create(index: "mission_template_camp", on: "mission_template", columns: ["campId", "createdAt"])
+
+            try db.create(table: "schedule") { t in
+                t.primaryKey("id", .text)
+                t.column("templateId", .text).notNull().references("mission_template")
+                t.column("frequency", .text).notNull()
+                    .check(sql: "frequency IN ('daily', 'weekly')")
+                t.column("hour", .integer).notNull()
+                    .check(sql: "hour >= 0 AND hour <= 23")
+                t.column("minute", .integer).notNull()
+                    .check(sql: "minute >= 0 AND minute <= 59")
+                t.column("weekday", .integer)
+                    .check(sql: "weekday IS NULL OR (weekday >= 1 AND weekday <= 7)")
+                t.column("enabled", .boolean).notNull().defaults(to: false)
+                t.column("lastFiredAt", .datetime)
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.create(index: "schedule_template", on: "schedule", columns: ["templateId"])
+            try db.create(index: "schedule_enabled", on: "schedule", columns: ["enabled", "templateId"])
+        }
         return m
     }
 

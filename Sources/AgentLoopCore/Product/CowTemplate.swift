@@ -45,6 +45,44 @@ public enum CowTemplate {
     }
 }
 
+/// 牛的 UI 展示元数据单一来源(角色/专长/能力/学习目标),避免 App 层散落硬编码文案。
+public struct CowDisplayProfile: Sendable, Equatable {
+    public let role: String
+    public let specialties: [String]
+    public let capabilities: [String]
+    public let learningGoal: String
+
+    public init(role: String, specialties: [String], capabilities: [String], learningGoal: String) {
+        self.role = role
+        self.specialties = specialties
+        self.capabilities = capabilities
+        self.learningGoal = learningGoal
+    }
+}
+
+extension CowTemplate {
+    public static func displayProfile(for companionId: String) -> CowDisplayProfile? {
+        switch companionId {
+        case baseCowId:
+            CowDisplayProfile(
+                role: "Coding 通才",
+                specialties: ["HTML", "小工具", "需求整理"],
+                capabilities: ["拆解目标", "生成单页应用", "引导验收"],
+                learningGoal: "带你完成第一次从资料到成果的放牛"
+            )
+        case testCowId:
+            CowDisplayProfile(
+                role: "验收与测试",
+                specialties: ["测试", "边界检查"],
+                capabilities: ["主流程测试", "边界检查", "失败提示"],
+                learningGoal: "学会用验收标准判断成果"
+            )
+        default:
+            nil
+        }
+    }
+}
+
 public struct CodingRanchBootstrapResult: Sendable {
     public let camp: CampRecord
     public let baseCow: CompanionRecord?

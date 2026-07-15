@@ -26,6 +26,7 @@ struct RootView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .detailOnly
     @State private var showNewCampSheet = false
     @State private var abandonTarget: MissionRecord?
+    @State private var archiveTarget: CampRecord?
     @State private var showResumeConfirmation = false
     @State private var pendingMissionDraft: MissionDraftViewState?
     @State private var lastWindowWidth: CGFloat = 0
@@ -37,6 +38,11 @@ struct RootView: View {
             if store.showsGlobalHaltBanner {
                 globalHaltBanner(compact: windowSize.width < CampLayout.windowCompactWidth)
                 Divider().overlay(Camp.charcoalRed.opacity(0.35))
+            }
+
+            if let catchup = store.pendingScheduleCatchups.first {
+                scheduleCatchupBanner(catchup)
+                Divider().overlay(Camp.amber.opacity(0.35))
             }
 
             NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -307,6 +313,24 @@ struct RootView: View {
         } message: {
             Text("等待中的规划和小目标可能会立即继续调用模型与工具，并产生新的花销。")
         }
+        .confirmationDialog(
+            "归档营地「\(archiveTarget?.name ?? "")」?",
+            isPresented: Binding(
+                get: { archiveTarget != nil },
+                set: { if !$0 { archiveTarget = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("归档", role: .destructive) {
+                if let camp = archiveTarget {
+                    store.setCampArchived(id: camp.id, archived: true)
+                }
+                archiveTarget = nil
+            }
+            Button("再想想", role: .cancel) { archiveTarget = nil }
+        } message: {
+            Text("归档后不能发起新的放牛,资料和历史保留;可随时恢复。")
+        }
         .onChange(of: haltAccessibilityAnnouncement) { _, announcement in
             AccessibilityNotification.Announcement(announcement).post()
         }
@@ -317,6 +341,26 @@ struct RootView: View {
         }
         .fontDesign(.rounded)
         .tint(Camp.ember)
+    }
+
+    /// M10:启动时发现错过的日程,提示补跑(不自动跑,防预算意外)。
+    private func scheduleCatchupBanner(_ catchup: ScheduleCatchup) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .foregroundStyle(Camp.amber)
+            Text("\(store.scheduleCatchupTitle(catchup)) 错过了 \(ScheduleManagerView.stamp(catchup.fireDate)) 的触发")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Camp.ink)
+                .lineLimit(1)
+            Spacer()
+            Button("现在补跑") { store.resolveScheduleCatchup(catchup, run: true) }
+                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+            Button("跳过") { store.resolveScheduleCatchup(catchup, run: false) }
+                .buttonStyle(CampSecondaryButtonStyle())
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Camp.amber.opacity(0.12))
     }
 
     private func globalHaltBanner(compact: Bool) -> some View {
@@ -465,7 +509,7 @@ struct RootView: View {
                     .disabled(store.missionStartBlocked)
                     Divider()
                     Button("归档营地") {
-                        store.setCampArchived(id: camp.id, archived: true)
+                        archiveTarget = camp
                     }
                 } else {
                     Button("恢复营地") {
