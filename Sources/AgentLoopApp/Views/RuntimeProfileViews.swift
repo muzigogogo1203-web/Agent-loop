@@ -21,12 +21,16 @@ struct RuntimeProfileSection: View {
             HStack {
                 CampSectionTitle("供给线")
                 Spacer()
-                Button {
-                    editingProfile = ProfileDraft()
+                Menu {
+                    Button("API / ChatGPT 登录供给线…") { editingProfile = ProfileDraft() }
+                    Divider()
+                    Button("添加 Codex CLI 牧工") { addCliProfile(kind: .cliCodex, name: "Codex CLI") }
+                    Button("添加 Claude Code 牧工") { addCliProfile(kind: .cliClaude, name: "Claude Code") }
                 } label: {
                     Label("新建", systemImage: "plus")
                 }
-                .buttonStyle(CampSecondaryButtonStyle())
+                .menuStyle(.borderlessButton)
+                .fixedSize()
             }
             Text("模型从哪来:官方 API、自定义网关或 ChatGPT 登录。伙伴可以各选各的供给线。")
                 .font(.caption)
@@ -140,6 +144,15 @@ struct RuntimeProfileSection: View {
         return parts.joined(separator: " · ")
     }
 
+    /// V1.1b:一键添加 CLI 牧工供给线(幂等:同 kind 已存在则提示)。CLI 需本机已安装并登录,缺失时派单会被人话化拦下。
+    private func addCliProfile(kind: RuntimeProfileKind, name: String) {
+        if store.runtimeProfiles.contains(where: { $0.kind == kind }) {
+            store.showToast("已经有一条 \(name) 供给线了")
+            return
+        }
+        store.saveRuntimeProfileAndReload(RuntimeProfileRecord.new(kind: kind, name: name))
+    }
+
     private func beginSwitch(to profile: RuntimeProfileRecord) {
         let items = store.reconciliationItems(switchingTo: profile.id)
         if items.isEmpty {
@@ -163,7 +176,9 @@ struct RuntimeProfileSection: View {
         case .anthropicAPI: "Anthropic API / 网关"
         case .openAIAPI: "OpenAI API"
         case .chatGPTOAuth: "ChatGPT 登录"
-        default: "CLI 牧工"  // V1.1b cli_* kinds;专属 UI 在 V1.1b UI 轮
+        case .cliCodex: "Codex CLI 牧工"
+        case .cliClaude: "Claude Code 牧工"
+        @unknown default: "CLI 牧工"
         }
     }
 

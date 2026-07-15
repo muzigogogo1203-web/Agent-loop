@@ -575,7 +575,7 @@ struct TaskRunView: View {
             }
             Divider()
             spendRow(name: "合计 / 预算", tokens: mission.spentTokens, budget: mission.budgetTokens)
-            Text("本地估算：按 API 回报用量累计")
+            Text("本地估算：按 API 回报用量累计;CLI 牧工用量未上报时计 0")
                 .font(.caption2)
                 .foregroundStyle(Camp.inkSecondary)
         }
