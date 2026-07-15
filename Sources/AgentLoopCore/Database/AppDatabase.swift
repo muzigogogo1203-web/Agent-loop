@@ -357,6 +357,35 @@ public final class AppDatabase: Sendable {
             }
             try db.create(index: "companion_runtimeProfileId", on: "companion", columns: ["runtimeProfileId"])
         }
+        m.registerMigration("v11-cli-kinds") { db in
+            try db.create(table: "runtime_profile_v11") { t in
+                t.primaryKey("id", .text)
+                t.column("kind", .text).notNull()
+                    .check(sql: """
+                        kind IN ('anthropic_api', 'openai_api', 'chatgpt_oauth', 'cli_codex', 'cli_claude')
+                        """)
+                t.column("name", .text).notNull()
+                t.column("baseURL", .text)
+                t.column("credentialAccount", .text)
+                t.column("isDefault", .boolean).notNull().defaults(to: false)
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.execute(sql: """
+                INSERT INTO runtime_profile_v11(
+                    id, kind, name, baseURL, credentialAccount, isDefault, createdAt
+                )
+                SELECT id, kind, name, baseURL, credentialAccount, isDefault, createdAt
+                FROM runtime_profile
+                """)
+            try db.drop(index: "runtime_profile_one_default")
+            try db.drop(table: "runtime_profile")
+            try db.rename(table: "runtime_profile_v11", to: "runtime_profile")
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX runtime_profile_one_default
+                ON runtime_profile(isDefault)
+                WHERE isDefault = 1
+                """)
+        }
         return m
     }
 

@@ -95,6 +95,9 @@ extension AppDatabase {
         guard let profile else {
             throw RuntimeProfileStoreError.profileNotFound(profileId)
         }
+        guard !profile.kind.isCLI else {
+            return []
+        }
         guard let catalog = ModelCatalogService.trustedCatalog(profile: profile, defaults: defaults) else {
             return []
         }

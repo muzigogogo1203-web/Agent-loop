@@ -499,6 +499,7 @@ public actor Orchestrator {
                             companionName: companion.name,
                             rolePrompt: companion.rolePrompt,
                             model: companion.model,
+                            runtimeProfileKind: try Self.runtimeProfileKind(for: companion, database: database),
                             toolsJson: companion.toolsJson,
                             autonomy: autonomyByMission[ready.missionId] ?? .standard
                         )
@@ -551,24 +552,30 @@ public actor Orchestrator {
                   running[candidate.card.id] == nil else {
                 continue
             }
-            guard let provider = makeProvider(candidate.model, candidate.assigneeId) else {
-                let message = "伙伴「\(candidate.companionName)」的供给线没有可用模型或凭据，卡片已暂停派发"
-                do {
-                    try db.blockCard(
-                        id: candidate.card.id,
-                        runId: nil,
-                        reason: "other",
-                        detail: message
-                    )
-                    db.appendKernelErrorEvent(missionId: candidate.card.missionId, message: message)
-                    emit(.kernelError(missionId: candidate.card.missionId, message: message))
-                    emit(.missionChanged(missionId: candidate.card.missionId))
-                } catch {
-                    let detail = String(describing: error)
-                    db.appendKernelErrorEvent(missionId: candidate.card.missionId, message: detail)
-                    emit(.kernelError(missionId: candidate.card.missionId, message: detail))
+            let provider: (any LLMProvider)?
+            if candidate.runtimeProfileKind.isCLI {
+                provider = nil
+            } else {
+                guard let resolved = makeProvider(candidate.model, candidate.assigneeId) else {
+                    let message = "伙伴「\(candidate.companionName)」的供给线没有可用模型或凭据，卡片已暂停派发"
+                    do {
+                        try db.blockCard(
+                            id: candidate.card.id,
+                            runId: nil,
+                            reason: "other",
+                            detail: message
+                        )
+                        db.appendKernelErrorEvent(missionId: candidate.card.missionId, message: message)
+                        emit(.kernelError(missionId: candidate.card.missionId, message: message))
+                        emit(.missionChanged(missionId: candidate.card.missionId))
+                    } catch {
+                        let detail = String(describing: error)
+                        db.appendKernelErrorEvent(missionId: candidate.card.missionId, message: detail)
+                        emit(.kernelError(missionId: candidate.card.missionId, message: detail))
+                    }
+                    continue
                 }
-                continue
+                provider = resolved
             }
             let task = Task {
                 await self.run(candidate: candidate, provider: provider)
@@ -1252,7 +1259,7 @@ public actor Orchestrator {
         continuations.removeAll()
     }
 
-    private func run(candidate: DispatchCandidate, provider: any LLMProvider) async {
+    private func run(candidate: DispatchCandidate, provider: (any LLMProvider)?) async {
         do {
             try Task.checkCancellation()
             guard dispatchPhase.permitsDispatch else { throw CancellationError() }
@@ -1293,12 +1300,7 @@ public actor Orchestrator {
             // Re-check before CardRunner atomically claims ready -> running.
             try Task.checkCancellation()
             guard dispatchPhase.permitsDispatch else { throw CancellationError() }
-            let stream = try CardRunner(
-                db: db,
-                provider: provider,
-                artifactStoreRoot: artifactStoreRoot,
-                retryDelays: KernelDefaults.transportRetryDelays
-            ).run(
+            let context = CardExecutionContext(
                 cardId: candidate.card.id,
                 companionName: candidate.companionName,
                 rolePrompt: candidate.rolePrompt,
@@ -1311,6 +1313,25 @@ public actor Orchestrator {
                 autonomy: candidate.autonomy,
                 externalTools: externalTools
             )
+            let backend: any CardExecutionBackend
+            if candidate.runtimeProfileKind.isCLI {
+                backend = CliProcessBackend(
+                    db: db,
+                    artifactStoreRoot: artifactStoreRoot,
+                    profileKind: candidate.runtimeProfileKind
+                )
+            } else {
+                guard let provider else {
+                    throw ProviderUnavailableError(model: candidate.model, companionId: candidate.assigneeId)
+                }
+                backend = ModelLoopBackend(runner: CardRunner(
+                    db: db,
+                    provider: provider,
+                    artifactStoreRoot: artifactStoreRoot,
+                    retryDelays: KernelDefaults.transportRetryDelays
+                ))
+            }
+            let stream = try backend.run(context: context)
             for try await event in stream {
                 await emitFromTask(.cardEvent(cardId: candidate.card.id, event))
             }
@@ -1504,12 +1525,27 @@ public actor Orchestrator {
         try JSONDecoder().decode([String].self, from: Data(json.utf8))
     }
 
+    private static func runtimeProfileKind(
+        for companion: CompanionRecord,
+        database: Database
+    ) throws -> RuntimeProfileKind {
+        let defaultProfile = try RuntimeProfileRecord
+            .filter(Column("isDefault") == true)
+            .fetchOne(database)
+        if let runtimeProfileId = companion.runtimeProfileId,
+           let profile = try RuntimeProfileRecord.fetchOne(database, key: runtimeProfileId) {
+            return profile.kind
+        }
+        return defaultProfile?.kind ?? .anthropicAPI
+    }
+
     private struct DispatchCandidate: Sendable {
         let card: CardRecord
         let assigneeId: String
         let companionName: String
         let rolePrompt: String
         let model: String
+        let runtimeProfileKind: RuntimeProfileKind
         let toolsJson: String
         let autonomy: MissionAutonomy
     }

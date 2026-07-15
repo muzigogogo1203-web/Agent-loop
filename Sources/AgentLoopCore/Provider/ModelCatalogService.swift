@@ -39,8 +39,8 @@ public actor ModelCatalogService {
     @discardableResult
     public func refresh(profile: RuntimeProfileRecord, credential: String) async throws -> [String] {
         switch profile.kind {
-        case .chatGPTOAuth:
-            return Self.staticCatalog(profileID: profile.id, defaults: defaults)
+        case .chatGPTOAuth, .cliCodex, .cliClaude:
+            return Self.staticCatalog(profile: profile, defaults: defaults)
         case .anthropicAPI, .openAIAPI:
             let models = try await fetchModels(profile: profile, credential: credential)
             defaults.setCachedCatalog(models, fetchedAt: now(), profileID: profile.id)
@@ -53,8 +53,8 @@ public actor ModelCatalogService {
         defaults: ProfileScopedDefaults = ProfileScopedDefaults()
     ) -> [String]? {
         switch profile.kind {
-        case .chatGPTOAuth:
-            return staticCatalog(profileID: profile.id, defaults: defaults)
+        case .chatGPTOAuth, .cliCodex, .cliClaude:
+            return staticCatalog(profile: profile, defaults: defaults)
         case .anthropicAPI, .openAIAPI:
             guard isOfficialCatalogProfile(profile),
                   let cached = defaults.cachedCatalog(profileID: profile.id),
@@ -76,15 +76,16 @@ public actor ModelCatalogService {
             return host == "api.anthropic.com"
         case .openAIAPI:
             return host == "api.openai.com"
-        case .chatGPTOAuth:
+        case .chatGPTOAuth, .cliCodex, .cliClaude:
             return true
         }
     }
 
-    private static func staticCatalog(profileID: String, defaults: ProfileScopedDefaults) -> [String] {
-        ProfileScopedDefaults.uniqueModels(
-            KernelDefaults.chatGPTStaticModels + defaults.manualModels(profileID: profileID)
-        )
+    private static func staticCatalog(profile: RuntimeProfileRecord, defaults: ProfileScopedDefaults) -> [String] {
+        let builtIn = profile.kind.isCLI
+            ? KernelDefaults.cliStaticModels
+            : KernelDefaults.chatGPTStaticModels
+        return ProfileScopedDefaults.uniqueModels(builtIn + defaults.manualModels(profileID: profile.id))
     }
 
     private func fetchModels(profile: RuntimeProfileRecord, credential: String) async throws -> [String] {
@@ -102,7 +103,7 @@ public actor ModelCatalogService {
             request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         case .openAIAPI:
             request.setValue("Bearer \(credential.trimmingCharacters(in: .whitespacesAndNewlines))", forHTTPHeaderField: "Authorization")
-        case .chatGPTOAuth:
+        case .chatGPTOAuth, .cliCodex, .cliClaude:
             throw ModelCatalogError.unsupportedProfileKind(profile.kind)
         }
 

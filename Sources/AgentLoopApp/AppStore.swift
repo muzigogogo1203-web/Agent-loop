@@ -522,6 +522,7 @@ final class AppStore {
             profile = defaultProfile
         }
         guard let profile else { return nil }
+        guard !profile.kind.isCLI else { return nil }
 
         let policy = companion?.modelPolicy ?? .pinned
         let model = policy == .inherit
@@ -554,6 +555,8 @@ final class AppStore {
             .anthropicMessages
         case .openAIAPI, .chatGPTOAuth:
             .openAIChatCompletions
+        case .cliCodex, .cliClaude:
+            .openAIChatCompletions
         }
         return makeProvider(
             credential: credential,
@@ -582,6 +585,8 @@ final class AppStore {
             }
             let chatGPTAccountID = nonEmptyCredential(try? keychain.get(account: oauthChatGPTAccountIDAccount))
             return StoredCredential(value: value, source: .webLogin, chatGPTAccountID: chatGPTAccountID)
+        case .cliCodex, .cliClaude:
+            return nil
         }
     }
 
@@ -691,6 +696,8 @@ final class AppStore {
             return Self.apiKeyAccount
         case .chatGPTOAuth:
             return Self.oauthAccessTokenAccount
+        case .cliCodex, .cliClaude:
+            return nil
         }
     }
 
@@ -769,7 +776,7 @@ final class AppStore {
     func refreshCatalog(profileId: String) async -> String? {
         guard let profile = try? db.runtimeProfile(id: profileId) else { return "供给线不存在" }
         let credential: String
-        if profile.kind == .chatGPTOAuth {
+        if profile.kind == .chatGPTOAuth || profile.kind.isCLI {
             credential = ""
         } else if let value = Self.nonEmptyCredential(
             try? keychain.get(account: profile.credentialAccount ?? Self.apiKeyAccount)

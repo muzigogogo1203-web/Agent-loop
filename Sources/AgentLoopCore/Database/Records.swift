@@ -137,6 +137,19 @@ public enum RuntimeProfileKind: String, Codable, Sendable, CaseIterable {
     case anthropicAPI = "anthropic_api"
     case openAIAPI = "openai_api"
     case chatGPTOAuth = "chatgpt_oauth"
+    case cliCodex = "cli_codex"
+    case cliClaude = "cli_claude"
+}
+
+extension RuntimeProfileKind {
+    public var isCLI: Bool {
+        switch self {
+        case .cliCodex, .cliClaude:
+            return true
+        case .anthropicAPI, .openAIAPI, .chatGPTOAuth:
+            return false
+        }
+    }
 }
 
 public enum CompanionModelPolicy: String, Codable, Sendable, CaseIterable {

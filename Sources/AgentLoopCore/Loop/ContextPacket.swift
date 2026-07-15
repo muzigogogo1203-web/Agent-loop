@@ -39,10 +39,11 @@ public struct ContextPacket: Sendable {
         // M6-D4：契约文本随实际工具集渲染——提示词里提到的工具必须真的在场
         let toolSet = Set(toolNames)
         let hasFileTools = !toolSet.isDisjoint(with: ["list_dir", "read_file", "write_file"])
+        let progressToolName = toolSet.contains("progress_note") ? "progress_note" : "add_progress_note"
         var rules: [String] = []
         rules.append("用工具完成真实工作。"
             + (hasFileTools ? "文件操作仅限工作目录内的相对路径。" : ""))
-        rules.append("每完成一个阶段用 add_progress_note 汇报一句话进展。")
+        rules.append("每完成一个阶段用 \(progressToolName) 汇报一句话进展。")
         rules.append("工作完成并自查后，必须调用 complete_card 提交交接包（outcome/summary/artifacts/verification/risks）收尾；artifacts 必须是已写入工作目录的真实文件。")
         rules.append("确定无法继续时调用 block_card 说明原因。")
         rules.append("complete_card 或 block_card 是仅有的两种结束方式；不要用普通文本宣布完成。")

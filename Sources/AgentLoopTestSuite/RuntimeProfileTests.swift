@@ -59,6 +59,77 @@ private func runtimeCompanion(model: String = "model-a", profileId: String? = ni
     #expect(indexes.contains("runtime_profile_one_default"))
 }
 
+@Test func runtimeProfileMigrationV11AllowsCliKindsAndPreservesExistingRows() throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let pool = try DatabasePool(path: directory.appendingPathComponent("v10.sqlite").path)
+    let migrator = AppDatabase.migrator
+    #expect(migrator.migrations.contains("v11-cli-kinds"))
+
+    try migrator.migrate(pool, upTo: "v10-runtime-profiles")
+    try pool.write { db in
+        try db.execute(sql: """
+            INSERT INTO camp(id, name, createdAt) VALUES ('camp-a', 'Camp', CURRENT_TIMESTAMP)
+            """)
+        try db.execute(sql: """
+            INSERT INTO runtime_profile(
+                id, kind, name, baseURL, credentialAccount, isDefault, createdAt
+            ) VALUES (
+                'profile-a', 'anthropic_api', 'API', 'https://api.anthropic.com', 'api-key', 1, CURRENT_TIMESTAMP
+            )
+            """)
+        try db.execute(sql: """
+            INSERT INTO companion(
+                id, name, color, rolePrompt, model, toolsJson, kind, campId, createdAt,
+                runtimeProfileId, modelPolicy
+            ) VALUES (
+                'cow-a', 'Cow', 'blue', 'r', 'model-old', '[]', 'regular', 'camp-a', CURRENT_TIMESTAMP,
+                'profile-a', 'pinned'
+            )
+            """)
+    }
+
+    try migrator.migrate(pool)
+    try migrator.migrate(pool)
+
+    try pool.write { db in
+        try db.execute(sql: """
+            INSERT INTO runtime_profile(
+                id, kind, name, baseURL, credentialAccount, isDefault, createdAt
+            ) VALUES (
+                'cli-codex', 'cli_codex', 'Codex CLI', NULL, NULL, 0, CURRENT_TIMESTAMP
+            )
+            """)
+        try db.execute(sql: """
+            INSERT INTO runtime_profile(
+                id, kind, name, baseURL, credentialAccount, isDefault, createdAt
+            ) VALUES (
+                'cli-claude', 'cli_claude', 'Claude CLI', NULL, NULL, 0, CURRENT_TIMESTAMP
+            )
+            """)
+    }
+
+    let kinds = try pool.read { db in
+        try String.fetchAll(db, sql: "SELECT kind FROM runtime_profile ORDER BY id")
+    }
+    #expect(kinds == ["cli_claude", "cli_codex", "anthropic_api"])
+    let companionProfileId = try pool.read { db in
+        try String.fetchOne(db, sql: "SELECT runtimeProfileId FROM companion WHERE id = 'cow-a'")
+    }
+    #expect(companionProfileId == "profile-a")
+    #expect(throws: DatabaseError.self) {
+        try pool.write { db in
+            try db.execute(sql: """
+                INSERT INTO runtime_profile(
+                    id, kind, name, baseURL, credentialAccount, isDefault, createdAt
+                ) VALUES (
+                    'bad', 'not_allowed', 'Bad', NULL, NULL, 0, CURRENT_TIMESTAMP
+                )
+                """)
+        }
+    }
+}
+
 @Test func runtimeProfileBootstrapSeedsAPIOnly() throws {
     let db = try runtimeProfileTempDB()
     let defaults = ProfileScopedDefaults(defaults: runtimeProfileDefaults())
@@ -264,6 +335,25 @@ private func runtimeCompanion(model: String = "model-a", profileId: String? = ni
     #expect(try db.reconciliationReport(switchingTo: profile.id, defaults: defaults).isEmpty)
 }
 
+@Test func reconciliationSkipsModelJudgementForCliProfiles() throws {
+    let db = try runtimeProfileTempDB()
+    let defaults = ProfileScopedDefaults(defaults: runtimeProfileDefaults())
+    let profile = RuntimeProfileRecord.new(
+        kind: .cliCodex,
+        name: "Codex CLI",
+        baseURL: nil,
+        credentialAccount: nil,
+        isDefault: true
+    )
+    try db.saveRuntimeProfile(profile)
+    try db.saveCompanion(runtimeCompanion(model: "glm-5.2", profileId: profile.id))
+    defaults.setString("bad-default", profileID: profile.id, suffix: "defaultModel")
+    defaults.setString("bad-distill", profileID: profile.id, suffix: "distillModel")
+    defaults.setString("bad-planner", profileID: profile.id, suffix: "plannerModel")
+
+    #expect(try db.reconciliationReport(switchingTo: profile.id, defaults: defaults).isEmpty)
+}
+
 @Suite(.serialized) struct RuntimeProfileCatalogTests {
     @Test func catalogRefreshParsesModelsAndCachesForOfficialProfiles() async throws {
         let defaults = ProfileScopedDefaults(defaults: runtimeProfileDefaults())
@@ -311,6 +401,18 @@ private func runtimeCompanion(model: String = "model-a", profileId: String? = ni
             try await service.refresh(profile: profile, credential: "key")
         }
         #expect(await service.catalog(profile: profile) == ["claude-sonnet-4-6"])
+    }
+
+    @Test func cliProfilesUseStaticPlaceholderCatalog() async throws {
+        let defaults = ProfileScopedDefaults(defaults: runtimeProfileDefaults())
+        let codex = RuntimeProfileRecord.new(kind: .cliCodex, name: "Codex CLI")
+        let claude = RuntimeProfileRecord.new(kind: .cliClaude, name: "Claude CLI")
+        let oauth = RuntimeProfileRecord.new(kind: .chatGPTOAuth, name: "ChatGPT")
+        let service = ModelCatalogService(session: Self.stubbedSession(), defaults: defaults)
+
+        #expect(try await service.refresh(profile: codex, credential: "") == ["cli-default"])
+        #expect(await service.catalog(profile: claude) == ["cli-default"])
+        #expect(await service.catalog(profile: oauth) == ["gpt-5.5"])
     }
 
     private static func stubbedSession() -> URLSession {
