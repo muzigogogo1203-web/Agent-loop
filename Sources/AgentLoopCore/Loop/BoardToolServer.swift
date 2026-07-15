@@ -146,18 +146,22 @@ public final class BoardToolServer: @unchecked Sendable {
     }
 
     public func stop() {
-        let fds: (Int32, Int32) = {
-            lock.lock()
-            defer { lock.unlock() }
-            guard !stopped else { return (-1, -1) }
-            stopped = true
-            let result = (listenFD, activeConnectionFD)
-            listenFD = -1
-            activeConnectionFD = -1
-            return result
-        }()
-        if fds.0 >= 0 { close(fds.0) }
-        if fds.1 >= 0 { close(fds.1) }
+        lock.lock()
+        guard !stopped else {
+            lock.unlock()
+            return
+        }
+        stopped = true
+        let listenerToClose = listenFD
+        listenFD = -1
+        // 活动连接由 handle() 的 FileHandle 唯一拥有。这里只 shutdown 以唤醒 read；
+        // 在锁内执行可防止 handler 先释放并关闭后 fd 被系统复用。
+        if activeConnectionFD >= 0 {
+            _ = shutdown(activeConnectionFD, SHUT_RDWR)
+        }
+        lock.unlock()
+
+        if listenerToClose >= 0 { close(listenerToClose) }
         try? FileManager.default.removeItem(at: socketURL)
     }
 
@@ -209,19 +213,27 @@ public final class BoardToolServer: @unchecked Sendable {
                 if isStopped() { return }
                 continue
             }
+            guard Self.disableSIGPIPE(connection) else {
+                close(connection)
+                continue
+            }
             guard claimConnection(connection) else {
                 close(connection)
                 continue
             }
             DispatchQueue.global(qos: .utility).async { [weak self] in
                 self?.handle(connection: connection)
-                self?.releaseConnection(connection)
             }
         }
     }
 
     private func handle(connection fd: Int32) {
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        defer {
+            // 先从共享状态解绑，再由唯一 owner 关闭，避免 stop() 命中已复用的 fd。
+            releaseConnection(fd)
+            try? handle.close()
+        }
         var authorized = false
         var buffer = Data()
         while true {
@@ -246,6 +258,17 @@ public final class BoardToolServer: @unchecked Sendable {
         let n = buffer.withUnsafeMutableBytes { Darwin.read(fd, $0.baseAddress, 4096) }
         guard n > 0 else { return nil }
         return Data(buffer[0..<n])
+    }
+
+    private static func disableSIGPIPE(_ fd: Int32) -> Bool {
+        var enabled: Int32 = 1
+        return setsockopt(
+            fd,
+            SOL_SOCKET,
+            SO_NOSIGPIPE,
+            &enabled,
+            socklen_t(MemoryLayout<Int32>.size)
+        ) == 0
     }
 
     private func processLine(_ line: String, authorized: inout Bool, handle: FileHandle) -> Bool {

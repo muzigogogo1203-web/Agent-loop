@@ -270,6 +270,81 @@ private func scheduleTemplateFixture(
     #expect(try pool.read { try $0.tableExists("schedule") })
 }
 
+@Test func evercampMigrationV9AdoptsValidatedLegacyV8Tables() throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let pool = try DatabasePool(path: directory.appendingPathComponent("legacy-v8.sqlite").path)
+    let migrator = AppDatabase.migrator
+    try migrator.migrate(pool, upTo: "v8-coding-ranch")
+
+    try pool.write { db in
+        try db.execute(sql: """
+            CREATE TABLE mission_template (
+                id TEXT PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                goal TEXT NOT NULL,
+                companionIdsJson TEXT NOT NULL,
+                workspacePath TEXT,
+                budgetTokens INTEGER NOT NULL,
+                autonomy TEXT NOT NULL,
+                campId TEXT NOT NULL REFERENCES camp(id),
+                createdAt DATETIME NOT NULL
+            );
+            CREATE TABLE schedule (
+                id TEXT PRIMARY KEY NOT NULL,
+                templateId TEXT NOT NULL REFERENCES mission_template(id) ON DELETE CASCADE,
+                frequency TEXT NOT NULL,
+                hour INTEGER NOT NULL,
+                minute INTEGER NOT NULL,
+                weekday INTEGER,
+                enabled BOOLEAN NOT NULL DEFAULT 1,
+                lastFiredAt DATETIME,
+                createdAt DATETIME NOT NULL
+            );
+            INSERT INTO camp(id, name, createdAt) VALUES ('camp-legacy', 'Legacy', CURRENT_TIMESTAMP);
+            INSERT INTO mission_template(
+                id, name, goal, companionIdsJson, workspacePath,
+                budgetTokens, autonomy, campId, createdAt
+            ) VALUES (
+                'template-legacy', 'Legacy', 'Preserve me', '[]', NULL,
+                1000, 'supervised', 'camp-legacy', CURRENT_TIMESTAMP
+            );
+            INSERT INTO schedule(
+                id, templateId, frequency, hour, minute, weekday,
+                enabled, lastFiredAt, createdAt
+            ) VALUES (
+                'schedule-legacy', 'template-legacy', 'daily', 9, 30, NULL,
+                1, NULL, CURRENT_TIMESTAMP
+            );
+            """)
+    }
+
+    try migrator.migrate(pool)
+    try migrator.migrate(pool)
+
+    let migrationNames = try pool.read { db in
+        try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations")
+    }
+    #expect(migrationNames.contains("v9-evercamp"))
+    #expect(migrationNames.contains("v10-runtime-profiles"))
+    #expect(migrationNames.contains("v11-cli-kinds"))
+    #expect(try pool.read { db in
+        try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM mission_template WHERE id = 'template-legacy'") == 1
+    })
+    #expect(try pool.read { db in
+        try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM schedule WHERE id = 'schedule-legacy'") == 1
+    })
+    let indexes = try pool.read { db in
+        try String.fetchAll(db, sql: """
+            SELECT name FROM sqlite_master
+            WHERE type = 'index' AND tbl_name IN ('mission_template', 'schedule')
+            """)
+    }
+    #expect(indexes.contains("mission_template_camp"))
+    #expect(indexes.contains("schedule_template"))
+    #expect(indexes.contains("schedule_enabled"))
+}
+
 @Test func scheduleCRUDAndClaimDedupe() throws {
     let db = try scheduleTempDB()
     let fixture = try scheduleTemplateFixture(db: db)

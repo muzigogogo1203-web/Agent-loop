@@ -20,6 +20,8 @@ Hard rules:
 - Tests live in `Sources/AgentLoopTestSuite/` (run via `swift run RunTests` because of a CLT-only machine workaround gated in Package.swift).
 - macOS 14+, sandboxed, security-scoped bookmarks, Keychain for secrets. Never log API keys.
 - JSON encoding uses sortedKeys where prompt caching depends on stable key order — preserve this.
+- Runtime profiles are the source of truth for model availability. ChatGPT OAuth and CLI profiles use read-only built-in catalogs; API-key profiles may add provider-specific manual models.
+- When OAuth becomes the default profile, bootstrap reconciliation resets unsupported saved defaults and changes incompatible pinned companion models to inherit, preserving the old model string only for traceability.
 
 ## Known Bug Classes (check your own work against these)
 

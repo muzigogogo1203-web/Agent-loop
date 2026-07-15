@@ -84,11 +84,25 @@ import AgentLoopCore
         try first.hello(token: harness.server.token, cardId: harness.cardId)
 
         let second = try BoardSocketTestClient(path: harness.server.socketURL.path)
-        try second.send(JSONValue.object(["type": "hello", "token": .string(harness.server.token), "cardId": .string(harness.cardId)]))
-        #expect(try second.readLine() == nil)
+        let sent = try second.sendObservingPeerClosure(
+            JSONValue.object(["type": "hello", "token": .string(harness.server.token), "cardId": .string(harness.cardId)])
+        )
+        let peerClosed = sent ? (try second.readLine() == nil) : true
+        #expect(peerClosed)
         first.close()
         second.close()
         harness.server.stop()
+    }
+
+    @Test func boardServerStopWhileConnectionIsActiveClosesExactlyOnce() throws {
+        guard agentLoopCanBindListenerSocket() else { return }
+        let harness = try Self.makeBoardHarness(startServer: true)
+        let client = try BoardSocketTestClient(path: harness.server.socketURL.path)
+        try client.hello(token: harness.server.token, cardId: harness.cardId)
+
+        harness.server.stop()
+        #expect(try client.readLine() == nil)
+        client.close()
     }
 
     @Test func boardServerDefinitionsExposeFiveToolsWhenFullAccess() throws {
@@ -186,6 +200,17 @@ private final class BoardSocketTestClient {
         guard fd >= 0 else {
             throw BoardToolServerError.socketSetupFailed(String(cString: strerror(errno)))
         }
+        var noSIGPIPE: Int32 = 1
+        guard setsockopt(
+            fd,
+            SOL_SOCKET,
+            SO_NOSIGPIPE,
+            &noSIGPIPE,
+            socklen_t(MemoryLayout<Int32>.size)
+        ) == 0 else {
+            Darwin.close(fd)
+            throw BoardToolServerError.socketSetupFailed("SO_NOSIGPIPE: \(String(cString: strerror(errno)))")
+        }
         try Self.connect(fd: fd, path: path)
         var timeout = timeval(tv_sec: 1, tv_usec: 0)
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
@@ -208,14 +233,22 @@ private final class BoardSocketTestClient {
     }
 
     func send(_ value: JSONValue) throws {
+        guard try sendObservingPeerClosure(value) else {
+            throw BoardToolServerError.socketSetupFailed("peer closed socket")
+        }
+    }
+
+    func sendObservingPeerClosure(_ value: JSONValue) throws -> Bool {
         var data = Data(try value.encodedString().utf8)
         data.append(UInt8(ascii: "\n"))
-        try data.withUnsafeBytes { raw in
-            guard let base = raw.baseAddress else { return }
+        return try data.withUnsafeBytes { raw in
+            guard let base = raw.baseAddress else { return true }
             let written = Darwin.write(fd, base, data.count)
             if written < 0 {
+                if errno == EPIPE || errno == ECONNRESET || errno == ENOTCONN { return false }
                 throw BoardToolServerError.socketSetupFailed(String(cString: strerror(errno)))
             }
+            return true
         }
     }
 
@@ -227,6 +260,7 @@ private final class BoardSocketTestClient {
             if count == 0 { return nil }
             if count < 0 {
                 if errno == EAGAIN || errno == EWOULDBLOCK { return nil }
+                if errno == ECONNRESET || errno == ENOTCONN { return nil }
                 throw BoardToolServerError.socketSetupFailed(String(cString: strerror(errno)))
             }
             if byte == UInt8(ascii: "\n") {

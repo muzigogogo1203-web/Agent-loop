@@ -163,7 +163,7 @@ struct SettingsView: View {
                                 .font(.body.monospaced())
                                 .foregroundStyle(Camp.ink)
                             Spacer()
-                            if store.modelChoices.count > 1 {
+                            if store.canRemoveModelFromCurrentCatalog(model) {
                                 Button {
                                     removeModel(model)
                                 } label: {
@@ -175,33 +175,32 @@ struct SettingsView: View {
                             }
                         }
                     }
-                    HStack {
-                        TextField("模型 id（如 glm-5.1）", text: $newModelId)
-                            .textFieldStyle(.plain)
-                            .autocorrectionDisabled()
-                            .font(.body.monospaced())
-                            .padding(8)
-                            .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
-                                    .stroke(Camp.line, lineWidth: 1)
-                            )
-                        Button {
-                            addModel()
-                        } label: {
-                            Label("加入目录", systemImage: "plus")
-                        }
-                        .buttonStyle(CampSecondaryButtonStyle())
-                        .disabled(newModelId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        Button {
-                            store.modelChoices = AppStore.factoryModelChoices
-                            if !store.modelChoices.contains(store.defaultModel) {
-                                store.defaultModel = store.modelChoices[0]
+                    if store.currentModelCatalogAllowsManualInput {
+                        HStack {
+                            TextField("模型 id（如 glm-5.1）", text: $newModelId)
+                                .textFieldStyle(.plain)
+                                .autocorrectionDisabled()
+                                .font(.body.monospaced())
+                                .padding(8)
+                                .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                        .stroke(Camp.line, lineWidth: 1)
+                                )
+                            Button {
+                                addModel()
+                            } label: {
+                                Label("加入目录", systemImage: "plus")
                             }
-                        } label: {
-                            Text("恢复出厂")
+                            .buttonStyle(CampSecondaryButtonStyle())
+                            .disabled(newModelId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            Button("恢复目录") { store.resetCurrentModelCatalog() }
+                                .buttonStyle(CampSecondaryButtonStyle())
                         }
-                        .buttonStyle(CampSecondaryButtonStyle())
+                    } else {
+                        Label("当前供给线使用受控模型目录，不能手动添加模型。", systemImage: "lock.fill")
+                            .font(.caption)
+                            .foregroundStyle(Camp.inkSecondary)
                     }
                     Divider()
                     modelPicker("默认模型", selection: $store.defaultModel, allowFollow: false)
@@ -384,23 +383,13 @@ struct SettingsView: View {
 
     private func addModel() {
         let id = newModelId.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !id.isEmpty, !store.modelChoices.contains(id) else {
-            newModelId = ""
-            return
-        }
-        store.modelChoices.append(id)
+        guard !id.isEmpty else { return }
+        store.addModelToCurrentCatalog(id)
         newModelId = ""
     }
 
     private func removeModel(_ model: String) {
-        guard store.modelChoices.count > 1 else { return }
-        store.modelChoices.removeAll { $0 == model }
-        // 默认模型被移除时落到目录首项；蒸馏/规划回「跟随默认」
-        if store.defaultModel == model {
-            store.defaultModel = store.modelChoices[0]
-        }
-        if store.distillModel == model { store.distillModel = "" }
-        if store.plannerModel == model { store.plannerModel = "" }
+        store.removeModelFromCurrentCatalog(model)
     }
 }
 

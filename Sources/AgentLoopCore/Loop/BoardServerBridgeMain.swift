@@ -162,6 +162,7 @@ private struct BoardSocketBridgeClient {
             throw BoardToolServerError.socketSetupFailed(String(cString: strerror(errno)))
         }
         do {
+            try Self.disableSIGPIPE(fd)
             try Self.connect(fd: fd, path: socketPath)
         } catch {
             close(fd)
@@ -220,6 +221,19 @@ private struct BoardSocketBridgeClient {
         }
         guard result == 0 else {
             throw BoardToolServerError.socketSetupFailed(String(cString: strerror(errno)))
+        }
+    }
+
+    private static func disableSIGPIPE(_ fd: Int32) throws {
+        var enabled: Int32 = 1
+        guard setsockopt(
+            fd,
+            SOL_SOCKET,
+            SO_NOSIGPIPE,
+            &enabled,
+            socklen_t(MemoryLayout<Int32>.size)
+        ) == 0 else {
+            throw BoardToolServerError.socketSetupFailed("SO_NOSIGPIPE: \(String(cString: strerror(errno)))")
         }
     }
 

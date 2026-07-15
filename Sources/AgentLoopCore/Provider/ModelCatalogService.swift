@@ -40,7 +40,7 @@ public actor ModelCatalogService {
     public func refresh(profile: RuntimeProfileRecord, credential: String) async throws -> [String] {
         switch profile.kind {
         case .chatGPTOAuth, .cliCodex, .cliClaude:
-            return Self.staticCatalog(profile: profile, defaults: defaults)
+            return Self.staticCatalog(profile: profile)
         case .anthropicAPI, .openAIAPI:
             let models = try await fetchModels(profile: profile, credential: credential)
             defaults.setCachedCatalog(models, fetchedAt: now(), profileID: profile.id)
@@ -54,7 +54,7 @@ public actor ModelCatalogService {
     ) -> [String]? {
         switch profile.kind {
         case .chatGPTOAuth, .cliCodex, .cliClaude:
-            return staticCatalog(profile: profile, defaults: defaults)
+            return staticCatalog(profile: profile)
         case .anthropicAPI, .openAIAPI:
             guard isOfficialCatalogProfile(profile),
                   let cached = defaults.cachedCatalog(profileID: profile.id),
@@ -81,11 +81,8 @@ public actor ModelCatalogService {
         }
     }
 
-    private static func staticCatalog(profile: RuntimeProfileRecord, defaults: ProfileScopedDefaults) -> [String] {
-        let builtIn = profile.kind.isCLI
-            ? KernelDefaults.cliStaticModels
-            : KernelDefaults.chatGPTStaticModels
-        return ProfileScopedDefaults.uniqueModels(builtIn + defaults.manualModels(profileID: profile.id))
+    private static func staticCatalog(profile: RuntimeProfileRecord) -> [String] {
+        profile.kind.isCLI ? KernelDefaults.cliStaticModels : KernelDefaults.chatGPTStaticModels
     }
 
     private func fetchModels(profile: RuntimeProfileRecord, credential: String) async throws -> [String] {

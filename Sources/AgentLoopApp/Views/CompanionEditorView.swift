@@ -30,11 +30,25 @@ struct CompanionEditorView: View {
 
     /// V1.1a:钉住模型的候选 = 所选供给线的目录(拿不到时回退全局 modelChoices)
     private var editorModelChoices: [String] {
-        let profile = profileChoice.isEmpty
-            ? store.currentRuntimeProfile
-            : store.runtimeProfiles.first { $0.id == profileChoice }
+        let profile = selectedRuntimeProfile
         guard let profile else { return store.modelChoices }
         return store.catalogChoices(profile: profile)
+    }
+
+    private var selectedRuntimeProfile: RuntimeProfileRecord? {
+        profileChoice.isEmpty
+            ? store.currentRuntimeProfile
+            : store.runtimeProfiles.first { $0.id == profileChoice }
+    }
+
+    private var allowsCustomModel: Bool {
+        guard let profile = selectedRuntimeProfile else { return true }
+        switch profile.kind {
+        case .anthropicAPI, .openAIAPI:
+            return true
+        case .chatGPTOAuth, .cliCodex, .cliClaude:
+            return false
+        }
     }
 
     private var canSave: Bool {
@@ -103,7 +117,9 @@ struct CompanionEditorView: View {
                         ForEach(editorModelChoices, id: \.self) { model in
                             Text(model).tag(model)
                         }
-                        Text("自定义…").tag(Self.customTag)
+                        if allowsCustomModel {
+                            Text("自定义…").tag(Self.customTag)
+                        }
                     }
                     .labelsHidden()
                     .pickerStyle(.menu)
@@ -204,6 +220,9 @@ struct CompanionEditorView: View {
         .task(id: companionId) {
             load()
             await refreshMcpTools()
+        }
+        .onChange(of: profileChoice) {
+            normalizeModelChoiceForSelectedProfile()
         }
     }
 
@@ -354,9 +373,21 @@ struct CompanionEditorView: View {
         if editorModelChoices.contains(companion.model) {
             modelChoice = companion.model
             customModel = ""
-        } else {
+        } else if allowsCustomModel {
             modelChoice = Self.customTag
             customModel = companion.model
+        } else {
+            modelChoice = editorModelChoices.first ?? ""
+            customModel = ""
+        }
+    }
+
+    private func normalizeModelChoiceForSelectedProfile() {
+        let choices = editorModelChoices
+        if modelChoice == Self.customTag, allowsCustomModel { return }
+        if !choices.contains(modelChoice) {
+            modelChoice = choices.first ?? (allowsCustomModel ? Self.customTag : "")
+            if !allowsCustomModel { customModel = "" }
         }
     }
 
