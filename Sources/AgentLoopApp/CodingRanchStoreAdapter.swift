@@ -54,6 +54,15 @@ extension AppStore: CodingRanchStoreProtocol {
         ], forKey: "codingRanch.feedDraft.\(draft.campId)")
     }
 
+    /// 反刍阶段回调:把 Core 的真实阶段(extracting/organizing)映射进内存态供 UI 展示。
+    private func ruminationPhaseHandler(ingestionId: String) -> @Sendable (RuminationService.RuminationPhase) -> Void {
+        { [weak self] phase in
+            Task { @MainActor [weak self] in
+                self?.ruminationStages[ingestionId] = phase == .extracting ? .extracting : .organizing
+            }
+        }
+    }
+
     func startRumination(ingestionId: String) async {
         guard let item = try? FeedService(db: db).item(id: ingestionId),
               let provider = provider(model: effectiveDistillModel) else { return }
@@ -67,9 +76,14 @@ extension AppStore: CodingRanchStoreProtocol {
         }
         await loadDashboard(campId: item.campId)
         Task { [weak self] in
-            _ = try? await service.processStarted(ingestionId: ingestionId)
             guard let self else { return }
-            await self.loadDashboard(campId: item.campId)
+            ruminationStages[ingestionId] = .reading
+            _ = try? await service.processStarted(
+                ingestionId: ingestionId,
+                onPhase: ruminationPhaseHandler(ingestionId: ingestionId)
+            )
+            ruminationStages[ingestionId] = nil
+            await loadDashboard(campId: item.campId)
         }
     }
 
@@ -159,7 +173,7 @@ extension AppStore: CodingRanchStoreProtocol {
             draftId: core.candidateId, ingestionId: core.ingestionId, campId: core.campId,
             cow: cow, goal: core.goal, acceptance: core.acceptance,
             knowledge: [.init(id: core.noteId, title: note?.title ?? "来源笔记", sourceLabel: "主动喂入")],
-            deliverableType: "可验证成果", workspacePath: "", isNewcomer: cow != nil,
+            deliverableType: MissionDraftViewState.defaultDeliverableType, workspacePath: "", isNewcomer: cow != nil,
             canStart: provider(model: effectivePlannerModel) != nil && !missionStartBlocked,
             startBlockReason: missionStartBlocked ? missionStartBlockMessage : (apiKeyPresent ? nil : "请先配置模型")
         )
@@ -257,9 +271,14 @@ extension AppStore: CodingRanchStoreProtocol {
                 let service = RuminationService(db: db, provider: ruminationProvider)
                 _ = try service.start(ingestionId: item.id)
                 Task { [weak self] in
-                    _ = try? await service.processStarted(ingestionId: item.id)
                     guard let self else { return }
-                    await self.loadDashboard(campId: draft.campId)
+                    ruminationStages[item.id] = .reading
+                    _ = try? await service.processStarted(
+                        ingestionId: item.id,
+                        onPhase: ruminationPhaseHandler(ingestionId: item.id)
+                    )
+                    ruminationStages[item.id] = nil
+                    await loadDashboard(campId: draft.campId)
                 }
             }
             await loadDashboard(campId: draft.campId)
@@ -306,7 +325,7 @@ extension AppStore: CodingRanchStoreProtocol {
             MissionDraftViewState(
                 draftId: "pending", ingestionId: ingestion.id, campId: ingestion.campId,
                 cow: companions.first(where: { $0.id == CowTemplate.baseCowId }).map(cowViewState),
-                goal: $0.goal, acceptance: $0.acceptance, knowledge: [], deliverableType: "可验证成果",
+                goal: $0.goal, acceptance: $0.acceptance, knowledge: [], deliverableType: MissionDraftViewState.defaultDeliverableType,
                 workspacePath: "", isNewcomer: true, canStart: true, startBlockReason: nil
             )
         }
@@ -327,7 +346,7 @@ extension AppStore: CodingRanchStoreProtocol {
         let status: RuminationStatusViewState
         switch item.status {
         case .queued: status = .queued
-        case .ruminating: status = .ruminating(stage: .organizing)
+        case .ruminating: status = .ruminating(stage: ruminationStages[item.id] ?? .reading)
         case .needsReview: status = .needsReview
         case .materialized:
             let noteId = (try? db.pool.read { database in
@@ -346,10 +365,11 @@ extension AppStore: CodingRanchStoreProtocol {
     }
 
     private func cowViewState(_ cow: CompanionRecord) -> CowSummaryViewState {
+        let profile = CowTemplate.displayProfile(for: cow.id)
         return .init(
             id: cow.id, name: cow.name,
-            role: cow.id == CowTemplate.testCowId ? "验收与测试" : "Coding 通才",
-            colorName: cow.color, specialties: cow.id == CowTemplate.testCowId ? ["测试", "边界检查"] : ["HTML", "小工具", "需求整理"],
+            role: profile?.role ?? "牧场伙伴",
+            colorName: cow.color, specialties: profile?.specialties ?? [],
             status: .idle, lastActivity: nil, recentMission: nil, isSystemGuide: cow.kind == .guide
         )
     }
@@ -389,11 +409,14 @@ extension AppStore: CodingRanchStoreProtocol {
         ]
         return .init(
             steps: steps,
-            nextCow: .init(
-                id: CowTemplate.testCowId, name: "测试牛", role: "验收与测试",
-                capabilities: ["主流程测试", "边界检查", "失败提示"], learningGoal: "学会用验收标准判断成果",
-                conditions: steps.map { $0.title }
-            ),
+            nextCow: {
+                let profile = CowTemplate.displayProfile(for: CowTemplate.testCowId)
+                return .init(
+                    id: CowTemplate.testCowId, name: "测试牛", role: profile?.role ?? "验收与测试",
+                    capabilities: profile?.capabilities ?? [], learningGoal: profile?.learningGoal ?? "",
+                    conditions: steps.map { $0.title }
+                )
+            }(),
             canUnlock: core.eligible && !core.isTestCowOwned,
             isUnlocked: core.isTestCowOwned
         )

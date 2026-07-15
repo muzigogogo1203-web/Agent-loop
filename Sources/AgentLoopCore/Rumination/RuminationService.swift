@@ -24,8 +24,14 @@ public struct RuminationService: Sendable {
         try begin(ingestionId: ingestionId)
     }
 
+    /// 反刍的真实阶段(供 UI 呈现进度;extracting=LLM 调用中,organizing=解析与落库)
+    public enum RuminationPhase: Sendable { case extracting, organizing }
+
     @discardableResult
-    public func processStarted(ingestionId: String) async throws -> RuminationResultRecord {
+    public func processStarted(
+        ingestionId: String,
+        onPhase: (@Sendable (RuminationPhase) -> Void)? = nil
+    ) async throws -> RuminationResultRecord {
         let ingestion = try await db.pool.read { database in
             guard let item = try IngestionItemRecord.fetchOne(database, key: ingestionId) else {
                 throw FeedServiceError.ingestionNotFound(ingestionId)
@@ -33,12 +39,17 @@ public struct RuminationService: Sendable {
             guard item.status == .ruminating else { throw FeedServiceError.invalidState(item.status) }
             return item
         }
-        return try await processStarted(ingestion: ingestion)
+        return try await processStarted(ingestion: ingestion, onPhase: onPhase)
     }
 
-    private func processStarted(ingestion: IngestionItemRecord) async throws -> RuminationResultRecord {
+    private func processStarted(
+        ingestion: IngestionItemRecord,
+        onPhase: (@Sendable (RuminationPhase) -> Void)? = nil
+    ) async throws -> RuminationResultRecord {
         do {
+            onPhase?(.extracting)
             let raw = try await singleTurn(ingestion: ingestion)
+            onPhase?(.organizing)
             let result = try RuminationParser.parse(raw)
             return try complete(ingestionId: ingestion.id, result: result)
         } catch {

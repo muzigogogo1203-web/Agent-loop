@@ -16,6 +16,7 @@ struct CampHomeView: View {
     @State private var enabledStations: Set<String> = []
     @State private var showFeedComposer = false
     @State private var showRumination = false
+    @State private var showSchedules = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -59,6 +60,12 @@ struct CampHomeView: View {
         .task(id: campId) {
             store.loadCampHome(campId: campId)
             await store.loadDashboard(campId: campId)
+        }
+        .sheet(isPresented: $showSchedules) {
+            ScheduleManagerView(campId: campId) {
+                showSchedules = false
+            }
+            .environment(store)
         }
         .sheet(isPresented: $showFeedComposer) {
             FeedComposerView(
@@ -340,6 +347,14 @@ struct CampHomeView: View {
         .disabled(currentCampArchived)
         .opacity(currentCampArchived ? 0.5 : 1)
         .help(currentCampArchived ? "营地已归档，恢复后才能喂牛" : "把资料或想法喂给这个营地")
+
+        Button {
+            showSchedules = true
+        } label: {
+            Label("日程", systemImage: "calendar.badge.clock")
+        }
+        .buttonStyle(CampSecondaryButtonStyle())
+        .help("任务模板与定时放牛")
 
         Button {
             showRumination = true

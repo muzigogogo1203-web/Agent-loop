@@ -14,7 +14,6 @@ struct ScheduleCatchup: Identifiable, Equatable, Sendable {
 final class MissionScheduler {
     private let db: AppDatabase
     private let orchestrator: Orchestrator
-    private let notifier: ScheduledMissionNotifier
     private let plannerModel: @MainActor () -> String
     private let logger = Logger(subsystem: "com.muzi.agentloop", category: "mission-scheduler")
     private var activitySchedulers: [String: NSBackgroundActivityScheduler] = [:]
@@ -35,12 +34,10 @@ final class MissionScheduler {
     init(
         db: AppDatabase,
         orchestrator: Orchestrator,
-        notifier: ScheduledMissionNotifier,
         plannerModel: @escaping @MainActor () -> String
     ) {
         self.db = db
         self.orchestrator = orchestrator
-        self.notifier = notifier
         self.plannerModel = plannerModel
     }
 
@@ -161,6 +158,22 @@ final class MissionScheduler {
         }
         pendingCatchups = catchups
         onPendingCatchupsChanged?(catchups)
+    }
+
+    /// UI「立即试跑」:按当前时间出发一次(走同一条 fire 校验与 CAS 防重路径)。
+    func runNow(scheduleId: String) async {
+        await fire(scheduleId: scheduleId, scheduledFireDate: Date())
+        refresh()
+    }
+
+    /// 处理启动补跑提示:run=true 时按错过的触发点出发一次;两种选择都会移除该提示。
+    func resolveCatchup(_ catchup: ScheduleCatchup, run: Bool) async {
+        if run {
+            await fire(scheduleId: catchup.scheduleId, scheduledFireDate: catchup.fireDate)
+        }
+        pendingCatchups.removeAll { $0.id == catchup.id }
+        onPendingCatchupsChanged?(pendingCatchups)
+        refresh()
     }
 
     private func fire(scheduleId: String, scheduledFireDate: Date) async {

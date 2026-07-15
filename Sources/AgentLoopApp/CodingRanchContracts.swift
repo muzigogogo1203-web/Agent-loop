@@ -161,6 +161,9 @@ struct MissionKnowledgeItemViewState: Sendable, Equatable, Identifiable {
 }
 
 struct MissionDraftViewState: Sendable, Equatable {
+    /// 草稿交付物类型的统一默认值(产品语义:以验收清单界定的成果)
+    static let defaultDeliverableType = "可验证成果"
+
     let draftId: String
     let ingestionId: String?
     var campId: String

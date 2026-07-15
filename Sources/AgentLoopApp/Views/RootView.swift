@@ -40,6 +40,11 @@ struct RootView: View {
                 Divider().overlay(Camp.charcoalRed.opacity(0.35))
             }
 
+            if let catchup = store.pendingScheduleCatchups.first {
+                scheduleCatchupBanner(catchup)
+                Divider().overlay(Camp.amber.opacity(0.35))
+            }
+
             NavigationSplitView(columnVisibility: $columnVisibility) {
                 VStack(spacing: 0) {
                     List(selection: $selection) {
@@ -336,6 +341,26 @@ struct RootView: View {
         }
         .fontDesign(.rounded)
         .tint(Camp.ember)
+    }
+
+    /// M10:启动时发现错过的日程,提示补跑(不自动跑,防预算意外)。
+    private func scheduleCatchupBanner(_ catchup: ScheduleCatchup) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .foregroundStyle(Camp.amber)
+            Text("\(store.scheduleCatchupTitle(catchup)) 错过了 \(ScheduleManagerView.stamp(catchup.fireDate)) 的触发")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Camp.ink)
+                .lineLimit(1)
+            Spacer()
+            Button("现在补跑") { store.resolveScheduleCatchup(catchup, run: true) }
+                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+            Button("跳过") { store.resolveScheduleCatchup(catchup, run: false) }
+                .buttonStyle(CampSecondaryButtonStyle())
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Camp.amber.opacity(0.12))
     }
 
     private func globalHaltBanner(compact: Bool) -> some View {

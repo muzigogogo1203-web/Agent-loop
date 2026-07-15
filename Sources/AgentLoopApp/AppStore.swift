@@ -99,6 +99,10 @@ final class AppStore {
     var haltErrorMessage: String?
     var kernelStartupRecoveryPending = false
     var pendingScheduleCatchups: [ScheduleCatchup] = []
+    /// 反刍真实阶段(内存态,UI 展示用;key=ingestionId)
+    var ruminationStages: [String: RuminationStage] = [:]
+    /// 设置页「测试连接」状态文案
+    var modelConnectionTestStatus: String?
 
     var missionStartBlocked: Bool {
         kernelStartupRecoveryPending || campHalted || haltOperationState != .idle
@@ -378,7 +382,6 @@ final class AppStore {
         missionScheduler = MissionScheduler(
             db: database,
             orchestrator: orchestrator,
-            notifier: notifier,
             plannerModel: { AppStore.scheduledPlannerModelFromDefaults() }
         )
         try! db.ensureCodingRanchBootstrap()
@@ -608,6 +611,78 @@ final class AppStore {
             missionScheduler.refresh()
         } catch {
             showToast("删除日程失败：\(readableError(error))")
+        }
+    }
+
+    func scheduleGroups(campId: String) -> [(template: MissionTemplateRecord, schedules: [ScheduleRecord])] {
+        let templates = (try? db.missionTemplates(campId: campId)) ?? []
+        let schedules = (try? db.schedules(campId: campId)) ?? []
+        return templates.map { template in
+            (template, schedules.filter { $0.templateId == template.id })
+        }
+    }
+
+    func deleteScheduledMissionTemplate(id: String) {
+        do {
+            try db.deleteMissionTemplate(id: id)
+            missionScheduler.refresh()
+        } catch {
+            showToast("删除模板失败：\(readableError(error))")
+        }
+    }
+
+    func runScheduleNow(id: String) {
+        Task { [weak self] in
+            guard let self else { return }
+            await missionScheduler.runNow(scheduleId: id)
+            reloadMissionList()
+        }
+    }
+
+    func resolveScheduleCatchup(_ catchup: ScheduleCatchup, run: Bool) {
+        Task { [weak self] in
+            guard let self else { return }
+            await missionScheduler.resolveCatchup(catchup, run: run)
+            reloadMissionList()
+        }
+    }
+
+    func scheduleCatchupTitle(_ catchup: ScheduleCatchup) -> String {
+        if let name = (try? db.missionTemplate(id: catchup.templateId))?.name {
+            return "定时行动「\(name)」"
+        }
+        return "定时行动"
+    }
+
+    /// 设置页「测试连接」:用当前凭据发一次最小请求,人话化报告结果。
+    func testModelConnection() {
+        guard let provider = provider(model: defaultModel) else {
+            modelConnectionTestStatus = "还没有可用凭据——先保存 API Key 或完成网页登录"
+            return
+        }
+        modelConnectionTestStatus = "正在测试连接…"
+        let model = defaultModel
+        Task { [weak self] in
+            do {
+                let stream = provider.streamTurn(
+                    system: "Connectivity check. Reply with OK.",
+                    history: [.user("ping")],
+                    tools: [],
+                    toolChoice: .auto,
+                    maxTokens: 8
+                )
+                for try await event in stream {
+                    if case .turn = event { break }
+                }
+                await MainActor.run { [weak self] in
+                    self?.modelConnectionTestStatus = "连接正常（\(model)）"
+                }
+            } catch {
+                let message = (error as? ProviderError)?.description ?? String(describing: error)
+                await MainActor.run { [weak self] in
+                    self?.modelConnectionTestStatus = "连接失败：\(message)"
+                }
+            }
         }
     }
 

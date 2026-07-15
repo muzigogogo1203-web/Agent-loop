@@ -127,6 +127,23 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundStyle(Camp.inkSecondary)
                     }
+                    Divider()
+                    HStack(spacing: 10) {
+                        Button {
+                            store.testModelConnection()
+                        } label: {
+                            Label("测试连接", systemImage: "bolt.horizontal")
+                        }
+                        .buttonStyle(CampSecondaryButtonStyle())
+                        if let status = store.modelConnectionTestStatus {
+                            Text(status)
+                                .font(.caption)
+                                .foregroundStyle(
+                                    status.hasPrefix("连接正常") ? Camp.moss
+                                        : status.hasPrefix("正在") ? Camp.inkSecondary : Camp.charcoalRed
+                                )
+                        }
+                    }
                 }
                 .campCard()
 
@@ -256,6 +273,24 @@ struct SettingsView: View {
 
                 // M8-D6/D7：MCP 驿站（全局注册；营地首页启用；伙伴编辑器按人授权）
                 McpStationSection()
+
+                // M10-D4:菜单栏常驻(默认关;开启后关窗保活,日程照常触发)
+                VStack(alignment: .leading, spacing: 10) {
+                    CampSectionTitle("菜单栏常驻")
+                    Toggle(isOn: Binding(
+                        get: { (NSApp.delegate as? AppDelegate)?.menuBarResidencyEnabled ?? false },
+                        set: { (NSApp.delegate as? AppDelegate)?.setMenuBarResidencyEnabled($0) }
+                    )) {
+                        Text("篝火常驻菜单栏,关窗后牧场继续守着日程")
+                            .font(.callout)
+                            .foregroundStyle(Camp.ink)
+                    }
+                    .toggleStyle(.switch)
+                    Text("关闭时,关掉最后一个窗口即退出;定时行动只在 App 运行期间生效。")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                }
+                .campCard()
 
                 VStack(alignment: .leading, spacing: 12) {
                     CampSectionTitle("默认预算")
