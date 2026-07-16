@@ -183,6 +183,7 @@ public enum CliBackendPolicy {
 public enum CliProcessBackendError: Error, Sendable, Equatable {
     case unsupportedKind(RuntimeProfileKind)
     case bannedFlag(String)
+    case pipeSetupFailed(String)
     case processExitedWithoutTerminator(status: Int32, stderrTail: String)
 }
 
@@ -417,6 +418,10 @@ public struct CliProcessBackend: CardExecutionBackend {
         let stderr = Pipe()
         process.standardOutput = stdout
         process.standardError = stderr
+        let stdoutFD = stdout.fileHandleForReading.fileDescriptor
+        let stderrFD = stderr.fileHandleForReading.fileDescriptor
+        try setNonBlocking(stdoutFD)
+        try setNonBlocking(stderrFD)
 
         let exitBox = CliExitBox()
         process.terminationHandler = { process in
@@ -425,14 +430,24 @@ public struct CliProcessBackend: CardExecutionBackend {
         }
 
         try process.run()
+        // 父进程不持有写端，否则子进程退出后读端永远等不到 EOF。
+        try? stdout.fileHandleForWriting.close()
+        try? stderr.fileHandleForWriting.close()
         processHandle.set(process)
         continuation.yield(.turnStarted)
 
+        let drainControl = CliPipeDrainControl()
         let stdoutTask = Task.detached {
-            await readStdout(stdout.fileHandleForReading, profileKind: nil, metrics: metrics, continuation: continuation)
+            await readStdout(
+                stdoutFD,
+                profileKind: nil,
+                metrics: metrics,
+                drainControl: drainControl,
+                continuation: continuation
+            )
         }
         let stderrTask = Task.detached {
-            await readStderr(stderr.fileHandleForReading, metrics: metrics)
+            await readStderr(stderrFD, metrics: metrics, drainControl: drainControl)
         }
         let timeoutTask = Task {
             try? await Task.sleep(for: timeout)
@@ -448,43 +463,96 @@ public struct CliProcessBackend: CardExecutionBackend {
         let status = await exitBox.wait()
         await metrics.setExitStatus(status)
         timeoutTask.cancel()
+        await drainControl.processDidExit()
+        await stdoutTask.value
+        await stderrTask.value
         try? stdout.fileHandleForReading.close()
         try? stderr.fileHandleForReading.close()
-        stdoutTask.cancel()
-        stderrTask.cancel()
     }
 
     private static func readStdout(
-        _ handle: FileHandle,
+        _ fd: Int32,
         profileKind: RuntimeProfileKind?,
         metrics: CliRunMetrics,
+        drainControl: CliPipeDrainControl,
         continuation: AsyncThrowingStream<AgentEvent, Error>.Continuation
     ) async {
         var buffer = Data()
         while true {
-            let chunk = handle.availableData
-            if chunk.isEmpty { break }
-            buffer.append(chunk)
-            while let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
-                let line = buffer[..<newline]
-                buffer.removeSubrange(buffer.startIndex...newline)
-                guard let text = String(data: line, encoding: .utf8), !text.isEmpty else { continue }
-                for event in CliOutputParser.events(from: text) {
-                    if case .turnEnded(let usage) = event {
-                        await metrics.addUsage(usage)
+            switch readPipeChunk(fd) {
+            case .data(let chunk):
+                buffer.append(chunk)
+                while let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
+                    let line = buffer[..<newline]
+                    buffer.removeSubrange(buffer.startIndex...newline)
+                    guard let text = String(data: line, encoding: .utf8), !text.isEmpty else { continue }
+                    for event in CliOutputParser.events(from: text) {
+                        if case .turnEnded(let usage) = event {
+                            await metrics.addUsage(usage)
+                        }
+                        continuation.yield(event)
                     }
-                    continuation.yield(event)
                 }
+            case .wouldBlock:
+                if await drainControl.shouldStop { return }
+                try? await Task.sleep(for: .milliseconds(10))
+            case .interrupted:
+                continue
+            case .eof:
+                return
+            case .failed(let message):
+                await metrics.appendStderr(Data("stdout read failed: \(message)".utf8))
+                return
             }
         }
     }
 
-    private static func readStderr(_ handle: FileHandle, metrics: CliRunMetrics) async {
+    private static func readStderr(
+        _ fd: Int32,
+        metrics: CliRunMetrics,
+        drainControl: CliPipeDrainControl
+    ) async {
         while true {
-            let chunk = handle.availableData
-            if chunk.isEmpty { break }
-            await metrics.appendStderr(chunk)
+            switch readPipeChunk(fd) {
+            case .data(let chunk):
+                await metrics.appendStderr(chunk)
+            case .wouldBlock:
+                if await drainControl.shouldStop { return }
+                try? await Task.sleep(for: .milliseconds(10))
+            case .interrupted:
+                continue
+            case .eof:
+                return
+            case .failed(let message):
+                await metrics.appendStderr(Data("stderr read failed: \(message)".utf8))
+                return
+            }
         }
+    }
+
+    private static func setNonBlocking(_ fd: Int32) throws {
+        let flags = fcntl(fd, F_GETFL)
+        guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else {
+            throw CliProcessBackendError.pipeSetupFailed(String(cString: strerror(errno)))
+        }
+    }
+
+    private enum PipeReadResult {
+        case data(Data)
+        case wouldBlock
+        case interrupted
+        case eof
+        case failed(String)
+    }
+
+    private static func readPipeChunk(_ fd: Int32) -> PipeReadResult {
+        var bytes = [UInt8](repeating: 0, count: 4096)
+        let count = bytes.withUnsafeMutableBytes { Darwin.read(fd, $0.baseAddress, $0.count) }
+        if count > 0 { return .data(Data(bytes[0..<count])) }
+        if count == 0 { return .eof }
+        if errno == EAGAIN || errno == EWOULDBLOCK { return .wouldBlock }
+        if errno == EINTR { return .interrupted }
+        return .failed(String(cString: strerror(errno)))
     }
 
     private func blockCardIfStillRunning(cardId: String, runId: String, reason: String, detail: String) throws {
@@ -500,6 +568,14 @@ public struct CliProcessBackend: CardExecutionBackend {
             eventKind: EventKind.cardInterrupted,
             payload: ["runId": .string(runId), "reason": "canceled"]
         )
+    }
+}
+
+private actor CliPipeDrainControl {
+    private(set) var shouldStop = false
+
+    func processDidExit() {
+        shouldStop = true
     }
 }
 

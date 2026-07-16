@@ -760,7 +760,8 @@ final class AppStore {
         reload()
     }
 
-    /// 目录选项(伙伴编辑器/对账用):可信目录 ∪ 手动 id;都拿不到时回退当前 modelChoices。
+    /// 目录选项(伙伴编辑器/设置/对账共用):OAuth/CLI 只读静态目录;
+    /// 官方 API 使用服务端目录 + 手动项;网关使用该档案自己的可编辑目录。
     func catalogChoices(profile: RuntimeProfileRecord) -> [String] {
         let defaults = ProfileScopedDefaults()
         if let trusted = ModelCatalogService.trustedCatalog(profile: profile, defaults: defaults) {
@@ -768,8 +769,78 @@ final class AppStore {
         }
         let cached = defaults.cachedCatalog(profileID: profile.id) ?? []
         let manual = defaults.manualModels(profileID: profile.id)
-        let merged = ProfileScopedDefaults.uniqueModels(cached + manual)
-        return merged.isEmpty ? modelChoices : merged
+        let scoped = defaults.modelChoices(profileID: profile.id, fallback: Self.factoryModelChoices)
+        let merged = ProfileScopedDefaults.uniqueModels(cached + scoped + manual)
+        return merged.isEmpty ? Self.factoryModelChoices : merged
+    }
+
+    var currentModelCatalogAllowsManualInput: Bool {
+        guard let profile = currentRuntimeProfile else { return false }
+        switch profile.kind {
+        case .anthropicAPI, .openAIAPI:
+            return true
+        case .chatGPTOAuth, .cliCodex, .cliClaude:
+            return false
+        }
+    }
+
+    func canRemoveModelFromCurrentCatalog(_ model: String) -> Bool {
+        guard let profile = currentRuntimeProfile, currentModelCatalogAllowsManualInput else { return false }
+        let defaults = ProfileScopedDefaults()
+        if ModelCatalogService.isOfficialCatalogProfile(profile) {
+            return defaults.manualModels(profileID: profile.id).contains(model)
+        }
+        return modelChoices.count > 1
+    }
+
+    func addModelToCurrentCatalog(_ rawModel: String) {
+        guard let profile = currentRuntimeProfile, currentModelCatalogAllowsManualInput else { return }
+        let model = rawModel.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !model.isEmpty else { return }
+        let defaults = ProfileScopedDefaults()
+        if ModelCatalogService.isOfficialCatalogProfile(profile) {
+            defaults.setManualModels(
+                ProfileScopedDefaults.uniqueModels(defaults.manualModels(profileID: profile.id) + [model]),
+                profileID: profile.id
+            )
+        } else {
+            defaults.setStringArray(
+                ProfileScopedDefaults.uniqueModels(modelChoices + [model]),
+                profileID: profile.id,
+                suffix: "modelChoices"
+            )
+        }
+        loadModelDefaultsForCurrentProfile()
+    }
+
+    func removeModelFromCurrentCatalog(_ model: String) {
+        guard let profile = currentRuntimeProfile, canRemoveModelFromCurrentCatalog(model) else { return }
+        let defaults = ProfileScopedDefaults()
+        if ModelCatalogService.isOfficialCatalogProfile(profile) {
+            defaults.setManualModels(
+                defaults.manualModels(profileID: profile.id).filter { $0 != model },
+                profileID: profile.id
+            )
+        } else {
+            defaults.setStringArray(
+                modelChoices.filter { $0 != model },
+                profileID: profile.id,
+                suffix: "modelChoices"
+            )
+        }
+        loadModelDefaultsForCurrentProfile()
+        normalizeCurrentModelSelections()
+    }
+
+    func resetCurrentModelCatalog() {
+        guard let profile = currentRuntimeProfile, currentModelCatalogAllowsManualInput else { return }
+        let defaults = ProfileScopedDefaults()
+        defaults.setManualModels([], profileID: profile.id)
+        if !ModelCatalogService.isOfficialCatalogProfile(profile) {
+            defaults.setStringArray(Self.factoryModelChoices, profileID: profile.id, suffix: "modelChoices")
+        }
+        loadModelDefaultsForCurrentProfile()
+        normalizeCurrentModelSelections()
     }
 
     /// 刷新目录;返回人话结果供设置页展示。
@@ -814,14 +885,31 @@ final class AppStore {
     private func loadModelDefaultsForCurrentProfile() {
         guard let profile = currentRuntimeProfile else { return }
         let defaults = ProfileScopedDefaults()
-        let choices = defaults.modelChoices(profileID: profile.id, fallback: Self.factoryModelChoices)
+        let choices = catalogChoices(profile: profile)
         modelChoices = choices
-        defaultModel = defaults.defaultModel(
+        let storedDefault = defaults.defaultModel(
             profileID: profile.id,
             fallback: choices.first ?? KernelDefaults.defaultGuideModel
         )
-        distillModel = defaults.distillModel(profileID: profile.id)
-        plannerModel = defaults.plannerModel(profileID: profile.id)
+        let isStrictCatalog = profile.kind == .chatGPTOAuth || profile.kind.isCLI
+        defaultModel = isStrictCatalog && !choices.contains(storedDefault)
+            ? (choices.first ?? KernelDefaults.defaultGuideModel)
+            : storedDefault
+        let storedDistill = defaults.distillModel(profileID: profile.id)
+        distillModel = isStrictCatalog && !storedDistill.isEmpty && !choices.contains(storedDistill)
+            ? ""
+            : storedDistill
+        let storedPlanner = defaults.plannerModel(profileID: profile.id)
+        plannerModel = isStrictCatalog && !storedPlanner.isEmpty && !choices.contains(storedPlanner)
+            ? ""
+            : storedPlanner
+    }
+
+    private func normalizeCurrentModelSelections() {
+        guard !modelChoices.isEmpty else { return }
+        if !modelChoices.contains(defaultModel) { defaultModel = modelChoices[0] }
+        if !distillModel.isEmpty, !modelChoices.contains(distillModel) { distillModel = "" }
+        if !plannerModel.isEmpty, !modelChoices.contains(plannerModel) { plannerModel = "" }
     }
 
     private func persistProfileString(_ value: String, suffix: String) {

@@ -63,8 +63,47 @@ public struct RuntimeProfileBootstrap: Sendable {
                 fallbackDefaultModel: fallbackDefaultModel,
                 fallbackModelChoices: fallbackModelChoices
             )
+            if profile.kind == .chatGPTOAuth {
+                try reconcileOAuthDefaults(profile: profile)
+            }
         }
         return profile
+    }
+
+    /// OAuth 的模型目录是受控静态清单。首次从旧版升级或清单升级后，不能继续让旧
+    /// API/网关模型悄悄落到 OAuth 请求上；保留原 model 字符串用于追溯，但改为继承。
+    private func reconcileOAuthDefaults(profile: RuntimeProfileRecord) throws {
+        precondition(!KernelDefaults.chatGPTStaticModels.isEmpty, "ChatGPT OAuth model catalog must not be empty")
+        let catalog = KernelDefaults.chatGPTStaticModels
+        let allowed = Set(catalog)
+        let fallback = catalog[0]
+
+        let currentDefault = defaults.defaultModel(profileID: profile.id, fallback: fallback)
+        if !allowed.contains(currentDefault) {
+            defaults.setString(fallback, profileID: profile.id, suffix: "defaultModel")
+        }
+        if !defaults.distillModel(profileID: profile.id).isEmpty,
+           !allowed.contains(defaults.distillModel(profileID: profile.id)) {
+            defaults.setString("", profileID: profile.id, suffix: "distillModel")
+        }
+        if !defaults.plannerModel(profileID: profile.id).isEmpty,
+           !allowed.contains(defaults.plannerModel(profileID: profile.id)) {
+            defaults.setString("", profileID: profile.id, suffix: "plannerModel")
+        }
+        defaults.setStringArray(catalog, profileID: profile.id, suffix: "modelChoices")
+        defaults.setManualModels([], profileID: profile.id)
+
+        try db.pool.write { database in
+            let companions = try CompanionRecord
+                .filter(Column("modelPolicy") == CompanionModelPolicy.pinned.rawValue)
+                .fetchAll(database)
+            for var companion in companions
+            where (companion.runtimeProfileId == nil || companion.runtimeProfileId == profile.id)
+                && !allowed.contains(companion.model) {
+                companion.modelPolicy = .inherit
+                try companion.update(database)
+            }
+        }
     }
 
     private static func seedProfiles(inputs: SeedInputs) -> [RuntimeProfileRecord] {

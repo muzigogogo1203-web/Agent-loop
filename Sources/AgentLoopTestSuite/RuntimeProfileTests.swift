@@ -186,6 +186,38 @@ private func runtimeCompanion(model: String = "model-a", profileId: String? = ni
     #expect(try db.defaultProfile()?.kind == .chatGPTOAuth)
 }
 
+@Test func runtimeProfileBootstrapOAuthDefaultReconcilesLegacyModels() throws {
+    let db = try runtimeProfileTempDB()
+    let rawDefaults = runtimeProfileDefaults()
+    rawDefaults.set("claude-sonnet-4-6", forKey: "defaultModel")
+    rawDefaults.set("glm-5.2", forKey: "distillModel")
+    rawDefaults.set("glm-5.2", forKey: "plannerModel")
+    rawDefaults.set(["claude-sonnet-4-6", "glm-5.2"], forKey: "modelChoices")
+    let defaults = ProfileScopedDefaults(defaults: rawDefaults)
+    let companion = runtimeCompanion(model: "glm-5.2")
+    try db.saveCompanion(companion)
+
+    let profile = try #require(try RuntimeProfileBootstrap(db: db, defaults: defaults).ensureSeeded(
+        inputs: .init(
+            apiKeyPresent: true,
+            apiFormat: .openAIChatCompletions,
+            apiBaseURL: "https://api.openai.com",
+            oauthTokenPresent: true,
+            preferredSource: .webLogin
+        ),
+        fallbackModelChoices: ["claude-sonnet-4-6", "glm-5.2"]
+    ))
+
+    #expect(profile.kind == .chatGPTOAuth)
+    #expect(defaults.defaultModel(profileID: profile.id, fallback: "missing") == "gpt-5.5")
+    #expect(defaults.distillModel(profileID: profile.id).isEmpty)
+    #expect(defaults.plannerModel(profileID: profile.id).isEmpty)
+    #expect(defaults.modelChoices(profileID: profile.id, fallback: []) == ["gpt-5.5"])
+    let reconciled = try #require(try db.companion(id: companion.id))
+    #expect(reconciled.model == "glm-5.2")
+    #expect(reconciled.modelPolicy == .inherit)
+}
+
 @Test func runtimeProfileBootstrapSeedsEmptyAnthropicProfileWhenNoCredentials() throws {
     let db = try runtimeProfileTempDB()
     let profile = try #require(try RuntimeProfileBootstrap(db: db).ensureSeeded(
@@ -412,6 +444,15 @@ private func runtimeCompanion(model: String = "model-a", profileId: String? = ni
 
         #expect(try await service.refresh(profile: codex, credential: "") == ["cli-default"])
         #expect(await service.catalog(profile: claude) == ["cli-default"])
+        #expect(await service.catalog(profile: oauth) == ["gpt-5.5"])
+    }
+
+    @Test func oauthCatalogIgnoresManualModels() async throws {
+        let defaults = ProfileScopedDefaults(defaults: runtimeProfileDefaults())
+        let oauth = RuntimeProfileRecord.new(kind: .chatGPTOAuth, name: "ChatGPT")
+        defaults.setManualModels(["glm-5.2", "gpt-5.5"], profileID: oauth.id)
+        let service = ModelCatalogService(session: Self.stubbedSession(), defaults: defaults)
+
         #expect(await service.catalog(profile: oauth) == ["gpt-5.5"])
     }
 

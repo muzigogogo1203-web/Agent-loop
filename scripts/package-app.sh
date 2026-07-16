@@ -3,7 +3,7 @@
 #
 # 用法:
 #   scripts/package-app.sh                      # ad-hoc 签名(本机/亲友分发;跨机首启需右键打开过 Gatekeeper)
-#   scripts/package-app.sh --version 1.0.0      # 显式版本(默认取最新 git tag,无 tag 兜底 1.0.0)
+#   scripts/package-app.sh --version 1.1.0      # 显式版本(默认取最新 vX.Y.Z 标签,无语义化版本标签兜底 1.1.0)
 #   scripts/package-app.sh --feed-url <url>     # 写入 SUFeedURL(为将来 Sparkle 预留,当前无消费方)
 #   SIGN_ID="Developer ID Application: …" scripts/package-app.sh          # 正式签名(硬化运行时 + entitlements)
 #   SIGN_ID="…" NOTARY_PROFILE=<profile> scripts/package-app.sh           # 签名 + 公证 + staple
@@ -25,8 +25,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 if [[ -z "$VERSION" ]]; then
-  VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)"
-  VERSION="${VERSION:-1.0.0}"
+  # Milestone tags such as `m3` are not valid application versions.
+  VERSION="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname 2>/dev/null | sed -n '1s/^v//p' || true)"
+  VERSION="${VERSION:-1.1.0}"
 fi
 BUILD_NUMBER="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 SIGN_ID="${SIGN_ID:--}"

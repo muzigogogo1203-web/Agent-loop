@@ -303,36 +303,68 @@ public final class AppDatabase: Sendable {
         }
         // M10: 长明火定时行动。v8 已被 Coding 牧场 MVP 占用，本轮必须注册为 v9-evercamp。
         m.registerMigration("v9-evercamp") { db in
-            try db.create(table: "mission_template") { t in
-                t.primaryKey("id", .text)
-                t.column("name", .text).notNull()
-                t.column("goal", .text).notNull()
-                t.column("companionIdsJson", .text).notNull()
-                t.column("workspacePath", .text)
-                t.column("budgetTokens", .integer).notNull()
-                t.column("autonomy", .text).notNull()
-                t.column("campId", .text).notNull().references("camp")
-                t.column("createdAt", .datetime).notNull()
-            }
-            try db.create(index: "mission_template_camp", on: "mission_template", columns: ["campId", "createdAt"])
+            let templateExists = try db.tableExists("mission_template")
+            let scheduleExists = try db.tableExists("schedule")
 
-            try db.create(table: "schedule") { t in
-                t.primaryKey("id", .text)
-                t.column("templateId", .text).notNull().references("mission_template")
-                t.column("frequency", .text).notNull()
-                    .check(sql: "frequency IN ('daily', 'weekly')")
-                t.column("hour", .integer).notNull()
-                    .check(sql: "hour >= 0 AND hour <= 23")
-                t.column("minute", .integer).notNull()
-                    .check(sql: "minute >= 0 AND minute <= 59")
-                t.column("weekday", .integer)
-                    .check(sql: "weekday IS NULL OR (weekday >= 1 AND weekday <= 7)")
-                t.column("enabled", .boolean).notNull().defaults(to: false)
-                t.column("lastFiredAt", .datetime)
-                t.column("createdAt", .datetime).notNull()
+            if templateExists || scheduleExists {
+                guard templateExists && scheduleExists else {
+                    throw DatabaseError(message: "legacy Evercamp schema is incomplete: mission_template and schedule must both exist")
+                }
+
+                // A pre-release build registered these tables as migration `v8`.
+                // Released builds use `v8-coding-ranch` + `v9-evercamp`, so validate
+                // that legacy shape before adopting it instead of blindly recreating
+                // tables or silently accepting a corrupt partial migration.
+                let requiredColumns: [(String, Set<String>)] = [
+                    ("mission_template", [
+                        "id", "name", "goal", "companionIdsJson", "workspacePath",
+                        "budgetTokens", "autonomy", "campId", "createdAt",
+                    ]),
+                    ("schedule", [
+                        "id", "templateId", "frequency", "hour", "minute", "weekday",
+                        "enabled", "lastFiredAt", "createdAt",
+                    ]),
+                ]
+                for (table, required) in requiredColumns {
+                    let actual = Set(try db.columns(in: table).map(\.name))
+                    let missing = required.subtracting(actual).sorted()
+                    guard missing.isEmpty else {
+                        throw DatabaseError(message: "legacy Evercamp table \(table) is missing columns: \(missing.joined(separator: ", "))")
+                    }
+                }
+                Self.logger.notice("Adopting validated legacy Evercamp v8 tables as v9-evercamp")
+            } else {
+                try db.create(table: "mission_template") { t in
+                    t.primaryKey("id", .text)
+                    t.column("name", .text).notNull()
+                    t.column("goal", .text).notNull()
+                    t.column("companionIdsJson", .text).notNull()
+                    t.column("workspacePath", .text)
+                    t.column("budgetTokens", .integer).notNull()
+                    t.column("autonomy", .text).notNull()
+                    t.column("campId", .text).notNull().references("camp")
+                    t.column("createdAt", .datetime).notNull()
+                }
+
+                try db.create(table: "schedule") { t in
+                    t.primaryKey("id", .text)
+                    t.column("templateId", .text).notNull().references("mission_template")
+                    t.column("frequency", .text).notNull()
+                        .check(sql: "frequency IN ('daily', 'weekly')")
+                    t.column("hour", .integer).notNull()
+                        .check(sql: "hour >= 0 AND hour <= 23")
+                    t.column("minute", .integer).notNull()
+                        .check(sql: "minute >= 0 AND minute <= 59")
+                    t.column("weekday", .integer)
+                        .check(sql: "weekday IS NULL OR (weekday >= 1 AND weekday <= 7)")
+                    t.column("enabled", .boolean).notNull().defaults(to: false)
+                    t.column("lastFiredAt", .datetime)
+                    t.column("createdAt", .datetime).notNull()
+                }
             }
-            try db.create(index: "schedule_template", on: "schedule", columns: ["templateId"])
-            try db.create(index: "schedule_enabled", on: "schedule", columns: ["enabled", "templateId"])
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS mission_template_camp ON mission_template(campId, createdAt)")
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS schedule_template ON schedule(templateId)")
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS schedule_enabled ON schedule(enabled, templateId)")
         }
         m.registerMigration("v10-runtime-profiles") { db in
             try db.create(table: "runtime_profile") { t in
