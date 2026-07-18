@@ -44,6 +44,7 @@ APP_NAME="Coding 牧场"
 APP="dist/${APP_NAME}.app"
 rm -rf dist && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/AgentLoopApp "$APP/Contents/MacOS/AgentLoop"
+cp -R .build/release/AgentLoop_AgentLoopApp.bundle "$APP/Contents/Resources/"
 
 # 图标:代码绘制 1024 → iconset → icns
 echo "==> icon"

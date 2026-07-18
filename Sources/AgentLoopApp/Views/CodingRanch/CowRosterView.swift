@@ -53,6 +53,7 @@ struct CowRosterView: View {
         case .loaded:
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    RanchArtView(kind: .barn, height: 150)
                     VStack(alignment: .leading, spacing: 10) {
                         CampSectionTitle("已经在营地的牛")
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 270), spacing: 12)], spacing: 12) {

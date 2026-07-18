@@ -246,6 +246,7 @@ struct CodingRanchHomeView: View {
                     .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
             }
             if state.activeMissions.isEmpty {
+                RanchArtView(kind: .base, height: 170)
                 Text("基础牛现在空闲。确认反刍结果后，可以把一个真实任务交给它。")
                     .font(.callout)
                     .foregroundStyle(Camp.inkSecondary)

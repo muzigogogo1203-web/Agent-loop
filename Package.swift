@@ -50,7 +50,8 @@ let package = Package(
         ),
         .executableTarget(
             name: "AgentLoopApp",
-            dependencies: ["AgentLoopCore"]
+            dependencies: ["AgentLoopCore"],
+            resources: [.copy("Resources/RanchArt")]
         ),
         .testTarget(
             name: "AgentLoopCoreTests",

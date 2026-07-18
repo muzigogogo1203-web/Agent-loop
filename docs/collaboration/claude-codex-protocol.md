@@ -60,10 +60,11 @@ plan 里留一节「Open questions」——若非空，先问用户，不触发�
 
 ```bash
 cd /Users/muzi/Agent-loop && codex exec --cd "$PWD" --sandbox workspace-write \
-  --dangerously-bypass-hook-trust=false 2>&1 \
+  -m gpt-5.6-sol -c model_reasoning_effort=xhigh 2>&1 \
   "You are the IMPLEMENTER for AgentLoop. Read AGENTS.md first, then read <$TASK>/plan.md and implement it exactly. Rules: (1) Do not make architecture/product decisions not in the plan — if blocked, write the question to <$TASK>/blocked.md and STOP. (2) Follow existing Swift 6 / GRDB / actor patterns in the codebase. (3) Run 'swift run RunTests' and save full output to <$TASK>/verify.log. (4) Write <$TASK>/impl-report.md: what changed (file list), test results, anything deviating from plan. Do not commit."
 ```
 
+- **必须显式 `-m` 和 `-c model_reasoning_effort=xhigh`**：本机 Codex 配置的默认模型曾漂移到当前 CLI 不支持的型号（gpt-5.6-luna）且 effort 掉到 low；显式指定可避免静默降级。当前指定 `gpt-5.6-sol`（2026-07-17 用户确认）。旧模板里的 `--dangerously-bypass-hook-trust=false` 在 Codex 0.132.0 上是非法参数，已移除。
 - Claude 用 Bash `run_in_background` 挂起该命令，完成后回来收结果；不轮询。
 - 超时预算：Level 1 ≤ 10 分钟，Level 2/3 ≤ 30 分钟；超时先看 impl-report/blocked.md 是否已产出，再决定 resume 还是重试。
 
