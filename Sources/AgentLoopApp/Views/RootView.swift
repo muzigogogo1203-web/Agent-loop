@@ -99,7 +99,7 @@ struct RootView: View {
             .background(Camp.canvas)
             .navigationSplitViewColumnWidth(min: 210, ideal: 240)
             .onAppear {
-                store.reload()
+                store.reload(keychainInteractionPolicy: .failIfInteractionRequired)
                 if let previewMission = AppStore.previewMissionId {
                     selection = .mission(previewMission)
                 } else if shouldShowOnboarding {
@@ -107,6 +107,11 @@ struct RootView: View {
                 } else if selection == nil, let first = store.camps.first {
                     selection = .camp(first.id)
                 }
+            }
+            .task {
+                // 先让 SwiftUI 提交首帧；需要钥匙串授权时，系统提示会出现在可用窗口之上。
+                await Task.yield()
+                await store.refreshCredentialPresence()
             }
             .onChange(of: selection) { previous, value in
                 if case .mission(let id) = value {

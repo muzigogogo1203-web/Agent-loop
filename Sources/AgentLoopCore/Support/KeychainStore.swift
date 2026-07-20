@@ -1,5 +1,11 @@
 import Foundation
+import LocalAuthentication
 import Security
+
+public enum KeychainInteractionPolicy: Sendable, Equatable {
+    case allow
+    case failIfInteractionRequired
+}
 
 public struct KeychainStore: Sendable {
     public let service: String
@@ -30,13 +36,22 @@ public struct KeychainStore: Sendable {
     }
 
     public func get(account: String) throws -> String? {
-        let query: [String: Any] = [
+        try get(account: account, interactionPolicy: .allow)
+    }
+
+    public func get(account: String, interactionPolicy: KeychainInteractionPolicy) throws -> String? {
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
+        if interactionPolicy == .failIfInteractionRequired {
+            let context = LAContext()
+            context.interactionNotAllowed = true
+            query[kSecUseAuthenticationContext as String] = context
+        }
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         if status == errSecItemNotFound {
@@ -66,6 +81,15 @@ public struct KeychainError: Error, Sendable {
 
     public init(status: OSStatus) {
         self.status = status
+    }
+}
+
+extension KeychainError: LocalizedError {
+    public var errorDescription: String? {
+        if let message = SecCopyErrorMessageString(status, nil) {
+            return message as String
+        }
+        return "钥匙串错误（状态码 \(status)）"
     }
 }
 

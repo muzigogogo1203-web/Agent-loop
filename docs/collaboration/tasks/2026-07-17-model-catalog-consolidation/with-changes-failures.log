@@ -1,0 +1,19 @@
+✘ Test resolvedCatalogUsesTheCorrectSourceWithoutWrites() recorded an issue at ModelCatalogPolicyTests.swift:36:5: Expectation failed: (ModelCatalogService.resolvedCatalog(profile: gateway, defaults: defaults, fallback: ["fallback"]) → ["cached", "manual"]) == ["scoped", "manual"]
+✘ Test resolvedCatalogUsesTheCorrectSourceWithoutWrites() failed after 1.869 seconds with 1 issue.
+✘ Test cliProcessBackendBlocksWhenCliExitsWithoutBoardTerminator() recorded an issue at CliBackendTests.swift:113:2: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/c0A212703/s/ABBCA92CD5B348CC.sock")
+✘ Test cliProcessBackendBlocksWhenCliExitsWithoutBoardTerminator() failed after 2.352 seconds with 1 issue.
+✘ Test cliProcessBackendTimeoutBlocksCard() recorded an issue at CliBackendTests.swift:151:2: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/cAE1C9D8F/s/E9A397D3ED0349C6.sock")
+✘ Test cliProcessBackendTimeoutBlocksCard() failed after 2.132 seconds with 1 issue.
+✘ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() recorded an issue at BoardServerTests.swift:36:6: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/bA65D1841/s/A259799D6638473E.sock")
+✘ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() failed after 0.287 seconds with 1 issue.
+✘ Test boardServerRejectsWrongTokenAndMismatchedCard() recorded an issue at BoardServerTests.swift:65:6: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/b14770BB3/s/5F5AAE8FBF444F28.sock")
+✘ Test boardServerRejectsWrongTokenAndMismatchedCard() failed after 0.176 seconds with 1 issue.
+✘ Test boardServerRejectsSecondConcurrentConnection() recorded an issue at BoardServerTests.swift:80:6: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/b046C766B/s/91DAA03B75C3407D.sock")
+✘ Test boardServerRejectsSecondConcurrentConnection() failed after 0.068 seconds with 1 issue.
+✘ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() recorded an issue at BoardServerTests.swift:97:6: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/bD397AF5B/s/25490BEBC380411E.sock")
+✘ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() failed after 0.056 seconds with 1 issue.
+✘ Suite BoardServerTests failed after 3.335 seconds with 4 issues.
+✘ Test cliProcessBackendCancellationReturnsCardToReady() recorded an issue at CliBackendTests.swift:208:5: Expectation failed: (status → .blocked) == .ready
+✘ Test cliProcessBackendCancellationReturnsCardToReady() recorded an issue at CliBackendTests.swift:210:5: Expectation failed: (run.outcome → "failed") == "canceled"
+✘ Test cliProcessBackendCancellationReturnsCardToReady() failed after 3.761 seconds with 2 issues.
+✘ Test run with 412 tests in 4 suites failed after 4.136 seconds with 9 issues.

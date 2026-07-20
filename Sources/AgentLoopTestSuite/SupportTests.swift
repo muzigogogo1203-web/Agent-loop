@@ -7,8 +7,10 @@ import Darwin
     let store = KeychainStore(service: "com.muzi.agentloop.tests.\(UUID().uuidString)")
     defer { try? store.delete(account: "k") }
     #expect(try store.get(account: "k") == nil)
+    #expect(try store.get(account: "k", interactionPolicy: .failIfInteractionRequired) == nil)
     try store.set("sk-abc", account: "k")
     #expect(try store.get(account: "k") == "sk-abc")
+    #expect(try store.get(account: "k", interactionPolicy: .failIfInteractionRequired) == "sk-abc")
     try store.set("sk-def", account: "k")
     #expect(try store.get(account: "k") == "sk-def")
 }

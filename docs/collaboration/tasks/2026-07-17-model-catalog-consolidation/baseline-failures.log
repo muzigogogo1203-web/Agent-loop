@@ -1,0 +1,17 @@
+✘ Test cliProcessBackendTimeoutBlocksCard() recorded an issue at CliBackendTests.swift:151:2: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/cF4D91116/s/24F5B7A6337F4A91.sock")
+✘ Test cliProcessBackendTimeoutBlocksCard() failed after 1.736 seconds with 1 issue.
+✘ Test cliProcessBackendBlocksWhenCliExitsWithoutBoardTerminator() recorded an issue at CliBackendTests.swift:113:2: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/c3A737679/s/DABD7A7C52CF4E84.sock")
+✘ Test cliProcessBackendBlocksWhenCliExitsWithoutBoardTerminator() failed after 1.671 seconds with 1 issue.
+✘ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() recorded an issue at BoardServerTests.swift:36:6: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/bAB55A0D9/s/A6BFBC1E1E5A4984.sock")
+✘ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() failed after 0.215 seconds with 1 issue.
+✘ Test boardServerRejectsWrongTokenAndMismatchedCard() recorded an issue at BoardServerTests.swift:65:6: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/bCEBB920D/s/0E9182D2C5514A36.sock")
+✘ Test boardServerRejectsWrongTokenAndMismatchedCard() failed after 0.181 seconds with 1 issue.
+✘ Test boardServerRejectsSecondConcurrentConnection() recorded an issue at BoardServerTests.swift:80:6: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/b791D4EAF/s/63854F4670154556.sock")
+✘ Test boardServerRejectsSecondConcurrentConnection() failed after 0.051 seconds with 1 issue.
+✘ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() recorded an issue at BoardServerTests.swift:97:6: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/b507D2C1B/s/5F368AFFD22E4D28.sock")
+✘ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() failed after 0.041 seconds with 1 issue.
+✘ Suite BoardServerTests failed after 2.799 seconds with 4 issues.
+✘ Test cliProcessBackendCancellationReturnsCardToReady() recorded an issue at CliBackendTests.swift:208:5: Expectation failed: (status → .blocked) == .ready
+✘ Test cliProcessBackendCancellationReturnsCardToReady() recorded an issue at CliBackendTests.swift:210:5: Expectation failed: (run.outcome → "failed") == "canceled"
+✘ Test cliProcessBackendCancellationReturnsCardToReady() failed after 3.164 seconds with 2 issues.
+✘ Test run with 409 tests in 4 suites failed after 3.602 seconds with 8 issues.

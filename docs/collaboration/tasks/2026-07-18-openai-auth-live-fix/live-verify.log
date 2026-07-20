@@ -1,0 +1,38 @@
+OpenAI 网页认证现场验证
+日期: 2026-07-18
+
+初始现场
+- 启动进程: /Users/muzi/Agent-loop/.build/AgentLoop.app/Contents/MacOS/AgentLoop
+- bundle id: com.muzi.agentloop.dev
+- 启动方式包含 --preview；预览数据库为 .build/AgentLoopPreviewState/agentloop.sqlite
+- 浏览器回调页已显示“Coding 牧场登录完成”，但预览界面仍显示“未配置 API”
+- Keychain 仅检查条目存在性：access/refresh/id token 与 account id 条目均已存在；未读取或记录凭据值
+- 生产数据库中已存在默认的“ChatGPT 登录” OAuth runtime profile
+
+根因复现
+- 使用真实模式启动开发版后，界面显示“网页登录已授权”
+- 点击“测试连接”返回：HTTP 400 Unsupported parameter: max_output_tokens
+- 说明 OAuth 回调与 token exchange 已完成；后续请求体与 ChatGPT Codex backend 不兼容
+
+修复后开发版
+- 真实模式启动
+- 网页登录状态：已授权
+- 默认供给线：ChatGPT 登录
+- 默认模型：gpt-5.5
+- 点击“测试连接”：连接正常（gpt-5.5）
+
+安装版
+- 安装来源: dist/Coding 牧场.app
+- 安装目标: /Applications/AgentLoop.app
+- 版本: 1.1.0 (build 124)
+- bundle id: com.muzi.agentloop
+- codesign --verify --deep --strict: 通过
+- 运行进程: /Applications/AgentLoop.app/Contents/MacOS/AgentLoop
+- 数据库: /Users/muzi/Library/Application Support/AgentLoop/agentloop.sqlite
+- 网页登录状态：已授权
+- 默认供给线：ChatGPT 登录
+- 默认模型：gpt-5.5
+- 点击“测试连接”：连接正常（gpt-5.5）
+
+可恢复备份
+- /Users/muzi/Library/Application Support/AgentLoop/Install Backups/20260718-204818-openai-auth-live-fix/AgentLoop-build120.app

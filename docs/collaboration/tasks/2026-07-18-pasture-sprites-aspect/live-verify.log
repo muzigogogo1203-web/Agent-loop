@@ -1,0 +1,38 @@
+草原具象小牛与比例修复现场验收
+时间: 2026-07-18 23:16 PDT
+工作区: /Users/muzi/Agent-loop
+
+构建与测试
+- swift build: 通过，9.48 秒
+- swift run RunTests: 423 tests / 5 suites 全部通过，13.589 秒
+- 完整日志: build.log、verify.log
+
+预览 UI
+- 亮色 Coding 草原: 完整 3:2 舞台，实测约 660x440；两只透明小牛、状态胶囊、知识槽与阶段轨道可见
+- 暗色 Coding 草原: 夜间基座完整显示；小牛和文字可读
+- 点击小牛: 正确打开相应工作卡详情，关闭后状态恢复
+- Accessibility: 两只牛均为按钮，help 包含真实工作卡标题
+- 暗色牛棚: 16:9 横幅完整显示屋顶、四只牛、牛棚与背景，无裁切
+- 我的营地: 当前存在进行中任务，因此不进入空闲插画分支；源码确认使用同一 RanchArtView.fit 渲染路径
+
+打包与安装
+- scripts/package-app.sh: 成功
+- 产物: dist/Coding 牧场.app、dist/CodingRanch-1.1.0.zip、dist/CodingRanch-1.1.0.dmg
+- 版本: 1.1.0 (build 124)
+- dist 与安装版可执行文件 SHA-256: fa0c185e302504d0915077d2e273f3f3b1e32a601e14ecd5ba9bca4cde13249e
+- codesign --verify --deep --strict: dist 与 /Applications/AgentLoop.app 均通过
+- 资源: RanchBarnDay/Night、RanchBaseDay/Night、RanchCowAmber/Blue/Coral/Green/Pink/Purple/Teal，共 11 个
+- 旧安装版备份: /Users/muzi/Library/Application Support/AgentLoop/Install Backups/20260718-231244-pre-sprites/AgentLoop-pre-sprites.app
+
+安装版现场
+- PID 8513，进程路径 /Applications/AgentLoop.app/Contents/MacOS/AgentLoop
+- 窗口正常出现并可交互
+- 真实任务的 Coding 草原显示两只具象小牛，无白色工作卡浮层
+- 设置页: 网页登录已授权；API Key 已保存
+- 2 秒 sample: 主线程位于 NSApplication run / nextEventMatchingMask；未命中 SecItemCopyMatching、SecurityAgent 或 AppStore.init 阻塞
+- 最近 15 分钟 DiagnosticReports: 无新 AgentLoop crash report
+- 最终将安装版留在进行中任务的 Coding 草原页面，供用户直接体验
+
+清理
+- 临时验收状态移到 /Users/muzi/.Trash/AgentLoop-CodingPastureSpritesAcceptance-20260718-231608，可恢复
+- git worktree list 仅 /Users/muzi/Agent-loop [main]

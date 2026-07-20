@@ -148,6 +148,200 @@ import AgentLoopCore
     #expect(run.tokensOut == 9)
 }
 
+@Test func cliProcessBackendFinishesWithinGraceWhenGrandchildHoldsPipe() async throws {
+    guard agentLoopCanBindListenerSocket() else { return }
+    let harness = try CliBackendHarness()
+    let script = try harness.fakeScript("""
+    #!/bin/bash
+    yes 1>&2 &
+    printf '%s\n' '{"usage":{"input_tokens":1,"output_tokens":2}}'
+    exit 0
+    """)
+    let backend = CliProcessBackend(
+        db: harness.db,
+        artifactStoreRoot: harness.artifacts,
+        profileKind: .cliCodex,
+        commandOverride: script.path,
+        bridgeExecutablePath: "/bin/echo",
+        timeout: .seconds(30),
+        pipeDrainGrace: .milliseconds(300),
+        socketDirectory: harness.sockets
+    )
+    let completion = StreamCompletion<[AgentEvent]>()
+    let streamTask = Task {
+        do {
+            var events: [AgentEvent] = []
+            for try await event in try backend.run(context: harness.context()) {
+                events.append(event)
+            }
+            await completion.finish(.success(events))
+        } catch {
+            await completion.finish(.failure(error))
+        }
+    }
+
+    var result: Result<[AgentEvent], Error>?
+    for _ in 0..<400 {
+        if let value = await completion.value() {
+            result = value
+            break
+        }
+        try await Task.sleep(for: .milliseconds(25))
+    }
+    guard let result else {
+        #expect(Bool(false), "CLI stream did not finish before watchdog")
+        streamTask.cancel()
+        return
+    }
+    let events = try result.get()
+    streamTask.cancel()
+
+    #expect(events.contains {
+        if case .finished(.blocked(let reason, _)) = $0 {
+            return reason == "tool_failure"
+        }
+        return false
+    })
+    #expect(try harness.db.card(id: harness.cardId)?.status == .blocked)
+    let run = try #require(try harness.db.runs(cardId: harness.cardId).first)
+    #expect(run.outcome == "blocked")
+    #expect(run.tokensIn == 1)
+    #expect(run.tokensOut == 2)
+}
+
+@Test func cliProcessBackendCapturesFinalLineWithoutNewline() async throws {
+    guard agentLoopCanBindListenerSocket() else { return }
+    let harness = try CliBackendHarness()
+    let script = try harness.fakeScript("""
+    #!/bin/bash
+    printf '%s' '{"usage":{"input_tokens":11,"output_tokens":13}}'
+    exit 0
+    """)
+    let backend = CliProcessBackend(
+        db: harness.db,
+        artifactStoreRoot: harness.artifacts,
+        profileKind: .cliCodex,
+        commandOverride: script.path,
+        bridgeExecutablePath: "/bin/echo",
+        timeout: .seconds(5),
+        socketDirectory: harness.sockets
+    )
+    for try await _ in try backend.run(context: harness.context()) {}
+
+    #expect(try harness.db.card(id: harness.cardId)?.status == .blocked)
+    let run = try #require(try harness.db.runs(cardId: harness.cardId).first)
+    #expect(run.outcome == "blocked")
+    #expect(run.tokensIn == 11)
+    #expect(run.tokensOut == 13)
+}
+
+@Test func cliPipeDrainRereadsAfterExitObserved() async {
+    let clock = ContinuousClock()
+    var reads: [CliPipeDrain.ReadResult] = [
+        .wouldBlock,
+        .data(Data("{\"usage\":{\"input_tokens\":3,\"output_tokens\":5}}\n".utf8)),
+        .wouldBlock,
+    ]
+    var readCount = 0
+    var received: [Data] = []
+
+    await CliPipeDrain.drain(
+        grace: .seconds(1),
+        readChunk: {
+            readCount += 1
+            guard !reads.isEmpty else { return .wouldBlock }
+            return reads.removeFirst()
+        },
+        isExited: { true },
+        sleep: { _ in },
+        now: { clock.now },
+        onData: { received.append($0) },
+        onReadFailure: { _ in }
+    )
+
+    #expect(readCount >= 3)
+    #expect(received == [Data("{\"usage\":{\"input_tokens\":3,\"output_tokens\":5}}\n".utf8)])
+}
+
+@Test func cliPipeDrainBacksOffPollingWhileSilent() async {
+    let clock = ContinuousClock()
+    var exitChecks = 0
+    var silentSleeps: [Duration] = []
+
+    await CliPipeDrain.drain(
+        grace: .seconds(1),
+        readChunk: { .wouldBlock },
+        isExited: {
+            exitChecks += 1
+            return exitChecks > 6
+        },
+        sleep: { silentSleeps.append($0) },
+        now: { clock.now },
+        onData: { _ in },
+        onReadFailure: { _ in }
+    )
+
+    #expect(silentSleeps == [
+        .milliseconds(10),
+        .milliseconds(20),
+        .milliseconds(40),
+        .milliseconds(80),
+        .milliseconds(100),
+        .milliseconds(100),
+    ])
+
+    var resetReads: [CliPipeDrain.ReadResult] = [
+        .wouldBlock,
+        .wouldBlock,
+        .data(Data("x".utf8)),
+        .wouldBlock,
+        .wouldBlock,
+    ]
+    var resetExitChecks = 0
+    var resetSleeps: [Duration] = []
+
+    await CliPipeDrain.drain(
+        grace: .seconds(1),
+        readChunk: {
+            guard !resetReads.isEmpty else { return .wouldBlock }
+            return resetReads.removeFirst()
+        },
+        isExited: {
+            resetExitChecks += 1
+            return resetExitChecks > 4
+        },
+        sleep: { resetSleeps.append($0) },
+        now: { clock.now },
+        onData: { _ in },
+        onReadFailure: { _ in }
+    )
+
+    #expect(resetSleeps == [.milliseconds(10), .milliseconds(20), .milliseconds(10)])
+}
+
+@Test func cliPipeDrainStopsAtGraceDeadlineWhileDataFlows() async {
+    let clock = ContinuousClock()
+    let start = clock.now
+    var tick = 0
+    var received = 0
+
+    await CliPipeDrain.drain(
+        grace: .milliseconds(250),
+        readChunk: { .data(Data("x".utf8)) },
+        isExited: { true },
+        sleep: { _ in },
+        now: {
+            defer { tick += 1 }
+            return start.advanced(by: .milliseconds(100 * tick))
+        },
+        onData: { _ in received += 1 },
+        onReadFailure: { _ in }
+    )
+
+    #expect(received >= 1)
+    #expect(received <= 4)
+}
+
 @Test func cliProcessBackendTimeoutBlocksCard() async throws {
     guard agentLoopCanBindListenerSocket() else { return }
     let harness = try CliBackendHarness()
@@ -240,7 +434,9 @@ private struct CliBackendHarness {
             .appendingPathComponent("c\(UUID().uuidString.prefix(8))")
         workspace = base.appendingPathComponent("ws")
         artifacts = base.appendingPathComponent("artifacts")
-        sockets = base.appendingPathComponent("s")
+        // socket 目录必须走短路径：worktree 下 CWD 前缀会让 sun_path 超 104 字节上限
+        sockets = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("al-\(UUID().uuidString.prefix(8))")
         try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: artifacts, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: sockets, withIntermediateDirectories: true)
@@ -274,5 +470,17 @@ private struct CliBackendHarness {
             toolAccess: .full,
             autonomy: .standard
         )
+    }
+}
+
+private actor StreamCompletion<Value> {
+    private var stored: Result<Value, Error>?
+
+    func finish(_ result: Result<Value, Error>) {
+        stored = result
+    }
+
+    func value() -> Result<Value, Error>? {
+        stored
     }
 }

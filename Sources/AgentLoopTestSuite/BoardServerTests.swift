@@ -105,13 +105,78 @@ import AgentLoopCore
         client.close()
     }
 
+    @Test func boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses() throws {
+        guard agentLoopCanBindListenerSocket() else { return }
+        let baseline = Self.fileDescriptorCount()
+        for _ in 0..<20 {
+            let queue = DispatchQueue(label: "board-handler-test")
+            queue.suspend()
+            // 释放挂起状态的队列会被 libdispatch trap 掉整个进程；任何 throw 路径都必须恰好 resume 一次
+            var queueResumed = false
+            defer { if !queueResumed { queue.resume() } }
+            var server: BoardToolServer?
+            var cardId = ""
+            do {
+                let harness = try Self.makeBoardHarness(startServer: false, handlerQueue: queue)
+                server = harness.server
+                cardId = harness.cardId
+            }
+            try server?.start()
+            // backlog=1：acceptLoop 尚未取走上一个连接时新 connect 会被拒，需有界重试
+            let client = try Self.connectClientWithRetry(path: server!.socketURL.path)
+            let probe = try Self.connectClientWithRetry(path: server!.socketURL.path)
+            let sent = try probe.sendObservingPeerClosure(["type": "hello", "token": .string(server!.token), "cardId": .string(cardId)])
+            #expect(sent ? (try probe.readLine() == nil) : true)
+            probe.close()
+            server?.stop()
+            weak var weakServer = server
+            server = nil
+            usleep(300_000)
+            #expect(weakServer != nil)
+            queueResumed = true
+            queue.resume()
+            let deadline = Date().addingTimeInterval(2)
+            while weakServer != nil, Date() < deadline { usleep(10_000) }
+            #expect(weakServer == nil)
+            #expect(try client.readLine() == nil)
+            client.close()
+        }
+        #expect(Self.fileDescriptorCount() - baseline < 10)
+    }
+
+    @Test func boardServerStopWakesBlockedAcceptLoopAndReleasesListener() throws {
+        guard agentLoopCanBindListenerSocket() else { return }
+        let baseline = Self.fileDescriptorCount()
+        for _ in 0..<100 {
+            var server: BoardToolServer?
+            var cardId = ""
+            do {
+                let harness = try Self.makeBoardHarness(startServer: true)
+                server = harness.server
+                cardId = harness.cardId
+            }
+            let socketPath = server!.socketURL.path
+            let client = try BoardSocketTestClient(path: socketPath)
+            try client.hello(token: server!.token, cardId: cardId)
+            client.close()
+            server?.stop()
+            weak var weakServer = server
+            server = nil
+            let deadline = Date().addingTimeInterval(5)
+            while weakServer != nil, Date() < deadline { usleep(10_000) }
+            #expect(weakServer == nil)
+            #expect(!FileManager.default.fileExists(atPath: socketPath))
+        }
+        #expect(Self.fileDescriptorCount() - baseline < 10)
+    }
+
     @Test func boardServerDefinitionsExposeFiveToolsWhenFullAccess() throws {
         let harness = try Self.makeBoardHarness(startServer: false)
         #expect(harness.toolNames == ["complete_card", "block_card", "progress_note", "ask_user", "search_camp_notes"])
         harness.server.stop()
     }
 
-    private static func makeBoardHarness(startServer: Bool) throws -> (
+    private static func makeBoardHarness(startServer: Bool, handlerQueue: DispatchQueue? = nil) throws -> (
         db: AppDatabase,
         cardId: String,
         server: BoardToolServer,
@@ -123,7 +188,9 @@ import AgentLoopCore
             .appendingPathComponent("t")
             .appendingPathComponent("b\(UUID().uuidString.prefix(8))")
         let workspace = base.appendingPathComponent("ws")
-        let sockets = base.appendingPathComponent("s")
+        // socket 目录必须走短路径：worktree 下 CWD 前缀会让 sun_path 超 104 字节上限
+        let sockets = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("al-\(UUID().uuidString.prefix(8))")
         try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: sockets, withIntermediateDirectories: true)
         let db = try AppDatabase(path: base.appendingPathComponent("test.sqlite").path)
@@ -154,19 +221,36 @@ import AgentLoopCore
             socketURL: try BoardToolServer.makeSocketURL(directory: sockets),
             cardId: ids.cardId,
             executor: built.executor,
-            toolDefs: built.toolDefs
+            toolDefs: built.toolDefs,
+            handlerQueue: handlerQueue ?? DispatchQueue.global(qos: .utility)
         )
         if startServer {
             try server.start()
         }
         return (db, ids.cardId, server, built.executor, built.toolDefs.map(\.name))
     }
+
+    private static func fileDescriptorCount() -> Int {
+        (try? FileManager.default.contentsOfDirectory(atPath: "/dev/fd").count) ?? 0
+    }
+
+    private static func connectClientWithRetry(path: String, timeout: TimeInterval = 2) throws -> BoardSocketTestClient {
+        let deadline = Date().addingTimeInterval(timeout)
+        while true {
+            do {
+                return try BoardSocketTestClient(path: path)
+            } catch BoardToolServerError.socketSetupFailed(let message)
+                where message.contains("Connection refused") && Date() < deadline {
+                usleep(10_000)
+            }
+        }
+    }
 }
 
 func agentLoopCanBindListenerSocket() -> Bool {
-    let directory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        .appendingPathComponent(".build")
-        .appendingPathComponent("t")
+    // 与 makeBoardHarness 的 socket 目录同源：探针必须探真实绑定位置
+    let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appendingPathComponent("al-probe")
     try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     let path = directory.appendingPathComponent("probe-\(UUID().uuidString.prefix(8)).sock").path
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)
@@ -200,14 +284,7 @@ private final class BoardSocketTestClient {
         guard fd >= 0 else {
             throw BoardToolServerError.socketSetupFailed(String(cString: strerror(errno)))
         }
-        var noSIGPIPE: Int32 = 1
-        guard setsockopt(
-            fd,
-            SOL_SOCKET,
-            SO_NOSIGPIPE,
-            &noSIGPIPE,
-            socklen_t(MemoryLayout<Int32>.size)
-        ) == 0 else {
+        guard PosixSockets.disableSIGPIPE(fd) else {
             Darwin.close(fd)
             throw BoardToolServerError.socketSetupFailed("SO_NOSIGPIPE: \(String(cString: strerror(errno)))")
         }

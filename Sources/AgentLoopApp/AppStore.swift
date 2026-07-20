@@ -27,6 +27,13 @@ private final class RuntimeProfileResolutionFailureHandler: @unchecked Sendable 
     }
 }
 
+private struct CredentialPresenceSnapshot: Sendable {
+    let apiKeyPresent: Bool
+    let searchKeyPresent: Bool
+    let oauthAccessTokenPresent: Bool
+    let chatGPTAccountIDPresent: Bool
+}
+
 @MainActor @Observable
 final class AppStore {
     struct ActivityItem: Identifiable, Equatable {
@@ -60,6 +67,8 @@ final class AppStore {
     var codingRanchInbox = RuminationInboxViewState(loadState: .idle, items: [])
     var apiKeyPresent = false
     var webCredentialPresent = false
+    var credentialAccessInProgress = false
+    var credentialAccessError: String?
     var runtimeProfiles: [RuntimeProfileRecord] = []
     var currentRuntimeProfile: RuntimeProfileRecord?
     var preferredCredentialSource: ProviderCredentialSource = .apiKey {
@@ -82,9 +91,8 @@ final class AppStore {
         "gpt-4o",
         "DeepSeek-V4-Flash-Third",
     ]
-    var modelChoices: [String] = AppStore.factoryModelChoices {
-        didSet { persistProfileModels(modelChoices, suffix: "modelChoices") }
-    }
+    var modelChoices: [String] = AppStore.factoryModelChoices
+    private(set) var removableCatalogModels: Set<String> = []
     /// M6-D12：轻任务模型（空 = 跟随默认模型）——蒸馏与规划是最便宜的降档位
     var distillModel: String = "" {
         didSet { persistProfileString(distillModel, suffix: "distillModel") }
@@ -345,9 +353,15 @@ final class AppStore {
         let scopedDefaults = ProfileScopedDefaults()
         let initialAPIBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
         let initialAPIKeyPresent = !Self.isUIPreview
-            && Self.nonEmptyCredential(try? keychainStore.get(account: Self.apiKeyAccount)) != nil
+            && Self.nonEmptyCredential(try? keychainStore.get(
+                account: Self.apiKeyAccount,
+                interactionPolicy: .failIfInteractionRequired
+            )) != nil
         let initialOAuthTokenPresent = !Self.isUIPreview
-            && Self.nonEmptyCredential(try? keychainStore.get(account: Self.oauthAccessTokenAccount)) != nil
+            && Self.nonEmptyCredential(try? keychainStore.get(
+                account: Self.oauthAccessTokenAccount,
+                interactionPolicy: .failIfInteractionRequired
+            )) != nil
         do {
             let seededProfile = try RuntimeProfileBootstrap(
                 db: database,
@@ -450,7 +464,7 @@ final class AppStore {
             self?.reloadMissionList()
             self?.notifyScheduledMissionOutcomeIfNeeded(missionId: missionId)
         }
-        reload()
+        reload(keychainInteractionPolicy: .failIfInteractionRequired)
         startKernelEventListener(recoverKernel: !Self.isUIPreview)
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
         reloginHandler.store = self
@@ -624,7 +638,9 @@ final class AppStore {
         }
     }
 
-    func reload() {
+    func reload(
+        keychainInteractionPolicy: KeychainInteractionPolicy = .failIfInteractionRequired
+    ) {
         let previousDefaultProfileId = currentRuntimeProfile?.id
         runtimeProfiles = (try? db.runtimeProfiles()) ?? []
         currentRuntimeProfile = (try? db.defaultProfile()) ?? runtimeProfiles.first
@@ -634,21 +650,72 @@ final class AppStore {
         companions = (try? db.regularCompanions()) ?? []
         camps = (try? db.camps()) ?? []
         apiKeyPresent = !Self.isUIPreview
-            && Self.nonEmptyCredential(try? keychain.get(account: Self.apiKeyAccount)) != nil
+            && Self.nonEmptyCredential(try? keychain.get(
+                account: Self.apiKeyAccount,
+                interactionPolicy: keychainInteractionPolicy
+            )) != nil
         searchKeyPresent = Self.isUIPreview
             ? false
-            : (((try? keychain.get(account: "tavily-api-key")) ?? nil).map { !$0.isEmpty } ?? false)
+            : (((try? keychain.get(
+                account: "tavily-api-key",
+                interactionPolicy: keychainInteractionPolicy
+            )) ?? nil).map { !$0.isEmpty } ?? false)
         let hasOAuthToken = Self.nonEmptyCredential(
-            try? keychain.get(account: Self.oauthAccessTokenAccount)
+            try? keychain.get(
+                account: Self.oauthAccessTokenAccount,
+                interactionPolicy: keychainInteractionPolicy
+            )
         ) != nil
         let hasChatGPTAccount = Self.nonEmptyCredential(
-            try? keychain.get(account: Self.oauthChatGPTAccountIDAccount)
+            try? keychain.get(
+                account: Self.oauthChatGPTAccountIDAccount,
+                interactionPolicy: keychainInteractionPolicy
+            )
         ) != nil
         webCredentialPresent = !Self.isUIPreview
             && hasOAuthToken
             && (apiFormat != .openAIChatCompletions || hasChatGPTAccount)
         reloadMissionList()
         reloadArtifactLedger()
+    }
+
+    /// 首屏出现后再允许 SecurityAgent 交互，避免钥匙串授权把 App 主线程堵在窗口创建之前。
+    /// 读取在独立任务中完成；这里只回写“是否存在”，绝不把凭据带回 UI 或日志。
+    func refreshCredentialPresence() async {
+        guard !Self.isUIPreview, !credentialAccessInProgress else { return }
+        credentialAccessInProgress = true
+        credentialAccessError = nil
+        defer { credentialAccessInProgress = false }
+
+        let keychainStore = keychain
+        do {
+            let snapshot = try await Task.detached(priority: .userInitiated) {
+                try Self.readCredentialPresence(using: keychainStore)
+            }.value
+            apiKeyPresent = snapshot.apiKeyPresent
+            searchKeyPresent = snapshot.searchKeyPresent
+            webCredentialPresent = snapshot.oauthAccessTokenPresent
+                && (apiFormat != .openAIChatCompletions || snapshot.chatGPTAccountIDPresent)
+        } catch {
+            let message = "无法读取系统钥匙串：\(readableError(error))"
+            credentialAccessError = message
+            showToast(message)
+        }
+    }
+
+    nonisolated private static func readCredentialPresence(
+        using keychain: KeychainStore
+    ) throws -> CredentialPresenceSnapshot {
+        CredentialPresenceSnapshot(
+            apiKeyPresent: nonEmptyCredential(try keychain.get(account: apiKeyAccount)) != nil,
+            searchKeyPresent: nonEmptyCredential(try keychain.get(account: "tavily-api-key")) != nil,
+            oauthAccessTokenPresent: nonEmptyCredential(
+                try keychain.get(account: oauthAccessTokenAccount)
+            ) != nil,
+            chatGPTAccountIDPresent: nonEmptyCredential(
+                try keychain.get(account: oauthChatGPTAccountIDAccount)
+            ) != nil
+        )
     }
 
     func saveAPIKey(_ key: String) {
@@ -732,30 +799,13 @@ final class AppStore {
         inheritCompanionIds: Set<String>,
         resetSettingScopes: Set<String>
     ) {
-        for companionId in inheritCompanionIds {
-            guard var companion = try? db.companion(id: companionId) else { continue }
-            companion.modelPolicy = .inherit
-            try? db.saveCompanion(companion)
-        }
-        if !resetSettingScopes.isEmpty {
-            let defaults = ProfileScopedDefaults()
-            let catalogFirst = (try? db.runtimeProfile(id: id)).flatMap { profile in
-                catalogChoices(profile: profile).first
-            }
-            for item in reconciliationItems(switchingTo: id) where resetSettingScopes.contains(item.id) {
-                switch item.scope {
-                case .companion: continue
-                case .defaultModel:
-                    if let catalogFirst {
-                        defaults.setString(catalogFirst, profileID: id, suffix: "defaultModel")
-                    }
-                case .distillModel:
-                    defaults.setString("", profileID: id, suffix: "distillModel")
-                case .plannerModel:
-                    defaults.setString("", profileID: id, suffix: "plannerModel")
-                }
+        let items = reconciliationItems(switchingTo: id).filter { item in
+            switch item.scope {
+            case .companion(let companionId, _): return inheritCompanionIds.contains(companionId)
+            default: return resetSettingScopes.contains(item.id)
             }
         }
+        try? db.applyReconciliation(items: items, defaults: ProfileScopedDefaults())
         setDefaultRuntimeProfile(id: id)
         reload()
     }
@@ -763,34 +813,15 @@ final class AppStore {
     /// 目录选项(伙伴编辑器/设置/对账共用):OAuth/CLI 只读静态目录;
     /// 官方 API 使用服务端目录 + 手动项;网关使用该档案自己的可编辑目录。
     func catalogChoices(profile: RuntimeProfileRecord) -> [String] {
-        let defaults = ProfileScopedDefaults()
-        if let trusted = ModelCatalogService.trustedCatalog(profile: profile, defaults: defaults) {
-            return trusted
-        }
-        let cached = defaults.cachedCatalog(profileID: profile.id) ?? []
-        let manual = defaults.manualModels(profileID: profile.id)
-        let scoped = defaults.modelChoices(profileID: profile.id, fallback: Self.factoryModelChoices)
-        let merged = ProfileScopedDefaults.uniqueModels(cached + scoped + manual)
-        return merged.isEmpty ? Self.factoryModelChoices : merged
+        ModelCatalogService.resolvedCatalog(profile: profile, defaults: ProfileScopedDefaults(), fallback: Self.factoryModelChoices)
     }
 
     var currentModelCatalogAllowsManualInput: Bool {
-        guard let profile = currentRuntimeProfile else { return false }
-        switch profile.kind {
-        case .anthropicAPI, .openAIAPI:
-            return true
-        case .chatGPTOAuth, .cliCodex, .cliClaude:
-            return false
-        }
+        currentRuntimeProfile?.kind.allowsManualModelEntry ?? false
     }
 
     func canRemoveModelFromCurrentCatalog(_ model: String) -> Bool {
-        guard let profile = currentRuntimeProfile, currentModelCatalogAllowsManualInput else { return false }
-        let defaults = ProfileScopedDefaults()
-        if ModelCatalogService.isOfficialCatalogProfile(profile) {
-            return defaults.manualModels(profileID: profile.id).contains(model)
-        }
-        return modelChoices.count > 1
+        currentModelCatalogAllowsManualInput && removableCatalogModels.contains(model)
     }
 
     func addModelToCurrentCatalog(_ rawModel: String) {
@@ -798,38 +829,19 @@ final class AppStore {
         let model = rawModel.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !model.isEmpty else { return }
         let defaults = ProfileScopedDefaults()
-        if ModelCatalogService.isOfficialCatalogProfile(profile) {
-            defaults.setManualModels(
-                ProfileScopedDefaults.uniqueModels(defaults.manualModels(profileID: profile.id) + [model]),
-                profileID: profile.id
-            )
-        } else {
-            defaults.setStringArray(
-                ProfileScopedDefaults.uniqueModels(modelChoices + [model]),
-                profileID: profile.id,
-                suffix: "modelChoices"
-            )
-        }
+        defaults.setManualModels(defaults.manualModels(profileID: profile.id) + [model], profileID: profile.id)
         loadModelDefaultsForCurrentProfile()
     }
 
     func removeModelFromCurrentCatalog(_ model: String) {
         guard let profile = currentRuntimeProfile, canRemoveModelFromCurrentCatalog(model) else { return }
         let defaults = ProfileScopedDefaults()
-        if ModelCatalogService.isOfficialCatalogProfile(profile) {
-            defaults.setManualModels(
-                defaults.manualModels(profileID: profile.id).filter { $0 != model },
-                profileID: profile.id
-            )
-        } else {
-            defaults.setStringArray(
-                modelChoices.filter { $0 != model },
-                profileID: profile.id,
-                suffix: "modelChoices"
-            )
+        defaults.setManualModels(defaults.manualModels(profileID: profile.id).filter { $0 != model }, profileID: profile.id)
+        if !ModelCatalogService.isOfficialCatalogProfile(profile) {
+            let stored = defaults.modelChoices(profileID: profile.id, fallback: Self.factoryModelChoices)
+            defaults.setStringArray(stored.filter { $0 != model }, profileID: profile.id, suffix: "modelChoices")
         }
-        loadModelDefaultsForCurrentProfile()
-        normalizeCurrentModelSelections()
+        loadModelDefaultsForCurrentProfile(clampAfterCatalogEdit: true)
     }
 
     func resetCurrentModelCatalog() {
@@ -839,15 +851,14 @@ final class AppStore {
         if !ModelCatalogService.isOfficialCatalogProfile(profile) {
             defaults.setStringArray(Self.factoryModelChoices, profileID: profile.id, suffix: "modelChoices")
         }
-        loadModelDefaultsForCurrentProfile()
-        normalizeCurrentModelSelections()
+        loadModelDefaultsForCurrentProfile(clampAfterCatalogEdit: true)
     }
 
     /// 刷新目录;返回人话结果供设置页展示。
     func refreshCatalog(profileId: String) async -> String? {
         guard let profile = try? db.runtimeProfile(id: profileId) else { return "供给线不存在" }
         let credential: String
-        if profile.kind == .chatGPTOAuth || profile.kind.isCLI {
+        if !profile.kind.allowsManualModelEntry {
             credential = ""
         } else if let value = Self.nonEmptyCredential(
             try? keychain.get(account: profile.credentialAccount ?? Self.apiKeyAccount)
@@ -882,44 +893,29 @@ final class AppStore {
         }
     }
 
-    private func loadModelDefaultsForCurrentProfile() {
+    private func loadModelDefaultsForCurrentProfile(clampAfterCatalogEdit: Bool = false) {
         guard let profile = currentRuntimeProfile else { return }
         let defaults = ProfileScopedDefaults()
         let choices = catalogChoices(profile: profile)
         modelChoices = choices
-        let storedDefault = defaults.defaultModel(
+        removableCatalogModels = !profile.kind.allowsManualModelEntry ? [] :
+            (ModelCatalogService.isOfficialCatalogProfile(profile)
+                ? Set(defaults.manualModels(profileID: profile.id))
+                : (choices.count > 1 ? Set(choices) : []))
+        if !profile.kind.allowsManualModelEntry || clampAfterCatalogEdit {
+            defaults.clampModelSelections(profileID: profile.id, catalog: choices)
+        }
+        defaultModel = defaults.defaultModel(
             profileID: profile.id,
             fallback: choices.first ?? KernelDefaults.defaultGuideModel
         )
-        let isStrictCatalog = profile.kind == .chatGPTOAuth || profile.kind.isCLI
-        defaultModel = isStrictCatalog && !choices.contains(storedDefault)
-            ? (choices.first ?? KernelDefaults.defaultGuideModel)
-            : storedDefault
-        let storedDistill = defaults.distillModel(profileID: profile.id)
-        distillModel = isStrictCatalog && !storedDistill.isEmpty && !choices.contains(storedDistill)
-            ? ""
-            : storedDistill
-        let storedPlanner = defaults.plannerModel(profileID: profile.id)
-        plannerModel = isStrictCatalog && !storedPlanner.isEmpty && !choices.contains(storedPlanner)
-            ? ""
-            : storedPlanner
-    }
-
-    private func normalizeCurrentModelSelections() {
-        guard !modelChoices.isEmpty else { return }
-        if !modelChoices.contains(defaultModel) { defaultModel = modelChoices[0] }
-        if !distillModel.isEmpty, !modelChoices.contains(distillModel) { distillModel = "" }
-        if !plannerModel.isEmpty, !modelChoices.contains(plannerModel) { plannerModel = "" }
+        distillModel = defaults.distillModel(profileID: profile.id)
+        plannerModel = defaults.plannerModel(profileID: profile.id)
     }
 
     private func persistProfileString(_ value: String, suffix: String) {
         guard let profileId = currentRuntimeProfile?.id else { return }
         ProfileScopedDefaults().setString(value, profileID: profileId, suffix: suffix)
-    }
-
-    private func persistProfileModels(_ values: [String], suffix: String) {
-        guard let profileId = currentRuntimeProfile?.id else { return }
-        ProfileScopedDefaults().setStringArray(values, profileID: profileId, suffix: suffix)
     }
 
     private func attachAPIKeyToEmptyDefaultProfileIfNeeded() {
@@ -1083,6 +1079,10 @@ final class AppStore {
     }
 
     func openProviderAuth() {
+        guard !Self.isUIPreview else {
+            oauthLoginStatus = "预览模式不读取登录凭据；请用真实模式启动 Coding 牧场后再登录"
+            return
+        }
         guard apiBaseURLValid else {
             oauthLoginStatus = "请先填一个有效的 API 端点"
             return

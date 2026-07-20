@@ -69,13 +69,15 @@ public struct OpenAIResponsesProvider: LLMProvider {
         history: [APIMessage],
         tools: [ToolDef],
         toolChoice: ToolChoice = .auto,
-        maxTokens: Int
+        maxTokens _: Int
     ) -> JSONValue {
+        // ChatGPT's Codex backend owns the output limit and rejects the public
+        // Responses API's `max_output_tokens` field. Keep the argument in this
+        // adapter's API to match LLMProvider, but do not serialize it.
         var body: [String: JSONValue] = [
             "model": .string(model),
             "instructions": .string(system),
             "input": .array(inputItems(from: history)),
-            "max_output_tokens": .number(Double(maxTokens)),
             "parallel_tool_calls": .bool(true),
             "store": .bool(false),
             "stream": .bool(true),

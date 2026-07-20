@@ -19,8 +19,10 @@ public final class BoardToolServer: @unchecked Sendable {
     private let executor: ToolExecutor
     private let toolDefs: [ToolDef]
     private let onTerminal: @Sendable (LoopOutcome) -> Void
+    private let handlerQueue: DispatchQueue
     private let lock = NSLock()
     private var listenFD: Int32 = -1
+    private var acceptLoopOwnsListener = false
     private var activeConnectionFD: Int32 = -1
     private var stopped = false
     private var terminalOutcome: LoopOutcome?
@@ -31,7 +33,8 @@ public final class BoardToolServer: @unchecked Sendable {
         cardId: String,
         executor: ToolExecutor,
         toolDefs: [ToolDef],
-        onTerminal: @escaping @Sendable (LoopOutcome) -> Void = { _ in }
+        onTerminal: @escaping @Sendable (LoopOutcome) -> Void = { _ in },
+        handlerQueue: DispatchQueue = DispatchQueue.global(qos: .utility)
     ) {
         self.socketURL = socketURL
         self.token = token
@@ -39,6 +42,7 @@ public final class BoardToolServer: @unchecked Sendable {
         self.executor = executor
         self.toolDefs = toolDefs
         self.onTerminal = onTerminal
+        self.handlerQueue = handlerQueue
     }
 
     deinit {
@@ -124,6 +128,13 @@ public final class BoardToolServer: @unchecked Sendable {
     }
 
     public func start() throws {
+        // 先于 bind 检查：bindAndListen 会 unlink 同路径 socket 文件，误用重复 start 不得破坏活 listener。
+        lock.lock()
+        let alreadyStarted = listenFD >= 0 || acceptLoopOwnsListener
+        lock.unlock()
+        guard !alreadyStarted else {
+            throw BoardToolServerError.socketSetupFailed("board server already started")
+        }
         let path = socketURL.path
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else {
@@ -136,12 +147,17 @@ public final class BoardToolServer: @unchecked Sendable {
             throw error
         }
         lock.lock()
+        guard listenFD < 0, !acceptLoopOwnsListener else {
+            lock.unlock()
+            close(fd)
+            throw BoardToolServerError.socketSetupFailed("board server already started")
+        }
         listenFD = fd
         stopped = false
         lock.unlock()
 
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            self?.acceptLoop()
+            self?.acceptLoop(claiming: fd)
         }
     }
 
@@ -152,16 +168,24 @@ public final class BoardToolServer: @unchecked Sendable {
             return
         }
         stopped = true
-        let listenerToClose = listenFD
-        listenFD = -1
         // 活动连接由 handle() 的 FileHandle 唯一拥有。这里只 shutdown 以唤醒 read；
-        // 在锁内执行可防止 handler 先释放并关闭后 fd 被系统复用。
+        // listener 若已移交给 acceptLoop，则由自连唤醒后由 acceptLoop 唯一关闭。
         if activeConnectionFD >= 0 {
             _ = shutdown(activeConnectionFD, SHUT_RDWR)
         }
+        let ownsTransferred = acceptLoopOwnsListener
+        var listenerToClose: Int32 = -1
+        if !ownsTransferred {
+            listenerToClose = listenFD
+            listenFD = -1
+        }
         lock.unlock()
 
-        if listenerToClose >= 0 { close(listenerToClose) }
+        if ownsTransferred {
+            Self.wakeAcceptLoop(socketPath: socketURL.path)
+        } else if listenerToClose >= 0 {
+            close(listenerToClose)
+        }
         try? FileManager.default.removeItem(at: socketURL)
     }
 
@@ -204,16 +228,29 @@ public final class BoardToolServer: @unchecked Sendable {
         }
     }
 
-    private func acceptLoop() {
-        while true {
-            let fd = currentListenFD()
-            guard fd >= 0 else { return }
+    private func acceptLoop(claiming expectedFD: Int32) {
+        // 锁内校验自己 start 时捕获的 fd 仍是当前 listener 且无人认领，防止 stop→start 后
+        // 滞留的旧 block 抢占新 listener。不匹配时对应 fd 已被 stop()/其 owner 关闭，直接退出。
+        lock.lock()
+        guard !stopped, listenFD == expectedFD, !acceptLoopOwnsListener else {
+            lock.unlock()
+            return
+        }
+        let fd = expectedFD
+        acceptLoopOwnsListener = true
+        lock.unlock()
+
+        while !isStopped() {
             let connection = accept(fd, nil, nil)
             if connection < 0 {
-                if isStopped() { return }
+                if isStopped() { break }
                 continue
             }
-            guard Self.disableSIGPIPE(connection) else {
+            if isStopped() {
+                close(connection)
+                break
+            }
+            guard PosixSockets.disableSIGPIPE(connection) else {
                 close(connection)
                 continue
             }
@@ -221,10 +258,14 @@ public final class BoardToolServer: @unchecked Sendable {
                 close(connection)
                 continue
             }
-            DispatchQueue.global(qos: .utility).async { [weak self] in
-                self?.handle(connection: connection)
-            }
+            handlerQueue.async { self.handle(connection: connection) }
         }
+
+        close(fd)
+        lock.lock()
+        if listenFD == fd { listenFD = -1 }
+        acceptLoopOwnsListener = false
+        lock.unlock()
     }
 
     private func handle(connection fd: Int32) {
@@ -258,17 +299,6 @@ public final class BoardToolServer: @unchecked Sendable {
         let n = buffer.withUnsafeMutableBytes { Darwin.read(fd, $0.baseAddress, 4096) }
         guard n > 0 else { return nil }
         return Data(buffer[0..<n])
-    }
-
-    private static func disableSIGPIPE(_ fd: Int32) -> Bool {
-        var enabled: Int32 = 1
-        return setsockopt(
-            fd,
-            SOL_SOCKET,
-            SO_NOSIGPIPE,
-            &enabled,
-            socklen_t(MemoryLayout<Int32>.size)
-        ) == 0
     }
 
     private func processLine(_ line: String, authorized: inout Bool, handle: FileHandle) -> Bool {
@@ -368,10 +398,24 @@ public final class BoardToolServer: @unchecked Sendable {
         try? handle.write(contentsOf: data)
     }
 
-    private func currentListenFD() -> Int32 {
-        lock.lock()
-        defer { lock.unlock() }
-        return stopped ? -1 : listenFD
+    private static func wakeAcceptLoop(socketPath: String) {
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else { return }
+        defer { close(fd) }
+        var address = sockaddr_un()
+        address.sun_family = sa_family_t(AF_UNIX)
+        let pathBytes = Array(socketPath.utf8) + [0]
+        guard pathBytes.count <= MemoryLayout.size(ofValue: address.sun_path) else { return }
+        withUnsafeMutableBytes(of: &address.sun_path) { raw in
+            raw.copyBytes(from: pathBytes)
+        }
+        let length = socklen_t(MemoryLayout<sockaddr_un>.offset(of: \.sun_path)! + pathBytes.count)
+        address.sun_len = UInt8(length)
+        _ = withUnsafePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
+                Darwin.connect(fd, sockaddrPointer, length)
+            }
+        }
     }
 
     private func isStopped() -> Bool {

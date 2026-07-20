@@ -18,6 +18,7 @@ struct CompanionEditorView: View {
     @State private var saveError: String?
     /// 各驿站的已知工具（连接后取自 Manager 缓存）
     @State private var mcpToolsByServer: [String: [McpServerManager.AssembledTool]] = [:]
+    @State private var cachedEditorModelChoices: [String] = []
 
     static let colors = ["purple", "teal", "coral", "pink", "blue", "green", "amber"]
     private static let customTag = "__custom__"
@@ -29,11 +30,7 @@ struct CompanionEditorView: View {
     }
 
     /// V1.1a:钉住模型的候选 = 所选供给线的目录(拿不到时回退全局 modelChoices)
-    private var editorModelChoices: [String] {
-        let profile = selectedRuntimeProfile
-        guard let profile else { return store.modelChoices }
-        return store.catalogChoices(profile: profile)
-    }
+    private var editorModelChoices: [String] { cachedEditorModelChoices.isEmpty ? store.modelChoices : cachedEditorModelChoices }
 
     private var selectedRuntimeProfile: RuntimeProfileRecord? {
         profileChoice.isEmpty
@@ -42,13 +39,7 @@ struct CompanionEditorView: View {
     }
 
     private var allowsCustomModel: Bool {
-        guard let profile = selectedRuntimeProfile else { return true }
-        switch profile.kind {
-        case .anthropicAPI, .openAIAPI:
-            return true
-        case .chatGPTOAuth, .cliCodex, .cliClaude:
-            return false
-        }
+        selectedRuntimeProfile?.kind.allowsManualModelEntry ?? true
     }
 
     private var canSave: Bool {
@@ -218,10 +209,12 @@ struct CompanionEditorView: View {
         }
         .background(Camp.canvas)
         .task(id: companionId) {
+            reloadEditorModelChoices()
             load()
             await refreshMcpTools()
         }
         .onChange(of: profileChoice) {
+            reloadEditorModelChoices()
             normalizeModelChoiceForSelectedProfile()
         }
     }
@@ -380,6 +373,14 @@ struct CompanionEditorView: View {
             modelChoice = editorModelChoices.first ?? ""
             customModel = ""
         }
+    }
+
+    private func reloadEditorModelChoices() {
+        guard let profile = selectedRuntimeProfile else {
+            cachedEditorModelChoices = store.modelChoices
+            return
+        }
+        cachedEditorModelChoices = store.catalogChoices(profile: profile)
     }
 
     private func normalizeModelChoiceForSelectedProfile() {

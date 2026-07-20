@@ -43,9 +43,20 @@ public actor ModelCatalogService {
             return Self.staticCatalog(profile: profile)
         case .anthropicAPI, .openAIAPI:
             let models = try await fetchModels(profile: profile, credential: credential)
-            defaults.setCachedCatalog(models, fetchedAt: now(), profileID: profile.id)
+            if Self.isOfficialCatalogProfile(profile) {
+                defaults.setCachedCatalog(models, fetchedAt: now(), profileID: profile.id)
+            } else {
+                defaults.setStringArray(ProfileScopedDefaults.uniqueModels(models), profileID: profile.id, suffix: "modelChoices")
+            }
             return models
         }
+    }
+
+    public static func resolvedCatalog(profile: RuntimeProfileRecord, defaults: ProfileScopedDefaults, fallback: [String]) -> [String] {
+        if let trusted = trustedCatalog(profile: profile, defaults: defaults) { return trusted }
+        let scoped = defaults.modelChoices(profileID: profile.id, fallback: fallback)
+        let resolved = ProfileScopedDefaults.uniqueModels(scoped + defaults.manualModels(profileID: profile.id))
+        return resolved.isEmpty ? fallback : resolved
     }
 
     public static func trustedCatalog(

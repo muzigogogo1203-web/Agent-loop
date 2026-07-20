@@ -1,0 +1,22 @@
+==> swift build -c release
+[0/1] Planning build
+Building for production...
+[0/5] Write sources
+[1/5] Copying RanchArt
+[2/5] Write swift-version--1AB21518FC5DEDBE.txt
+[4/5] Compiling AgentLoopApp AgentLoopApp.swift
+[4/6] Write Objects.LinkFileList
+[5/6] Linking AgentLoopApp
+Build complete! (49.07s)
+==> icon
+==> codesign (ad-hoc;跨机首启需右键打开过 Gatekeeper)
+dist/Coding 牧场.app: replacing existing signature
+==> zip
+==> 未配置 NOTARY_PROFILE,跳过公证(脚本头注释有一次性配置方法)
+==> DMG
+打包完成:dist/Coding 牧场.app(v1.1.0 build 124)
+  - dist/CodingRanch-1.1.0.zip
+  - dist/CodingRanch-1.1.0.dmg
+Executable=/Users/muzi/Agent-loop/dist/Coding 牧场.app/Contents/MacOS/AgentLoop
+Identifier=com.muzi.agentloop
+Format=app bundle with Mach-O thin (arm64)

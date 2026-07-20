@@ -19,6 +19,14 @@ public struct ProfileScopedDefaults: @unchecked Sendable {
         defaults.set(value, forKey: Self.key(profileID: profileID, suffix: suffix))
     }
 
+    public func bool(profileID: String, suffix: String) -> Bool {
+        defaults.bool(forKey: Self.key(profileID: profileID, suffix: suffix))
+    }
+
+    public func setBool(_ value: Bool, profileID: String, suffix: String) {
+        defaults.set(value, forKey: Self.key(profileID: profileID, suffix: suffix))
+    }
+
     public func stringArray(profileID: String, suffix: String) -> [String]? {
         defaults.stringArray(forKey: Self.key(profileID: profileID, suffix: suffix))
     }
@@ -73,6 +81,25 @@ public struct ProfileScopedDefaults: @unchecked Sendable {
 
     public func cachedCatalog(profileID: String) -> [String]? {
         stringArray(profileID: profileID, suffix: "modelCatalog")
+    }
+
+    @discardableResult
+    public func clampModelSelections(profileID: String, catalog: [String]) -> Bool {
+        guard !catalog.isEmpty else { return false }
+        var changed = false
+        let defaultValue = defaultModel(profileID: profileID, fallback: catalog[0])
+        if !catalog.contains(defaultValue) {
+            setString(catalog[0], profileID: profileID, suffix: "defaultModel")
+            changed = true
+        }
+        for suffix in ["distillModel", "plannerModel"] {
+            let value = string(profileID: profileID, suffix: suffix) ?? ""
+            if !value.isEmpty && !catalog.contains(value) {
+                setString("", profileID: profileID, suffix: suffix)
+                changed = true
+            }
+        }
+        return changed
     }
 
     public func setCachedCatalog(_ models: [String], fetchedAt: Date, profileID: String) {

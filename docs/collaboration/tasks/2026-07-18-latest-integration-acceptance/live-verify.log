@@ -1,0 +1,60 @@
+Coding 牧场最新整合版现场验收
+日期: 2026-07-18
+
+源码与分支
+- 主工作区: /Users/muzi/Agent-loop
+- 分支: main
+- 基线 HEAD: 3f11d087fcb4dfb13c2ecf634973f4ce0b76c650
+- 已抓取 origin；origin/main 当前为 3023f8b，本地主线包含后续 CLI/OAuth 与牧场视觉提交
+- 四条 Claude worktree 均为干净工作区，且各自只有一个尚未进入 main 的有效提交
+- 四条修复与现有 OpenAI 修复在隔离 worktree 无冲突组合
+- 隔离组合测试: 423 tests / 5 suites 全绿
+- 组合内容逐文件复制回 main 后，与隔离测试版本完全一致
+
+主工作区验证
+- 命令: CLANG_MODULE_CACHE_PATH=/private/tmp/agentloop-clang-cache swift run --disable-sandbox RunTests
+- 结果: 423 tests / 5 suites 全绿
+- 完整输出: verify.log
+- release 打包: 成功
+- 完整输出: package.log
+
+安装包
+- 来源: /Users/muzi/Agent-loop/dist/Coding 牧场.app
+- 目标: /Applications/AgentLoop.app
+- 产品显示名: Coding 牧场
+- bundle id: com.muzi.agentloop
+- 版本: 1.1.0 (build 124)
+- 可执行文件 SHA-256: 891666d601378a6f561eb7480be9fe6b9d2c69e46871e67fff76d465b6cf6086
+- codesign --verify --deep --strict: 通过
+- AgentLoop_AgentLoopApp.bundle: 存在
+- ZIP 与 DMG: 生成成功
+- NOTARY_PROFILE 未配置，按脚本跳过公证
+
+安装与恢复
+- 旧安装版已移动到可恢复备份:
+  /Users/muzi/Library/Application Support/AgentLoop/Install Backups/20260718-211458-latest-integration/AgentLoop-pre-integration-build124.app
+- 当前运行进程:
+  /Applications/AgentLoop.app/Contents/MacOS/AgentLoop
+- 当前数据库:
+  /Users/muzi/Library/Application Support/AgentLoop/agentloop.sqlite
+
+真实 UI 验收
+- 窗口标题: Coding 牧场
+- 已有“减肥大作战”任务恢复，状态与产物可见
+- 牛棚与解锁页: 黏土风牛棚横幅正常渲染，资源 bundle 不是构建机路径假象
+- OpenAI: 网页登录已授权
+- 当前供给线: ChatGPT 登录
+- 默认模型: gpt-5.5
+- 点击测试连接: 连接正常（gpt-5.5）
+
+首次启动观察
+- 替换 ad-hoc 签名后的首次启动约一分钟内没有窗口响应
+- 进程 sample 显示主线程等待 macOS Security 的 SecItemCopyMatching/Keychain 查询
+- 再次从 Finder 唤起后窗口正常出现，之后 UI 与连接测试均正常
+- 未读取、输出或记录任何 Keychain 凭据值
+
+保留项
+- Claude 的四个 worktree 未删除
+- 历史安装备份未删除
+- 安全 stash 保留: codex-safety-before-latest-integration-20260718
+- 未提交、未推送

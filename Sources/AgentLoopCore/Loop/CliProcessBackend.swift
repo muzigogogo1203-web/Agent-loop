@@ -187,6 +187,64 @@ public enum CliProcessBackendError: Error, Sendable, Equatable {
     case processExitedWithoutTerminator(status: Int32, stderrTail: String)
 }
 
+public enum CliPipeDrain {
+    public enum ReadResult: Sendable {
+        case data(Data)
+        case wouldBlock
+        case interrupted
+        case eof
+        case failed(String)
+    }
+
+    private static let minimumBackoff: Duration = .milliseconds(10)
+    private static let maximumBackoff: Duration = .milliseconds(100)
+
+    /// Drains a non-blocking pipe. After process exit is observed, drain until EAGAIN/EOF or grace expiry.
+    public static func drain(
+        grace: Duration,
+        readChunk: () -> ReadResult,
+        isExited: () async -> Bool,
+        sleep: (Duration) async -> Void,
+        now: () -> ContinuousClock.Instant,
+        onData: (Data) async -> Void,
+        onReadFailure: (String) async -> Void
+    ) async {
+        var exitObservedAt: ContinuousClock.Instant?
+        var backoff = minimumBackoff
+
+        while true {
+            switch readChunk() {
+            case .data(let chunk):
+                if exitObservedAt == nil, await isExited() {
+                    exitObservedAt = now()
+                }
+                await onData(chunk)
+                backoff = minimumBackoff
+                if let observedAt = exitObservedAt, observedAt.duration(to: now()) >= grace {
+                    return
+                }
+            case .interrupted:
+                continue
+            case .eof:
+                return
+            case .failed(let message):
+                await onReadFailure(message)
+                return
+            case .wouldBlock:
+                if exitObservedAt != nil {
+                    return
+                }
+                if await isExited() {
+                    exitObservedAt = now()
+                    continue
+                }
+                await sleep(backoff)
+                backoff = min(backoff * 2, maximumBackoff)
+            }
+        }
+    }
+}
+
 public struct CliProcessBackend: CardExecutionBackend {
     private let db: AppDatabase
     private let artifactStoreRoot: URL
@@ -194,6 +252,7 @@ public struct CliProcessBackend: CardExecutionBackend {
     private let commandOverride: String?
     private let bridgeExecutablePath: String
     private let timeout: Duration
+    private let pipeDrainGrace: Duration
     private let socketDirectory: URL?
     private let registry: ShellProcessRegistry
 
@@ -204,6 +263,7 @@ public struct CliProcessBackend: CardExecutionBackend {
         commandOverride: String? = nil,
         bridgeExecutablePath: String = CommandLine.arguments.first ?? "AgentLoopApp",
         timeout: Duration = KernelDefaults.cliCardTimeout,
+        pipeDrainGrace: Duration = .seconds(1),
         socketDirectory: URL? = nil,
         registry: ShellProcessRegistry = .shared
     ) {
@@ -213,6 +273,7 @@ public struct CliProcessBackend: CardExecutionBackend {
         self.commandOverride = commandOverride
         self.bridgeExecutablePath = bridgeExecutablePath
         self.timeout = timeout
+        self.pipeDrainGrace = pipeDrainGrace
         self.socketDirectory = socketDirectory
         self.registry = registry
     }
@@ -291,6 +352,7 @@ public struct CliProcessBackend: CardExecutionBackend {
                             processHandle: processHandle,
                             metrics: metrics,
                             timeout: timeout,
+                            pipeDrainGrace: pipeDrainGrace,
                             continuation: continuation
                         )
                     } onCancel: {
@@ -404,6 +466,7 @@ public struct CliProcessBackend: CardExecutionBackend {
         processHandle: CliProcessHandle,
         metrics: CliRunMetrics,
         timeout: Duration,
+        pipeDrainGrace: Duration,
         continuation: AsyncThrowingStream<AgentEvent, Error>.Continuation
     ) async throws {
         let process = Process()
@@ -436,18 +499,17 @@ public struct CliProcessBackend: CardExecutionBackend {
         processHandle.set(process)
         continuation.yield(.turnStarted)
 
-        let drainControl = CliPipeDrainControl()
         let stdoutTask = Task.detached {
-            await readStdout(
+            await drainStdout(
                 stdoutFD,
-                profileKind: nil,
                 metrics: metrics,
-                drainControl: drainControl,
+                exitBox: exitBox,
+                grace: pipeDrainGrace,
                 continuation: continuation
             )
         }
         let stderrTask = Task.detached {
-            await readStderr(stderrFD, metrics: metrics, drainControl: drainControl)
+            await drainStderr(stderrFD, metrics: metrics, exitBox: exitBox, grace: pipeDrainGrace)
         }
         let timeoutTask = Task {
             try? await Task.sleep(for: timeout)
@@ -463,71 +525,81 @@ public struct CliProcessBackend: CardExecutionBackend {
         let status = await exitBox.wait()
         await metrics.setExitStatus(status)
         timeoutTask.cancel()
-        await drainControl.processDidExit()
         await stdoutTask.value
         await stderrTask.value
         try? stdout.fileHandleForReading.close()
         try? stderr.fileHandleForReading.close()
     }
 
-    private static func readStdout(
+    private static func drainStdout(
         _ fd: Int32,
-        profileKind: RuntimeProfileKind?,
         metrics: CliRunMetrics,
-        drainControl: CliPipeDrainControl,
+        exitBox: CliExitBox,
+        grace: Duration,
         continuation: AsyncThrowingStream<AgentEvent, Error>.Continuation
     ) async {
-        var buffer = Data()
-        while true {
-            switch readPipeChunk(fd) {
-            case .data(let chunk):
-                buffer.append(chunk)
-                while let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
-                    let line = buffer[..<newline]
-                    buffer.removeSubrange(buffer.startIndex...newline)
-                    guard let text = String(data: line, encoding: .utf8), !text.isEmpty else { continue }
-                    for event in CliOutputParser.events(from: text) {
-                        if case .turnEnded(let usage) = event {
-                            await metrics.addUsage(usage)
-                        }
-                        continuation.yield(event)
-                    }
+        let clock = ContinuousClock()
+        var lineBuffer = Data()
+        var readBuffer = [UInt8](repeating: 0, count: 4096)
+
+        func emitLine(_ data: Data) async {
+            guard let text = String(data: data, encoding: .utf8), !text.isEmpty else { return }
+            for event in CliOutputParser.events(from: text) {
+                if case .turnEnded(let usage) = event {
+                    await metrics.addUsage(usage)
                 }
-            case .wouldBlock:
-                if await drainControl.shouldStop { return }
-                try? await Task.sleep(for: .milliseconds(10))
-            case .interrupted:
-                continue
-            case .eof:
-                return
-            case .failed(let message):
-                await metrics.appendStderr(Data("stdout read failed: \(message)".utf8))
-                return
+                continuation.yield(event)
             }
+        }
+
+        await CliPipeDrain.drain(
+            grace: grace,
+            readChunk: { readPipeChunk(fd, into: &readBuffer) },
+            isExited: { await exitBox.value != nil },
+            sleep: { try? await Task.sleep(for: $0) },
+            now: { clock.now },
+            onData: { chunk in
+                lineBuffer.append(chunk)
+                while let newline = lineBuffer.firstIndex(of: UInt8(ascii: "\n")) {
+                    let line = Data(lineBuffer[..<newline])
+                    lineBuffer.removeSubrange(lineBuffer.startIndex...newline)
+                    await emitLine(line)
+                }
+            },
+            onReadFailure: { message in
+                await metrics.appendStderr(Data("stdout read failed: \(message)".utf8))
+            }
+        )
+
+        if !lineBuffer.isEmpty {
+            let line = lineBuffer
+            lineBuffer.removeAll(keepingCapacity: true)
+            await emitLine(line)
         }
     }
 
-    private static func readStderr(
+    private static func drainStderr(
         _ fd: Int32,
         metrics: CliRunMetrics,
-        drainControl: CliPipeDrainControl
+        exitBox: CliExitBox,
+        grace: Duration
     ) async {
-        while true {
-            switch readPipeChunk(fd) {
-            case .data(let chunk):
+        let clock = ContinuousClock()
+        var readBuffer = [UInt8](repeating: 0, count: 4096)
+
+        await CliPipeDrain.drain(
+            grace: grace,
+            readChunk: { readPipeChunk(fd, into: &readBuffer) },
+            isExited: { await exitBox.value != nil },
+            sleep: { try? await Task.sleep(for: $0) },
+            now: { clock.now },
+            onData: { chunk in
                 await metrics.appendStderr(chunk)
-            case .wouldBlock:
-                if await drainControl.shouldStop { return }
-                try? await Task.sleep(for: .milliseconds(10))
-            case .interrupted:
-                continue
-            case .eof:
-                return
-            case .failed(let message):
+            },
+            onReadFailure: { message in
                 await metrics.appendStderr(Data("stderr read failed: \(message)".utf8))
-                return
             }
-        }
+        )
     }
 
     private static func setNonBlocking(_ fd: Int32) throws {
@@ -537,16 +609,7 @@ public struct CliProcessBackend: CardExecutionBackend {
         }
     }
 
-    private enum PipeReadResult {
-        case data(Data)
-        case wouldBlock
-        case interrupted
-        case eof
-        case failed(String)
-    }
-
-    private static func readPipeChunk(_ fd: Int32) -> PipeReadResult {
-        var bytes = [UInt8](repeating: 0, count: 4096)
+    private static func readPipeChunk(_ fd: Int32, into bytes: inout [UInt8]) -> CliPipeDrain.ReadResult {
         let count = bytes.withUnsafeMutableBytes { Darwin.read(fd, $0.baseAddress, $0.count) }
         if count > 0 { return .data(Data(bytes[0..<count])) }
         if count == 0 { return .eof }
@@ -568,14 +631,6 @@ public struct CliProcessBackend: CardExecutionBackend {
             eventKind: EventKind.cardInterrupted,
             payload: ["runId": .string(runId), "reason": "canceled"]
         )
-    }
-}
-
-private actor CliPipeDrainControl {
-    private(set) var shouldStop = false
-
-    func processDidExit() {
-        shouldStop = true
     }
 }
 

@@ -1,0 +1,44 @@
+Claude Code 全量收口最终现场验收
+时间: 2026-07-18 23:16 PDT
+工作区: /Users/muzi/Agent-loop
+
+源码与 Worktree
+- 分支: main
+- 基线 HEAD: 3f11d087fcb4dfb13c2ecf634973f4ce0b76c650
+- git worktree list: /Users/muzi/Agent-loop  3f11d08 [main]
+- 四个 Claude worktree 已在 clean 状态移除并 prune；分支引用保留
+- 四个 Claude 提交的补丁均通过 staged reverse-check 证明已精确吸收
+- 晚到的 pasture-sprites-aspect 任务也已进入同一工作区
+
+最终构建与测试
+- swift build: 通过
+- swift run RunTests: 423 tests / 5 suites 全部通过，13.589 秒
+- scripts/package-app.sh: 成功
+- 产物: dist/Coding 牧场.app、dist/CodingRanch-1.1.0.zip、dist/CodingRanch-1.1.0.dmg
+
+发布包与安装
+- 版本: 1.1.0 (build 124)
+- 安装位置: /Applications/AgentLoop.app
+- dist 与安装版可执行文件 SHA-256: fa0c185e302504d0915077d2e273f3f3b1e32a601e14ecd5ba9bca4cde13249e
+- codesign --verify --deep --strict: dist 与安装版均通过
+- RanchArt bundle: 4 张 RanchBarn/RanchBase 日夜 JPEG + 7 张 RanchCow PNG，共 11 个
+- 替换前备份: /Users/muzi/Library/Application Support/AgentLoop/Install Backups/20260718-231244-pre-sprites/AgentLoop-pre-sprites.app
+
+真实 UI
+- 安装版窗口正常出现并可交互
+- 进行中任务的 Coding 草原显示完整 3:2 日间基座与两只透明小牛，无旧白卡片
+- 亮色、暗色预览均验收；暗色牛棚完整显示且无裁切
+- 点击小牛可打开正确工作卡，Accessibility help 保留卡片标题
+- 设置页: 网页登录已授权；API Key 已保存
+- 最终把安装版留在进行中任务的 Coding 草原页面
+
+进程健康
+- 安装版 PID 8513，路径 /Applications/AgentLoop.app/Contents/MacOS/AgentLoop
+- 2 秒 sample 主线程位于 NSApplication run / nextEventMatchingMask
+- sample 未命中 SecItemCopyMatching、SecurityAgent 或 AppStore.init 阻塞
+- 最近 15 分钟 DiagnosticReports 无新 AgentLoop crash report
+
+恢复与清理
+- Git 安全 stash: stash@{0}: codex-safety-before-latest-integration-20260718
+- sprite 临时状态: /Users/muzi/.Trash/AgentLoop-CodingPastureSpritesAcceptance-20260718-231608，可恢复
+- 未提交、未推送

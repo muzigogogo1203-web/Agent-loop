@@ -1,0 +1,46 @@
+==> swift build -c release --disable-sandbox
+[0/1] Planning build
+Building for production...
+[0/8] Write sources
+[3/8] Write swift-version--1AB21518FC5DEDBE.txt
+[5/9] Compiling AgentLoopCore ChatService.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[6/11] Compiling AgentLoopApp AgentLoopApp.swift
+[6/11] Write Objects.LinkFileList
+[7/11] Linking AgentLoopApp
+[9/11] Compiling AgentLoopTestSuite AgentLoopTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[10/12] Compiling RunTests main.swift
+[10/12] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[11/12] Linking RunTests
+Build complete! (124.57s)
+==> icon
+==> codesign (ad-hoc;跨机首启需右键打开过 Gatekeeper)
+dist/Coding 牧场.app: replacing existing signature
+==> zip
+==> 未配置 NOTARY_PROFILE,跳过公证(脚本头注释有一次性配置方法)
+==> DMG
+打包完成:dist/Coding 牧场.app(v1.1.0 build 124)
+  - dist/CodingRanch-1.1.0.zip
+  - dist/CodingRanch-1.1.0.dmg
+Executable=/Users/muzi/Agent-loop/dist/Coding 牧场.app/Contents/MacOS/AgentLoop
+Identifier=com.muzi.agentloop
+Format=app bundle with Mach-O thin (arm64)

@@ -1,0 +1,40 @@
+✔ Test malformedRetryAfterFallsBackAndCaps() passed after 0.005 seconds.
+◇ Test fallsBackToNonStreamingAfterMalformedStream() started.
+✔ Test fallsBackToNonStreamingAfterMalformedStream() passed after 0.001 seconds.
+◇ Test fallbackEmitsMergedTextWhenNothingStreamedYet() started.
+✔ Test fallbackEmitsMergedTextWhenNothingStreamedYet() passed after 0.002 seconds.
+◇ Test nonStreamingParsesToolUse() started.
+✔ Test nonStreamingParsesToolUse() passed after 0.003 seconds.
+◇ Test retriesExhaustedThrows() started.
+✔ Test staleStartupRecoveryCannotStealNewResumePhase() passed after 3.181 seconds.
+✔ Test retriesExhaustedThrows() passed after 0.008 seconds.
+◇ Test openAIStreamsToolCall() started.
+✔ Test openAIStreamsToolCall() passed after 0.001 seconds.
+✔ Suite AnthropicProviderStubTests passed after 3.184 seconds.
+✘ Test boardServerRejectsWrongTokenAndMismatchedCard() recorded an issue at BoardServerTests.swift:65:6: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/b87EE1F3C/s/D735E4067C92453C.sock")
+✘ Test boardServerRejectsWrongTokenAndMismatchedCard() failed after 0.173 seconds with 1 issue.
+◇ Test boardServerRejectsSecondConcurrentConnection() started.
+✔ Test twoCardMissionWithMidwayAskUser() passed after 2.952 seconds.
+✔ Test twoCardMissionEndToEndColdStart() passed after 2.964 seconds.
+✔ Test multipleQARoundsAccumulate() passed after 3.194 seconds.
+✘ Test boardServerRejectsSecondConcurrentConnection() recorded an issue at BoardServerTests.swift:80:6: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/bA3FF174C/s/7B1905383C4E40C4.sock")
+✘ Test boardServerRejectsSecondConcurrentConnection() failed after 0.062 seconds with 1 issue.
+◇ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() started.
+✘ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() recorded an issue at BoardServerTests.swift:97:6: Caught error: socketPathTooLong("/Users/muzi/Agent-loop/.claude/worktrees/cool-dijkstra-f429d3/.build/t/bE6AF058C/s/E0B334949ABD40D1.sock")
+✘ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() failed after 0.040 seconds with 1 issue.
+◇ Test boardServerDefinitionsExposeFiveToolsWhenFullAccess() started.
+✔ Test boardServerDefinitionsExposeFiveToolsWhenFullAccess() passed after 0.030 seconds.
+✘ Suite BoardServerTests failed after 3.325 seconds with 4 issues.
+✔ Test shellRegistryTerminateAllKillsRunning() passed after 3.339 seconds.
+✔ Test loginShellEnvironmentCapturesPath() passed after 3.344 seconds.
+✔ Test shellNonzeroExitIsResultNotError() passed after 3.151 seconds.
+✔ Test shellOutputTruncatedByteSafe() passed after 3.390 seconds.
+✔ Test shellRunsCommandInWorkspaceAndReportsExitCode() passed after 3.392 seconds.
+✔ Test rateLimitTriggersGlobalCooldownThenRecovers() passed after 3.176 seconds.
+✔ Test orchestratorPassesCompanionIdToProviderFactory() passed after 3.762 seconds.
+✔ Test shellTimeoutTerminatesProcess() passed after 3.772 seconds.
+✘ Test cliProcessBackendCancellationReturnsCardToReady() recorded an issue at CliBackendTests.swift:208:5: Expectation failed: (status → .blocked) == .ready
+✘ Test cliProcessBackendCancellationReturnsCardToReady() recorded an issue at CliBackendTests.swift:210:5: Expectation failed: (run.outcome → "failed") == "canceled"
+✘ Test cliProcessBackendCancellationReturnsCardToReady() failed after 3.824 seconds with 2 issues.
+✔ Test slowActiveStreamDoesNotIdleTimeout() passed after 4.076 seconds.
+✘ Test run with 412 tests in 4 suites failed after 4.078 seconds with 9 issues.

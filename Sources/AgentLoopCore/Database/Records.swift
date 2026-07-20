@@ -142,6 +142,14 @@ public enum RuntimeProfileKind: String, Codable, Sendable, CaseIterable {
 }
 
 extension RuntimeProfileKind {
+    /// 该供给线是否允许手动录入/编辑模型目录;false = 受控静态目录(OAuth/CLI)。
+    public var allowsManualModelEntry: Bool {
+        switch self {
+        case .anthropicAPI, .openAIAPI: return true
+        case .chatGPTOAuth, .cliCodex, .cliClaude: return false
+        }
+    }
+
     public var isCLI: Bool {
         switch self {
         case .cliCodex, .cliClaude:

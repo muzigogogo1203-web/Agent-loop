@@ -405,7 +405,7 @@ struct TaskRunView: View {
                     )
 
                     if store.theaterMode {
-                        CampfireTheaterView(
+                        CodingPastureTheaterView(
                             phase: store.missionPhase,
                             cards: store.missionCards,
                             companions: store.cardCompanions,

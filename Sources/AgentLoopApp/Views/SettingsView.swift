@@ -86,15 +86,32 @@ struct SettingsView: View {
                             Label(store.apiFormat == .openAIChatCompletions ? "OpenAI Auth 登录" : "网页登录授权", systemImage: "arrow.up.forward.app")
                         }
                         .buttonStyle(CampPrimaryButtonStyle(size: .small))
-                        .disabled(!store.apiBaseURLValid)
-                        .opacity(store.apiBaseURLValid ? 1 : 0.5)
-                        Text(store.webCredentialPresent ? "优先使用网页登录凭据" : store.authHintText)
+                        .disabled(!store.apiBaseURLValid || AppStore.isUIPreview)
+                        .opacity(store.apiBaseURLValid && !AppStore.isUIPreview ? 1 : 0.5)
+                        Text(
+                            AppStore.isUIPreview
+                                ? "预览模式不读取登录凭据；请用真实模式测试认证"
+                                : (store.webCredentialPresent ? "优先使用网页登录凭据" : store.authHintText)
+                        )
                             .font(.caption)
                             .foregroundStyle(Camp.inkSecondary)
                     }
                     if let status = store.oauthLoginStatus {
                         Label(status, systemImage: store.webCredentialPresent ? "checkmark.circle.fill" : "info.circle")
                             .foregroundStyle(store.webCredentialPresent ? Camp.moss : Camp.inkSecondary)
+                            .font(.caption)
+                    }
+                    if store.credentialAccessInProgress {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text("正在读取系统钥匙串；如需授权，App 仍可继续使用")
+                        }
+                        .foregroundStyle(Camp.inkSecondary)
+                        .font(.caption)
+                    }
+                    if let error = store.credentialAccessError {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Camp.charcoalRed)
                             .font(.caption)
                     }
                     if store.oauthNeedsRelogin {

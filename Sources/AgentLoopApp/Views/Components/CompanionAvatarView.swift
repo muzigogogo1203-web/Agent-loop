@@ -3,8 +3,7 @@ import AgentLoopCore
 
 typealias AvatarState = CompanionAnimState
 
-/// 伙伴头像 v2（M5 资产升级）：仍是零资产的参数化简笔角色，但升级为
-/// 渐变立体头部 + 表情系统（眉/眼/状态嘴型/腮红）+ 徽章小圆片。
+/// 七色小牛头像：零资产参数化绘制，保留真实状态驱动的表情、徽章与低帧率动效。
 /// 动画纪律不变：TimelineView 低帧率、reduceMotion/失焦静态。
 struct CompanionAvatarView: View {
     let name: String
@@ -30,6 +29,7 @@ struct CompanionAvatarView: View {
     private var light: Color { Color(nsColor: base.blended(withFraction: 0.38, of: .white) ?? base) }
     private var deep: Color { Color(nsColor: base.blended(withFraction: 0.42, of: .black) ?? base) }
     private var mid: Color { Color(nsColor: base) }
+    private var cream: Color { Color(red: 0.97, green: 0.93, blue: 0.84) }
     private var paused: Bool { reduceMotion || controlActiveState != .key }
 
     var body: some View {
@@ -47,12 +47,36 @@ struct CompanionAvatarView: View {
         .accessibilityLabel("\(name)，\(Self.accessibilityState(state))")
     }
 
-    // MARK: - 头部与脸
+    // MARK: - 小牛头部与脸
 
     private func avatarCore(t: TimeInterval) -> some View {
         ZStack {
-            // 立体头：垂直渐变 + 左上高光 + 深色细描边 + 柔影
-            Circle()
+            // 耳朵和角放在头部后面；尺寸全部相对头像大小，缩到侧栏仍可辨识。
+            Group {
+                Capsule()
+                    .fill(mid)
+                    .frame(width: size * 0.30, height: size * 0.16)
+                    .rotationEffect(.degrees(24))
+                    .offset(x: -size * 0.39, y: -size * 0.20)
+                Capsule()
+                    .fill(mid)
+                    .frame(width: size * 0.30, height: size * 0.16)
+                    .rotationEffect(.degrees(-24))
+                    .offset(x: size * 0.39, y: -size * 0.20)
+                Capsule()
+                    .fill(LinearGradient(colors: [cream, Camp.stone.opacity(0.9)], startPoint: .bottom, endPoint: .top))
+                    .frame(width: size * 0.11, height: size * 0.25)
+                    .rotationEffect(.degrees(-18))
+                    .offset(x: -size * 0.25, y: -size * 0.35)
+                Capsule()
+                    .fill(LinearGradient(colors: [cream, Camp.stone.opacity(0.9)], startPoint: .bottom, endPoint: .top))
+                    .frame(width: size * 0.11, height: size * 0.25)
+                    .rotationEffect(.degrees(18))
+                    .offset(x: size * 0.25, y: -size * 0.35)
+            }
+
+            // 黏土感头部：柔和方圆轮廓、垂直渐变、高光与深色细描边。
+            RoundedRectangle(cornerRadius: size * 0.32, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [light, mid],
@@ -60,7 +84,7 @@ struct CompanionAvatarView: View {
                     )
                 )
                 .overlay(
-                    Circle().fill(
+                    RoundedRectangle(cornerRadius: size * 0.32, style: .continuous).fill(
                         RadialGradient(
                             colors: [.white.opacity(0.42), .clear],
                             center: UnitPoint(x: 0.32, y: 0.22),
@@ -68,19 +92,57 @@ struct CompanionAvatarView: View {
                         )
                     )
                 )
-                .overlay(Circle().strokeBorder(deep.opacity(0.55), lineWidth: max(1, size * 0.035)))
+                .overlay(
+                    RoundedRectangle(cornerRadius: size * 0.32, style: .continuous)
+                        .strokeBorder(deep.opacity(0.55), lineWidth: max(1, size * 0.035))
+                )
+                .frame(width: size * 0.86, height: size * 0.78)
+                .offset(y: size * 0.035)
                 .shadow(color: deep.opacity(0.28), radius: size * 0.07, y: size * 0.05)
+
+            // 白色额前毛与侧斑，延续概念稿中七色小牛的共同身份特征。
+            ZStack {
+                Circle().fill(cream).frame(width: size * 0.24, height: size * 0.21)
+                Circle().fill(cream).frame(width: size * 0.20, height: size * 0.18)
+                    .offset(x: -size * 0.13, y: size * 0.03)
+                Circle().fill(cream).frame(width: size * 0.18, height: size * 0.16)
+                    .offset(x: size * 0.13, y: size * 0.04)
+            }
+            .offset(y: -size * 0.28)
+
+            Circle()
+                .fill(cream.opacity(0.92))
+                .frame(width: size * 0.23, height: size * 0.20)
+                .offset(x: -size * 0.29, y: size * 0.04)
+
+            // 奶牛口鼻区：粉色胶泥质感 + 两个鼻孔。
+            Capsule()
+                .fill(
+                    LinearGradient(
+                        colors: [Color(red: 1.0, green: 0.77, blue: 0.76), Color(red: 0.94, green: 0.61, blue: 0.63)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .overlay(Capsule().stroke(deep.opacity(0.22), lineWidth: max(0.7, size * 0.018)))
+                .frame(width: size * 0.48, height: size * 0.28)
+                .offset(y: size * 0.15)
+            HStack(spacing: size * 0.12) {
+                Circle().fill(deep.opacity(0.68)).frame(width: size * 0.055, height: size * 0.045)
+                Circle().fill(deep.opacity(0.68)).frame(width: size * 0.055, height: size * 0.045)
+            }
+            .offset(y: size * 0.11)
 
             face(t: t)
 
-            // 首字母小签：底缘内侧，弱存在感的身份锚
+            // 颈牌保留首字母身份锚，避免同色伙伴失去可辨识度。
             Text(String(name.prefix(1)))
-                .font(.system(size: size * 0.26, weight: .bold, design: .rounded))
+                .font(.system(size: size * 0.20, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.92))
                 .padding(.horizontal, size * 0.10)
-                .padding(.vertical, size * 0.015)
+                .padding(.vertical, size * 0.02)
                 .background(deep.opacity(0.55), in: Capsule())
-                .offset(y: size * 0.335)
+                .offset(y: size * 0.42)
         }
     }
 
@@ -96,14 +158,14 @@ struct CompanionAvatarView: View {
             browShape(mirror: false)
             browShape(mirror: true)
         }
-        .offset(x: dart * 0.6, y: -size * 0.245 + browLift)
+        .offset(x: dart * 0.6, y: -size * 0.18 + browLift)
 
         // 眼睛 + 高光
         HStack(spacing: size * 0.19) {
             eye(blink: blink || closed)
             eye(blink: blink || closed)
         }
-        .offset(x: dart, y: -size * 0.10)
+        .offset(x: dart, y: -size * 0.04)
 
         // 腮红
         HStack(spacing: size * 0.46) {
@@ -112,10 +174,10 @@ struct CompanionAvatarView: View {
             Ellipse().fill(deep.opacity(0.20))
                 .frame(width: size * 0.14, height: size * 0.08)
         }
-        .offset(y: size * 0.035)
+        .offset(y: size * 0.045)
 
         mouth
-            .offset(x: state == .working ? dart * 0.4 : 0, y: size * 0.135)
+            .offset(x: state == .working ? dart * 0.4 : 0, y: size * 0.22)
     }
 
     private func eye(blink: Bool) -> some View {

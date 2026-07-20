@@ -86,6 +86,7 @@ import AgentLoopCore
     #expect(body["instructions"]?.stringValue == "system")
     #expect(body["stream"]?.boolValue == true)
     #expect(body["store"]?.boolValue == false)
+    #expect(body["max_output_tokens"] == nil)
     #expect(body["input"]?[0]?["content"]?[0]?["type"]?.stringValue == "input_text")
     #expect(body["input"]?[1]?["type"]?.stringValue == "function_call")
     #expect(body["input"]?[2]?["type"]?.stringValue == "function_call_output")

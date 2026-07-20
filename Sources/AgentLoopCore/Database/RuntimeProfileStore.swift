@@ -22,6 +22,40 @@ public enum RuntimeProfileStoreError: LocalizedError, Sendable, Equatable {
 }
 
 extension AppDatabase {
+    /// 应用对账结论:伙伴项改 inherit(保留 model 字符串便于追溯);defaultModel 项
+    /// 重置为受控目录第一项;distill/planner 项清空。伙伴项以外不开 DB 写事务。
+    public func applyReconciliation(items: [ReconciliationItem], defaults: ProfileScopedDefaults = ProfileScopedDefaults()) throws {
+        let companionIds = items.compactMap { item -> String? in
+            if case .companion(let id, _) = item.scope { return id }
+            return nil
+        }
+        if !companionIds.isEmpty {
+            try pool.write { db in
+                for id in companionIds {
+                    guard var companion = try CompanionRecord.fetchOne(db, key: id) else { continue }
+                    companion.modelPolicy = .inherit
+                    try companion.update(db)
+                }
+            }
+        }
+        for item in items {
+            switch item.scope {
+            case .companion:
+                continue
+            case .defaultModel:
+                guard let profile = try runtimeProfile(id: item.profileId),
+                      let first = ModelCatalogService.trustedCatalog(profile: profile, defaults: defaults)?.first else {
+                    continue
+                }
+                defaults.setString(first, profileID: item.profileId, suffix: "defaultModel")
+            case .distillModel:
+                defaults.setString("", profileID: item.profileId, suffix: "distillModel")
+            case .plannerModel:
+                defaults.setString("", profileID: item.profileId, suffix: "plannerModel")
+            }
+        }
+    }
+
     public func runtimeProfiles() throws -> [RuntimeProfileRecord] {
         try pool.read { db in
             try RuntimeProfileRecord
