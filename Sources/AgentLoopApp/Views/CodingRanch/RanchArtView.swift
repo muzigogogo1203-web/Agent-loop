@@ -68,6 +68,11 @@ struct RanchArtView: View {
         return image(named: "PixelCowSide\(suffix)", withExtension: "png")
     }
 
+    @MainActor static func strideSpriteImage(colorName: String) -> NSImage? {
+        guard let suffix = spriteSuffix(colorName: colorName) else { return nil }
+        return image(named: "PixelCowStride\(suffix)", withExtension: "png")
+    }
+
     @MainActor static func sleepSpriteImage(colorName: String) -> NSImage? {
         guard let suffix = spriteSuffix(colorName: colorName) else { return nil }
         return image(named: "PixelCowSleep\(suffix)", withExtension: "png")
@@ -288,9 +293,21 @@ struct RanchCowSpriteView: View {
     let colorName: String
     let height: CGFloat
     let flipped: Bool
+    let striding: Bool
+
+    init(colorName: String, height: CGFloat, flipped: Bool, striding: Bool = false) {
+        self.colorName = colorName
+        self.height = height
+        self.flipped = flipped
+        self.striding = striding
+    }
 
     @ViewBuilder var body: some View {
-        if let image = RanchArtView.spriteImage(colorName: colorName) {
+        let image = striding
+            ? RanchArtView.strideSpriteImage(colorName: colorName)
+                ?? RanchArtView.spriteImage(colorName: colorName)
+            : RanchArtView.spriteImage(colorName: colorName)
+        if let image {
             ZStack {
                 Ellipse()
                     .fill(.black.opacity(0.16))

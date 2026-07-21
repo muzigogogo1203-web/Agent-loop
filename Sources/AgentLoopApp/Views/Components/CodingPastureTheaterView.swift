@@ -128,7 +128,8 @@ struct CodingPastureTheaterView: View {
                                     companion,
                                     index: index,
                                     compact: proxy.size.width < 760 || sortedCompanions.count > 5,
-                                    flipped: motion.flipped
+                                    flipped: motion.flipped,
+                                    striding: motion.striding
                                 )
                                 .position(position)
                                 .offset(x: motion.dx, y: motion.dy + motion.bob)
@@ -216,10 +217,11 @@ struct CodingPastureTheaterView: View {
         _ companion: CompanionRecord,
         index: Int,
         compact: Bool,
-        flipped: Bool
+        flipped: Bool,
+        striding: Bool
     ) -> some View {
         if RanchArtView.spriteImage(colorName: companion.color) != nil {
-            spriteAgentSpot(companion, compact: compact, flipped: flipped)
+            spriteAgentSpot(companion, compact: compact, flipped: flipped, striding: striding)
         } else {
             legacyAgentSpot(companion, compact: compact)
         }
@@ -228,7 +230,8 @@ struct CodingPastureTheaterView: View {
     private func spriteAgentSpot(
         _ companion: CompanionRecord,
         compact: Bool,
-        flipped: Bool
+        flipped: Bool,
+        striding: Bool
     ) -> some View {
         let state = states[companion.id] ?? .idle
         let card = selectableCard(for: companion.id)
@@ -242,7 +245,8 @@ struct CodingPastureTheaterView: View {
                     RanchCowSpriteView(
                         colorName: companion.color,
                         height: compact ? 74 : 96,
-                        flipped: flipped
+                        flipped: flipped,
+                        striding: striding
                     )
                     .animation(.easeInOut(duration: 0.3), value: flipped)
                     Image(systemName: seatSymbols(for: state).first ?? "circle")
@@ -628,6 +632,7 @@ struct CodingPastureTheaterView: View {
                 if elapsed < leg.walkDuration {
                     let progress = elapsed / leg.walkDuration
                     let eased = progress * progress * (3 - 2 * progress)
+                    let strideFrame = Int(time * 6.0 * speedJitter) % 2 == 1
                     let position = CGPoint(
                         x: leg.start.x + (leg.end.x - leg.start.x) * CGFloat(eased),
                         y: leg.start.y + (leg.end.y - leg.start.y) * CGFloat(eased)
@@ -635,8 +640,9 @@ struct CodingPastureTheaterView: View {
                     return PastureMotion(
                         dx: position.x - slot.x,
                         dy: position.y - slot.y,
-                        bob: -2.0 * CGFloat(abs(sin(time * 7 * speedJitter))),
-                        flipped: leg.flipped
+                        bob: -1.2 * CGFloat(abs(sin(time * 7 * speedJitter))),
+                        flipped: leg.flipped,
+                        striding: strideFrame
                     )
                 }
 
@@ -646,29 +652,32 @@ struct CodingPastureTheaterView: View {
                         dx: leg.end.x - slot.x,
                         dy: leg.end.y - slot.y,
                         bob: 0,
-                        flipped: leg.flipped
+                        flipped: leg.flipped,
+                        striding: false
                     )
                 }
                 elapsed -= leg.pauseDuration
             }
 
-            return PastureMotion(dx: 0, dy: 0, bob: 0, flipped: false)
+            return PastureMotion(dx: 0, dy: 0, bob: 0, flipped: false, striding: false)
         case .asking, .scratching:
             return PastureMotion(
                 dx: 1.5 * CGFloat(sin(time * 0.8 + phase1)),
                 dy: 0,
                 bob: 0,
-                flipped: true
+                flipped: true,
+                striding: false
             )
         case .working:
             return PastureMotion(
                 dx: 0,
                 dy: 1.4 * CGFloat(sin(time * 1.7 + phase1)),
                 bob: 0,
-                flipped: true
+                flipped: true,
+                striding: false
             )
         case .napping:
-            return PastureMotion(dx: 0, dy: 0, bob: 0, flipped: true)
+            return PastureMotion(dx: 0, dy: 0, bob: 0, flipped: true, striding: false)
         }
     }
 
@@ -753,6 +762,7 @@ private struct PastureMotion {
     let dy: CGFloat
     let bob: CGFloat
     let flipped: Bool
+    let striding: Bool
 }
 
 private struct PastureLeg {
