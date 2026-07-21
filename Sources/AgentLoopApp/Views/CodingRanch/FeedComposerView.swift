@@ -49,7 +49,7 @@ struct FeedComposerView: View {
                 footer
             }
             .frame(maxWidth: 720)
-            .padding(22)
+            .padding(20)
             .frame(maxWidth: .infinity)
         }
         .background(Camp.canvas)
@@ -190,7 +190,6 @@ struct FeedComposerView: View {
             .buttonStyle(CampPrimaryButtonStyle())
             .keyboardShortcut(.defaultAction)
             .disabled(!canRuminate || isRunning)
-            .opacity(canRuminate && !isRunning ? 1 : 0.5)
             .help(canRuminate ? "保存原文并开始反刍" : primaryDisabledReason)
         }
     }

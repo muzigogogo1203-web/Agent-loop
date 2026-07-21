@@ -8,37 +8,46 @@ struct CowRosterView: View {
     var onCreateCustomCow: () -> Void = {}
 
     @State private var actionState: CodingRanchActionState = .idle
+    @State private var isUnlockExpanded = false
+    @State private var toastMessage: String?
 
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().overlay(Camp.line)
             content
         }
         .background(Camp.canvas)
+        .campToast(toastMessage)
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "building.2.crop.circle.fill")
-                .font(.title2)
-                .foregroundStyle(Camp.ember)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("牛棚")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(Camp.ink)
-                Text("每只牛都对应真实的角色、能力和任务记录。")
-                    .font(.caption)
-                    .foregroundStyle(Camp.inkSecondary)
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                RanchCowSpriteView(colorName: "teal", height: 40, flipped: false)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("牛棚")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(Camp.ink)
+                    Text("每只牛都对应真实的角色、能力和任务记录。")
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                }
+                Spacer()
+                if state.canCreateCustomCow {
+                    Button("创建自定义牛…", action: onCreateCustomCow)
+                        .buttonStyle(CampSecondaryButtonStyle())
+                }
             }
-            Spacer()
-            if state.canCreateCustomCow {
-                Button("创建自定义牛…", action: onCreateCustomCow)
-                    .buttonStyle(CampSecondaryButtonStyle())
-            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+
+            LinearGradient(
+                colors: [Camp.pasture.opacity(0.45), Camp.pasture],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(height: 4)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
         .background(Camp.surface)
     }
 
@@ -53,35 +62,28 @@ struct CowRosterView: View {
         case .loaded:
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    RanchArtView(kind: .barn, layout: .fit(maxWidth: 760))
-                        .frame(maxWidth: .infinity)
-                    VStack(alignment: .leading, spacing: 10) {
-                        CampSectionTitle("已经在营地的牛")
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 270), spacing: 12)], spacing: 12) {
-                            ForEach(state.owned) { cow in
-                                CowRosterCard(cow: cow) { onOpenCow(cow.id) }
-                            }
+                    RanchBarnView(
+                        cows: state.owned.map {
+                            (id: $0.id, name: $0.name, colorName: $0.colorName)
+                        },
+                        lockedCow: state.locked.first.map { ($0.name, state.newcomerProgress.canUnlock) },
+                        maxWidth: 800,
+                        onSelectCow: onOpenCow
+                    )
+                    .frame(maxWidth: .infinity)
+
+                    if let cow = state.locked.first {
+                        unlockProgressRow(cow)
+
+                        if case .failed(let message) = actionState {
+                            Label(message, systemImage: "exclamationmark.triangle.fill")
+                                .font(.callout)
+                                .foregroundStyle(Camp.charcoalRed)
+                                .campStatusPanel(Camp.charcoalRed)
                         }
                     }
-                    if !state.locked.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            CampSectionTitle("下一只可以学习的牛")
-                            ForEach(state.locked) { cow in
-                                CowUnlockCard(
-                                    cow: cow,
-                                    progress: state.newcomerProgress,
-                                    actionState: actionState,
-                                    onUnlock: { Task { await unlock() } }
-                                )
-                            }
-                        }
-                    }
-                    if case .failed(let message) = actionState {
-                        Label(message, systemImage: "exclamationmark.triangle.fill")
-                            .font(.callout)
-                            .foregroundStyle(Camp.charcoalRed)
-                            .campStatusPanel(Camp.charcoalRed)
-                    }
+
+                    miniRoster
                 }
                 .padding(20)
                 .frame(maxWidth: 980)
@@ -90,130 +92,189 @@ struct CowRosterView: View {
         }
     }
 
+    private func unlockProgressRow(_ cow: LockedCowViewState) -> some View {
+        let progress = state.newcomerProgress
+        let done = progress.steps.filter { $0.status == .completed }.count
+        let expanded = progress.canUnlock || isUnlockExpanded
+
+        return VStack(alignment: .leading, spacing: 12) {
+            if progress.canUnlock {
+                unlockProgressHeader(cow, progress: progress, done: done, expanded: expanded, showsUnlockAction: true)
+            } else {
+                Button {
+                    withAnimation {
+                        isUnlockExpanded.toggle()
+                    }
+                } label: {
+                    unlockProgressHeader(cow, progress: progress, done: done, expanded: expanded, showsUnlockAction: false)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isUnlockExpanded ? "收起解锁条件" : "展开解锁条件")
+            }
+
+            if expanded {
+                CowUnlockProgressDetails(cow: cow, progress: progress)
+            }
+        }
+        .campCard()
+    }
+
+    private func unlockProgressHeader(
+        _ cow: LockedCowViewState,
+        progress: NewcomerProgressViewState,
+        done: Int,
+        expanded: Bool,
+        showsUnlockAction: Bool
+    ) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: progress.canUnlock ? "sparkles" : "lock.fill")
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(progress.canUnlock ? Camp.moss : Camp.stone)
+
+            Text(progress.canUnlock
+                ? "\(cow.name) · 可以领回"
+                : "\(cow.name) · 学习中 \(done)/\(progress.steps.count)")
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(Camp.ink)
+
+            Spacer()
+
+            if showsUnlockAction {
+                Button {
+                    Task { await unlock() }
+                } label: {
+                    if actionState == .running {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(.white)
+                    } else {
+                        Label("领回营地", systemImage: "house.fill")
+                    }
+                }
+                .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                .disabled(actionState == .running)
+            } else {
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Camp.inkSecondary)
+                    .rotationEffect(.degrees(expanded ? 180 : 0))
+            }
+        }
+    }
+
+    private var miniRoster: some View {
+        FlowLayoutLite(spacing: 8) {
+            ForEach(state.owned) { cow in
+                Button {
+                    onOpenCow(cow.id)
+                } label: {
+                    HStack(spacing: 6) {
+                        RanchCowSpriteView(colorName: cow.colorName, height: 22, flipped: true)
+                        Text(cow.name)
+                            .font(.callout.weight(.semibold))
+                            .foregroundStyle(Camp.ink)
+                        CampChip(text: cow.role, color: Camp.stone)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Camp.surface, in: Capsule())
+                    .overlay(Capsule().stroke(Camp.line, lineWidth: 1))
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .campHoverLift()
+            }
+        }
+    }
+
     @MainActor private func unlock() async {
         actionState = .running
         do {
             let cow = try await onUnlock()
-            actionState = .idle
+            withAnimation(.spring(duration: 0.5)) {
+                actionState = .idle
+                toastMessage = "🐮 \(cow.name) 领回营地了"
+            }
             AccessibilityNotification.Announcement("\(cow.name)已经领回营地").post()
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                if toastMessage == "🐮 \(cow.name) 领回营地了" {
+                    toastMessage = nil
+                }
+            }
         } catch {
             actionState = .failed(error.localizedDescription)
         }
     }
 }
 
-struct CowRosterCard: View {
-    let cow: CowSummaryViewState
-    var onOpen: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 11) {
-            HStack(spacing: 11) {
-                CompanionAvatarView(name: cow.name, colorName: cow.colorName, size: 48)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(cow.name).font(.headline).foregroundStyle(Camp.ink)
-                    Text(cow.role).font(.caption).foregroundStyle(Camp.inkSecondary)
-                }
-                Spacer()
-                CowStatusLabel(status: cow.status)
-            }
-            Text(cow.specialties.joined(separator: " · "))
-                .font(.callout)
-                .foregroundStyle(Camp.ink)
-                .lineLimit(2)
-            if let recentMission = cow.recentMission {
-                Label(recentMission, systemImage: "flag.fill")
-                    .font(.caption)
-                    .foregroundStyle(Camp.inkSecondary)
-            }
-            Button("查看牛的档案", action: onOpen)
-                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
-        }
-        .campCard()
-    }
-}
-
-struct CowUnlockCard: View {
+private struct CowUnlockProgressDetails: View {
     let cow: LockedCowViewState
     let progress: NewcomerProgressViewState
-    let actionState: CodingRanchActionState
-    var onUnlock: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 13) {
-            HStack(alignment: .top, spacing: 13) {
-                ZStack {
-                    Circle().fill(Camp.stone.opacity(0.13)).frame(width: 60, height: 60)
-                    Image(systemName: progress.canUnlock ? "pawprint.fill" : "lock.fill")
-                        .font(.title2)
-                        .foregroundStyle(progress.canUnlock ? Camp.moss : Camp.stone)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(cow.name).font(.headline).foregroundStyle(Camp.ink)
-                        CampChip(text: progress.canUnlock ? "可以领回" : "学习中", color: progress.canUnlock ? Camp.moss : Camp.stone)
-                    }
-                    Text(cow.role).font(.callout).foregroundStyle(Camp.inkSecondary)
-                    Text(cow.learningGoal).font(.caption).foregroundStyle(Camp.inkSecondary)
-                }
-            }
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 22) {
-                    capabilitiesColumn
-                        .fixedSize(horizontal: true, vertical: false)
-                    unlockConditionsColumn
-                        .fixedSize(horizontal: true, vertical: false)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            unlockConditionsColumn
 
-                VStack(alignment: .leading, spacing: 14) {
-                    capabilitiesColumn
-                    unlockConditionsColumn
-                }
-            }
-            if progress.canUnlock {
-                HStack {
-                    Text("条件都满足了。确认后，测试牛会作为真实角色加入牛棚。")
-                        .font(.caption)
-                        .foregroundStyle(Camp.moss)
-                    Spacer()
-                    Button(action: onUnlock) {
-                        if actionState == .running {
-                            ProgressView().controlSize(.small).tint(.white)
-                        } else {
-                            Label("领回营地", systemImage: "house.fill")
-                        }
+            VStack(alignment: .leading, spacing: 6) {
+                RanchSectionHeader(icon: "hand.thumbsup.fill", title: "它能帮你", tint: Camp.creek)
+                FlowLayoutLite(spacing: 6) {
+                    ForEach(cow.capabilities, id: \.self) { capability in
+                        CampTag(text: capability)
                     }
-                    .buttonStyle(CampPrimaryButtonStyle(size: .small))
-                    .disabled(actionState == .running)
                 }
             }
-        }
-        .campCard(highlighted: progress.canUnlock)
-    }
 
-    private var capabilitiesColumn: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            CampSectionTitle("它能帮你")
-            ForEach(cow.capabilities, id: \.self) { capability in
-                Label(capability, systemImage: "checkmark.seal")
-                    .font(.caption)
-                    .foregroundStyle(Camp.ink)
-            }
+            Text(cow.learningGoal)
+                .font(.caption)
+                .foregroundStyle(Camp.inkSecondary)
         }
     }
 
     private var unlockConditionsColumn: some View {
         VStack(alignment: .leading, spacing: 6) {
-            CampSectionTitle("解锁条件")
-            ForEach(progress.steps) { step in
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: step.status == .completed ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(step.status == .completed ? Camp.moss : Camp.stone)
-                    Text(step.title)
-                        .font(.caption)
-                        .foregroundStyle(Camp.ink)
+            Text("解锁条件")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Camp.ink)
+            ScrollView(.horizontal) {
+                HStack(alignment: .top, spacing: 0) {
+                    ForEach(Array(progress.steps.enumerated()), id: \.element.id) { index, step in
+                        VStack(spacing: 5) {
+                            ZStack {
+                                Circle()
+                                    .fill(step.status == .completed ? Camp.moss : Camp.stone.opacity(0.25))
+                                if step.status == .completed {
+                                    Image(systemName: "pawprint.fill")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundStyle(.white)
+                                } else {
+                                    Text("\(index + 1)")
+                                        .font(.caption2.weight(.bold))
+                                        .foregroundStyle(Camp.stone)
+                                }
+                            }
+                            .frame(width: 22, height: 22)
+
+                            Text(step.title)
+                                .font(.caption2)
+                                .foregroundStyle(Camp.ink)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: true, vertical: true)
+                        }
+                        .frame(minWidth: 72)
+
+                        if index < progress.steps.count - 1 {
+                            Rectangle()
+                                .fill(step.status == .completed ? Camp.moss : Camp.line)
+                                .frame(width: 30, height: 2)
+                                .padding(.top, 10)
+                        }
+                    }
                 }
+                .padding(.vertical, 2)
             }
+            .scrollIndicators(.hidden)
         }
     }
 }

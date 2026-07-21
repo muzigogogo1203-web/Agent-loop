@@ -7,6 +7,7 @@ struct ReturnSummaryView: View {
     var onRequestChanges: () -> Void
     var onAccept: () -> Void
     var onAbandon: () -> Void
+    var onOpenRoster: () -> Void = {}
 
     @State private var previewURL: URL?
     @State private var showAbandonConfirmation = false
@@ -53,7 +54,7 @@ struct ReturnSummaryView: View {
 
     private var artifacts: some View {
         VStack(alignment: .leading, spacing: 10) {
-            CampSectionTitle("成果预览")
+            RanchSectionHeader(icon: "shippingbox.fill", title: "成果预览", tint: Camp.creek)
             if state.artifacts.isEmpty {
                 Label("还没有真实交付物", systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(Camp.charcoalRed)
@@ -80,7 +81,7 @@ struct ReturnSummaryView: View {
 
     private var validation: some View {
         VStack(alignment: .leading, spacing: 9) {
-            CampSectionTitle("验证清单")
+            RanchSectionHeader(icon: "checkmark.seal.fill", title: "验证清单", tint: Camp.moss)
             ForEach(state.validationChecklist) { item in
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: item.completed ? "checkmark.circle.fill" : "circle")
@@ -99,7 +100,7 @@ struct ReturnSummaryView: View {
 
     private var knowledge: some View {
         VStack(alignment: .leading, spacing: 9) {
-            CampSectionTitle("这次基础牛用了什么")
+            RanchSectionHeader(icon: "book.closed.fill", title: "这次基础牛用了什么", tint: Camp.stone)
             if state.usedKnowledge.isEmpty {
                 Text("没有记录到显式引用的营地知识。")
                     .font(.caption)
@@ -116,7 +117,7 @@ struct ReturnSummaryView: View {
     }
 
     private var newcomer: some View {
-        NewcomerTaskCard(progress: state.newcomerProgress, onOpenRoster: {})
+        NewcomerTaskCard(progress: state.newcomerProgress, onOpenRoster: onOpenRoster)
     }
 
     private var actions: some View {
@@ -136,7 +137,6 @@ struct ReturnSummaryView: View {
                 Button("验收并回营", action: onAccept)
                     .buttonStyle(CampPrimaryButtonStyle())
                     .disabled(!state.canAccept)
-                    .opacity(state.canAccept ? 1 : 0.5)
             }
         }
     }

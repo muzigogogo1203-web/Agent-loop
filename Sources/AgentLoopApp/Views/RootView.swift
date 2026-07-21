@@ -165,15 +165,17 @@ struct RootView: View {
                         onRecruit: { selection = .editCompanion(nil) }
                     )
                 case .camp(let campId):
-                    CampHomeView(
+                    CodingRanchHomeHost(
                         campId: campId,
-                        onEditGuide: {
-                            if let guideId = store.guideCompanion?.id {
-                                selection = .editCompanion(guideId)
-                            }
-                        },
-                        onNewMission: { selection = .newMission(campId: campId) },
-                        onOpenMission: { selection = .mission($0) }
+                        onOpenInbox: { selection = .ruminationInbox(campId) },
+                        onOpenRumination: { selection = .rumination($0) },
+                        onOpenMission: { selection = .mission($0) },
+                        onOpenNote: { _ in selection = .campNotes(campId) },
+                        onOpenCowRoster: { selection = .cowRoster(campId) },
+                        onStartMission: { selection = .newMission(campId: campId) },
+                        onOpenGuide: { selection = .campGuide(campId) },
+                        onOpenNotes: { selection = .campNotes(campId) },
+                        onOpenSettings: { selection = .settings }
                     )
                 case .campGuide(let campId):
                     CampHomeView(
@@ -241,7 +243,11 @@ struct RootView: View {
                     ReturnSummaryHost(
                         missionId: id,
                         onBackToMission: { selection = .mission(id) },
-                        onAccepted: { selection = .mission(id) }
+                        onAccepted: { selection = .mission(id) },
+                        onOpenRoster: {
+                            let campId = store.camp(forMission: id) ?? store.camps.first?.id
+                            if let campId { selection = .cowRoster(campId) }
+                        }
                     )
                 case .trophies:
                     TrophyCenterView { missionId in
@@ -682,7 +688,6 @@ private struct NewCampSheet: View {
                 .buttonStyle(CampPrimaryButtonStyle(size: .small))
                 .keyboardShortcut(.defaultAction)
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
             }
         }
         .padding(18)

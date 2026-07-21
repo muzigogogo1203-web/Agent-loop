@@ -201,7 +201,6 @@ struct CompanionEditorView: View {
                 .buttonStyle(CampPrimaryButtonStyle())
                 .keyboardShortcut(.defaultAction)
                 .disabled(!canSave)
-                .opacity(canSave ? 1 : 0.5)
             }
             .frame(maxWidth: 560)
             .padding(24)

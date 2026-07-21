@@ -29,6 +29,11 @@ struct TaskRunView: View {
     @FocusState private var detailFocused: Bool
     /// 花销分账浮层（M7-D7）
     @State private var showSpendPopover = false
+    @State private var spendChipHovered = false
+    @State private var detailHasDraftText = false
+    @State private var draftCloseDeadline: Date?
+    @State private var draftCloseToast: String?
+    @State private var showEmergencyStopConfirmation = false
     /// 新行动表单的档位选择（M7-D2；.task 里以全局默认初始化）
     @State private var formAutonomy: MissionAutonomy = .standard
 
@@ -58,6 +63,7 @@ struct TaskRunView: View {
         .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: store.missionCards.map(\.status))
         .overlay { cardDetailOverlay }
         .animation(reduceMotion ? nil : .smooth(duration: 0.22), value: store.selectedCardId)
+        .campToast(draftCloseToast)
     }
 
     // MARK: - 卡片详情弹层
@@ -77,10 +83,10 @@ struct TaskRunView: View {
                     Camp.ink.opacity(0.22)
                         .ignoresSafeArea()
                         .contentShape(Rectangle())
-                        .onTapGesture { store.selectedCardId = nil }
+                        .onTapGesture { requestCardDetailClose() }
                         .transition(.opacity)
-                    CardDetailInspector(card: card) {
-                        store.selectedCardId = nil
+                    CardDetailInspector(card: card, hasDraftText: $detailHasDraftText) {
+                        requestCardDetailClose()
                     }
                     .frame(width: inspectorSize.width, height: inspectorSize.height)
                     .clipShape(RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous))
@@ -98,7 +104,7 @@ struct TaskRunView: View {
                 .focused($detailFocused)
                 .focusEffectDisabled()
                 .onKeyPress(.escape) {
-                    store.selectedCardId = nil
+                    requestCardDetailClose()
                     return .handled
                 }
                 .onAppear { detailFocused = true }
@@ -106,16 +112,47 @@ struct TaskRunView: View {
         }
     }
 
+    private func requestCardDetailClose() {
+        guard detailHasDraftText else {
+            closeCardDetail()
+            return
+        }
+
+        let now = Date()
+        if let deadline = draftCloseDeadline, now <= deadline {
+            closeCardDetail()
+            return
+        }
+
+        let deadline = now.addingTimeInterval(2)
+        draftCloseDeadline = deadline
+        draftCloseToast = "意见还没提交，再点一次关闭"
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            guard draftCloseDeadline == deadline else { return }
+            draftCloseDeadline = nil
+            draftCloseToast = nil
+        }
+    }
+
+    private func closeCardDetail() {
+        store.selectedCardId = nil
+        detailHasDraftText = false
+        draftCloseDeadline = nil
+        draftCloseToast = nil
+    }
+
     // MARK: - 新行动（英雄表单）
 
     private func newMissionForm(campId: String) -> some View {
         ScrollView {
-            let _ = campId // 草稿读写见 .task / .onChange
+            let availableCompanions = missionCompanions(campId: campId)
+            let singleCow = newcomerSingleCow(campId: campId)
 
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("发起放牛")
-                        .font(.largeTitle.weight(.bold))
+                        .font(.title2.weight(.bold))
                         .foregroundStyle(Camp.ink)
                     HStack(spacing: 6) {
                         // 行动在营地内发起（M5-0 C1）：表单锁定所属营地
@@ -148,7 +185,7 @@ struct TaskRunView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        CampSectionTitle(newcomerSingleCow ? "参与的牛" : "参与的牛")
+                        CampSectionTitle(singleCow ? "参与的牛" : "参与的牛")
                         Spacer()
                         if !selectedCompanionIds.isEmpty {
                             Text("已选 \(selectedCompanionIds.count) 位")
@@ -156,7 +193,7 @@ struct TaskRunView: View {
                                 .foregroundStyle(Camp.inkSecondary)
                         }
                     }
-                    if newcomerSingleCow, let cow = store.companions.first(where: { $0.kind == .regular }) {
+                    if singleCow, let cow = availableCompanions.first(where: { $0.kind == .regular }) {
                         HStack(spacing: 9) {
                             CompanionAvatarView(name: cow.name, colorName: cow.color, size: 34)
                             VStack(alignment: .leading, spacing: 2) {
@@ -170,7 +207,7 @@ struct TaskRunView: View {
                             Spacer()
                             CampChip(text: "已准备", color: Camp.moss, icon: "checkmark")
                         }
-                    } else if store.companions.isEmpty {
+                    } else if availableCompanions.isEmpty {
                         HStack(spacing: 10) {
                             Text("牛棚还是空的——先创建一只自定义牛。")
                                 .font(.callout)
@@ -184,7 +221,7 @@ struct TaskRunView: View {
                         }
                     } else {
                         FlowLayoutLite(spacing: 10) {
-                            ForEach(store.companions, id: \.id) { companion in
+                            ForEach(availableCompanions, id: \.id) { companion in
                                 companionChip(companion)
                             }
                         }
@@ -271,44 +308,46 @@ struct TaskRunView: View {
                     .campCard(padding: 10, highlighted: true)
                 }
 
-                Button {
-                    guard !store.missionStartBlocked else {
-                        submitError = store.missionStartBlockMessage
-                        return
-                    }
-                    submitError = nil
-                    submitting = true
-                    store.startMission(
-                        goal: goal,
-                        companionIds: selectedCompanionIds,
-                        workspacePath: workspace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : workspace,
-                        campId: campId,
-                        autonomy: formAutonomy
-                    )
-                } label: {
-                    HStack {
-                        Spacer()
-                        if submitting {
-                            ProgressView()
-                                .controlSize(.small)
-                                .tint(.white)
-                            Text("正在开工…")
-                        } else {
-                            Label("开始放牛", systemImage: "flag.fill")
+                HStack(spacing: 8) {
+                    Button {
+                        guard !store.missionStartBlocked else {
+                            submitError = store.missionStartBlockMessage
+                            return
                         }
-                        Spacer()
+                        submitError = nil
+                        submitting = true
+                        store.startMission(
+                            goal: goal,
+                            companionIds: selectedCompanionIds,
+                            workspacePath: workspace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : workspace,
+                            campId: campId,
+                            autonomy: formAutonomy
+                        )
+                    } label: {
+                        HStack {
+                            Spacer()
+                            if submitting {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .tint(.white)
+                                Text("正在开工…")
+                            } else {
+                                Label("开始放牛", systemImage: "flag.fill")
+                            }
+                            Spacer()
+                        }
                     }
+                    .buttonStyle(CampPrimaryButtonStyle())
+                    .keyboardShortcut(.return, modifiers: .command)
+                    .disabled(submitting
+                              || store.missionStartBlocked
+                              || goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                              || selectedCompanionIds.isEmpty)
+                    .help(store.missionStartBlocked ? store.missionStartBlockMessage : "让基础牛开始任务")
+                    Text("⌘↩ 开始")
+                        .font(.caption2)
+                        .foregroundStyle(Camp.inkSecondary)
                 }
-                .buttonStyle(CampPrimaryButtonStyle())
-                .keyboardShortcut(.defaultAction)
-                .disabled(submitting
-                          || store.missionStartBlocked
-                          || goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                          || selectedCompanionIds.isEmpty)
-                .opacity(store.missionStartBlocked
-                         || goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                         || selectedCompanionIds.isEmpty ? 0.5 : 1)
-                .help(store.missionStartBlocked ? store.missionStartBlockMessage : "让基础牛开始任务")
             }
             .frame(maxWidth: 620)
             .padding(24)
@@ -321,8 +360,8 @@ struct TaskRunView: View {
             goal = draft.goal
             workspace = draft.workspace
             selectedCompanionIds = draft.companionIds
-            if newcomerSingleCow,
-               let baseCow = store.companions.first(where: { $0.id == CowTemplate.baseCowId }) {
+            if newcomerSingleCow(campId: campId),
+               let baseCow = missionCompanions(campId: campId).first(where: { $0.id == CowTemplate.baseCowId }) {
                 selectedCompanionIds = [baseCow.id]
             }
             formAutonomy = store.defaultAutonomy
@@ -405,22 +444,27 @@ struct TaskRunView: View {
                     )
 
                     if store.theaterMode {
-                        CodingPastureTheaterView(
-                            phase: store.missionPhase,
-                            cards: store.missionCards,
-                            companions: store.cardCompanions,
-                            states: store.companionAnimStates,
-                            campMemoryCount: store.campNotes.count,
-                            onSelectCard: {
-                                recordInteraction()
-                                store.selectedCardId = $0
+                        ScrollView {
+                            VStack(spacing: 14) {
+                                CodingPastureTheaterView(
+                                    phase: store.missionPhase,
+                                    cards: store.missionCards,
+                                    companions: store.cardCompanions,
+                                    states: store.companionAnimStates,
+                                    campMemoryCount: store.campNotes.count,
+                                    onSelectCard: {
+                                        recordInteraction()
+                                        store.selectedCardId = $0
+                                    }
+                                )
+                                artifactsView
                             }
-                        )
+                            .frame(maxWidth: .infinity)
+                        }
                     } else {
                         cardList
+                        artifactsView
                     }
-
-                    artifactsView
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
 
@@ -453,35 +497,63 @@ struct TaskRunView: View {
     }
 
     @ViewBuilder private func missionHeader(compact: Bool) -> some View {
-        Group {
-            if compact {
-                VStack(alignment: .leading, spacing: 10) {
-                    missionTitle(lineLimit: 3)
-                    missionStatusSummary
-                    HStack(spacing: 10) {
-                        presentCompanions
+        VStack(spacing: 0) {
+            Group {
+                if compact {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(alignment: .top, spacing: 12) {
+                            missionLeadCow
+                            VStack(alignment: .leading, spacing: 7) {
+                                missionTitle(lineLimit: 3)
+                                missionStatusSummary
+                            }
+                        }
+                        missionOperationSummary
+                        HStack(spacing: 10) {
+                            presentCompanions
+                            Spacer(minLength: 8)
+                            missionActions
+                        }
+                    }
+                } else {
+                    HStack(alignment: .top, spacing: 12) {
+                        missionLeadCow
+                        VStack(alignment: .leading, spacing: 7) {
+                            missionTitle(lineLimit: 2)
+                            missionStatusSummary
+                            missionOperationSummary
+                        }
                         Spacer(minLength: 8)
-                        missionActions
+                        VStack(alignment: .trailing, spacing: 10) {
+                            presentCompanions
+                            missionActions
+                        }
                     }
-                }
-            } else {
-                HStack(alignment: .center, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        missionTitle(lineLimit: 2)
-                        missionStatusSummary
-                    }
-                    Spacer(minLength: 8)
-                    presentCompanions
-                    missionActions
                 }
             }
+            .padding(14)
+
+            LinearGradient(
+                colors: [Camp.pasture, Camp.hay],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(height: 4)
         }
-        .campCard()
+        .background(
+            Camp.surface,
+            in: RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+                .stroke(Camp.line, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.06), radius: 5, y: 2)
     }
 
     private func missionTitle(lineLimit: Int) -> some View {
         Text(missionGoalLine)
-            .font(.title3.weight(.semibold))
+            .font(.title2.weight(.bold))
             .foregroundStyle(Camp.ink)
             .lineLimit(lineLimit)
             .fixedSize(horizontal: false, vertical: true)
@@ -496,15 +568,51 @@ struct TaskRunView: View {
                     .foregroundStyle(Camp.inkSecondary)
                     .fixedSize(horizontal: true, vertical: false)
             }
-            autonomyMenu
-            spendChip
         }
+    }
+
+    private var missionOperationSummary: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                Spacer(minLength: 0)
+                autonomyMenu
+                spendChip
+            }
+            FlowLayoutLite(spacing: 8) {
+                autonomyMenu
+                spendChip
+            }
+        }
+    }
+
+    private var missionLeadCow: some View {
+        ZStack(alignment: .topTrailing) {
+            RanchCowSpriteView(colorName: leadingCowColor, height: 56, flipped: false)
+            if case .planning = store.missionPhase {
+                TypingIndicatorView()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(
+                        Camp.surfaceRaised,
+                        in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .stroke(Camp.line, lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+                    .offset(x: 10, y: -7)
+            }
+        }
+        .padding(.top, 7)
     }
 
     // MARK: - 哨卡（M7）
 
     private var currentMission: MissionRecord? {
-        store.missionList.first { $0.id == store.currentMissionId }
+        guard let missionId = store.currentMissionId else { return nil }
+        return store.missionList.first { $0.id == missionId }
+            ?? store.missionsByCamp.values.lazy.flatMap { $0 }.first { $0.id == missionId }
     }
 
     /// 档位菜单（M7-D2）：行动执行中可改，收营后只读
@@ -548,12 +656,19 @@ struct TaskRunView: View {
                 showSpendPopover.toggle()
             } label: {
                 CampChip(
-                    text: "花销 ~\(mission.spentTokens / 1000)k",
+                    text: "花销 ~\(CampFormat.tokens(mission.spentTokens))",
                     color: Camp.stone,
-                    icon: "creditcard"
+                    icon: "creditcard",
+                    trailingIcon: "chevron.down"
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(Camp.stone.opacity(spendChipHovered ? 0.72 : 0.26), lineWidth: 1)
                 )
             }
             .buttonStyle(.plain)
+            .help("查看花销分账")
+            .onHover { spendChipHovered = $0 }
             .popover(isPresented: $showSpendPopover, arrowEdge: .bottom) {
                 spendBreakdownView(mission: mission)
             }
@@ -589,7 +704,8 @@ struct TaskRunView: View {
                 .font(.callout)
                 .foregroundStyle(Camp.ink)
             Spacer()
-            Text(budget.map { "\(tokens / 1000)k / \($0 / 1000)k" } ?? "\(tokens / 1000)k tokens")
+            Text(budget.map { "\(CampFormat.tokens(tokens)) / \(CampFormat.tokens($0))" }
+                ?? "\(CampFormat.tokens(tokens)) tokens")
                 .font(.callout.monospacedDigit())
                 .foregroundStyle(Camp.inkSecondary)
         }
@@ -598,13 +714,7 @@ struct TaskRunView: View {
     @ViewBuilder private var statusChip: some View {
         switch store.missionPhase {
         case .planning:
-            HStack(spacing: 6) {
-                CompanionAvatarView(name: "基础牛", colorName: "amber", state: .thinking, size: 22)
-                TypingIndicatorView()
-                Text("基础牛正在规划路线…")
-                    .font(.caption)
-                    .foregroundStyle(Camp.amber)
-            }
+            CampChip(text: "正在规划路线…", color: Camp.creek, icon: "sparkles")
         case .executing:
             CampChip(text: "基础牛正在制作首版", color: Camp.creek, icon: "bolt.fill")
         case .delivering:
@@ -656,7 +766,6 @@ struct TaskRunView: View {
             }
             .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
             .disabled(store.missionStartBlocked)
-            .opacity(store.missionStartBlocked ? 0.5 : 1)
             .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在当前营地发起新放牛任务")
         case .idle:
             EmptyView()
@@ -715,10 +824,10 @@ struct TaskRunView: View {
     }
 
     private var budgetLine: String {
-        guard let mission = store.missionList.first(where: { $0.id == store.currentMissionId }) else {
+        guard let mission = currentMission else {
             return ""
         }
-        return "已用 \(mission.spentTokens / 1000)k / \(mission.budgetTokens / 1000)k tokens，任务已暂停派发"
+        return "已用 \(CampFormat.tokens(mission.spentTokens)) / \(CampFormat.tokens(mission.budgetTokens)) tokens，任务已暂停派发"
     }
 
     private var abandonButton: some View {
@@ -779,13 +888,36 @@ struct TaskRunView: View {
     }
 
     private var viewModePicker: some View {
-        Picker("视图", selection: theaterBinding) {
-            Label("工作卡", systemImage: "checklist").tag(false)
-            Label("Coding 草原", systemImage: "leaf.fill").tag(true)
+        HStack(spacing: 2) {
+            viewModeSegment(title: "工作卡", icon: "checklist", theater: false)
+            viewModeSegment(title: "Coding 草原", icon: "leaf.fill", theater: true)
         }
-        .pickerStyle(.segmented)
-        .labelsHidden()
+        .padding(3)
+        .background(Camp.surfaceRaised, in: Capsule())
+        .overlay(Capsule().stroke(Camp.line, lineWidth: 1))
         .frame(width: 190)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: store.theaterMode)
+    }
+
+    private func viewModeSegment(title: String, icon: String, theater: Bool) -> some View {
+        let selected = store.theaterMode == theater
+        return Button {
+            theaterBinding.wrappedValue = theater
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .foregroundStyle(selected && theater ? Camp.moss : (selected ? Camp.ember : Camp.inkSecondary))
+                Text(title)
+                    .foregroundStyle(selected ? Camp.ember : Camp.inkSecondary)
+            }
+            .font(.caption.weight(.semibold))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 5)
+            .background(selected ? Camp.surface : .clear, in: Capsule())
+            .shadow(color: .black.opacity(selected ? 0.08 : 0), radius: 3, y: 1)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private var theaterPulseIndicator: some View {
@@ -795,37 +927,48 @@ struct TaskRunView: View {
             .symbolEffect(.pulse, options: .repeat(2), value: theaterPulseToken)
     }
 
-    @ViewBuilder
     private func missionToolbarActions(feedVisible: Bool, feedLocked: Bool) -> some View {
-        // M7-D5 / D8：按钮保留在行动页，Cmd+. 由 App 全局 Commands 接管。
-        if !store.campHalted {
-            Button {
-                store.emergencyStopCamp()
-            } label: {
-                if store.haltOperationState == .stopping {
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.small)
-                        Text("正在收哨…")
+        HStack(spacing: 20) {
+            // M7-D5 / D8：按钮保留在行动页，Cmd+. 由 App 全局 Commands 接管。
+            if !store.campHalted {
+                Button {
+                    showEmergencyStopConfirmation = true
+                } label: {
+                    if store.haltOperationState == .stopping {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("正在收哨…")
+                        }
+                    } else {
+                        Label("收哨", systemImage: "hand.raised.fill")
                     }
-                } else {
-                    Label("收哨", systemImage: "hand.raised.fill")
+                }
+                .foregroundStyle(Camp.charcoalRed)
+                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
+                .disabled(!store.canRequestEmergencyStop)
+                .help("紧急收哨：暂停全部行动并终止子进程（全局 Cmd+.）")
+                .confirmationDialog(
+                    "收哨会暂停全营任务并终止牛群的执行进程",
+                    isPresented: $showEmergencyStopConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("确认收哨", role: .destructive) {
+                        store.emergencyStopCamp()
+                    }
+                    Button("取消", role: .cancel) {}
                 }
             }
-            .foregroundStyle(Camp.charcoalRed)
-            .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
-            .disabled(!store.canRequestEmergencyStop)
-            .help("紧急收哨：暂停全部行动并终止子进程（全局 Cmd+.）")
-        }
 
-        Button {
-            store.feedPanelVisible.toggle()
-        } label: {
-            Image(systemName: feedVisible ? "sidebar.trailing" : "text.bubble")
-                .foregroundStyle(feedVisible ? Camp.inkSecondary : Camp.ember)
+            Button {
+                store.feedPanelVisible.toggle()
+            } label: {
+                Image(systemName: feedVisible ? "sidebar.trailing" : "text.bubble")
+                    .foregroundStyle(feedVisible ? Camp.inkSecondary : Camp.ember)
+            }
+            .buttonStyle(CampSecondaryButtonStyle())
+            .disabled(feedLocked)
+            .help(feedLocked ? "窗口太窄，加宽窗口后可展开小队动态" : (feedVisible ? "收起小队动态" : "展开小队动态"))
         }
-        .buttonStyle(CampSecondaryButtonStyle())
-        .disabled(feedLocked)
-        .help(feedLocked ? "窗口太窄，加宽窗口后可展开小队动态" : (feedVisible ? "收起小队动态" : "展开小队动态"))
     }
 
     private var cardList: some View {
@@ -880,7 +1023,7 @@ struct TaskRunView: View {
     @ViewBuilder private var artifactsView: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                CampSectionTitle("回营成果")
+                RanchSectionHeader(icon: "shippingbox.fill", title: "回营成果", tint: Camp.amber)
                 if !store.missionArtifacts.isEmpty {
                     CampChip(text: "\(store.missionArtifacts.count) 件", color: Camp.moss, icon: "doc.fill")
                 }
@@ -956,9 +1099,9 @@ struct TaskRunView: View {
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 7)
-                            .background(Camp.surfaceRaised, in: RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous))
+                            .modifier(ArtifactRowHoverBackground())
                             .overlay(
-                                RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
                                     .stroke(Camp.line, lineWidth: 1)
                             )
                             .contentShape(Rectangle())
@@ -975,7 +1118,7 @@ struct TaskRunView: View {
     // MARK: - 派生
 
     private var missionGoalLine: String {
-        guard let mission = store.missionList.first(where: { $0.id == store.currentMissionId }) else {
+        guard let mission = currentMission else {
             return "放牛任务"
         }
         let refined = mission.goalRefined.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -984,9 +1127,16 @@ struct TaskRunView: View {
         return base.split(whereSeparator: \.isNewline).first.map(String.init) ?? "放牛任务"
     }
 
-    private var newcomerSingleCow: Bool {
-        let regular = store.companions.filter { $0.kind == .regular }
+    private func newcomerSingleCow(campId: String? = nil) -> Bool {
+        let regular = missionCompanions(campId: campId).filter { $0.kind == .regular }
         return regular.count == 1 && regular.first?.id == CowTemplate.baseCowId
+    }
+
+    private func missionCompanions(campId: String?) -> [CompanionRecord] {
+        guard let campId else { return store.companions }
+        return store.companions.filter {
+            $0.campId == campId || ($0.campId ?? "").isEmpty
+        }
     }
 
     private var doneCount: Int {
@@ -999,6 +1149,14 @@ struct TaskRunView: View {
 
     private var companionColors: [String: String] {
         Dictionary(store.cardCompanions.map { ($0.key, $0.value.color) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    private var leadingCowColor: String {
+        guard let color = presentCompanionList.first?.color,
+              RanchArtView.spriteImage(colorName: color) != nil else {
+            return "purple"
+        }
+        return color
     }
 
     private var sortedCards: [CardRecord] {
@@ -1054,43 +1212,15 @@ struct TaskRunView: View {
     }
 }
 
-// MARK: - 轻量流式布局（伙伴选择 chips 换行用）
+private struct ArtifactRowHoverBackground: ViewModifier {
+    @State private var hovering = false
 
-struct FlowLayoutLite: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > 0 && x + size.width > maxWidth {
-                x = 0
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-        return CGSize(width: maxWidth == .infinity ? x : maxWidth, height: y + rowHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX
-        var y = bounds.minY
-        var rowHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > bounds.minX && x + size.width > bounds.maxX {
-                x = bounds.minX
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            subview.place(at: CGPoint(x: x, y: y), anchor: .topLeading, proposal: .unspecified)
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
+    func body(content: Content) -> some View {
+        content
+            .background(
+                hovering ? Camp.pasture.opacity(0.5) : Camp.surfaceRaised,
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            )
+            .onHover { hovering = $0 }
     }
 }

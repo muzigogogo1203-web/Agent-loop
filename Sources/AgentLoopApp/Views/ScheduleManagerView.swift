@@ -344,9 +344,7 @@ struct ScheduleManagerView: View {
     }
 
     static func stamp(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MM-dd HH:mm"
-        return formatter.string(from: date)
+        date.formatted(date: .numeric, time: .shortened)
     }
 }
 

@@ -10,6 +10,9 @@ struct CodingRanchHomeHost: View {
     var onOpenNote: (String) -> Void
     var onOpenCowRoster: () -> Void
     var onStartMission: () -> Void
+    var onOpenGuide: () -> Void
+    var onOpenNotes: () -> Void
+    var onOpenSettings: () -> Void
 
     var body: some View {
         Group {
@@ -29,7 +32,10 @@ struct CodingRanchHomeHost: View {
                     onOpenMission: onOpenMission,
                     onOpenNote: onOpenNote,
                     onOpenCowRoster: onOpenCowRoster,
-                    onStartMission: onStartMission
+                    onStartMission: onStartMission,
+                    onOpenGuide: onOpenGuide,
+                    onOpenNotes: onOpenNotes,
+                    onOpenSettings: onOpenSettings
                 )
             } else {
                 ProgressView("正在整理营地…")
@@ -61,7 +67,9 @@ struct RuminationInboxHost: View {
             onStart: { await store.startRumination(ingestionId: $0) },
             onRetry: { await store.retryRumination(ingestionId: $0) },
             onClose: onClose,
-            onFeed: onFeed
+            onFeed: onFeed,
+            actionError: store.ruminationActionError,
+            onClearActionError: { store.ruminationActionError = nil }
         )
         .task(id: campId) {
             await store.loadRuminationInbox(campId: campId)
@@ -77,35 +85,75 @@ struct RuminationDetailHost: View {
 
     @State private var review: RuminationReviewViewState?
     @State private var loadState: CodingRanchLoadState = .loading
+    @State private var source: SourceViewState?
+    @State private var showSource = false
+    @State private var sourceLoadFailed = false
 
     var body: some View {
-        Group {
-            if let review {
-                RuminationReviewView(
-                    review: review,
-                    onSave: store.saveRuminationReview,
-                    onMaterialize: store.materializeRumination,
-                    onDelete: { scope in
-                        try await store.deleteIngestion(ingestionId: ingestionId, scope: scope)
-                    },
-                    onMissionDraft: onMissionDraft,
-                    onClose: onClose
+        VStack(spacing: 0) {
+            if let actionError = store.ruminationActionError {
+                RuminationActionErrorPanel(
+                    message: actionError,
+                    onDismiss: { store.ruminationActionError = nil }
                 )
-            } else if let item = inboxItem, case .ruminating = item.status {
-                RuminationProgressView(
-                    item: item,
-                    onViewSource: {},
-                    onCancel: { try await store.cancelRumination(ingestionId: ingestionId) },
-                    onClose: onClose
-                )
-            } else if let item = inboxItem, item.status == .queued {
-                queuedView(item)
-            } else {
-                loadContent
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
             }
+
+            Group {
+                if let review {
+                    RuminationReviewView(
+                        review: review,
+                        onSave: store.saveRuminationReview,
+                        onMaterialize: store.materializeRumination,
+                        onDelete: { scope in
+                            try await store.deleteIngestion(ingestionId: ingestionId, scope: scope)
+                        },
+                        onMissionDraft: onMissionDraft,
+                        onClose: onClose
+                    )
+                } else if let item = inboxItem, case .ruminating = item.status {
+                    RuminationProgressView(
+                        item: item,
+                        onViewSource: openSource,
+                        onCancel: { try await store.cancelRumination(ingestionId: ingestionId) },
+                        onClose: onClose
+                    )
+                } else if let item = inboxItem, item.status == .queued {
+                    queuedView(item)
+                } else if let item = inboxItem, case .failed(let message, let retryable) = item.status {
+                    failedView(item: item, message: message, retryable: retryable)
+                } else if let item = inboxItem, case .materialized = item.status {
+                    processedView(item)
+                } else if let item = inboxItem, item.status == .discarded {
+                    discardedView(item)
+                } else {
+                    loadContent
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .task(id: ingestionId) {
             await load()
+        }
+        .onChange(of: inboxItem?.status) { _, _ in
+            Task { await load() }
+        }
+        .sheet(isPresented: $showSource) {
+            RuminationSourceSheet(
+                source: source,
+                fallbackTitle: inboxItem?.title ?? "未命名资料",
+                fallbackSummary: inboxItem?.resultCountText ?? "",
+                loadFailed: sourceLoadFailed
+            )
+            .frame(
+                minWidth: 420,
+                idealWidth: 620,
+                maxWidth: 760,
+                minHeight: 420,
+                idealHeight: 600,
+                maxHeight: 760
+            )
         }
     }
 
@@ -126,13 +174,58 @@ struct RuminationDetailHost: View {
         .background(Camp.canvas)
     }
 
+    private func failedView(item: RuminationInboxItemViewState, message: String, retryable: Bool) -> some View {
+        VStack(spacing: 14) {
+            CodingRanchEmptyState(
+                title: "反刍失败",
+                message: message,
+                systemImage: "exclamationmark.triangle.fill"
+            )
+            HStack(spacing: 10) {
+                Button("查看原文", action: openSource)
+                    .buttonStyle(CampSecondaryButtonStyle())
+                if retryable {
+                    Button("重试") {
+                        Task { await store.retryRumination(ingestionId: item.id) }
+                    }
+                    .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                }
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Camp.canvas)
+    }
+
+    private func processedView(_ item: RuminationInboxItemViewState) -> some View {
+        CodingRanchEmptyState(
+            title: "这条材料已经处理",
+            message: "“\(item.title)”已经收进营地。",
+            systemImage: "checkmark.circle.fill",
+            actionTitle: "返回",
+            action: onClose
+        )
+        .padding(20)
+    }
+
+    private func discardedView(_ item: RuminationInboxItemViewState) -> some View {
+        CodingRanchEmptyState(
+            title: "这条材料已忽略",
+            message: "“\(item.title)”仍保留在待反刍记录中。",
+            systemImage: "eye.slash",
+            actionTitle: "返回",
+            action: onClose
+        )
+        .padding(20)
+    }
+
     @ViewBuilder private var loadContent: some View {
         switch loadState {
         case .idle, .loading:
             ProgressView("正在打开反刍结果…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .loaded:
-            CodingRanchEmptyState(title: "这条材料已经处理", message: "回到待反刍区查看它的最新状态。", actionTitle: "返回", action: onClose)
+            CodingRanchEmptyState(title: "状态已经更新", message: "回到待反刍区查看它的最新状态。", actionTitle: "返回", action: onClose)
                 .padding(20)
         case .failed(let message):
             CodingRanchEmptyState(title: "反刍结果暂时打不开", message: message, systemImage: "exclamationmark.triangle.fill", actionTitle: "返回", action: onClose)
@@ -148,15 +241,30 @@ struct RuminationDetailHost: View {
             loadState = .failed("找不到这条喂入材料")
             return
         }
+        review = nil
         guard item.status == .needsReview else {
             loadState = .loaded
             return
         }
+        loadState = .loading
         do {
             review = try await store.loadRuminationReview(ingestionId: ingestionId)
             loadState = .loaded
         } catch {
             loadState = .failed(error.localizedDescription)
+        }
+    }
+
+    private func openSource() {
+        source = nil
+        sourceLoadFailed = false
+        showSource = true
+        Task {
+            do {
+                source = try await store.loadRuminationSource(ingestionId: ingestionId)
+            } catch {
+                sourceLoadFailed = true
+            }
         }
     }
 }
@@ -188,7 +296,7 @@ struct CowRosterHost: View {
 
     private func rosterState(_ dashboard: CampDashboardViewState) -> CowRosterViewState {
         let owned = store.companions
-            .filter { $0.campId == campId && $0.kind == .regular }
+            .filter { ($0.campId == campId || ($0.campId ?? "").isEmpty) && $0.kind == .regular }
             .map { cow in
                 CowSummaryViewState(
                     id: cow.id,
@@ -221,7 +329,7 @@ struct CampNotesHost: View {
             HStack(spacing: 10) {
                 Image(systemName: "book.closed.fill").foregroundStyle(Camp.amber)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("营地笔记").font(.title2.weight(.semibold)).foregroundStyle(Camp.ink)
+                    Text("营地笔记").font(.title2.weight(.bold)).foregroundStyle(Camp.ink)
                     Text("确认后的知识和回营经验都保存在这里。")
                         .font(.caption).foregroundStyle(Camp.inkSecondary)
                 }
@@ -258,6 +366,7 @@ struct ReturnSummaryHost: View {
     let missionId: String
     var onBackToMission: () -> Void
     var onAccepted: () -> Void
+    var onOpenRoster: () -> Void
 
     @State private var summary: ReturnSummaryViewState?
     @State private var loadState: CodingRanchLoadState = .loading
@@ -278,7 +387,8 @@ struct ReturnSummaryHost: View {
                             await store.cancelMission(missionId: missionId)
                             onBackToMission()
                         }
-                    }
+                    },
+                    onOpenRoster: onOpenRoster
                 )
             } else {
                 switch loadState {

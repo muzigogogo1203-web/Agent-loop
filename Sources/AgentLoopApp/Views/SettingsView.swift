@@ -15,7 +15,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("设置")
-                        .font(.largeTitle.weight(.bold))
+                        .font(.title2.weight(.bold))
                         .foregroundStyle(Camp.ink)
                     Text("基础连接保持清晰，模型、工具和预算属于高级能力。凭据只存在本机。")
                         .font(.callout)
@@ -24,7 +24,7 @@ struct SettingsView: View {
                 .padding(.top, 8)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    CampSectionTitle("API 端点")
+                    RanchSectionHeader(icon: "link", title: "API 端点", tint: Camp.creek)
                     Picker("接口格式", selection: $store.apiFormat) {
                         ForEach(ProviderAPIFormat.allCases, id: \.rawValue) { format in
                             Text(format.displayName).tag(format)
@@ -70,7 +70,7 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        CampSectionTitle("认证")
+                        RanchSectionHeader(icon: "person.crop.circle.badge.checkmark", title: "认证", tint: Camp.moss)
                         Spacer()
                         if store.webCredentialPresent {
                             CampChip(text: "网页登录已授权", color: Camp.moss, icon: "checkmark.seal.fill")
@@ -87,7 +87,6 @@ struct SettingsView: View {
                         }
                         .buttonStyle(CampPrimaryButtonStyle(size: .small))
                         .disabled(!store.apiBaseURLValid || AppStore.isUIPreview)
-                        .opacity(store.apiBaseURLValid && !AppStore.isUIPreview ? 1 : 0.5)
                         Text(
                             AppStore.isUIPreview
                                 ? "预览模式不读取登录凭据；请用真实模式测试认证"
@@ -139,7 +138,6 @@ struct SettingsView: View {
                         }
                         .buttonStyle(CampPrimaryButtonStyle(size: .small))
                         .disabled(key.isEmpty)
-                        .opacity(key.isEmpty ? 0.5 : 1)
                         Text("Key 只进系统钥匙串，不进配置文件。")
                             .font(.caption)
                             .foregroundStyle(Camp.inkSecondary)
@@ -170,7 +168,7 @@ struct SettingsView: View {
 
                 // M6-D11/D12：模型目录 + 默认/蒸馏/规划三档
                 VStack(alignment: .leading, spacing: 12) {
-                    CampSectionTitle("模型")
+                    RanchSectionHeader(icon: "cpu", title: "模型", tint: Camp.creek)
                     Text("目录里的模型会出现在牛的档案与下面三档选择里。")
                         .font(.caption)
                         .foregroundStyle(Camp.inkSecondary)
@@ -231,7 +229,7 @@ struct SettingsView: View {
 
                 // M7-D2：新行动的默认自主档位
                 VStack(alignment: .leading, spacing: 12) {
-                    CampSectionTitle("默认自主档位")
+                    RanchSectionHeader(icon: "shield.lefthalf.filled", title: "默认自主档位", tint: Camp.ember)
                     Picker("默认自主档位", selection: $store.defaultAutonomy) {
                         ForEach(MissionAutonomy.allCases, id: \.self) { autonomy in
                             Text(autonomy.displayName).tag(autonomy)
@@ -249,7 +247,7 @@ struct SettingsView: View {
                 // M6-D7/D8：Tavily 搜索 key（Keychain 第二槽）
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        CampSectionTitle("联网搜索（Tavily）")
+                        RanchSectionHeader(icon: "globe", title: "联网搜索（Tavily）", tint: Camp.creek)
                         Spacer()
                         if store.searchKeyPresent {
                             CampChip(text: "已配置", color: Camp.moss, icon: "checkmark.seal.fill")
@@ -278,7 +276,6 @@ struct SettingsView: View {
                         }
                         .buttonStyle(CampPrimaryButtonStyle(size: .small))
                         .disabled(searchKey.isEmpty)
-                        .opacity(searchKey.isEmpty ? 0.5 : 1)
                         if store.searchKeyPresent {
                             Button {
                                 store.saveSearchKey("")
@@ -296,7 +293,7 @@ struct SettingsView: View {
 
                 // M10-D4:菜单栏常驻(默认关;开启后关窗保活,日程照常触发)
                 VStack(alignment: .leading, spacing: 10) {
-                    CampSectionTitle("菜单栏常驻")
+                    RanchSectionHeader(icon: "menubar.rectangle", title: "菜单栏常驻", tint: Camp.stone)
                     Toggle(isOn: Binding(
                         get: { (NSApp.delegate as? AppDelegate)?.menuBarResidencyEnabled ?? false },
                         set: { (NSApp.delegate as? AppDelegate)?.setMenuBarResidencyEnabled($0) }
@@ -313,7 +310,7 @@ struct SettingsView: View {
                 .campCard()
 
                 VStack(alignment: .leading, spacing: 12) {
-                    CampSectionTitle("默认预算")
+                    RanchSectionHeader(icon: "gauge.with.dots.needle.50percent", title: "默认预算", tint: Camp.ember)
                     HStack(spacing: 10) {
                         TextField("\(KernelDefaults.missionBudget)", text: $budgetText)
                             .textFieldStyle(.plain)

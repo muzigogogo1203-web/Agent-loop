@@ -100,7 +100,7 @@ struct CowSummaryCard: View {
             if !cow.specialties.isEmpty {
                 FlowLayoutLite(spacing: 6) {
                     ForEach(cow.specialties, id: \.self) { specialty in
-                        CampChip(text: specialty, color: Camp.moss)
+                        CampTag(text: specialty)
                     }
                 }
             }

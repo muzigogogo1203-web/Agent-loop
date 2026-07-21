@@ -5,6 +5,7 @@ import AgentLoopCore
 struct CardDetailInspector: View {
     @Environment(AppStore.self) private var store
     let card: CardRecord
+    @Binding var hasDraftText: Bool
     var onClose: () -> Void = {}
     @State private var timelineEntries: [FeedEntry] = []
     @State private var runRecords: [RunRecord] = []
@@ -44,6 +45,12 @@ struct CardDetailInspector: View {
         .task(id: card.id) {
             loadDetails()
         }
+        .onChange(of: returnFeedback) { _, feedback in
+            hasDraftText = !feedback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        .onDisappear {
+            hasDraftText = false
+        }
     }
 
     // MARK: - 头部
@@ -82,7 +89,6 @@ struct CardDetailInspector: View {
                     .foregroundStyle(Camp.stone)
             }
             .buttonStyle(.plain)
-            .keyboardShortcut(.cancelAction)
         }
     }
 
@@ -193,6 +199,8 @@ struct CardDetailInspector: View {
                 returnError = error
             } else {
                 returning = false
+                returnFeedback = ""
+                hasDraftText = false
                 onClose()
             }
         }
@@ -373,7 +381,7 @@ struct CardDetailInspector: View {
                                     .font(.caption.weight(.bold).monospacedDigit())
                                     .foregroundStyle(Camp.inkSecondary)
                                 CampChip(text: outcomeText(run.outcome), color: outcomeColor(run.outcome))
-                                Text("\(run.turns) 轮 · \(run.tokensIn + run.tokensOut) tokens")
+                                Text("\(run.turns) 轮 · \((run.tokensIn + run.tokensOut).formatted()) tokens")
                                     .font(.caption)
                                     .foregroundStyle(Camp.inkSecondary)
                                 Spacer()

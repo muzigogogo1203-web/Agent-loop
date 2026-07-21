@@ -122,7 +122,6 @@ struct DMChatView: View {
                     Button("发送", action: send)
                         .buttonStyle(CampPrimaryButtonStyle(size: .small))
                         .disabled(input.isEmpty)
-                        .opacity(input.isEmpty ? 0.5 : 1)
                 }
             }
             .padding(10)
