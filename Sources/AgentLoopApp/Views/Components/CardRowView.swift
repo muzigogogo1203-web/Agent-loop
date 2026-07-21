@@ -17,76 +17,90 @@ struct CardRowView: View {
     @State private var hovering = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: 0) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(color)
-                .frame(width: 4)
-                .padding(.vertical, 2)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                statusBadge
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top, spacing: 10) {
-                    if let companion {
+                if let companion {
+                    if RanchArtView.spriteImage(colorName: companion.color) != nil {
+                        RanchCowSpriteView(
+                            colorName: companion.color,
+                            height: 34,
+                            flipped: false
+                        )
+                        .padding(.top, 1)
+                    } else {
                         CompanionAvatarView(
                             name: companion.name,
                             colorName: companion.color,
                             state: card.status == .running || card.status == .blocked ? animState : .idle,
-                            size: 30
+                            size: 34
                         )
                         .padding(.top, 1)
                     }
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 8) {
-                            Text(card.title)
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(card.status == .canceled ? Camp.inkSecondary : Camp.ink)
-                                .strikethrough(card.status == .canceled)
-                            CampChip(text: statusText, color: color, icon: statusIcon)
-                            if card.reviewFlag != nil {
-                                CampChip(text: "待复核", color: Camp.amber, icon: "exclamationmark.circle.fill")
-                            }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(card.title)
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(card.status == .canceled ? Camp.inkSecondary : Camp.ink)
+                            .strikethrough(card.status == .canceled)
+                        CampChip(text: statusText, color: color, icon: statusIcon)
+                        if card.reviewFlag != nil {
+                            CampChip(text: "待复核", color: Camp.amber, icon: "exclamationmark.circle.fill")
                         }
-                        if let companion {
-                            Text(companion.name)
-                                .font(.caption)
-                                .foregroundStyle(Camp.inkSecondary)
-                        }
-                        Text(detailText)
+                    }
+                    if let companion {
+                        Text(companion.name)
                             .font(.caption)
                             .foregroundStyle(Camp.inkSecondary)
-                            .lineLimit(2)
                     }
-                    Spacer()
-                    if card.status == .blocked && pendingRequest == nil {
-                        Button {
-                            onRetry()
-                        } label: {
-                            Label("重试", systemImage: "arrow.clockwise")
-                        }
-                        .buttonStyle(CampSecondaryButtonStyle(tint: Camp.amber))
-                    }
+                    Text(detailText)
+                        .font(.caption)
+                        .foregroundStyle(Camp.inkSecondary)
+                        .lineLimit(2)
                 }
-                if let pendingRequest {
-                    AskUserPromptView(request: pendingRequest) { answer in
-                        onAnswer(pendingRequest.id, answer)
+                Spacer()
+                if card.status == .blocked && pendingRequest == nil {
+                    Button {
+                        onRetry()
+                    } label: {
+                        Label("重试", systemImage: "arrow.clockwise")
                     }
+                    .buttonStyle(CampSecondaryButtonStyle(tint: Camp.amber))
                 }
             }
-            .padding(.leading, 10)
+            if let pendingRequest {
+                AskUserPromptView(request: pendingRequest) { answer in
+                    onAnswer(pendingRequest.id, answer)
+                }
+            }
         }
-        .campCard(padding: 12, highlighted: pendingRequest != nil || card.reviewFlag != nil)
+        .padding(12)
+        .background(
+            Camp.surface,
+            in: RoundedRectangle(cornerRadius: Camp.cardRadiusLarge, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Camp.cardRadiusLarge, style: .continuous)
+                .stroke(
+                    pendingRequest != nil || card.reviewFlag != nil ? Camp.amber.opacity(0.75) : Camp.line,
+                    lineWidth: pendingRequest != nil || card.reviewFlag != nil ? 1.5 : 1
+                )
+        )
         // 营地风选中/焦点/悬停三态（替代系统蓝色焦点环——与暖色设计语言不符）：
         // 悬停 = 余烬淡描边微升起；键盘焦点/选中 = 余烬描边 + 底色微染
         .overlay(
-            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: Camp.cardRadiusLarge, style: .continuous)
                 .fill(Camp.ember.opacity(isSelected ? 0.05 : 0))
                 .allowsHitTesting(false)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: Camp.cardRadiusLarge, style: .continuous)
                 .stroke(accentStroke, lineWidth: isSelected || focused ? 1.5 : 1)
         )
-        .shadow(color: .black.opacity(hovering ? 0.08 : 0), radius: 8, y: 3)
-        .scaleEffect(hovering && !reduceMotion ? 1.004 : 1)
+        .campHoverLift()
         .opacity(card.status == .canceled ? 0.65 : 1)
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
@@ -106,6 +120,24 @@ struct CardRowView: View {
         .animation(reduceMotion ? nil : .snappy(duration: 0.15), value: hovering)
         .animation(reduceMotion ? nil : .snappy(duration: 0.15), value: focused)
         .animation(reduceMotion ? nil : .snappy(duration: 0.15), value: isSelected)
+    }
+
+    private var statusBadge: some View {
+        ZStack {
+            Circle()
+                .fill(color.opacity(0.15))
+            if card.status == .running && !reduceMotion {
+                Image(systemName: badgeIcon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(color)
+                    .symbolEffect(.pulse, options: .repeating, isActive: true)
+            } else {
+                Image(systemName: badgeIcon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(color)
+            }
+        }
+        .frame(width: 34, height: 34)
     }
 
     private var accentStroke: Color {
@@ -158,14 +190,28 @@ struct CardRowView: View {
         }
     }
 
-    private var color: Color {
-        if card.reviewFlag != nil { return Camp.amber }
+    private var badgeIcon: String {
         switch card.status {
-        case .done: return Camp.moss
-        case .blocked: return Camp.amber
-        case .canceled: return Camp.stone
-        case .running: return Camp.creek
-        case .todo, .ready: return Camp.stone
+        case .done: return "checkmark"
+        case .running: return "hammer.fill"
+        case .blocked: return "hand.raised.fill"
+        case .todo, .ready: return "circle.dashed"
+        case .canceled: return "xmark"
+        }
+    }
+
+    private var color: Color {
+        CampStatusStyle.cardColor(statusStyle)
+    }
+
+    private var statusStyle: CampStatusStyle.CardStatusLike {
+        switch card.status {
+        case .todo: .todo
+        case .ready: .ready
+        case .running: .running
+        case .done: .done
+        case .blocked: .blocked
+        case .canceled: .canceled
         }
     }
 }

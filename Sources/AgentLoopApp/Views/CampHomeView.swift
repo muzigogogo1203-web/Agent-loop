@@ -161,12 +161,11 @@ struct CampHomeView: View {
         if !store.mcp.servers.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    Image(systemName: "point.3.connected.trianglepath.dotted")
-                        .font(.caption)
-                        .foregroundStyle(Camp.inkSecondary)
-                    Text("驿站")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Camp.inkSecondary)
+                    RanchSectionHeader(
+                        icon: "point.3.connected.trianglepath.dotted",
+                        title: "驿站",
+                        tint: Camp.creek
+                    )
                     Spacer()
                     Text("\(enabledStations.count)/\(store.mcp.servers.count) 启用")
                         .font(.caption2)
@@ -220,12 +219,7 @@ struct CampHomeView: View {
         if !past.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    Image(systemName: "shippingbox")
-                        .font(.caption)
-                        .foregroundStyle(Camp.inkSecondary)
-                    Text("往期放牛任务")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Camp.inkSecondary)
+                    RanchSectionHeader(icon: "shippingbox", title: "往期放牛任务", tint: Camp.stone)
                     Spacer()
                     Text("\(past.count)")
                         .font(.caption2)
@@ -345,7 +339,6 @@ struct CampHomeView: View {
         }
         .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
         .disabled(currentCampArchived)
-        .opacity(currentCampArchived ? 0.5 : 1)
         .help(currentCampArchived ? "营地已归档，恢复后才能喂牛" : "把资料或想法喂给这个营地")
 
         Button {
@@ -381,7 +374,6 @@ struct CampHomeView: View {
         }
         .buttonStyle(CampPrimaryButtonStyle(size: .small))
         .disabled(store.missionStartBlocked)
-        .opacity(store.missionStartBlocked ? 0.5 : 1)
         .help(store.missionStartBlocked ? store.missionStartBlockMessage : "在这个营地发起放牛任务")
 
         Button {
@@ -582,7 +574,6 @@ private struct GuideChatColumn: View {
             Button("发送", action: send)
                 .buttonStyle(CampPrimaryButtonStyle(size: .small))
                 .disabled(input.isEmpty || campArchived)
-                .opacity(input.isEmpty || campArchived ? 0.5 : 1)
         }
     }
 
@@ -821,7 +812,6 @@ struct ProposalCardView: View {
                     }
                     .buttonStyle(CampPrimaryButtonStyle(size: .small))
                     .disabled(confirming || hasGhostMembers || store.missionStartBlocked)
-                    .opacity(hasGhostMembers || store.missionStartBlocked ? 0.5 : 1)
                     .help(proposalConfirmationHelp)
 
                     Button("先不") {

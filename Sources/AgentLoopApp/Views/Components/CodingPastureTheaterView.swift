@@ -3,7 +3,7 @@ import AgentLoopCore
 
 /// 行动中的动态 Coding 草原。
 ///
-/// 视觉来自已定稿的黏土牧场基座，但牛的状态、工作卡和阶段仍完全由真实事件流驱动。
+/// 视觉来自已定稿的像素牧场基座，但牛的状态、工作卡和阶段仍完全由真实事件流驱动。
 struct CodingPastureTheaterView: View {
     let phase: AppStore.MissionPhase
     let cards: [CardRecord]
@@ -17,6 +17,21 @@ struct CodingPastureTheaterView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     private var paused: Bool { reduceMotion || controlActiveState != .key }
+    private static let sparsePastureSlots = [
+        CGPoint(x: 0.45, y: 0.42),
+        CGPoint(x: 0.62, y: 0.50),
+        CGPoint(x: 0.32, y: 0.52),
+    ]
+    private static let crowdedPastureSlots = [
+        CGPoint(x: 0.30, y: 0.44),
+        CGPoint(x: 0.46, y: 0.54),
+        CGPoint(x: 0.60, y: 0.40),
+        CGPoint(x: 0.72, y: 0.50),
+        CGPoint(x: 0.40, y: 0.34),
+        CGPoint(x: 0.56, y: 0.32),
+        CGPoint(x: 0.22, y: 0.56),
+        CGPoint(x: 0.84, y: 0.40),
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -26,7 +41,6 @@ struct CodingPastureTheaterView: View {
             } else {
                 pastureStage
             }
-            loopStageRail
         }
         .padding(16)
         .background(pastureBackground)
@@ -70,51 +84,75 @@ struct CodingPastureTheaterView: View {
     }
 
     private var pastureStage: some View {
-        AspectFitStageLayout(aspectRatio: 1.5, maxHeight: 440) {
+        AspectFitStageLayout(aspectRatio: 2.3333, maxHeight: 520) {
             GeometryReader { proxy in
-                ZStack {
-                    RanchArtView(kind: .base, layout: .fit(maxWidth: nil))
-                        .frame(width: proxy.size.width, height: proxy.size.height)
+                TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: paused)) { timeline in
+                    let time = timeline.date.timeIntervalSinceReferenceDate
 
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    colorScheme == .dark ? .black.opacity(0.05) : .white.opacity(0.03),
-                                    .clear,
-                                    .black.opacity(colorScheme == .dark ? 0.22 : 0.08),
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .allowsHitTesting(false)
+                    ZStack {
+                        RanchArtView(kind: .panorama, layout: .fit(maxWidth: nil))
+                            .frame(width: proxy.size.width, height: proxy.size.height)
 
-                    if sortedCompanions.isEmpty {
-                        emptyPastureHint
-                            .position(x: proxy.size.width * 0.62, y: proxy.size.height * 0.58)
-                    } else {
-                        ForEach(Array(sortedCompanions.enumerated()), id: \.element.id) { index, companion in
-                            agentSpot(
-                                companion,
-                                index: index,
-                                compact: proxy.size.width < 760 || sortedCompanions.count > 5
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        colorScheme == .dark ? .black.opacity(0.025) : .white.opacity(0.015),
+                                        .clear,
+                                        .black.opacity(colorScheme == .dark ? 0.11 : 0.04),
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
                             )
-                            .position(
-                                pasturePosition(
+                            .allowsHitTesting(false)
+
+                        if sortedCompanions.isEmpty {
+                            emptyPastureHint
+                                .position(x: proxy.size.width * 0.5, y: proxy.size.height * 0.45)
+                        } else {
+                            ForEach(Array(sortedCompanions.enumerated()), id: \.element.id) { index, companion in
+                                let position = pasturePosition(
                                     for: index,
                                     total: sortedCompanions.count,
                                     size: proxy.size
                                 )
-                            )
-                        }
-                    }
+                                let motion = pastureMotion(
+                                    for: companion,
+                                    index: index,
+                                    size: proxy.size,
+                                    time: time
+                                )
 
-                    memoryTrough
-                        .position(
-                            x: max(88, min(proxy.size.width * 0.17, 150)),
-                            y: max(42, proxy.size.height - 48)
-                        )
+                                agentSpot(
+                                    companion,
+                                    index: index,
+                                    compact: proxy.size.width < 760 || sortedCompanions.count > 5,
+                                    flipped: motion.flipped
+                                )
+                                .position(position)
+                                .offset(x: motion.dx, y: motion.dy + motion.bob)
+                                .zIndex(Double(position.y + motion.dy))
+                            }
+                        }
+
+                        pastureProgressBanner(width: min(proxy.size.width * 0.72, 640))
+                            .padding(.top, 12)
+                            .frame(
+                                width: proxy.size.width,
+                                height: proxy.size.height,
+                                alignment: .top
+                            )
+                            .allowsHitTesting(false)
+                            .zIndex(6_000)
+
+                        memoryTrough
+                            .position(
+                                x: proxy.size.width * 0.87,
+                                y: proxy.size.height * 0.86
+                            )
+                            .zIndex(10_000)
+                    }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(
@@ -131,7 +169,7 @@ struct CodingPastureTheaterView: View {
             AspectFitStageLayout(aspectRatio: 1.5, maxHeight: 200) {
                 GeometryReader { proxy in
                     ZStack(alignment: .bottomLeading) {
-                        RanchArtView(kind: .base, layout: .fit(maxWidth: nil))
+                        RanchArtView(kind: .panorama, layout: .fit(maxWidth: nil))
                             .frame(width: proxy.size.width, height: proxy.size.height)
                         LinearGradient(
                             colors: [.clear, .black.opacity(colorScheme == .dark ? 0.32 : 0.14)],
@@ -177,10 +215,11 @@ struct CodingPastureTheaterView: View {
     @ViewBuilder private func agentSpot(
         _ companion: CompanionRecord,
         index: Int,
-        compact: Bool
+        compact: Bool,
+        flipped: Bool
     ) -> some View {
         if RanchArtView.spriteImage(colorName: companion.color) != nil {
-            spriteAgentSpot(companion, index: index, compact: compact)
+            spriteAgentSpot(companion, compact: compact, flipped: flipped)
         } else {
             legacyAgentSpot(companion, compact: compact)
         }
@@ -188,8 +227,8 @@ struct CodingPastureTheaterView: View {
 
     private func spriteAgentSpot(
         _ companion: CompanionRecord,
-        index: Int,
-        compact: Bool
+        compact: Bool,
+        flipped: Bool
     ) -> some View {
         let state = states[companion.id] ?? .idle
         let card = selectableCard(for: companion.id)
@@ -203,8 +242,9 @@ struct CodingPastureTheaterView: View {
                     RanchCowSpriteView(
                         colorName: companion.color,
                         height: compact ? 74 : 96,
-                        flipped: index % 2 == 1
+                        flipped: flipped
                     )
+                    .animation(.easeInOut(duration: 0.3), value: flipped)
                     Image(systemName: seatSymbols(for: state).first ?? "circle")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.white)
@@ -218,12 +258,15 @@ struct CodingPastureTheaterView: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(accent)
                     .lineLimit(1)
+                    .truncationMode(.tail)
+                    .help("\(companion.name) · \(label(for: state))")
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(Camp.surfaceRaised.opacity(0.90), in: Capsule())
                     .overlay(Capsule().stroke(accent.opacity(0.40), lineWidth: 1))
                     .shadow(color: .black.opacity(0.14), radius: 4, y: 2)
             }
+            .frame(maxWidth: 132)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -379,60 +422,63 @@ struct CodingPastureTheaterView: View {
         .shadow(color: .black.opacity(0.12), radius: 5, y: 2)
     }
 
-    private var loopStageRail: some View {
-        HStack(spacing: 0) {
-            ForEach(LoopStage.allCases, id: \.self) { stage in
-                stageMarker(stage)
-                    .frame(maxWidth: .infinity)
-                if stage != LoopStage.allCases.last {
-                    Image(systemName: stage == .review ? "arrow.uturn.forward" : "arrow.right")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(
-                            stage == activeStage
-                                ? activeStage.color.opacity(0.85)
-                                : Camp.inkSecondary.opacity(0.55)
-                        )
-                        .frame(width: 22)
-                }
-            }
+    private func pastureProgressBanner(width: CGFloat) -> some View {
+        ViewThatFits(in: .horizontal) {
+            progressBannerStages(compact: false)
+            progressBannerStages(compact: true)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .frame(width: width)
         .background(
-            Camp.surfaceRaised.opacity(0.86),
-            in: RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+            colorScheme == .dark
+                ? Camp.surfaceRaised.opacity(0.90)
+                : Camp.hay.opacity(0.92),
+            in: RoundedRectangle(cornerRadius: 10)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: Camp.cornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: 10)
                 .stroke(Camp.line, lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
     }
 
-    private func stageMarker(_ stage: LoopStage) -> some View {
+    private func progressBannerStages(compact: Bool) -> some View {
+        HStack(spacing: 2) {
+            ForEach(Array(LoopStage.allCases.enumerated()), id: \.element) { index, stage in
+                if index > 0 {
+                    Image(systemName: index == LoopStage.allCases.count - 1
+                        ? "arrow.uturn.forward"
+                        : "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(Camp.inkSecondary.opacity(0.5))
+                }
+                progressBannerStage(stage, compact: compact)
+            }
+        }
+    }
+
+    private func progressBannerStage(_ stage: LoopStage, compact: Bool) -> some View {
         let active = stage == activeStage
         return TimelineView(.animation(minimumInterval: 0.12, paused: paused || !active)) { context in
             let lift = active && !paused
                 ? sin(context.date.timeIntervalSinceReferenceDate * 7) * 2.5
                 : 0
-            VStack(spacing: 6) {
+            HStack(spacing: 3) {
                 Image(systemName: stage.icon)
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(active ? .white : stage.color)
-                    .frame(width: 42, height: 42)
-                    .background(active ? stage.color : stage.color.opacity(0.13), in: Circle())
-                    .overlay(
-                        Circle().stroke(
-                            active ? Color.white.opacity(0.7) : stage.color.opacity(0.28),
-                            lineWidth: active ? 1.4 : 1
-                        )
-                    )
-                    .shadow(color: active ? stage.color.opacity(0.48) : .clear, radius: active ? 12 : 0, y: 2)
-                Text(stage.title)
-                    .font(.caption.weight(active ? .semibold : .regular))
-                    .foregroundStyle(active ? stage.color : Camp.inkSecondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
+                if active || !compact {
+                    Text(stage.title)
+                        .lineLimit(1)
+                }
             }
+            .font(active ? .caption2.bold() : .caption2)
+            .foregroundStyle(active ? Color.white : Camp.inkSecondary)
+            .padding(.horizontal, active ? 7 : 0)
+            .padding(.vertical, active ? 3 : 0)
+            .background(
+                active ? stage.color : Color.clear,
+                in: RoundedRectangle(cornerRadius: 7)
+            )
             .offset(y: lift)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: activeStage)
         }
@@ -539,32 +585,11 @@ struct CodingPastureTheaterView: View {
         let normalized: CGPoint
         switch total {
         case 0:
-            normalized = CGPoint(x: 0.62, y: 0.58)
-        case 1:
-            normalized = CGPoint(x: 0.60, y: 0.62)
-        case 2:
-            normalized = index == 0
-                ? CGPoint(x: 0.38, y: 0.66)
-                : CGPoint(x: 0.68, y: 0.52)
-        case 3:
-            let slots = [
-                CGPoint(x: 0.30, y: 0.64),
-                CGPoint(x: 0.56, y: 0.72),
-                CGPoint(x: 0.74, y: 0.50),
-            ]
-            normalized = slots[index]
+            normalized = CGPoint(x: 0.5, y: 0.45)
+        case 1...3:
+            normalized = Self.sparsePastureSlots[index]
         default:
-            let slots = [
-                CGPoint(x: 0.24, y: 0.60),
-                CGPoint(x: 0.44, y: 0.74),
-                CGPoint(x: 0.64, y: 0.68),
-                CGPoint(x: 0.80, y: 0.52),
-                CGPoint(x: 0.52, y: 0.44),
-                CGPoint(x: 0.34, y: 0.46),
-                CGPoint(x: 0.16, y: 0.42),
-                CGPoint(x: 0.86, y: 0.70),
-            ]
-            normalized = slots[index % slots.count]
+            normalized = Self.crowdedPastureSlots[index % Self.crowdedPastureSlots.count]
         }
 
         let horizontalInset: CGFloat = 56
@@ -574,6 +599,168 @@ struct CodingPastureTheaterView: View {
             y: min(max(size.height * normalized.y, verticalInset), size.height - verticalInset)
         )
     }
+
+    private func pastureMotion(
+        for companion: CompanionRecord,
+        index: Int,
+        size: CGSize,
+        time: TimeInterval
+    ) -> PastureMotion {
+        let hash = fnv1a(companion.id)
+        let mask: UInt64 = (1 << 21) - 1
+        let denominator = Double(mask)
+        let phase1 = Double(hash & mask) / denominator * 2 * Double.pi
+        let speedJitter = 0.85 + Double((hash >> 42) & mask) / denominator * 0.30
+        let state = states[companion.id] ?? .idle
+
+        switch state {
+        case .idle, .thinking, .celebrating:
+            let slot = pasturePosition(for: index, total: sortedCompanions.count, size: size)
+            let waypoints = pastureWaypoints(for: companion, slot: slot, size: size)
+            let legs = pastureLegs(for: companion, waypoints: waypoints, speedJitter: speedJitter)
+            let duration = legs.reduce(0) { $0 + $1.walkDuration + $1.pauseDuration }
+            let phaseSeed = fnv1a("\(companion.id):phase")
+            let phaseOffset = unitRandom(from: phaseSeed, segment: 0) * duration
+            var elapsed = (time + phaseOffset).truncatingRemainder(dividingBy: duration)
+            if elapsed < 0 { elapsed += duration }
+
+            for leg in legs {
+                if elapsed < leg.walkDuration {
+                    let progress = elapsed / leg.walkDuration
+                    let eased = progress * progress * (3 - 2 * progress)
+                    let position = CGPoint(
+                        x: leg.start.x + (leg.end.x - leg.start.x) * CGFloat(eased),
+                        y: leg.start.y + (leg.end.y - leg.start.y) * CGFloat(eased)
+                    )
+                    return PastureMotion(
+                        dx: position.x - slot.x,
+                        dy: position.y - slot.y,
+                        bob: -2.0 * CGFloat(abs(sin(time * 7 * speedJitter))),
+                        flipped: leg.flipped
+                    )
+                }
+
+                elapsed -= leg.walkDuration
+                if elapsed < leg.pauseDuration {
+                    return PastureMotion(
+                        dx: leg.end.x - slot.x,
+                        dy: leg.end.y - slot.y,
+                        bob: 0,
+                        flipped: leg.flipped
+                    )
+                }
+                elapsed -= leg.pauseDuration
+            }
+
+            return PastureMotion(dx: 0, dy: 0, bob: 0, flipped: false)
+        case .asking, .scratching:
+            return PastureMotion(
+                dx: 1.5 * CGFloat(sin(time * 0.8 + phase1)),
+                dy: 0,
+                bob: 0,
+                flipped: true
+            )
+        case .working:
+            return PastureMotion(
+                dx: 0,
+                dy: 1.4 * CGFloat(sin(time * 1.7 + phase1)),
+                bob: 0,
+                flipped: true
+            )
+        case .napping:
+            return PastureMotion(dx: 0, dy: 0, bob: 0, flipped: true)
+        }
+    }
+
+    private func pastureWaypoints(
+        for companion: CompanionRecord,
+        slot: CGPoint,
+        size: CGSize
+    ) -> [CGPoint] {
+        let angleSeed = fnv1a(companion.id)
+        let horizontalInset: CGFloat = 56
+        let verticalInset: CGFloat = 60
+
+        return (0..<4).map { index in
+            let angleRandom = unitRandom(from: angleSeed, segment: index)
+            let angle = Double(index) * Double.pi / 2 + (angleRandom - 0.5)
+            let radius = 0.06 * size.width
+            return CGPoint(
+                x: min(
+                    max(slot.x + radius * CGFloat(cos(angle)), horizontalInset),
+                    size.width - horizontalInset
+                ),
+                y: min(
+                    max(slot.y + radius * 0.55 * CGFloat(sin(angle)), verticalInset),
+                    size.height - verticalInset
+                )
+            )
+        }
+    }
+
+    private func pastureLegs(
+        for companion: CompanionRecord,
+        waypoints: [CGPoint],
+        speedJitter: Double
+    ) -> [PastureLeg] {
+        let pauseSeed = fnv1a("\(companion.id):pause")
+        let speed = 9.0 * speedJitter
+
+        return waypoints.indices.map { index in
+            let nextIndex = (index + 1) % waypoints.count
+            let start = waypoints[index]
+            let end = waypoints[nextIndex]
+            let distance = hypot(end.x - start.x, end.y - start.y)
+            return PastureLeg(
+                start: start,
+                end: end,
+                walkDuration: Double(distance) / speed,
+                pauseDuration: 4 + 6 * unitRandom(from: pauseSeed, segment: index),
+                flipped: pastureFlipped(for: index, waypoints: waypoints)
+            )
+        }
+    }
+
+    private func pastureFlipped(for index: Int, waypoints: [CGPoint]) -> Bool {
+        for offset in 0..<waypoints.count {
+            let legIndex = (index - offset + waypoints.count) % waypoints.count
+            let nextIndex = (legIndex + 1) % waypoints.count
+            let dx = waypoints[nextIndex].x - waypoints[legIndex].x
+            if abs(dx) >= 1 {
+                return dx > 0
+            }
+        }
+        return false
+    }
+
+    private func unitRandom(from seed: UInt64, segment: Int) -> Double {
+        let mask = UInt64(UInt16.max)
+        return Double((seed >> (segment * 16)) & mask) / Double(mask)
+    }
+
+    private func fnv1a(_ value: String) -> UInt64 {
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for byte in value.utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 1_099_511_628_211
+        }
+        return hash
+    }
+}
+
+private struct PastureMotion {
+    let dx: CGFloat
+    let dy: CGFloat
+    let bob: CGFloat
+    let flipped: Bool
+}
+
+private struct PastureLeg {
+    let start: CGPoint
+    let end: CGPoint
+    let walkDuration: TimeInterval
+    let pauseDuration: TimeInterval
+    let flipped: Bool
 }
 
 /// 给无固有尺寸的 GeometryReader 一个确定的 3:2 proposal，避免 VStack 采用 10pt 理想尺寸。
@@ -643,7 +830,7 @@ private enum LoopStage: CaseIterable, Hashable {
         switch self {
         case .goal: Camp.amber
         case .work: Camp.creek
-        case .handoff: Color(red: 0.48, green: 0.38, blue: 0.78)
+        case .handoff: Camp.lavender
         case .review: Camp.moss
         case .cycle: Camp.ember
         case .memory: Camp.amber

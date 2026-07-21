@@ -8,11 +8,18 @@ struct RuminationInboxView: View {
     var onRestore: (String) -> Void = { _ in }
     var onClose: (() -> Void)?
     var onFeed: (() -> Void)?
+    var actionError: String? = nil
+    var onClearActionError: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider().overlay(Camp.line)
+            if let actionError {
+                RuminationActionErrorPanel(message: actionError, onDismiss: onClearActionError)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+            }
             content
         }
         .background(Camp.canvas)
@@ -27,7 +34,7 @@ struct RuminationInboxView: View {
                 .background(Camp.ember.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
             VStack(alignment: .leading, spacing: 3) {
                 Text("待反刍")
-                    .font(.headline)
+                    .font(.title2.weight(.bold))
                     .foregroundStyle(Camp.ink)
                 Text("你主动喂入的材料都在这里，失败也不会丢失原文。")
                     .font(.caption)
@@ -50,7 +57,7 @@ struct RuminationInboxView: View {
                 .keyboardShortcut(.cancelAction)
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .background(Camp.surface)
     }
@@ -116,6 +123,30 @@ struct RuminationInboxView: View {
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct RuminationActionErrorPanel: View {
+    let message: String
+    var onDismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(Camp.charcoalRed)
+            Text(message)
+                .font(.callout)
+                .foregroundStyle(Camp.charcoalRed)
+            Spacer(minLength: 8)
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Camp.charcoalRed)
+            .accessibilityLabel("清除反刍错误")
+        }
+        .campStatusPanel(Camp.charcoalRed)
     }
 }
 
@@ -278,7 +309,7 @@ struct RuminationProgressView: View {
             }
             Spacer(minLength: 20)
         }
-        .padding(24)
+        .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Camp.canvas)
         .accessibilityElement(children: .contain)
@@ -310,6 +341,48 @@ struct RuminationProgressView: View {
             onClose()
         } catch {
             cancelState = .failed(error.localizedDescription)
+        }
+    }
+}
+
+struct RuminationSourceSheet: View {
+    let source: SourceViewState?
+    let fallbackTitle: String
+    let fallbackSummary: String
+    let loadFailed: Bool
+
+    var body: some View {
+        Group {
+            if let source {
+                SourceEvidenceView(source: source)
+            } else if loadFailed {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("原文", systemImage: "doc.text.fill")
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(Camp.ink)
+                        Text(fallbackTitle)
+                            .font(.headline)
+                            .foregroundStyle(Camp.ink)
+                        if !fallbackSummary.isEmpty {
+                            Text(fallbackSummary)
+                                .font(.callout)
+                                .foregroundStyle(Camp.inkSecondary)
+                        }
+                        Text("当前无法读取完整原文，以上仅展示这条材料的标题与摘要。请返回列表刷新后再试。")
+                            .font(.caption)
+                            .foregroundStyle(Camp.charcoalRed)
+                            .campStatusPanel(Camp.charcoalRed)
+                    }
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .background(Camp.surface)
+            } else {
+                ProgressView("正在读取原文…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Camp.surface)
+            }
         }
     }
 }
@@ -493,7 +566,7 @@ struct RuminationReviewView: View {
                         .lineLimit(3...8)
                 }
                 candidateSection(.keyPoint, title: "关键知识", icon: "book.closed.fill", color: Camp.moss)
-                candidateSection(.requirement, title: "需求", icon: "checklist", color: Camp.amber)
+                candidateSection(.requirement, title: "需求", icon: "checklist", color: Camp.creek)
                 candidateSection(.todo, title: "待办", icon: "calendar.badge.clock", color: Camp.ember)
                 missionSection
                 if !review.uncertainties.isEmpty {
@@ -581,7 +654,7 @@ struct RuminationReviewView: View {
                 }
             }
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .background(Camp.surface)
     }
@@ -611,7 +684,6 @@ struct RuminationReviewView: View {
         .buttonStyle(CampPrimaryButtonStyle())
         .keyboardShortcut(.defaultAction)
         .disabled(!review.canMaterialize || review.missionDraft == nil || isRunning)
-        .opacity(review.canMaterialize && review.missionDraft != nil ? 1 : 0.5)
     }
 
     private var isRunning: Bool { actionState == .running }
@@ -663,9 +735,7 @@ struct RuminationSectionCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 11) {
-            Label(title, systemImage: icon)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(color)
+            RanchSectionHeader(icon: icon, title: title, tint: color)
                 .accessibilityAddTraits(.isHeader)
             content
         }
@@ -779,7 +849,7 @@ struct SourceEvidenceView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(16)
+        .padding(20)
         .background(Camp.surface)
     }
 

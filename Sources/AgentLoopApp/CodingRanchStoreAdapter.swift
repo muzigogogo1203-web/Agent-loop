@@ -8,35 +8,62 @@ extension AppStore: CodingRanchStoreProtocol {
     var ruminationInbox: RuminationInboxViewState { codingRanchInbox }
 
     func loadDashboard(campId: String) async {
-        let camp = (try? db.camp(id: campId)) ?? camps.first(where: { $0.id == campId })
-        guard let camp else { return }
-        let ingestionItems = (try? FeedService(db: db).items(campId: campId)) ?? []
-        let inboxItems = ingestionItems.map { inboxItem($0, campName: camp.name) }
-        let missions = (try? db.missions(campId: campId)) ?? []
-        let notes = (try? db.campNotes(campId: campId)) ?? []
-        let cows = companions.filter { $0.campId == campId && $0.kind == .regular }
-        let progress = newcomerProgress(campId: campId)
-        codingRanchDashboard = CampDashboardViewState(
-            loadState: .loaded,
-            campId: camp.id,
-            campName: camp.name,
-            activeCow: cows.first.map(cowViewState),
-            pendingRuminationCount: ingestionItems.filter { [.queued, .ruminating, .failed].contains($0.status) }.count,
-            pendingConfirmationCount: ingestionItems.filter { $0.status == .needsReview }.count,
-            pendingReturnCount: missions.filter { $0.status == .delivering }.count,
-            pendingItems: Array(inboxItems.prefix(4)),
-            activeMissions: missions.filter { [.planning, .executing, .delivering].contains($0.status) }.map(missionViewState),
-            recentMissions: Array(missions.prefix(5)).map(missionViewState),
-            recentNotes: Array(notes.prefix(5)).map(noteViewState),
-            newcomerProgress: progress
-        )
-        codingRanchInbox = .init(loadState: .loaded, items: inboxItems)
+        do {
+            let camp = try db.camp(id: campId) ?? camps.first(where: { $0.id == campId })
+            guard let camp else {
+                setDashboardLoadFailure(campId: campId, campName: "当前营地", message: "找不到这个营地，刷新后再试")
+                return
+            }
+            let ingestionItems = try FeedService(db: db).items(campId: campId)
+            let inboxItems = ingestionItems.map { inboxItem($0, campName: camp.name) }
+            let pendingItems = inboxItems.filter {
+                switch $0.status {
+                case .queued, .ruminating, .needsReview, .failed: true
+                case .materialized, .discarded: false
+                }
+            }
+            let missions = try db.missions(campId: campId)
+            let notes = try db.campNotes(campId: campId)
+            let cows = companions.filter {
+                ($0.campId == campId || ($0.campId ?? "").isEmpty) && $0.kind == .regular
+            }
+            let progress = newcomerProgress(campId: campId)
+            codingRanchDashboard = CampDashboardViewState(
+                loadState: .loaded,
+                campId: camp.id,
+                campName: camp.name,
+                activeCow: cows.first.map(cowViewState),
+                pendingRuminationCount: ingestionItems.filter { [.queued, .ruminating, .failed].contains($0.status) }.count,
+                pendingConfirmationCount: ingestionItems.filter { $0.status == .needsReview }.count,
+                pendingReturnCount: missions.filter { $0.status == .delivering }.count,
+                pendingItems: Array(pendingItems.prefix(4)),
+                activeMissions: missions.filter { [.planning, .executing, .delivering].contains($0.status) }.map(missionViewState),
+                recentMissions: Array(missions.prefix(5)).map(missionViewState),
+                recentNotes: Array(notes.prefix(5)).map(noteViewState),
+                newcomerProgress: progress
+            )
+            codingRanchInbox = .init(loadState: .loaded, items: inboxItems)
+        } catch {
+            let campName = camps.first(where: { $0.id == campId })?.name ?? "当前营地"
+            setDashboardLoadFailure(
+                campId: campId,
+                campName: campName,
+                message: "营地暂时加载失败：\(error.localizedDescription)"
+            )
+        }
     }
 
     func loadRuminationInbox(campId: String) async {
-        let campName = (try? db.camp(id: campId)?.name) ?? "当前营地"
-        let items = ((try? FeedService(db: db).items(campId: campId)) ?? []).map { inboxItem($0, campName: campName) }
-        codingRanchInbox = .init(loadState: .loaded, items: items)
+        do {
+            let campName = try db.camp(id: campId)?.name ?? camps.first(where: { $0.id == campId })?.name ?? "当前营地"
+            let items = try FeedService(db: db).items(campId: campId).map { inboxItem($0, campName: campName) }
+            codingRanchInbox = .init(loadState: .loaded, items: items)
+        } catch {
+            codingRanchInbox = .init(
+                loadState: .failed("待反刍列表暂时加载失败：\(error.localizedDescription)"),
+                items: []
+            )
+        }
     }
 
     func submitFeed(_ draft: FeedDraft, startRumination: Bool) async throws -> FeedSubmissionResult {
@@ -58,31 +85,54 @@ extension AppStore: CodingRanchStoreProtocol {
     private func ruminationPhaseHandler(ingestionId: String) -> @Sendable (RuminationService.RuminationPhase) -> Void {
         { [weak self] phase in
             Task { @MainActor [weak self] in
-                self?.ruminationStages[ingestionId] = phase == .extracting ? .extracting : .organizing
+                self?.setRuminationStage(
+                    phase == .extracting ? .extracting : .organizing,
+                    ingestionId: ingestionId
+                )
             }
         }
     }
 
     func startRumination(ingestionId: String) async {
-        guard let item = try? FeedService(db: db).item(id: ingestionId),
-              let provider = provider(model: effectiveDistillModel) else { return }
+        ruminationActionError = nil
+        let item: IngestionItemRecord
+        do {
+            guard let storedItem = try FeedService(db: db).item(id: ingestionId) else {
+                ruminationActionError = "这条材料不存在了，刷新看看"
+                return
+            }
+            item = storedItem
+        } catch {
+            ruminationActionError = "这条材料暂时读不到，请刷新后再试"
+            return
+        }
+        guard let provider = provider(model: effectiveDistillModel) else {
+            ruminationActionError = "请先在设置里配置模型供给线"
+            return
+        }
         let service = RuminationService(db: db, provider: provider)
         do {
             _ = try service.start(ingestionId: ingestionId)
         } catch FeedServiceError.invalidState(.ruminating) {
+            await loadDashboard(campId: item.campId)
             return
         } catch {
+            ruminationActionError = "反刍没有开始：\(error.localizedDescription)"
             return
         }
         await loadDashboard(campId: item.campId)
         Task { [weak self] in
             guard let self else { return }
-            ruminationStages[ingestionId] = .reading
-            _ = try? await service.processStarted(
-                ingestionId: ingestionId,
-                onPhase: ruminationPhaseHandler(ingestionId: ingestionId)
-            )
-            ruminationStages[ingestionId] = nil
+            setRuminationStage(.reading, ingestionId: ingestionId)
+            do {
+                _ = try await service.processStarted(
+                    ingestionId: ingestionId,
+                    onPhase: ruminationPhaseHandler(ingestionId: ingestionId)
+                )
+            } catch {
+                ruminationActionError = "反刍没有完成，请查看失败原因后重试"
+            }
+            setRuminationStage(nil, ingestionId: ingestionId)
             await loadDashboard(campId: item.campId)
         }
     }
@@ -104,6 +154,13 @@ extension AppStore: CodingRanchStoreProtocol {
             return (ingestion, result)
         }
         return reviewViewState(ingestion: pair.0, result: pair.1)
+    }
+
+    func loadRuminationSource(ingestionId: String) async throws -> SourceViewState {
+        guard let ingestion = try FeedService(db: db).item(id: ingestionId) else {
+            throw FeedServiceError.ingestionNotFound(ingestionId)
+        }
+        return sourceViewState(ingestion)
     }
 
     func saveRuminationReview(_ review: RuminationReviewViewState) async throws {
@@ -272,12 +329,12 @@ extension AppStore: CodingRanchStoreProtocol {
                 _ = try service.start(ingestionId: item.id)
                 Task { [weak self] in
                     guard let self else { return }
-                    ruminationStages[item.id] = .reading
+                    setRuminationStage(.reading, ingestionId: item.id)
                     _ = try? await service.processStarted(
                         ingestionId: item.id,
                         onPhase: ruminationPhaseHandler(ingestionId: item.id)
                     )
-                    ruminationStages[item.id] = nil
+                    setRuminationStage(nil, ingestionId: item.id)
                     await loadDashboard(campId: draft.campId)
                 }
             }
@@ -342,6 +399,62 @@ extension AppStore: CodingRanchStoreProtocol {
         )
     }
 
+    private func sourceViewState(_ ingestion: IngestionItemRecord) -> SourceViewState {
+        .init(
+            title: ingestion.title ?? "未命名资料",
+            sourceURL: ingestion.sourceURL,
+            author: ingestion.author,
+            userIntent: ingestion.userIntent,
+            sourceKind: ingestion.sourceType == .manual ? .directThought : .pastedText,
+            createdAt: ingestion.createdAt,
+            rawText: ingestion.rawText
+        )
+    }
+
+    private func setRuminationStage(_ stage: RuminationStage?, ingestionId: String) {
+        ruminationStages[ingestionId] = stage
+        guard let stage,
+              let index = codingRanchInbox.items.firstIndex(where: { $0.id == ingestionId }) else {
+            return
+        }
+        let current = codingRanchInbox.items[index]
+        guard case .ruminating = current.status else { return }
+        var items = codingRanchInbox.items
+        items[index] = .init(
+            id: current.id,
+            title: current.title,
+            sourceKind: current.sourceKind,
+            createdAt: current.createdAt,
+            campName: current.campName,
+            status: .ruminating(stage: stage),
+            resultCountText: current.resultCountText,
+            isPossibleDuplicate: current.isPossibleDuplicate,
+            error: current.error
+        )
+        codingRanchInbox = .init(loadState: codingRanchInbox.loadState, items: items)
+    }
+
+    private func setDashboardLoadFailure(campId: String, campName: String, message: String) {
+        let cows = companions.filter {
+            ($0.campId == campId || ($0.campId ?? "").isEmpty) && $0.kind == .regular
+        }
+        codingRanchDashboard = .init(
+            loadState: .failed(message),
+            campId: campId,
+            campName: campName,
+            activeCow: cows.first.map(cowViewState),
+            pendingRuminationCount: 0,
+            pendingConfirmationCount: 0,
+            pendingReturnCount: 0,
+            pendingItems: [],
+            activeMissions: [],
+            recentMissions: [],
+            recentNotes: [],
+            newcomerProgress: newcomerProgress(campId: campId)
+        )
+        codingRanchInbox = .init(loadState: .failed(message), items: [])
+    }
+
     private func inboxItem(_ item: IngestionItemRecord, campName: String) -> RuminationInboxItemViewState {
         let status: RuminationStatusViewState
         switch item.status {
@@ -353,7 +466,11 @@ extension AppStore: CodingRanchStoreProtocol {
                 try KnowledgeSourceLinkRecord.filter(Column("ingestionId") == item.id).fetchOne(database)?.campNoteId
             }) ?? nil
             status = .materialized(noteId: noteId ?? "")
-        case .failed: status = .failed(message: item.errorText ?? "反刍失败", retryable: true)
+        case .failed:
+            status = .failed(
+                message: item.errorText ?? "反刍失败",
+                retryable: !item.rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            )
         case .discarded: status = .discarded
         }
         return .init(

@@ -65,6 +65,7 @@ final class AppStore {
     var missionsByCamp: [String: [MissionRecord]] = [:]
     var codingRanchDashboard: CampDashboardViewState?
     var codingRanchInbox = RuminationInboxViewState(loadState: .idle, items: [])
+    var ruminationActionError: String?
     var apiKeyPresent = false
     var webCredentialPresent = false
     var credentialAccessInProgress = false

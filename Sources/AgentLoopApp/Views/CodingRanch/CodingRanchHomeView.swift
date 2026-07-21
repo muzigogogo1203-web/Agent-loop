@@ -13,6 +13,9 @@ struct CodingRanchHomeView: View {
     var onOpenNote: (String) -> Void = { _ in }
     var onOpenCowRoster: () -> Void = {}
     var onStartMission: () -> Void = {}
+    var onOpenGuide: () -> Void = {}
+    var onOpenNotes: () -> Void = {}
+    var onOpenSettings: () -> Void = {}
 
     @State private var quickText = ""
     @State private var showFeedComposer = false
@@ -119,7 +122,14 @@ struct CodingRanchHomeView: View {
         if state.pendingConfirmationCount > 0 {
             CampChip(text: "\(state.pendingConfirmationCount) 项等你确认", color: Camp.amber, icon: "hand.raised.fill")
         }
+        Button("管家与工具", action: onOpenGuide)
+            .buttonStyle(CampSecondaryButtonStyle())
+            .help("打开管家聊天、日程、营地驿站和往期任务")
+        Button("笔记", action: onOpenNotes)
+            .buttonStyle(CampSecondaryButtonStyle())
         Button("牛棚", action: onOpenCowRoster)
+            .buttonStyle(CampSecondaryButtonStyle())
+        Button("驿站设置", action: onOpenSettings)
             .buttonStyle(CampSecondaryButtonStyle())
     }
 
@@ -166,7 +176,6 @@ struct CodingRanchHomeView: View {
                 }
                 .buttonStyle(CampPrimaryButtonStyle(size: .small))
                 .disabled(quickText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .opacity(quickText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
             }
         }
         .padding(16)

@@ -67,11 +67,11 @@ struct FeedView: View {
                     .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: entries.count)
                 }
                 .simultaneousGesture(DragGesture(minimumDistance: 1).onChanged { _ in onInteract() })
-                .onChange(of: entries.count) { _, _ in
+                .onChange(of: entries.count) { oldCount, newCount in
                     if stickToBottom {
                         proxy.scrollTo("feed-bottom", anchor: .bottom)
                     } else {
-                        unseenCount += 1
+                        unseenCount += max(0, newCount - oldCount)
                     }
                 }
                 .overlay(alignment: .bottomTrailing) {
@@ -157,7 +157,7 @@ struct FeedView: View {
                         .foregroundStyle(Camp.ink)
                         .padding(.horizontal, 11)
                         .padding(.vertical, 8)
-                        .background(Camp.ember.opacity(0.14), in: UnevenRoundedRectangle(
+                        .background(Camp.hay, in: UnevenRoundedRectangle(
                             topLeadingRadius: 12, bottomLeadingRadius: 12,
                             bottomTrailingRadius: 4, topTrailingRadius: 12, style: .continuous
                         ))
@@ -165,11 +165,12 @@ struct FeedView: View {
             }
         case .companion(let id, let name):
             HStack(alignment: .top, spacing: 8) {
-                CompanionAvatarView(
-                    name: name,
-                    colorName: companionColors[id] ?? "blue",
-                    size: 26
-                )
+                let colorName = companionColors[id] ?? "blue"
+                if RanchArtView.spriteImage(colorName: colorName) != nil {
+                    RanchCowSpriteView(colorName: colorName, height: 20, flipped: false)
+                } else {
+                    CompanionAvatarView(name: name, colorName: colorName, size: 20)
+                }
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(name)
@@ -193,7 +194,7 @@ struct FeedView: View {
                     }
                     .padding(.horizontal, 11)
                     .padding(.vertical, 8)
-                    .background(bubbleColor(for: entry.kind), in: UnevenRoundedRectangle(
+                    .background(Camp.pasture, in: UnevenRoundedRectangle(
                         topLeadingRadius: 4, bottomLeadingRadius: 12,
                         bottomTrailingRadius: 12, topTrailingRadius: 12, style: .continuous
                     ))
@@ -275,12 +276,4 @@ struct FeedView: View {
         }
     }
 
-    private func bubbleColor(for kind: FeedEntry.Kind) -> Color {
-        switch kind {
-        case .question: Camp.amber.opacity(0.16)
-        case .blocked, .error: Camp.charcoalRed.opacity(0.12)
-        case .delivered: Camp.moss.opacity(0.14)
-        default: Camp.canvas
-        }
-    }
 }

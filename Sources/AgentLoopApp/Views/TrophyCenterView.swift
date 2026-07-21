@@ -56,7 +56,7 @@ struct TrophyCenterView: View {
                 .foregroundStyle(Camp.ember)
             VStack(alignment: .leading, spacing: 3) {
                 Text("回营成果")
-                    .font(.title2.weight(.semibold))
+                    .font(.title2.weight(.bold))
                     .foregroundStyle(Camp.ink)
                 Text("跨营地查看、预览和定位基础牛带回的成果")
                     .font(.caption)

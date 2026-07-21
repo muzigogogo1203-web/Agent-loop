@@ -35,6 +35,8 @@ enum Camp {
     static let creek = dynamic(light: 0x4A7FA6, dark: 0x7FA8C9)
     /// 炭红——错误
     static let charcoalRed = dynamic(light: 0xB9553F, dark: 0xD07B62)
+    /// 薰衣草紫——动态交接
+    static let lavender = dynamic(light: 0x7A61C4, dark: 0x9B85D6)
 
     /// Coding 牧场新增语义面：喂入材料与轻提示，不改变原有 Camp 主色体系。
     static let hay = dynamic(light: 0xEFE2BF, dark: 0x443824)
@@ -43,6 +45,7 @@ enum Camp {
 
     static let cornerRadius: CGFloat = 14
     static let smallRadius: CGFloat = 10
+    static let cardRadiusLarge: CGFloat = 16
 
     private static func dynamic(light: Int, dark: Int) -> Color {
         Color(nsColor: NSColor(name: nil) { appearance in
@@ -76,6 +79,13 @@ enum CampLayout {
             width: min(620, max(320, available.width - edgePadding * 2)),
             height: min(640, max(360, available.height - edgePadding * 2))
         )
+    }
+}
+
+enum CampFormat {
+    static func tokens(_ n: Int) -> String {
+        guard n >= 1_000 else { return "\(n)" }
+        return String(format: "%.1fk", Double(n) / 1_000)
     }
 }
 
@@ -198,6 +208,7 @@ struct CampChip: View {
     let text: String
     let color: Color
     var icon: String? = nil
+    var trailingIcon: String? = nil
 
     var body: some View {
         HStack(spacing: 4) {
@@ -207,6 +218,10 @@ struct CampChip: View {
             }
             Text(text)
                 .font(.caption.weight(.semibold))
+            if let trailingIcon {
+                Image(systemName: trailingIcon)
+                    .font(.caption2.weight(.semibold))
+            }
         }
         .padding(.horizontal, 9)
         .padding(.vertical, 3.5)
@@ -241,6 +256,7 @@ extension View {
 // MARK: - 主按钮（篝火色）
 
 struct CampPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
     var size: ControlSize = .large
 
     func makeBody(configuration: Configuration) -> some View {
@@ -253,12 +269,18 @@ struct CampPrimaryButtonStyle: ButtonStyle {
                 LinearGradient(colors: [Camp.ember, Camp.emberDeep], startPoint: .top, endPoint: .bottom),
                 in: RoundedRectangle(cornerRadius: 12, style: .continuous)
             )
-            .opacity(configuration.isPressed ? 0.85 : 1)
+            .shadow(
+                color: isEnabled ? .black.opacity(0.10) : .clear,
+                radius: isEnabled ? 3 : 0,
+                y: isEnabled ? 1 : 0
+            )
+            .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1) : 0.45)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
     }
 }
 
 struct CampSecondaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
     var tint: Color = Camp.inkSecondary
 
     func makeBody(configuration: Configuration) -> some View {
@@ -272,7 +294,12 @@ struct CampSecondaryButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: Camp.smallRadius, style: .continuous)
                     .stroke(Camp.line, lineWidth: 1)
             )
-            .opacity(configuration.isPressed ? 0.8 : 1)
+            .shadow(
+                color: isEnabled ? .black.opacity(0.05) : .clear,
+                radius: isEnabled ? 2 : 0,
+                y: isEnabled ? 1 : 0
+            )
+            .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.45)
     }
 }
 
@@ -289,6 +316,106 @@ struct CampSectionTitle: View {
         Text(text)
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(Camp.inkSecondary)
+    }
+}
+
+struct RanchSectionHeader: View {
+    let icon: String
+    let title: String
+    let tint: Color
+    var count: Int? = nil
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(width: 26, height: 26)
+                .background(tint.opacity(0.15), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            Text(title)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Camp.ink)
+            if let count {
+                CampChip(text: "\(count)", color: tint)
+            }
+        }
+    }
+}
+
+struct CampTag: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(Camp.ink)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Camp.hay, in: Capsule())
+    }
+}
+
+struct CampHoverLift: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(hovering && !reduceMotion ? 1.012 : 1)
+            .shadow(
+                color: .black.opacity(hovering ? 0.12 : 0.06),
+                radius: hovering ? 9 : 5,
+                y: hovering ? 4 : 2
+            )
+            .onHover { hovering = $0 }
+            .animation(.easeOut(duration: 0.18), value: hovering)
+    }
+}
+
+extension View {
+    func campHoverLift() -> some View {
+        modifier(CampHoverLift())
+    }
+}
+
+// MARK: - 轻量流式布局
+
+struct FlowLayoutLite: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > 0 && x + size.width > maxWidth {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+        return CGSize(width: maxWidth == .infinity ? x : maxWidth, height: y + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        var y = bounds.minY
+        var rowHeight: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > bounds.minX && x + size.width > bounds.maxX {
+                x = bounds.minX
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            subview.place(at: CGPoint(x: x, y: y), anchor: .topLeading, proposal: .unspecified)
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
     }
 }
 
@@ -352,8 +479,8 @@ enum CampCopy {
             return "网络响应超时，可点重试"
         }
         if trimmed.contains("中断") || trimmed.lowercased().contains("stream") {
-            return "网关响应中断，可点重试（详情见小目标面板）"
+            return "网关响应中断，可点重试（详情见工作卡详情）"
         }
-        return "执行出错，可点重试（详情见小目标面板）"
+        return "执行出错，可点重试（详情见工作卡详情）"
     }
 }
