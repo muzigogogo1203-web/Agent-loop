@@ -4,6 +4,7 @@ import AgentLoopCore
 struct CompanionEditorView: View {
     @Environment(AppStore.self) private var store
     let companionId: String?
+    var onRetired: (() -> Void)? = nil
     var onDone: () -> Void
 
     @State private var name = ""
@@ -19,6 +20,9 @@ struct CompanionEditorView: View {
     /// 各驿站的已知工具（连接后取自 Manager 缓存）
     @State private var mcpToolsByServer: [String: [McpServerManager.AssembledTool]] = [:]
     @State private var cachedEditorModelChoices: [String] = []
+    @State private var retirementAvailable = false
+    @State private var showRetirementConfirmation = false
+    @State private var retirementInFlight = false
 
     static let colors = ["purple", "teal", "coral", "pink", "blue", "green", "amber"]
     private static let customTag = "__custom__"
@@ -201,6 +205,25 @@ struct CompanionEditorView: View {
                 .buttonStyle(CampPrimaryButtonStyle())
                 .keyboardShortcut(.defaultAction)
                 .disabled(!canSave)
+
+                if retirementAvailable {
+                    Divider()
+                        .overlay(Camp.line)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("移出牛群会保留这只牛的私聊、任务和记忆历史，但它之后不能再接新任务。")
+                            .font(.caption)
+                            .foregroundStyle(Camp.inkSecondary)
+                        Button("移出牛群…", role: .destructive) {
+                            showRetirementConfirmation = true
+                        }
+                        .buttonStyle(
+                            CampSecondaryButtonStyle(
+                                tint: Camp.charcoalRed
+                            )
+                        )
+                        .disabled(retirementInFlight)
+                    }
+                }
             }
             .frame(maxWidth: 560)
             .padding(24)
@@ -215,6 +238,18 @@ struct CompanionEditorView: View {
         .onChange(of: profileChoice) {
             reloadEditorModelChoices()
             normalizeModelChoiceForSelectedProfile()
+        }
+        .confirmationDialog(
+            "把「\(name)」移出牛群？",
+            isPresented: $showRetirementConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("移出牛群", role: .destructive) {
+                retire()
+            }
+            Button("再想想", role: .cancel) {}
+        } message: {
+            Text("历史记录会保留。这只牛将不再出现在牛群里，也不能被新任务或日程选中。")
         }
     }
 
@@ -337,7 +372,14 @@ struct CompanionEditorView: View {
         await store.mcp.refreshStatuses()
         var result: [String: [McpServerManager.AssembledTool]] = [:]
         for server in store.mcp.servers {
-            result[server.id] = await store.mcp.assembledTools(serverId: server.id)
+            do {
+                result[server.id] = try await store.mcp.assembledTools(
+                    serverId: server.id
+                )
+            } catch {
+                saveError = "驿站工具清单读取失败。"
+                return
+            }
         }
         mcpToolsByServer = result
     }
@@ -345,6 +387,7 @@ struct CompanionEditorView: View {
     private func load() {
         saveError = nil
         guard let companionId else {
+            retirementAvailable = false
             name = ""
             color = "purple"
             rolePrompt = ""
@@ -354,8 +397,12 @@ struct CompanionEditorView: View {
             return
         }
         guard let companion = try? store.db.companion(id: companionId) else {
+            retirementAvailable = false
             return
         }
+        retirementAvailable = companion.kind == .regular
+            && companion.id != CowTemplate.baseCowId
+            && companion.id != CowTemplate.testCowId
         name = companion.name
         color = companion.color
         rolePrompt = companion.rolePrompt
@@ -425,6 +472,22 @@ struct CompanionEditorView: View {
             onDone()
         } catch {
             saveError = "保存失败：\(error.localizedDescription)"
+        }
+    }
+
+    private func retire() {
+        guard let companionId, !retirementInFlight else { return }
+        retirementInFlight = true
+        Task {
+            let retired = await store.retireCow(id: companionId)
+            retirementInFlight = false
+            if retired {
+                if let onRetired {
+                    onRetired()
+                } else {
+                    onDone()
+                }
+            }
         }
     }
 }

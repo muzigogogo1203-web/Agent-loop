@@ -1,0 +1,88 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Emitting module AgentLoopTestSuite
+[4/6] Compiling AgentLoopTestSuite FailureVisibilityTests.swift
+[5/27] Compiling AgentLoopTestSuite ShellToolTests.swift
+[6/27] Compiling AgentLoopTestSuite SupportTests.swift
+[7/27] Compiling AgentLoopTestSuite HaltAndCooldownTests.swift
+[8/27] Compiling AgentLoopTestSuite McpTests.swift
+[9/27] Compiling AgentLoopTestSuite MultiCampTests.swift
+[10/27] Compiling AgentLoopTestSuite OrchestratorTests.swift
+[11/27] Compiling AgentLoopTestSuite DurableWorkTests.swift
+[12/27] Compiling AgentLoopTestSuite GuideChatTests.swift
+[13/27] Compiling AgentLoopTestSuite PlanningTestFixtures.swift
+[14/27] Compiling AgentLoopTestSuite ScheduleTests.swift
+[15/27] Compiling AgentLoopTestSuite ContextPacketTests.swift
+[16/27] Compiling AgentLoopTestSuite CrashRecoveryTests.swift
+[17/27] Compiling AgentLoopTestSuite CodingRanchTests.swift
+[18/27] Compiling AgentLoopTestSuite ContextCompactionTests.swift
+[19/27] Compiling AgentLoopTestSuite BoardServerTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[20/27] Compiling AgentLoopTestSuite BudgetTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[21/27] Compiling AgentLoopTestSuite DatabaseTests.swift
+[22/27] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+[23/27] Compiling AgentLoopTestSuite AgentLoopTests.swift
+[24/27] Compiling AgentLoopTestSuite AnthropicProviderTests.swift
+[25/27] Compiling AgentLoopTestSuite AskUserTests.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[25/28] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[26/28] Linking RunTests
+[27/28] Applying RunTests
+Build of product 'RunTests' complete! (35.95s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test mcpSecretAbsentAndReadFailureHaveDifferentCodes() started.
+◇ Test optionalDegradationPersistenceFailureDoesNotContinue() started.
+◇ Test optionalKnowledgeFailureRecordsBeforeContinuingWithMarker() started.
+◇ Test requiredMcpRegistryFailureBlocksCard() started.
+◇ Test mcpConnectAndToolListFailuresHaveDifferentCodes() started.
+◇ Test invalidProjectionCasesAreTraceableAndNeverDefault() started.
+◇ Test contextDegradationKernelEventOccursOnlyAfterCommit() started.
+◇ Test requiredKnowledgeFailureAtomicallyBlocksAndRecordsDegradation() started.
+✔ Test mcpConnectAndToolListFailuresHaveDifferentCodes() passed after 0.055 seconds.
+✔ Test mcpSecretAbsentAndReadFailureHaveDifferentCodes() passed after 0.058 seconds.
+✔ Test optionalKnowledgeFailureRecordsBeforeContinuingWithMarker() passed after 0.067 seconds.
+✔ Test contextDegradationKernelEventOccursOnlyAfterCommit() passed after 0.068 seconds.
+✔ Test requiredMcpRegistryFailureBlocksCard() passed after 0.068 seconds.
+✔ Test invalidProjectionCasesAreTraceableAndNeverDefault() passed after 0.092 seconds.
+✔ Test requiredKnowledgeFailureAtomicallyBlocksAndRecordsDegradation() passed after 0.098 seconds.
+✔ Test optionalDegradationPersistenceFailureDoesNotContinue() passed after 0.117 seconds.
+✔ Test run with 8 tests in 0 suites passed after 0.117 seconds.

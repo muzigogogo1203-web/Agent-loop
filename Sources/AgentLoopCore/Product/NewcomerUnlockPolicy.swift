@@ -49,6 +49,11 @@ public struct NewcomerUnlockPolicy: Sendable {
             }
             let cow = CowTemplate.testCow(campId: campId)
             try cow.insert(database)
+            _ = try CowResidencyStore.synchronizeCompanion(
+                cow,
+                provisionActiveResidency: true,
+                database: database
+            )
             try AppDatabase.appendEvent(
                 database, missionId: nil, cardId: nil, runId: nil,
                 kind: EventKind.cowUnlocked,
@@ -58,7 +63,10 @@ public struct NewcomerUnlockPolicy: Sendable {
         }
     }
 
-    private static func progress(database: Database, campId: String) throws -> NewcomerProgress {
+    package static func progress(
+        database: Database,
+        campId: String
+    ) throws -> NewcomerProgress {
         let materialized = try Bool.fetchOne(database, sql: """
             SELECT EXISTS(
               SELECT 1 FROM knowledge_source_link k

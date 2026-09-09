@@ -1,0 +1,1658 @@
+===== A1B SQLITE 3.51/3.52 MIGRATION MATRIX — 2026-07-27 =====
+command=scripts/verify-p1-migrations-sqlite-matrix.sh --sqlite 3.51 --sqlite 3.52
+P1 migration matrix: frozen Stage hash drifted: add94117fc634add114bff62aefd7f77d71e4826d15c9bd1affba1a8d76366a2
+===== A1B SQLITE 3.51/3.52 MIGRATION MATRIX — FROZEN HASH FIX RETRY — 2026-07-27 =====
+command=scripts/verify-p1-migrations-sqlite-matrix.sh --sqlite 3.51 --sqlite 3.52
+stage.sha256=add94117fc634add114bff62aefd7f77d71e4826d15c9bd1affba1a8d76366a2
+literal.sha256=fb77180d6edd44413e41179e4b220666438e2660de11fbde1dafee78b6fde5c2
+runner.sha256=db9d0ef56158321bcfe5048778cc1b63bd592a7cbddb355fac42ec9169f0c267
+app_database.sha256=d6478b05158697120c60c21466b68aec0a1675bf825d0fce0db277bb7f84966b
+cli.3.51.sqlite_version=3.51.0
+cli.3.51.sqlite_source_id=2025-06-12 13:14:41 f0ca7bba1c5e232e5d279fad6338121ab55af0c8c68c84cdfb18ba5114dcaapl
+Fetching https://github.com/groue/GRDB.swift.git from cache
+Fetched https://github.com/groue/GRDB.swift.git from cache (0.04s)
+Creating working copy for https://github.com/groue/GRDB.swift.git
+Working copy of https://github.com/groue/GRDB.swift.git resolved at 7.11.1
+Building for debugging...
+[0/10] Write sources
+[2/10] Write P1MigrationMatrixRunner-entitlement.plist
+[2/10] Copying Info.plist
+[4/10] Copying PrivacyInfo.xcprivacy
+[5/10] Write sources
+[6/10] Write swift-version--1AB21518FC5DEDBE.txt
+[8/163] Compiling GRDB MutablePersistableRecord+Update.swift
+[9/163] Compiling GRDB MutablePersistableRecord+Upsert.swift
+[10/163] Compiling GRDB MutablePersistableRecord.swift
+[11/163] Compiling GRDB PersistableRecord+Insert.swift
+[12/163] Compiling GRDB PersistableRecord+Save.swift
+[13/163] Compiling GRDB PersistableRecord+Upsert.swift
+[14/163] Compiling GRDB PersistableRecord.swift
+[15/163] Compiling GRDB Record.swift
+[16/163] Compiling GRDB TableRecord.swift
+[17/163] Compiling GRDB CaseInsensitiveIdentifier.swift
+[18/163] Compiling GRDB Inflections+English.swift
+[19/163] Compiling GRDB Inflections.swift
+[20/163] Compiling GRDB Mutex.swift
+[21/163] Compiling GRDB OnDemandFuture.swift
+[22/163] Compiling GRDB OrderedDictionary.swift
+[23/163] Compiling GRDB Pool.swift
+[24/163] Compiling GRDB SQLForeignKeyRequest.swift
+[25/163] Compiling GRDB SQLFunctions.swift
+[26/163] Compiling GRDB SQLOperators.swift
+[27/163] Compiling GRDB SQLOrdering.swift
+[28/163] Compiling GRDB SQLRelation.swift
+[29/163] Compiling GRDB SQLSelection.swift
+[30/163] Compiling GRDB SQLSubquery.swift
+[31/163] Compiling GRDB Table.swift
+[32/163] Compiling GRDB SQLColumnGenerator.swift
+[33/163] Compiling GRDB SQLGenerationContext.swift
+[34/163] Compiling GRDB SQLIndexGenerator.swift
+[35/163] Compiling GRDB SQLQueryGenerator.swift
+[36/163] Compiling GRDB SQLTableAlterationGenerator.swift
+[37/163] Compiling GRDB SQLTableGenerator.swift
+[38/163] Compiling GRDB TableAlias.swift
+[39/163] Compiling GRDB SQLInterpolation+QueryInterface.swift
+[40/163] Compiling GRDB ColumnDefinition.swift
+[41/163] Compiling GRDB ForeignKey.swift
+[42/163] Compiling GRDB Association.swift
+[43/163] Compiling GRDB AssociationAggregate.swift
+[44/163] Compiling GRDB BelongsToAssociation.swift
+[45/163] Compiling GRDB HasManyAssociation.swift
+[46/163] Compiling GRDB HasManyThroughAssociation.swift
+[47/163] Compiling GRDB HasOneAssociation.swift
+[48/163] Compiling GRDB HasOneThroughAssociation.swift
+[49/163] Compiling GRDB JoinAssociation.swift
+[50/163] Compiling GRDB CommonTableExpression.swift
+[51/163] Compiling GRDB QueryInterfaceRequest.swift
+[52/163] Compiling GRDB RequestProtocols.swift
+[53/163] Compiling GRDB Column.swift
+[54/163] Compiling GRDB DatabasePromise.swift
+[55/163] Compiling GRDB SQLAssociation.swift
+[56/163] Compiling GRDB SQLCollection.swift
+[57/163] Compiling GRDB SQLExpression.swift
+[58/163] Compiling GRDB DatabaseSchemaSource.swift
+[59/163] Compiling GRDB DatabaseSnapshot.swift
+[60/163] Compiling GRDB DatabaseSnapshotPool.swift
+[61/163] Compiling GRDB DatabaseValue.swift
+[62/163] Compiling GRDB DatabaseValueConvertible.swift
+[63/163] Compiling GRDB DatabaseWriter.swift
+[64/163] Compiling GRDB DispatchQueueActor.swift
+[65/163] Compiling GRDB FetchRequest.swift
+[66/163] Compiling GRDB Row.swift
+[67/163] Compiling GRDB RowAdapter.swift
+[68/163] Compiling GRDB RowDecodingError.swift
+[69/163] Compiling GRDB SQL.swift
+[70/163] Compiling GRDB SQLInterpolation.swift
+[71/163] Compiling GRDB SQLRequest.swift
+[72/163] Compiling GRDB SchedulingWatchdog.swift
+[73/163] Compiling GRDB SerializedDatabase.swift
+[74/163] Compiling GRDB Statement.swift
+[75/163] Compiling GRDB Database+SchemaDefinition.swift
+[76/163] Compiling GRDB ForeignKeyDefinition.swift
+[77/163] Compiling GRDB IndexDefinition.swift
+[78/163] Compiling GRDB TableAlteration.swift
+[79/163] Compiling GRDB TableDefinition.swift
+[80/163] Compiling GRDB VirtualTableModule.swift
+[81/163] Compiling GRDB TableRecord+Association.swift
+[82/163] Compiling GRDB TableRecord+QueryInterfaceRequest.swift
+[83/163] Compiling GRDB EncodableRecord+Encodable.swift
+[84/163] Compiling GRDB EncodableRecord.swift
+[85/163] Compiling GRDB FetchableRecord+Decodable.swift
+[86/163] Compiling GRDB FetchableRecord+TableRecord.swift
+[87/163] Compiling GRDB FetchableRecord.swift
+[88/163] Compiling GRDB MutablePersistableRecord+DAO.swift
+[89/163] Compiling GRDB MutablePersistableRecord+Delete.swift
+[90/163] Compiling GRDB MutablePersistableRecord+Insert.swift
+[91/163] Compiling GRDB MutablePersistableRecord+Save.swift
+[92/163] Emitting module GRDB
+[93/163] Compiling GRDB DatabaseValueConvertible+RawRepresentable.swift
+[94/163] Compiling GRDB JSONRequiredEncoder.swift
+[95/163] Compiling GRDB Optional.swift
+[96/163] Compiling GRDB StandardLibrary.swift
+[97/163] Compiling GRDB TransactionClock.swift
+[98/163] Compiling GRDB TransactionObserver.swift
+[99/163] Compiling GRDB WALSnapshot.swift
+[100/163] Compiling GRDB WALSnapshotTransaction.swift
+[101/163] Compiling GRDB Database+Dump.swift
+[102/163] Compiling GRDB DatabaseReader+dump.swift
+[103/163] Compiling GRDB DumpFormat.swift
+[104/163] Compiling GRDB DebugDumpFormat.swift
+[105/163] Compiling GRDB JSONDumpFormat.swift
+[106/163] Compiling GRDB LineDumpFormat.swift
+[107/163] Compiling GRDB ListDumpFormat.swift
+[108/163] Compiling GRDB QuoteDumpFormat.swift
+[109/163] Compiling GRDB FTS3.swift
+[110/163] Compiling GRDB StatementAuthorizer.swift
+[111/163] Compiling GRDB StatementColumnConvertible.swift
+[112/163] Compiling GRDB CGFloat.swift
+[113/163] Compiling GRDB Data.swift
+[114/163] Compiling GRDB DatabaseDateComponents.swift
+[115/163] Compiling GRDB DatabaseValueConvertible+ReferenceConvertible.swift
+[116/163] Compiling GRDB Date.swift
+[117/163] Compiling GRDB Decimal.swift
+[118/163] Compiling GRDB NSData.swift
+[119/163] Compiling GRDB NSNull.swift
+[120/163] Compiling GRDB NSNumber.swift
+[121/163] Compiling GRDB NSString.swift
+[122/163] Compiling GRDB SQLiteDateParser.swift
+[123/163] Compiling GRDB URL.swift
+[124/163] Compiling GRDB UUID.swift
+[125/163] Compiling GRDB DatabaseValueConvertible+Decodable.swift
+[126/163] Compiling GRDB DatabaseValueConvertible+Encodable.swift
+[127/163] Compiling GRDB FTS3Pattern.swift
+[128/163] Compiling GRDB FTS3TokenizerDescriptor.swift
+[129/163] Compiling GRDB FTS4.swift
+[130/163] Compiling GRDB FTS5.swift
+[131/163] Compiling GRDB FTS5CustomTokenizer.swift
+[132/163] Compiling GRDB FTS5Pattern.swift
+[133/163] Compiling GRDB FTS5Tokenizer.swift
+[134/163] Compiling GRDB FTS5TokenizerDescriptor.swift
+[135/163] Compiling GRDB FTS5WrapperTokenizer.swift
+[136/163] Compiling GRDB Fixits.swift
+[137/163] Compiling GRDB JSONColumn.swift
+[138/163] Compiling GRDB SQLJSONExpressible.swift
+[139/163] Compiling GRDB SQLJSONFunctions.swift
+[140/163] Compiling GRDB DatabaseMigrator.swift
+[141/163] Compiling GRDB Migration.swift
+[142/163] Compiling GRDB FTS3+QueryInterface.swift
+[143/163] Compiling GRDB FTS5+QueryInterface.swift
+[144/179] Compiling GRDB Configuration.swift
+[145/179] Compiling GRDB Cursor.swift
+[146/179] Compiling GRDB Database+SQLCipher.swift
+[147/179] Compiling GRDB Database+Schema.swift
+[148/179] Compiling GRDB Database+Statements.swift
+[149/179] Compiling GRDB Database.swift
+[150/179] Compiling GRDB DatabaseBackupProgress.swift
+[151/179] Compiling GRDB DatabaseCollation.swift
+[152/179] Compiling GRDB DatabaseError.swift
+[153/179] Compiling GRDB DatabaseFunction.swift
+[154/179] Compiling GRDB DatabasePool.swift
+[155/179] Compiling GRDB DatabasePublishers.swift
+[156/179] Compiling GRDB DatabaseQueue.swift
+[157/179] Compiling GRDB DatabaseReader.swift
+[158/179] Compiling GRDB DatabaseRegion.swift
+[159/179] Compiling GRDB DatabaseRegionObservation.swift
+[160/179] Compiling GRDB DatabaseSchemaCache.swift
+[161/179] Compiling GRDB ReadWriteLock.swift
+[162/179] Compiling GRDB ReceiveValuesOn.swift
+[163/179] Compiling GRDB Refinable.swift
+[164/179] Compiling GRDB Utils.swift
+[165/179] Compiling GRDB DatabaseCancellable.swift
+[166/179] Compiling GRDB ValueConcurrentObserver.swift
+[167/179] Compiling GRDB ValueWriteOnlyObserver.swift
+[168/179] Compiling GRDB Fetch.swift
+[169/179] Compiling GRDB Map.swift
+[170/179] Compiling GRDB RemoveDuplicates.swift
+[171/179] Compiling GRDB Trace.swift
+[172/179] Compiling GRDB ValueReducer.swift
+[173/179] Compiling GRDB SharedValueObservation.swift
+[174/179] Compiling GRDB ValueObservation.swift
+[175/179] Compiling GRDB ValueObservationScheduler.swift
+[176/179] Compiling GRDB resource_bundle_accessor.swift
+[177/258] Compiling AgentLoopCore ProviderConfiguration.swift
+[178/258] Compiling AgentLoopCore SSEParser.swift
+[179/258] Compiling AgentLoopCore StopReason.swift
+[180/258] Compiling AgentLoopCore TurnAccumulator.swift
+[181/258] Compiling AgentLoopCore RuminationMaterializer.swift
+[182/258] Compiling AgentLoopCore RuminationParser.swift
+[183/258] Compiling AgentLoopCore RuminationResult.swift
+[184/258] Compiling AgentLoopCore RuminationService.swift
+[185/266] Compiling AgentLoopCore WorkspaceScopedAccess.swift
+[186/266] Compiling AgentLoopCore ApprovalGate.swift
+[187/266] Compiling AgentLoopCore ApprovalPolicy.swift
+[188/266] Compiling AgentLoopCore BoardTools.swift
+[189/266] Compiling AgentLoopCore FileTools.swift
+[190/266] Compiling AgentLoopCore HandoffPayload.swift
+[191/266] Compiling AgentLoopCore KnowledgeTools.swift
+[192/266] Compiling AgentLoopCore ShellTool.swift
+[193/266] Compiling AgentLoopCore McpTransport.swift
+[194/266] Compiling AgentLoopCore MiniMcpClient.swift
+[195/266] Compiling AgentLoopCore CompanionAnimState.swift
+[196/266] Compiling AgentLoopCore CowTemplate.swift
+[197/266] Compiling AgentLoopCore MissionDraftFactory.swift
+[198/266] Compiling AgentLoopCore NewcomerUnlockPolicy.swift
+[199/266] Compiling AgentLoopCore ProductBootstrapService.swift
+[200/266] Compiling AgentLoopCore RuntimeProfileBootstrap.swift
+[201/266] Compiling AgentLoopCore AnthropicProvider.swift
+[202/266] Compiling AgentLoopCore ContentBlock.swift
+[203/266] Compiling AgentLoopCore LLMProvider.swift
+[204/266] Compiling AgentLoopCore MockProvider.swift
+[205/266] Compiling AgentLoopCore ModelCatalogService.swift
+[206/266] Compiling AgentLoopCore OpenAIChatGPTAuth.swift
+[207/266] Compiling AgentLoopCore OpenAIOAuthSession.swift
+[208/266] Compiling AgentLoopCore OpenAIProvider.swift
+[209/266] Compiling AgentLoopCore OpenAIResponsesProvider.swift
+[210/266] Compiling AgentLoopCore ProfileScopedDefaults.swift
+[211/266] Compiling AgentLoopCore KernelDefaults.swift
+[212/266] Compiling AgentLoopCore Orchestrator.swift
+[213/266] Compiling AgentLoopCore Planner.swift
+[214/266] Compiling AgentLoopCore ScheduleMath.swift
+[215/266] Compiling AgentLoopCore Distiller.swift
+[216/266] Compiling AgentLoopCore ExpeditionReport.swift
+[217/266] Compiling AgentLoopCore MemoryDistillService.swift
+[218/266] Compiling AgentLoopCore NoteSnippet.swift
+[219/266] Compiling AgentLoopCore AgentLoop.swift
+[220/266] Compiling AgentLoopCore BoardServerBridgeMain.swift
+[221/266] Compiling AgentLoopCore BoardToolServer.swift
+[222/266] Compiling AgentLoopCore CardExecutionBackend.swift
+[223/266] Compiling AgentLoopCore CardRunner.swift
+[224/266] Compiling AgentLoopCore CliProcessBackend.swift
+[225/266] Compiling AgentLoopCore ContextPacket.swift
+[226/266] Compiling AgentLoopCore McpServerManager.swift
+[227/266] Compiling AgentLoopCore McpToolBridge.swift
+[228/266] Compiling AgentLoopCore McpToolNaming.swift
+[229/266] Compiling AgentLoopCore DeltaCoalescer.swift
+[230/266] Compiling AgentLoopCore ExternalContent.swift
+[231/266] Compiling AgentLoopCore KeychainStore.swift
+[232/266] Compiling AgentLoopCore PosixSockets.swift
+[233/266] Compiling AgentLoopCore ShellProcessRegistry.swift
+[234/266] Compiling AgentLoopCore StateDirectoryLock.swift
+[235/266] Compiling AgentLoopCore StringError.swift
+[236/266] Compiling AgentLoopCore TextTruncation.swift
+[237/266] Compiling AgentLoopCore McpDatabase.swift
+[238/266] Compiling AgentLoopCore Records.swift
+[239/266] Compiling AgentLoopCore RuntimeProfileStore.swift
+[240/266] Compiling AgentLoopCore ScheduleStore.swift
+[241/266] Compiling AgentLoopCore ActivityFeed.swift
+[242/266] Compiling AgentLoopCore FeedService.swift
+[243/266] Compiling AgentLoopCore IngestionRecords.swift
+[244/266] Compiling AgentLoopCore CanonicalJSON.swift
+[245/266] Compiling AgentLoopCore JSONValue.swift
+[246/266] Compiling AgentLoopCore ToolAccess.swift
+[247/266] Compiling AgentLoopCore ToolDef.swift
+[248/266] Compiling AgentLoopCore ToolExecutor.swift
+[249/266] Compiling AgentLoopCore WebFetchTool.swift
+[250/266] Compiling AgentLoopCore WebSearchTool.swift
+[251/266] Compiling AgentLoopCore DurableWork.swift
+[252/266] Compiling AgentLoopCore DurableWorkSupervisor.swift
+[253/266] Compiling AgentLoopCore PlanningProviderResolver.swift
+[254/266] Compiling AgentLoopCore ChatService.swift
+[255/266] Compiling AgentLoopCore GuideChatService.swift
+[256/266] Compiling AgentLoopCore AppDatabase.swift
+[257/266] Compiling AgentLoopCore BoardCardTransactions.swift
+[258/266] Compiling AgentLoopCore DurableWorkStore.swift
+[259/266] Compiling AgentLoopCore EventKind.swift
+[260/266] Compiling AgentLoopCore HarvestDatabase.swift
+[261/266] Compiling AgentLoopCore KernelControlStore.swift
+[262/266] Compiling AgentLoopCore KnowledgeStore.swift
+[263/266] Emitting module AgentLoopCore
+[264/268] Emitting module P1MigrationMatrixRunner
+[265/268] Compiling P1MigrationMatrixRunner main.swift
+[265/268] Write Objects.LinkFileList
+[266/268] Linking P1MigrationMatrixRunner
+[267/268] Applying P1MigrationMatrixRunner
+Build of product 'P1MigrationMatrixRunner' complete! (54.31s)
+/private/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-p1-matrix.UTcVnk/build-3.51/arm64-apple-macosx/debug/P1MigrationMatrixRunner:
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+	/System/Library/Frameworks/CFNetwork.framework/Versions/A/CFNetwork (compatibility version 1.0.0, current version 3860.255.31)
+	/System/Library/Frameworks/Combine.framework/Versions/A/Combine (compatibility version 1.0.0, current version 3023.0.0)
+	/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 4201.0.0)
+	/System/Library/Frameworks/CryptoKit.framework/Versions/A/CryptoKit (compatibility version 1.0.0, current version 1.0.0)
+	/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 4201.0.0)
+	/System/Library/Frameworks/LocalAuthentication.framework/Versions/A/LocalAuthentication (compatibility version 1.0.0, current version 2005.60.9)
+	/System/Library/Frameworks/Security.framework/Versions/A/Security (compatibility version 1.0.0, current version 61901.60.40)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2000.67.0)
+	/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
+	/usr/lib/libsqlite3.dylib (compatibility version 9.0.0, current version 380.0.0)
+	/usr/lib/swift/libswiftCore.dylib (compatibility version 0.0.0, current version 0.0.0)
+	/usr/lib/swift/libswiftCoreFoundation.dylib (compatibility version 1.0.0, current version 120.100.0)
+	/usr/lib/swift/libswiftDarwin.dylib (compatibility version 1.0.0, current version 347.40.2)
+	/usr/lib/swift/libswiftDispatch.dylib (compatibility version 1.0.0, current version 56.0.0)
+	/usr/lib/swift/libswiftIOKit.dylib (compatibility version 1.0.0, current version 1.0.0, weak)
+	/usr/lib/swift/libswiftObjectiveC.dylib (compatibility version 1.0.0, current version 951.1.0)
+	/usr/lib/swift/libswiftXPC.dylib (compatibility version 1.0.0, current version 105.0.14, weak)
+	/usr/lib/swift/libswift_Concurrency.dylib (compatibility version 1.0.0, current version 0.0.0)
+	/usr/lib/swift/libswiftos.dylib (compatibility version 1.0.0, current version 1076.40.2)
+lane.sqlite_version=3.51.0
+lane.sqlite_source_id=2025-06-12 13:14:41 f0ca7bba1c5e232e5d279fad6338121ab55af0c8c68c84cdfb18ba5114dcaapl
+diagnostics.real.fresh.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.fresh.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.fresh.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.fresh.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.fresh.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.fresh.result=pass
+fixture.fresh.replay=pass
+fixture.fresh.fk=pass
+fixture.fresh.integrity=pass
+fixture.fresh.ddl=pass
+fixture.fresh.append_only=pass
+diagnostics.real.v7.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v7.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v7.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v7.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v7.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v7.result=pass
+fixture.v7.replay=pass
+fixture.v7.fk=pass
+fixture.v7.integrity=pass
+fixture.v7.ddl=pass
+fixture.v7.append_only=pass
+diagnostics.real.v8-coding-ranch.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v8-coding-ranch.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v8-coding-ranch.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v8-coding-ranch.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v8-coding-ranch.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v8-coding-ranch.result=pass
+fixture.v8-coding-ranch.replay=pass
+fixture.v8-coding-ranch.fk=pass
+fixture.v8-coding-ranch.integrity=pass
+fixture.v8-coding-ranch.ddl=pass
+fixture.v8-coding-ranch.append_only=pass
+diagnostics.real.v9-evercamp.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v9-evercamp.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v9-evercamp.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v9-evercamp.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v9-evercamp.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v9-evercamp.result=pass
+fixture.v9-evercamp.replay=pass
+fixture.v9-evercamp.fk=pass
+fixture.v9-evercamp.integrity=pass
+fixture.v9-evercamp.ddl=pass
+fixture.v9-evercamp.append_only=pass
+diagnostics.real.v10-runtime-profiles.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v10-runtime-profiles.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v10-runtime-profiles.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v10-runtime-profiles.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v10-runtime-profiles.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v10-runtime-profiles.result=pass
+fixture.v10-runtime-profiles.replay=pass
+fixture.v10-runtime-profiles.fk=pass
+fixture.v10-runtime-profiles.integrity=pass
+fixture.v10-runtime-profiles.ddl=pass
+fixture.v10-runtime-profiles.append_only=pass
+diagnostics.real.v11-cli-kinds.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v11-cli-kinds.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v11-cli-kinds.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v11-cli-kinds.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v11-cli-kinds.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v11-cli-kinds.result=pass
+fixture.v11-cli-kinds.replay=pass
+fixture.v11-cli-kinds.fk=pass
+fixture.v11-cli-kinds.integrity=pass
+fixture.v11-cli-kinds.ddl=pass
+fixture.v11-cli-kinds.append_only=pass
+fixture.v12-durable.snapshot=pass
+fixture.v12-durable.double_replay=pass
+diagnostics.real.v12-durable.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v12-durable.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v12-durable.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v12-durable.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v12-durable.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v12-durable.result=pass
+fixture.v12-durable.replay=pass
+fixture.v12-durable.fk=pass
+fixture.v12-durable.integrity=pass
+fixture.v12-durable.ddl=pass
+fixture.v12-durable.append_only=pass
+rollback.real_v12.error_type=DatabaseError
+rollback.real_v12=pass
+rollback.introduction_guard.error_type=DatabaseError
+rollback.introduction_guard=pass
+literal_v11.path=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-p1-matrix.UTcVnk/lane-3.51/literal-v11.sqlite
+diagnostics.literal.work.total=56 accepted=18 check_rejected=38
+diagnostics.literal.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.literal.event.total=288 accepted=17 check_rejected=271
+diagnostics.literal.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.literal.controls.total=19 accepted=19 check_rejected=0
+diagnostics.literal.result=pass
+matrix.result=pass
+Error: stepping, durable_work_attempt_event is append-only (19)
+Error: stepping, durable_work_attempt_event is append-only (19)
+Error: stepping, durable_work_attempt_event is append-only (19)
+Error: stepping, CHECK constraint failed: outputJson IS NULL OR state = 'succeeded' (19)
+Error: stepping, CHECK constraint failed: COALESCE((
+    (endedAt IS NULL AND errorCode IS NULL AND errorMessage IS NULL)
+    OR
+    (outcome = 'succeeded' AND errorCode IS NULL AND errorMessage IS NULL)
+    OR
+    (outcome = 'failed' AND errorCode IS NOT NULL)
+    OR
+    (outcome = 'canceled' AND errorCode = 'work_canceled'
+      AND errorMessage IS NOT NULL)
+    OR
+    (outcome = 'interrupted' AND errorCode = 'worker_interrupted'
+      AND errorMessage IS NULL)
+  ), 0) (19)
+Error: stepping, CHECK constraint failed: (sequence = 0) = (eventKind = 'claimed') (19)
+Parse error near line 190: no such table: __agentloop_forced_missing_table__
+literal.3.51=pass
+cli.3.52.sqlite_version=3.52.0
+cli.3.52.sqlite_source_id=2026-03-06 16:01:44 557aeb43869d3585137b17690cb3b64f7de6921774daae9e56403c3717dceab6
+Fetching https://github.com/groue/GRDB.swift.git from cache
+Fetched https://github.com/groue/GRDB.swift.git from cache (0.03s)
+Creating working copy for https://github.com/groue/GRDB.swift.git
+Working copy of https://github.com/groue/GRDB.swift.git resolved at 7.11.1
+Building for debugging...
+[0/10] Copying PrivacyInfo.xcprivacy
+[0/10] Write sources
+[0/10] Copying Info.plist
+[0/10] Write sources
+[5/10] Write P1MigrationMatrixRunner-entitlement.plist
+[6/10] Write swift-version--1AB21518FC5DEDBE.txt
+[8/163] Compiling GRDB SQLForeignKeyRequest.swift
+[9/163] Compiling GRDB SQLFunctions.swift
+[10/163] Compiling GRDB SQLOperators.swift
+[11/163] Compiling GRDB SQLOrdering.swift
+[12/163] Compiling GRDB SQLRelation.swift
+[13/163] Compiling GRDB SQLSelection.swift
+[14/163] Compiling GRDB SQLSubquery.swift
+[15/163] Compiling GRDB Table.swift
+[16/163] Compiling GRDB SQLColumnGenerator.swift
+[17/163] Compiling GRDB SQLGenerationContext.swift
+[18/163] Compiling GRDB SQLIndexGenerator.swift
+[19/163] Compiling GRDB SQLQueryGenerator.swift
+[20/163] Compiling GRDB SQLTableAlterationGenerator.swift
+[21/163] Compiling GRDB SQLTableGenerator.swift
+[22/163] Compiling GRDB TableAlias.swift
+[23/163] Compiling GRDB SQLInterpolation+QueryInterface.swift
+[24/163] Compiling GRDB ColumnDefinition.swift
+[25/163] Compiling GRDB Database+SchemaDefinition.swift
+[26/163] Compiling GRDB ForeignKeyDefinition.swift
+[27/163] Compiling GRDB IndexDefinition.swift
+[28/163] Compiling GRDB TableAlteration.swift
+[29/163] Compiling GRDB TableDefinition.swift
+[30/163] Compiling GRDB VirtualTableModule.swift
+[31/163] Compiling GRDB TableRecord+Association.swift
+[32/163] Compiling GRDB TableRecord+QueryInterfaceRequest.swift
+[33/163] Compiling GRDB EncodableRecord+Encodable.swift
+[34/163] Compiling GRDB EncodableRecord.swift
+[35/163] Compiling GRDB FetchableRecord+Decodable.swift
+[36/163] Compiling GRDB FetchableRecord+TableRecord.swift
+[37/163] Compiling GRDB FetchableRecord.swift
+[38/163] Compiling GRDB MutablePersistableRecord+DAO.swift
+[39/163] Compiling GRDB MutablePersistableRecord+Delete.swift
+[40/163] Compiling GRDB MutablePersistableRecord+Insert.swift
+[41/163] Compiling GRDB MutablePersistableRecord+Save.swift
+[42/163] Compiling GRDB DatabaseValueConvertible+RawRepresentable.swift
+[43/163] Compiling GRDB JSONRequiredEncoder.swift
+[44/163] Compiling GRDB Optional.swift
+[45/163] Compiling GRDB StandardLibrary.swift
+[46/163] Compiling GRDB TransactionClock.swift
+[47/163] Compiling GRDB TransactionObserver.swift
+[48/163] Compiling GRDB WALSnapshot.swift
+[49/163] Compiling GRDB WALSnapshotTransaction.swift
+[50/163] Compiling GRDB Database+Dump.swift
+[51/163] Compiling GRDB DatabaseReader+dump.swift
+[52/163] Compiling GRDB DumpFormat.swift
+[53/163] Compiling GRDB DebugDumpFormat.swift
+[54/163] Compiling GRDB JSONDumpFormat.swift
+[55/163] Compiling GRDB LineDumpFormat.swift
+[56/163] Compiling GRDB ListDumpFormat.swift
+[57/163] Compiling GRDB QuoteDumpFormat.swift
+[58/163] Compiling GRDB FTS3.swift
+[59/179] Compiling GRDB MutablePersistableRecord+Update.swift
+[60/179] Compiling GRDB MutablePersistableRecord+Upsert.swift
+[61/179] Compiling GRDB MutablePersistableRecord.swift
+[62/179] Compiling GRDB PersistableRecord+Insert.swift
+[63/179] Compiling GRDB PersistableRecord+Save.swift
+[64/179] Compiling GRDB PersistableRecord+Upsert.swift
+[65/179] Compiling GRDB PersistableRecord.swift
+[66/179] Compiling GRDB Record.swift
+[67/179] Compiling GRDB TableRecord.swift
+[68/179] Compiling GRDB CaseInsensitiveIdentifier.swift
+[69/179] Compiling GRDB Inflections+English.swift
+[70/179] Compiling GRDB Inflections.swift
+[71/179] Compiling GRDB Mutex.swift
+[72/179] Compiling GRDB OnDemandFuture.swift
+[73/179] Compiling GRDB OrderedDictionary.swift
+[74/179] Compiling GRDB Pool.swift
+[75/179] Compiling GRDB StatementAuthorizer.swift
+[76/179] Compiling GRDB StatementColumnConvertible.swift
+[77/179] Compiling GRDB CGFloat.swift
+[78/179] Compiling GRDB Data.swift
+[79/179] Compiling GRDB DatabaseDateComponents.swift
+[80/179] Compiling GRDB DatabaseValueConvertible+ReferenceConvertible.swift
+[81/179] Compiling GRDB Date.swift
+[82/179] Compiling GRDB Decimal.swift
+[83/179] Compiling GRDB NSData.swift
+[84/179] Compiling GRDB NSNull.swift
+[85/179] Compiling GRDB NSNumber.swift
+[86/179] Compiling GRDB NSString.swift
+[87/179] Compiling GRDB SQLiteDateParser.swift
+[88/179] Compiling GRDB URL.swift
+[89/179] Compiling GRDB UUID.swift
+[90/179] Compiling GRDB DatabaseValueConvertible+Decodable.swift
+[91/179] Compiling GRDB DatabaseValueConvertible+Encodable.swift
+[92/179] Emitting module GRDB
+[93/179] Compiling GRDB ForeignKey.swift
+[94/179] Compiling GRDB Association.swift
+[95/179] Compiling GRDB AssociationAggregate.swift
+[96/179] Compiling GRDB BelongsToAssociation.swift
+[97/179] Compiling GRDB HasManyAssociation.swift
+[98/179] Compiling GRDB HasManyThroughAssociation.swift
+[99/179] Compiling GRDB HasOneAssociation.swift
+[100/179] Compiling GRDB HasOneThroughAssociation.swift
+[101/179] Compiling GRDB JoinAssociation.swift
+[102/179] Compiling GRDB CommonTableExpression.swift
+[103/179] Compiling GRDB QueryInterfaceRequest.swift
+[104/179] Compiling GRDB RequestProtocols.swift
+[105/179] Compiling GRDB Column.swift
+[106/179] Compiling GRDB DatabasePromise.swift
+[107/179] Compiling GRDB SQLAssociation.swift
+[108/179] Compiling GRDB SQLCollection.swift
+[109/179] Compiling GRDB SQLExpression.swift
+[110/179] Compiling GRDB FTS3Pattern.swift
+[111/179] Compiling GRDB FTS3TokenizerDescriptor.swift
+[112/179] Compiling GRDB FTS4.swift
+[113/179] Compiling GRDB FTS5.swift
+[114/179] Compiling GRDB FTS5CustomTokenizer.swift
+[115/179] Compiling GRDB FTS5Pattern.swift
+[116/179] Compiling GRDB FTS5Tokenizer.swift
+[117/179] Compiling GRDB FTS5TokenizerDescriptor.swift
+[118/179] Compiling GRDB FTS5WrapperTokenizer.swift
+[119/179] Compiling GRDB Fixits.swift
+[120/179] Compiling GRDB JSONColumn.swift
+[121/179] Compiling GRDB SQLJSONExpressible.swift
+[122/179] Compiling GRDB SQLJSONFunctions.swift
+[123/179] Compiling GRDB DatabaseMigrator.swift
+[124/179] Compiling GRDB Migration.swift
+[125/179] Compiling GRDB FTS3+QueryInterface.swift
+[126/179] Compiling GRDB FTS5+QueryInterface.swift
+[127/179] Compiling GRDB Configuration.swift
+[128/179] Compiling GRDB Cursor.swift
+[129/179] Compiling GRDB Database+SQLCipher.swift
+[130/179] Compiling GRDB Database+Schema.swift
+[131/179] Compiling GRDB Database+Statements.swift
+[132/179] Compiling GRDB Database.swift
+[133/179] Compiling GRDB DatabaseBackupProgress.swift
+[134/179] Compiling GRDB DatabaseCollation.swift
+[135/179] Compiling GRDB DatabaseError.swift
+[136/179] Compiling GRDB DatabaseFunction.swift
+[137/179] Compiling GRDB DatabasePool.swift
+[138/179] Compiling GRDB DatabasePublishers.swift
+[139/179] Compiling GRDB DatabaseQueue.swift
+[140/179] Compiling GRDB DatabaseReader.swift
+[141/179] Compiling GRDB DatabaseRegion.swift
+[142/179] Compiling GRDB DatabaseRegionObservation.swift
+[143/179] Compiling GRDB DatabaseSchemaCache.swift
+[144/179] Compiling GRDB DatabaseSchemaSource.swift
+[145/179] Compiling GRDB DatabaseSnapshot.swift
+[146/179] Compiling GRDB DatabaseSnapshotPool.swift
+[147/179] Compiling GRDB DatabaseValue.swift
+[148/179] Compiling GRDB DatabaseValueConvertible.swift
+[149/179] Compiling GRDB DatabaseWriter.swift
+[150/179] Compiling GRDB DispatchQueueActor.swift
+[151/179] Compiling GRDB FetchRequest.swift
+[152/179] Compiling GRDB Row.swift
+[153/179] Compiling GRDB RowAdapter.swift
+[154/179] Compiling GRDB RowDecodingError.swift
+[155/179] Compiling GRDB SQL.swift
+[156/179] Compiling GRDB SQLInterpolation.swift
+[157/179] Compiling GRDB SQLRequest.swift
+[158/179] Compiling GRDB SchedulingWatchdog.swift
+[159/179] Compiling GRDB SerializedDatabase.swift
+[160/179] Compiling GRDB Statement.swift
+[161/179] Compiling GRDB ReadWriteLock.swift
+[162/179] Compiling GRDB ReceiveValuesOn.swift
+[163/179] Compiling GRDB Refinable.swift
+[164/179] Compiling GRDB Utils.swift
+[165/179] Compiling GRDB DatabaseCancellable.swift
+[166/179] Compiling GRDB ValueConcurrentObserver.swift
+[167/179] Compiling GRDB ValueWriteOnlyObserver.swift
+[168/179] Compiling GRDB Fetch.swift
+[169/179] Compiling GRDB Map.swift
+[170/179] Compiling GRDB RemoveDuplicates.swift
+[171/179] Compiling GRDB Trace.swift
+[172/179] Compiling GRDB ValueReducer.swift
+[173/179] Compiling GRDB SharedValueObservation.swift
+[174/179] Compiling GRDB ValueObservation.swift
+[175/179] Compiling GRDB ValueObservationScheduler.swift
+[176/179] Compiling GRDB resource_bundle_accessor.swift
+[177/258] Compiling AgentLoopCore ProviderConfiguration.swift
+[178/258] Compiling AgentLoopCore SSEParser.swift
+[179/258] Compiling AgentLoopCore StopReason.swift
+[180/258] Compiling AgentLoopCore TurnAccumulator.swift
+[181/258] Compiling AgentLoopCore RuminationMaterializer.swift
+[182/258] Compiling AgentLoopCore RuminationParser.swift
+[183/258] Compiling AgentLoopCore RuminationResult.swift
+[184/258] Compiling AgentLoopCore RuminationService.swift
+[185/258] Compiling AgentLoopCore DeltaCoalescer.swift
+[186/258] Compiling AgentLoopCore ExternalContent.swift
+[187/258] Compiling AgentLoopCore KeychainStore.swift
+[188/258] Compiling AgentLoopCore PosixSockets.swift
+[189/258] Compiling AgentLoopCore ShellProcessRegistry.swift
+[190/258] Compiling AgentLoopCore StateDirectoryLock.swift
+[191/258] Compiling AgentLoopCore StringError.swift
+[192/258] Compiling AgentLoopCore TextTruncation.swift
+[193/266] Compiling AgentLoopCore McpTransport.swift
+[194/266] Compiling AgentLoopCore MiniMcpClient.swift
+[195/266] Compiling AgentLoopCore CompanionAnimState.swift
+[196/266] Compiling AgentLoopCore CowTemplate.swift
+[197/266] Compiling AgentLoopCore MissionDraftFactory.swift
+[198/266] Compiling AgentLoopCore NewcomerUnlockPolicy.swift
+[199/266] Compiling AgentLoopCore ProductBootstrapService.swift
+[200/266] Compiling AgentLoopCore RuntimeProfileBootstrap.swift
+[201/266] Compiling AgentLoopCore AnthropicProvider.swift
+[202/266] Compiling AgentLoopCore ContentBlock.swift
+[203/266] Compiling AgentLoopCore LLMProvider.swift
+[204/266] Compiling AgentLoopCore MockProvider.swift
+[205/266] Compiling AgentLoopCore ModelCatalogService.swift
+[206/266] Compiling AgentLoopCore OpenAIChatGPTAuth.swift
+[207/266] Compiling AgentLoopCore OpenAIOAuthSession.swift
+[208/266] Compiling AgentLoopCore OpenAIProvider.swift
+[209/266] Compiling AgentLoopCore OpenAIResponsesProvider.swift
+[210/266] Compiling AgentLoopCore ProfileScopedDefaults.swift
+[211/266] Compiling AgentLoopCore BoardServerBridgeMain.swift
+[212/266] Compiling AgentLoopCore BoardToolServer.swift
+[213/266] Compiling AgentLoopCore CardExecutionBackend.swift
+[214/266] Compiling AgentLoopCore CardRunner.swift
+[215/266] Compiling AgentLoopCore CliProcessBackend.swift
+[216/266] Compiling AgentLoopCore ContextPacket.swift
+[217/266] Compiling AgentLoopCore McpServerManager.swift
+[218/266] Compiling AgentLoopCore McpToolBridge.swift
+[219/266] Compiling AgentLoopCore McpToolNaming.swift
+[220/266] Compiling AgentLoopCore KernelDefaults.swift
+[221/266] Compiling AgentLoopCore Orchestrator.swift
+[222/266] Compiling AgentLoopCore Planner.swift
+[223/266] Compiling AgentLoopCore ScheduleMath.swift
+[224/266] Compiling AgentLoopCore Distiller.swift
+[225/266] Compiling AgentLoopCore ExpeditionReport.swift
+[226/266] Compiling AgentLoopCore MemoryDistillService.swift
+[227/266] Compiling AgentLoopCore NoteSnippet.swift
+[228/266] Compiling AgentLoopCore AgentLoop.swift
+[229/266] Compiling AgentLoopCore McpDatabase.swift
+[230/266] Compiling AgentLoopCore Records.swift
+[231/266] Compiling AgentLoopCore RuntimeProfileStore.swift
+[232/266] Compiling AgentLoopCore ScheduleStore.swift
+[233/266] Compiling AgentLoopCore ActivityFeed.swift
+[234/266] Compiling AgentLoopCore FeedService.swift
+[235/266] Compiling AgentLoopCore IngestionRecords.swift
+[236/266] Compiling AgentLoopCore CanonicalJSON.swift
+[237/266] Compiling AgentLoopCore JSONValue.swift
+[238/266] Compiling AgentLoopCore WorkspaceScopedAccess.swift
+[239/266] Compiling AgentLoopCore ApprovalGate.swift
+[240/266] Compiling AgentLoopCore ApprovalPolicy.swift
+[241/266] Compiling AgentLoopCore BoardTools.swift
+[242/266] Compiling AgentLoopCore FileTools.swift
+[243/266] Compiling AgentLoopCore HandoffPayload.swift
+[244/266] Compiling AgentLoopCore KnowledgeTools.swift
+[245/266] Compiling AgentLoopCore ShellTool.swift
+[246/266] Compiling AgentLoopCore ChatService.swift
+[247/266] Compiling AgentLoopCore GuideChatService.swift
+[248/266] Compiling AgentLoopCore AppDatabase.swift
+[249/266] Compiling AgentLoopCore BoardCardTransactions.swift
+[250/266] Compiling AgentLoopCore DurableWorkStore.swift
+[251/266] Compiling AgentLoopCore EventKind.swift
+[252/266] Compiling AgentLoopCore HarvestDatabase.swift
+[253/266] Compiling AgentLoopCore KernelControlStore.swift
+[254/266] Compiling AgentLoopCore KnowledgeStore.swift
+[255/266] Emitting module AgentLoopCore
+[256/266] Compiling AgentLoopCore ToolAccess.swift
+[257/266] Compiling AgentLoopCore ToolDef.swift
+[258/266] Compiling AgentLoopCore ToolExecutor.swift
+[259/266] Compiling AgentLoopCore WebFetchTool.swift
+[260/266] Compiling AgentLoopCore WebSearchTool.swift
+[261/266] Compiling AgentLoopCore DurableWork.swift
+[262/266] Compiling AgentLoopCore DurableWorkSupervisor.swift
+[263/266] Compiling AgentLoopCore PlanningProviderResolver.swift
+[264/268] Compiling P1MigrationMatrixRunner main.swift
+[265/268] Emitting module P1MigrationMatrixRunner
+[265/268] Write Objects.LinkFileList
+ld: warning: building for macOS-14.0, but linking with dylib '/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib' which was built for newer version 26.0
+[266/268] Linking P1MigrationMatrixRunner
+[267/268] Applying P1MigrationMatrixRunner
+Build of product 'P1MigrationMatrixRunner' complete! (51.36s)
+/private/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-p1-matrix.UTcVnk/build-3.52/arm64-apple-macosx/debug/P1MigrationMatrixRunner:
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+	/System/Library/Frameworks/CFNetwork.framework/Versions/A/CFNetwork (compatibility version 1.0.0, current version 3860.255.31)
+	/System/Library/Frameworks/Combine.framework/Versions/A/Combine (compatibility version 1.0.0, current version 3023.0.0)
+	/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 4201.0.0)
+	/System/Library/Frameworks/CryptoKit.framework/Versions/A/CryptoKit (compatibility version 1.0.0, current version 1.0.0)
+	/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 4201.0.0)
+	/System/Library/Frameworks/LocalAuthentication.framework/Versions/A/LocalAuthentication (compatibility version 1.0.0, current version 2005.60.9)
+	/System/Library/Frameworks/Security.framework/Versions/A/Security (compatibility version 1.0.0, current version 61901.60.40)
+	/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib (compatibility version 9.0.0, current version 9.6.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2000.67.0)
+	/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
+	/usr/lib/swift/libswiftCore.dylib (compatibility version 0.0.0, current version 0.0.0)
+	/usr/lib/swift/libswiftCoreFoundation.dylib (compatibility version 1.0.0, current version 120.100.0)
+	/usr/lib/swift/libswiftDarwin.dylib (compatibility version 1.0.0, current version 347.40.2)
+	/usr/lib/swift/libswiftDispatch.dylib (compatibility version 1.0.0, current version 56.0.0)
+	/usr/lib/swift/libswiftIOKit.dylib (compatibility version 1.0.0, current version 1.0.0, weak)
+	/usr/lib/swift/libswiftObjectiveC.dylib (compatibility version 1.0.0, current version 951.1.0)
+	/usr/lib/swift/libswiftXPC.dylib (compatibility version 1.0.0, current version 105.0.14, weak)
+	/usr/lib/swift/libswift_Concurrency.dylib (compatibility version 1.0.0, current version 0.0.0)
+	/usr/lib/swift/libswiftos.dylib (compatibility version 1.0.0, current version 1076.40.2)
+lane.sqlite_version=3.52.0
+lane.sqlite_source_id=2026-03-06 16:01:44 557aeb43869d3585137b17690cb3b64f7de6921774daae9e56403c3717dceab6
+diagnostics.real.fresh.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.fresh.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.fresh.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.fresh.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.fresh.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.fresh.result=pass
+fixture.fresh.replay=pass
+fixture.fresh.fk=pass
+fixture.fresh.integrity=pass
+fixture.fresh.ddl=pass
+fixture.fresh.append_only=pass
+diagnostics.real.v7.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v7.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v7.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v7.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v7.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v7.result=pass
+fixture.v7.replay=pass
+fixture.v7.fk=pass
+fixture.v7.integrity=pass
+fixture.v7.ddl=pass
+fixture.v7.append_only=pass
+diagnostics.real.v8-coding-ranch.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v8-coding-ranch.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v8-coding-ranch.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v8-coding-ranch.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v8-coding-ranch.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v8-coding-ranch.result=pass
+fixture.v8-coding-ranch.replay=pass
+fixture.v8-coding-ranch.fk=pass
+fixture.v8-coding-ranch.integrity=pass
+fixture.v8-coding-ranch.ddl=pass
+fixture.v8-coding-ranch.append_only=pass
+diagnostics.real.v9-evercamp.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v9-evercamp.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v9-evercamp.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v9-evercamp.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v9-evercamp.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v9-evercamp.result=pass
+fixture.v9-evercamp.replay=pass
+fixture.v9-evercamp.fk=pass
+fixture.v9-evercamp.integrity=pass
+fixture.v9-evercamp.ddl=pass
+fixture.v9-evercamp.append_only=pass
+diagnostics.real.v10-runtime-profiles.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v10-runtime-profiles.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v10-runtime-profiles.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v10-runtime-profiles.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v10-runtime-profiles.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v10-runtime-profiles.result=pass
+fixture.v10-runtime-profiles.replay=pass
+fixture.v10-runtime-profiles.fk=pass
+fixture.v10-runtime-profiles.integrity=pass
+fixture.v10-runtime-profiles.ddl=pass
+fixture.v10-runtime-profiles.append_only=pass
+diagnostics.real.v11-cli-kinds.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v11-cli-kinds.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v11-cli-kinds.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v11-cli-kinds.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v11-cli-kinds.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v11-cli-kinds.result=pass
+fixture.v11-cli-kinds.replay=pass
+fixture.v11-cli-kinds.fk=pass
+fixture.v11-cli-kinds.integrity=pass
+fixture.v11-cli-kinds.ddl=pass
+fixture.v11-cli-kinds.append_only=pass
+fixture.v12-durable.snapshot=pass
+fixture.v12-durable.double_replay=pass
+diagnostics.real.v12-durable.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v12-durable.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v12-durable.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v12-durable.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v12-durable.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v12-durable.result=pass
+fixture.v12-durable.replay=pass
+fixture.v12-durable.fk=pass
+fixture.v12-durable.integrity=pass
+fixture.v12-durable.ddl=pass
+fixture.v12-durable.append_only=pass
+rollback.real_v12.error_type=DatabaseError
+rollback.real_v12=pass
+rollback.introduction_guard.error_type=DatabaseError
+rollback.introduction_guard=pass
+literal_v11.path=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-p1-matrix.UTcVnk/lane-3.52/literal-v11.sqlite
+diagnostics.literal.work.total=56 accepted=18 check_rejected=38
+diagnostics.literal.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.literal.event.total=288 accepted=17 check_rejected=271
+diagnostics.literal.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.literal.controls.total=19 accepted=19 check_rejected=0
+diagnostics.literal.result=pass
+matrix.result=pass
+Error: durable_work_attempt_event is append-only
+Error: durable_work_attempt_event is append-only
+Error: durable_work_attempt_event is append-only
+Error: CHECK constraint failed: outputJson IS NULL OR state = 'succeeded'
+Error: CHECK constraint failed: COALESCE((
+    (endedAt IS NULL AND errorCode IS NULL AND errorMessage IS NULL)
+    OR
+    (outcome = 'succeeded' AND errorCode IS NULL AND errorMessage IS NULL)
+    OR
+    (outcome = 'failed' AND errorCode IS NOT NULL)
+    OR
+    (outcome = 'canceled' AND errorCode = 'work_canceled'
+      AND errorMessage IS NOT NULL)
+    OR
+    (outcome = 'interrupted' AND errorCode = 'worker_interrupted'
+      AND errorMessage IS NULL)
+  ), 0)
+Error: CHECK constraint failed: (sequence = 0) = (eventKind = 'claimed')
+Parse error near line 190: no such table: __agentloop_forced_missing_table__
+literal.3.52=pass
+package_resolved.sha256=d2786c9b64c245c62f5793e697bb406d4960753e5f33c622250e804cd865fb3a
+p1_migration_matrix.result=pass
+
+=== 2026-07-27 Review01 bounded P1 repair rerun ===
+command=scripts/verify-p1-migrations-sqlite-matrix.sh --sqlite 3.51 --sqlite 3.52
+stage.sha256=add94117fc634add114bff62aefd7f77d71e4826d15c9bd1affba1a8d76366a2
+literal.sha256=fb77180d6edd44413e41179e4b220666438e2660de11fbde1dafee78b6fde5c2
+runner.sha256=db9d0ef56158321bcfe5048778cc1b63bd592a7cbddb355fac42ec9169f0c267
+app_database.sha256=d6478b05158697120c60c21466b68aec0a1675bf825d0fce0db277bb7f84966b
+cli.3.51.sqlite_version=3.51.0
+cli.3.51.sqlite_source_id=2025-06-12 13:14:41 f0ca7bba1c5e232e5d279fad6338121ab55af0c8c68c84cdfb18ba5114dcaapl
+Fetching https://github.com/groue/GRDB.swift.git from cache
+Fetched https://github.com/groue/GRDB.swift.git from cache (0.03s)
+Creating working copy for https://github.com/groue/GRDB.swift.git
+Working copy of https://github.com/groue/GRDB.swift.git resolved at 7.11.1
+Building for debugging...
+[0/10] Write sources
+[0/10] Copying PrivacyInfo.xcprivacy
+[1/10] Write sources
+[4/10] Copying Info.plist
+[5/10] Write P1MigrationMatrixRunner-entitlement.plist
+[6/10] Write swift-version--1AB21518FC5DEDBE.txt
+[8/163] Compiling GRDB DatabaseValueConvertible+RawRepresentable.swift
+[9/163] Compiling GRDB JSONRequiredEncoder.swift
+[10/163] Compiling GRDB Optional.swift
+[11/163] Compiling GRDB StandardLibrary.swift
+[12/163] Compiling GRDB TransactionClock.swift
+[13/163] Compiling GRDB TransactionObserver.swift
+[14/163] Compiling GRDB WALSnapshot.swift
+[15/163] Compiling GRDB WALSnapshotTransaction.swift
+[16/163] Compiling GRDB Database+Dump.swift
+[17/163] Compiling GRDB DatabaseReader+dump.swift
+[18/163] Compiling GRDB DumpFormat.swift
+[19/163] Compiling GRDB DebugDumpFormat.swift
+[20/163] Compiling GRDB JSONDumpFormat.swift
+[21/163] Compiling GRDB LineDumpFormat.swift
+[22/163] Compiling GRDB ListDumpFormat.swift
+[23/163] Compiling GRDB QuoteDumpFormat.swift
+[24/163] Compiling GRDB FTS3.swift
+[25/163] Compiling GRDB MutablePersistableRecord+Update.swift
+[26/163] Compiling GRDB MutablePersistableRecord+Upsert.swift
+[27/163] Compiling GRDB MutablePersistableRecord.swift
+[28/163] Compiling GRDB PersistableRecord+Insert.swift
+[29/163] Compiling GRDB PersistableRecord+Save.swift
+[30/163] Compiling GRDB PersistableRecord+Upsert.swift
+[31/163] Compiling GRDB PersistableRecord.swift
+[32/163] Compiling GRDB Record.swift
+[33/163] Compiling GRDB TableRecord.swift
+[34/163] Compiling GRDB CaseInsensitiveIdentifier.swift
+[35/163] Compiling GRDB Inflections+English.swift
+[36/163] Compiling GRDB Inflections.swift
+[37/163] Compiling GRDB Mutex.swift
+[38/163] Compiling GRDB OnDemandFuture.swift
+[39/163] Compiling GRDB OrderedDictionary.swift
+[40/163] Compiling GRDB Pool.swift
+[41/163] Compiling GRDB DatabaseSchemaSource.swift
+[42/163] Compiling GRDB DatabaseSnapshot.swift
+[43/163] Compiling GRDB DatabaseSnapshotPool.swift
+[44/163] Compiling GRDB DatabaseValue.swift
+[45/163] Compiling GRDB DatabaseValueConvertible.swift
+[46/163] Compiling GRDB DatabaseWriter.swift
+[47/163] Compiling GRDB DispatchQueueActor.swift
+[48/163] Compiling GRDB FetchRequest.swift
+[49/163] Compiling GRDB Row.swift
+[50/163] Compiling GRDB RowAdapter.swift
+[51/163] Compiling GRDB RowDecodingError.swift
+[52/163] Compiling GRDB SQL.swift
+[53/163] Compiling GRDB SQLInterpolation.swift
+[54/163] Compiling GRDB SQLRequest.swift
+[55/163] Compiling GRDB SchedulingWatchdog.swift
+[56/163] Compiling GRDB SerializedDatabase.swift
+[57/163] Compiling GRDB Statement.swift
+[58/163] Emitting module GRDB
+[59/163] Compiling GRDB StatementAuthorizer.swift
+[60/163] Compiling GRDB StatementColumnConvertible.swift
+[61/163] Compiling GRDB CGFloat.swift
+[62/163] Compiling GRDB Data.swift
+[63/163] Compiling GRDB DatabaseDateComponents.swift
+[64/163] Compiling GRDB DatabaseValueConvertible+ReferenceConvertible.swift
+[65/163] Compiling GRDB Date.swift
+[66/163] Compiling GRDB Decimal.swift
+[67/163] Compiling GRDB NSData.swift
+[68/163] Compiling GRDB NSNull.swift
+[69/163] Compiling GRDB NSNumber.swift
+[70/163] Compiling GRDB NSString.swift
+[71/163] Compiling GRDB SQLiteDateParser.swift
+[72/163] Compiling GRDB URL.swift
+[73/163] Compiling GRDB UUID.swift
+[74/163] Compiling GRDB DatabaseValueConvertible+Decodable.swift
+[75/163] Compiling GRDB DatabaseValueConvertible+Encodable.swift
+[76/179] Compiling GRDB FTS3Pattern.swift
+[77/179] Compiling GRDB FTS3TokenizerDescriptor.swift
+[78/179] Compiling GRDB FTS4.swift
+[79/179] Compiling GRDB FTS5.swift
+[80/179] Compiling GRDB FTS5CustomTokenizer.swift
+[81/179] Compiling GRDB FTS5Pattern.swift
+[82/179] Compiling GRDB FTS5Tokenizer.swift
+[83/179] Compiling GRDB FTS5TokenizerDescriptor.swift
+[84/179] Compiling GRDB FTS5WrapperTokenizer.swift
+[85/179] Compiling GRDB Fixits.swift
+[86/179] Compiling GRDB JSONColumn.swift
+[87/179] Compiling GRDB SQLJSONExpressible.swift
+[88/179] Compiling GRDB SQLJSONFunctions.swift
+[89/179] Compiling GRDB DatabaseMigrator.swift
+[90/179] Compiling GRDB Migration.swift
+[91/179] Compiling GRDB FTS3+QueryInterface.swift
+[92/179] Compiling GRDB FTS5+QueryInterface.swift
+[93/179] Compiling GRDB SQLForeignKeyRequest.swift
+[94/179] Compiling GRDB SQLFunctions.swift
+[95/179] Compiling GRDB SQLOperators.swift
+[96/179] Compiling GRDB SQLOrdering.swift
+[97/179] Compiling GRDB SQLRelation.swift
+[98/179] Compiling GRDB SQLSelection.swift
+[99/179] Compiling GRDB SQLSubquery.swift
+[100/179] Compiling GRDB Table.swift
+[101/179] Compiling GRDB SQLColumnGenerator.swift
+[102/179] Compiling GRDB SQLGenerationContext.swift
+[103/179] Compiling GRDB SQLIndexGenerator.swift
+[104/179] Compiling GRDB SQLQueryGenerator.swift
+[105/179] Compiling GRDB SQLTableAlterationGenerator.swift
+[106/179] Compiling GRDB SQLTableGenerator.swift
+[107/179] Compiling GRDB TableAlias.swift
+[108/179] Compiling GRDB SQLInterpolation+QueryInterface.swift
+[109/179] Compiling GRDB ColumnDefinition.swift
+[110/179] Compiling GRDB ForeignKey.swift
+[111/179] Compiling GRDB Association.swift
+[112/179] Compiling GRDB AssociationAggregate.swift
+[113/179] Compiling GRDB BelongsToAssociation.swift
+[114/179] Compiling GRDB HasManyAssociation.swift
+[115/179] Compiling GRDB HasManyThroughAssociation.swift
+[116/179] Compiling GRDB HasOneAssociation.swift
+[117/179] Compiling GRDB HasOneThroughAssociation.swift
+[118/179] Compiling GRDB JoinAssociation.swift
+[119/179] Compiling GRDB CommonTableExpression.swift
+[120/179] Compiling GRDB QueryInterfaceRequest.swift
+[121/179] Compiling GRDB RequestProtocols.swift
+[122/179] Compiling GRDB Column.swift
+[123/179] Compiling GRDB DatabasePromise.swift
+[124/179] Compiling GRDB SQLAssociation.swift
+[125/179] Compiling GRDB SQLCollection.swift
+[126/179] Compiling GRDB SQLExpression.swift
+[127/179] Compiling GRDB Database+SchemaDefinition.swift
+[128/179] Compiling GRDB ForeignKeyDefinition.swift
+[129/179] Compiling GRDB IndexDefinition.swift
+[130/179] Compiling GRDB TableAlteration.swift
+[131/179] Compiling GRDB TableDefinition.swift
+[132/179] Compiling GRDB VirtualTableModule.swift
+[133/179] Compiling GRDB TableRecord+Association.swift
+[134/179] Compiling GRDB TableRecord+QueryInterfaceRequest.swift
+[135/179] Compiling GRDB EncodableRecord+Encodable.swift
+[136/179] Compiling GRDB EncodableRecord.swift
+[137/179] Compiling GRDB FetchableRecord+Decodable.swift
+[138/179] Compiling GRDB FetchableRecord+TableRecord.swift
+[139/179] Compiling GRDB FetchableRecord.swift
+[140/179] Compiling GRDB MutablePersistableRecord+DAO.swift
+[141/179] Compiling GRDB MutablePersistableRecord+Delete.swift
+[142/179] Compiling GRDB MutablePersistableRecord+Insert.swift
+[143/179] Compiling GRDB MutablePersistableRecord+Save.swift
+[144/179] Compiling GRDB Configuration.swift
+[145/179] Compiling GRDB Cursor.swift
+[146/179] Compiling GRDB Database+SQLCipher.swift
+[147/179] Compiling GRDB Database+Schema.swift
+[148/179] Compiling GRDB Database+Statements.swift
+[149/179] Compiling GRDB Database.swift
+[150/179] Compiling GRDB DatabaseBackupProgress.swift
+[151/179] Compiling GRDB DatabaseCollation.swift
+[152/179] Compiling GRDB DatabaseError.swift
+[153/179] Compiling GRDB DatabaseFunction.swift
+[154/179] Compiling GRDB DatabasePool.swift
+[155/179] Compiling GRDB DatabasePublishers.swift
+[156/179] Compiling GRDB DatabaseQueue.swift
+[157/179] Compiling GRDB DatabaseReader.swift
+[158/179] Compiling GRDB DatabaseRegion.swift
+[159/179] Compiling GRDB DatabaseRegionObservation.swift
+[160/179] Compiling GRDB DatabaseSchemaCache.swift
+[161/179] Compiling GRDB ReadWriteLock.swift
+[162/179] Compiling GRDB ReceiveValuesOn.swift
+[163/179] Compiling GRDB Refinable.swift
+[164/179] Compiling GRDB Utils.swift
+[165/179] Compiling GRDB DatabaseCancellable.swift
+[166/179] Compiling GRDB ValueConcurrentObserver.swift
+[167/179] Compiling GRDB ValueWriteOnlyObserver.swift
+[168/179] Compiling GRDB Fetch.swift
+[169/179] Compiling GRDB Map.swift
+[170/179] Compiling GRDB RemoveDuplicates.swift
+[171/179] Compiling GRDB Trace.swift
+[172/179] Compiling GRDB ValueReducer.swift
+[173/179] Compiling GRDB SharedValueObservation.swift
+[174/179] Compiling GRDB ValueObservation.swift
+[175/179] Compiling GRDB ValueObservationScheduler.swift
+[176/179] Compiling GRDB resource_bundle_accessor.swift
+[177/258] Compiling AgentLoopCore WorkspaceScopedAccess.swift
+[178/258] Compiling AgentLoopCore ApprovalGate.swift
+[179/258] Compiling AgentLoopCore ApprovalPolicy.swift
+[180/258] Compiling AgentLoopCore BoardTools.swift
+[181/258] Compiling AgentLoopCore FileTools.swift
+[182/258] Compiling AgentLoopCore HandoffPayload.swift
+[183/258] Compiling AgentLoopCore KnowledgeTools.swift
+[184/258] Compiling AgentLoopCore ShellTool.swift
+[185/266] Compiling AgentLoopCore ContentBlock.swift
+[186/266] Compiling AgentLoopCore LLMProvider.swift
+[187/266] Compiling AgentLoopCore MockProvider.swift
+[188/266] Compiling AgentLoopCore ModelCatalogService.swift
+[189/266] Compiling AgentLoopCore OpenAIChatGPTAuth.swift
+[190/266] Compiling AgentLoopCore OpenAIOAuthSession.swift
+[191/266] Compiling AgentLoopCore OpenAIProvider.swift
+[192/266] Compiling AgentLoopCore OpenAIResponsesProvider.swift
+[193/266] Compiling AgentLoopCore ProfileScopedDefaults.swift
+[194/266] Compiling AgentLoopCore BoardServerBridgeMain.swift
+[195/266] Compiling AgentLoopCore BoardToolServer.swift
+[196/266] Compiling AgentLoopCore CardExecutionBackend.swift
+[197/266] Compiling AgentLoopCore CardRunner.swift
+[198/266] Compiling AgentLoopCore CliProcessBackend.swift
+[199/266] Compiling AgentLoopCore ContextPacket.swift
+[200/266] Compiling AgentLoopCore McpServerManager.swift
+[201/266] Compiling AgentLoopCore McpToolBridge.swift
+[202/266] Compiling AgentLoopCore McpToolNaming.swift
+[203/266] Compiling AgentLoopCore DeltaCoalescer.swift
+[204/266] Compiling AgentLoopCore ExternalContent.swift
+[205/266] Compiling AgentLoopCore KeychainStore.swift
+[206/266] Compiling AgentLoopCore PosixSockets.swift
+[207/266] Compiling AgentLoopCore ShellProcessRegistry.swift
+[208/266] Compiling AgentLoopCore StateDirectoryLock.swift
+[209/266] Compiling AgentLoopCore StringError.swift
+[210/266] Compiling AgentLoopCore TextTruncation.swift
+[211/266] Compiling AgentLoopCore KernelDefaults.swift
+[212/266] Compiling AgentLoopCore Orchestrator.swift
+[213/266] Compiling AgentLoopCore Planner.swift
+[214/266] Compiling AgentLoopCore ScheduleMath.swift
+[215/266] Compiling AgentLoopCore Distiller.swift
+[216/266] Compiling AgentLoopCore ExpeditionReport.swift
+[217/266] Compiling AgentLoopCore MemoryDistillService.swift
+[218/266] Compiling AgentLoopCore NoteSnippet.swift
+[219/266] Compiling AgentLoopCore AgentLoop.swift
+[220/266] Compiling AgentLoopCore McpDatabase.swift
+[221/266] Compiling AgentLoopCore Records.swift
+[222/266] Compiling AgentLoopCore RuntimeProfileStore.swift
+[223/266] Compiling AgentLoopCore ScheduleStore.swift
+[224/266] Compiling AgentLoopCore ActivityFeed.swift
+[225/266] Compiling AgentLoopCore FeedService.swift
+[226/266] Compiling AgentLoopCore IngestionRecords.swift
+[227/266] Compiling AgentLoopCore CanonicalJSON.swift
+[228/266] Compiling AgentLoopCore JSONValue.swift
+[229/266] Compiling AgentLoopCore ProviderConfiguration.swift
+[230/266] Compiling AgentLoopCore SSEParser.swift
+[231/266] Compiling AgentLoopCore StopReason.swift
+[232/266] Compiling AgentLoopCore TurnAccumulator.swift
+[233/266] Compiling AgentLoopCore RuminationMaterializer.swift
+[234/266] Compiling AgentLoopCore RuminationParser.swift
+[235/266] Compiling AgentLoopCore RuminationResult.swift
+[236/266] Compiling AgentLoopCore RuminationService.swift
+[237/266] Compiling AgentLoopCore McpTransport.swift
+[238/266] Compiling AgentLoopCore MiniMcpClient.swift
+[239/266] Compiling AgentLoopCore CompanionAnimState.swift
+[240/266] Compiling AgentLoopCore CowTemplate.swift
+[241/266] Compiling AgentLoopCore MissionDraftFactory.swift
+[242/266] Compiling AgentLoopCore NewcomerUnlockPolicy.swift
+[243/266] Compiling AgentLoopCore ProductBootstrapService.swift
+[244/266] Compiling AgentLoopCore RuntimeProfileBootstrap.swift
+[245/266] Compiling AgentLoopCore AnthropicProvider.swift
+[246/266] Emitting module AgentLoopCore
+[247/266] Compiling AgentLoopCore ChatService.swift
+[248/266] Compiling AgentLoopCore GuideChatService.swift
+[249/266] Compiling AgentLoopCore AppDatabase.swift
+[250/266] Compiling AgentLoopCore BoardCardTransactions.swift
+[251/266] Compiling AgentLoopCore DurableWorkStore.swift
+[252/266] Compiling AgentLoopCore EventKind.swift
+[253/266] Compiling AgentLoopCore HarvestDatabase.swift
+[254/266] Compiling AgentLoopCore KernelControlStore.swift
+[255/266] Compiling AgentLoopCore KnowledgeStore.swift
+[256/266] Compiling AgentLoopCore ToolAccess.swift
+[257/266] Compiling AgentLoopCore ToolDef.swift
+[258/266] Compiling AgentLoopCore ToolExecutor.swift
+[259/266] Compiling AgentLoopCore WebFetchTool.swift
+[260/266] Compiling AgentLoopCore WebSearchTool.swift
+[261/266] Compiling AgentLoopCore DurableWork.swift
+[262/266] Compiling AgentLoopCore DurableWorkSupervisor.swift
+[263/266] Compiling AgentLoopCore PlanningProviderResolver.swift
+[264/268] Compiling P1MigrationMatrixRunner main.swift
+[265/268] Emitting module P1MigrationMatrixRunner
+[265/268] Write Objects.LinkFileList
+[266/268] Linking P1MigrationMatrixRunner
+[267/268] Applying P1MigrationMatrixRunner
+Build of product 'P1MigrationMatrixRunner' complete! (49.27s)
+/private/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-p1-matrix.y3G2v3/build-3.51/arm64-apple-macosx/debug/P1MigrationMatrixRunner:
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+	/System/Library/Frameworks/CFNetwork.framework/Versions/A/CFNetwork (compatibility version 1.0.0, current version 3860.255.31)
+	/System/Library/Frameworks/Combine.framework/Versions/A/Combine (compatibility version 1.0.0, current version 3023.0.0)
+	/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 4201.0.0)
+	/System/Library/Frameworks/CryptoKit.framework/Versions/A/CryptoKit (compatibility version 1.0.0, current version 1.0.0)
+	/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 4201.0.0)
+	/System/Library/Frameworks/LocalAuthentication.framework/Versions/A/LocalAuthentication (compatibility version 1.0.0, current version 2005.60.9)
+	/System/Library/Frameworks/Security.framework/Versions/A/Security (compatibility version 1.0.0, current version 61901.60.40)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2000.67.0)
+	/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
+	/usr/lib/libsqlite3.dylib (compatibility version 9.0.0, current version 380.0.0)
+	/usr/lib/swift/libswiftCore.dylib (compatibility version 0.0.0, current version 0.0.0)
+	/usr/lib/swift/libswiftCoreFoundation.dylib (compatibility version 1.0.0, current version 120.100.0)
+	/usr/lib/swift/libswiftDarwin.dylib (compatibility version 1.0.0, current version 347.40.2)
+	/usr/lib/swift/libswiftDispatch.dylib (compatibility version 1.0.0, current version 56.0.0)
+	/usr/lib/swift/libswiftIOKit.dylib (compatibility version 1.0.0, current version 1.0.0, weak)
+	/usr/lib/swift/libswiftObjectiveC.dylib (compatibility version 1.0.0, current version 951.1.0)
+	/usr/lib/swift/libswiftXPC.dylib (compatibility version 1.0.0, current version 105.0.14, weak)
+	/usr/lib/swift/libswift_Concurrency.dylib (compatibility version 1.0.0, current version 0.0.0)
+	/usr/lib/swift/libswiftos.dylib (compatibility version 1.0.0, current version 1076.40.2)
+lane.sqlite_version=3.51.0
+lane.sqlite_source_id=2025-06-12 13:14:41 f0ca7bba1c5e232e5d279fad6338121ab55af0c8c68c84cdfb18ba5114dcaapl
+diagnostics.real.fresh.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.fresh.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.fresh.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.fresh.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.fresh.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.fresh.result=pass
+fixture.fresh.replay=pass
+fixture.fresh.fk=pass
+fixture.fresh.integrity=pass
+fixture.fresh.ddl=pass
+fixture.fresh.append_only=pass
+diagnostics.real.v7.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v7.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v7.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v7.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v7.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v7.result=pass
+fixture.v7.replay=pass
+fixture.v7.fk=pass
+fixture.v7.integrity=pass
+fixture.v7.ddl=pass
+fixture.v7.append_only=pass
+diagnostics.real.v8-coding-ranch.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v8-coding-ranch.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v8-coding-ranch.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v8-coding-ranch.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v8-coding-ranch.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v8-coding-ranch.result=pass
+fixture.v8-coding-ranch.replay=pass
+fixture.v8-coding-ranch.fk=pass
+fixture.v8-coding-ranch.integrity=pass
+fixture.v8-coding-ranch.ddl=pass
+fixture.v8-coding-ranch.append_only=pass
+diagnostics.real.v9-evercamp.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v9-evercamp.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v9-evercamp.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v9-evercamp.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v9-evercamp.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v9-evercamp.result=pass
+fixture.v9-evercamp.replay=pass
+fixture.v9-evercamp.fk=pass
+fixture.v9-evercamp.integrity=pass
+fixture.v9-evercamp.ddl=pass
+fixture.v9-evercamp.append_only=pass
+diagnostics.real.v10-runtime-profiles.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v10-runtime-profiles.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v10-runtime-profiles.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v10-runtime-profiles.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v10-runtime-profiles.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v10-runtime-profiles.result=pass
+fixture.v10-runtime-profiles.replay=pass
+fixture.v10-runtime-profiles.fk=pass
+fixture.v10-runtime-profiles.integrity=pass
+fixture.v10-runtime-profiles.ddl=pass
+fixture.v10-runtime-profiles.append_only=pass
+diagnostics.real.v11-cli-kinds.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v11-cli-kinds.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v11-cli-kinds.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v11-cli-kinds.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v11-cli-kinds.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v11-cli-kinds.result=pass
+fixture.v11-cli-kinds.replay=pass
+fixture.v11-cli-kinds.fk=pass
+fixture.v11-cli-kinds.integrity=pass
+fixture.v11-cli-kinds.ddl=pass
+fixture.v11-cli-kinds.append_only=pass
+fixture.v12-durable.snapshot=pass
+fixture.v12-durable.double_replay=pass
+diagnostics.real.v12-durable.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v12-durable.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v12-durable.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v12-durable.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v12-durable.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v12-durable.result=pass
+fixture.v12-durable.replay=pass
+fixture.v12-durable.fk=pass
+fixture.v12-durable.integrity=pass
+fixture.v12-durable.ddl=pass
+fixture.v12-durable.append_only=pass
+rollback.real_v12.error_type=DatabaseError
+rollback.real_v12=pass
+rollback.introduction_guard.error_type=DatabaseError
+rollback.introduction_guard=pass
+literal_v11.path=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-p1-matrix.y3G2v3/lane-3.51/literal-v11.sqlite
+diagnostics.literal.work.total=56 accepted=18 check_rejected=38
+diagnostics.literal.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.literal.event.total=288 accepted=17 check_rejected=271
+diagnostics.literal.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.literal.controls.total=19 accepted=19 check_rejected=0
+diagnostics.literal.result=pass
+matrix.result=pass
+Error: stepping, durable_work_attempt_event is append-only (19)
+Error: stepping, durable_work_attempt_event is append-only (19)
+Error: stepping, durable_work_attempt_event is append-only (19)
+Error: stepping, CHECK constraint failed: outputJson IS NULL OR state = 'succeeded' (19)
+Error: stepping, CHECK constraint failed: COALESCE((
+    (endedAt IS NULL AND errorCode IS NULL AND errorMessage IS NULL)
+    OR
+    (outcome = 'succeeded' AND errorCode IS NULL AND errorMessage IS NULL)
+    OR
+    (outcome = 'failed' AND errorCode IS NOT NULL)
+    OR
+    (outcome = 'canceled' AND errorCode = 'work_canceled'
+      AND errorMessage IS NOT NULL)
+    OR
+    (outcome = 'interrupted' AND errorCode = 'worker_interrupted'
+      AND errorMessage IS NULL)
+  ), 0) (19)
+Error: stepping, CHECK constraint failed: (sequence = 0) = (eventKind = 'claimed') (19)
+Parse error near line 190: no such table: __agentloop_forced_missing_table__
+literal.3.51=pass
+cli.3.52.sqlite_version=3.52.0
+cli.3.52.sqlite_source_id=2026-03-06 16:01:44 557aeb43869d3585137b17690cb3b64f7de6921774daae9e56403c3717dceab6
+Fetching https://github.com/groue/GRDB.swift.git from cache
+Fetched https://github.com/groue/GRDB.swift.git from cache (0.04s)
+Creating working copy for https://github.com/groue/GRDB.swift.git
+Working copy of https://github.com/groue/GRDB.swift.git resolved at 7.11.1
+Building for debugging...
+[0/10] Write sources
+[2/10] Copying Info.plist
+[3/10] Copying PrivacyInfo.xcprivacy
+[4/10] Write P1MigrationMatrixRunner-entitlement.plist
+[5/10] Write sources
+[6/10] Write swift-version--1AB21518FC5DEDBE.txt
+[8/163] Compiling GRDB SQLForeignKeyRequest.swift
+[9/163] Compiling GRDB SQLFunctions.swift
+[10/163] Compiling GRDB SQLOperators.swift
+[11/163] Compiling GRDB SQLOrdering.swift
+[12/163] Compiling GRDB SQLRelation.swift
+[13/163] Compiling GRDB SQLSelection.swift
+[14/163] Compiling GRDB SQLSubquery.swift
+[15/163] Compiling GRDB Table.swift
+[16/163] Compiling GRDB SQLColumnGenerator.swift
+[17/163] Compiling GRDB SQLGenerationContext.swift
+[18/163] Compiling GRDB SQLIndexGenerator.swift
+[19/163] Compiling GRDB SQLQueryGenerator.swift
+[20/163] Compiling GRDB SQLTableAlterationGenerator.swift
+[21/163] Compiling GRDB SQLTableGenerator.swift
+[22/163] Compiling GRDB TableAlias.swift
+[23/163] Compiling GRDB SQLInterpolation+QueryInterface.swift
+[24/163] Compiling GRDB ColumnDefinition.swift
+[25/163] Compiling GRDB MutablePersistableRecord+Update.swift
+[26/163] Compiling GRDB MutablePersistableRecord+Upsert.swift
+[27/163] Compiling GRDB MutablePersistableRecord.swift
+[28/163] Compiling GRDB PersistableRecord+Insert.swift
+[29/163] Compiling GRDB PersistableRecord+Save.swift
+[30/163] Compiling GRDB PersistableRecord+Upsert.swift
+[31/163] Compiling GRDB PersistableRecord.swift
+[32/163] Compiling GRDB Record.swift
+[33/163] Compiling GRDB TableRecord.swift
+[34/163] Compiling GRDB CaseInsensitiveIdentifier.swift
+[35/163] Compiling GRDB Inflections+English.swift
+[36/163] Compiling GRDB Inflections.swift
+[37/163] Compiling GRDB Mutex.swift
+[38/163] Compiling GRDB OnDemandFuture.swift
+[39/163] Compiling GRDB OrderedDictionary.swift
+[40/163] Compiling GRDB Pool.swift
+[41/163] Compiling GRDB StatementAuthorizer.swift
+[42/163] Compiling GRDB StatementColumnConvertible.swift
+[43/163] Compiling GRDB CGFloat.swift
+[44/163] Compiling GRDB Data.swift
+[45/163] Compiling GRDB DatabaseDateComponents.swift
+[46/163] Compiling GRDB DatabaseValueConvertible+ReferenceConvertible.swift
+[47/163] Compiling GRDB Date.swift
+[48/163] Compiling GRDB Decimal.swift
+[49/163] Compiling GRDB NSData.swift
+[50/163] Compiling GRDB NSNull.swift
+[51/163] Compiling GRDB NSNumber.swift
+[52/163] Compiling GRDB NSString.swift
+[53/163] Compiling GRDB SQLiteDateParser.swift
+[54/163] Compiling GRDB URL.swift
+[55/163] Compiling GRDB UUID.swift
+[56/163] Compiling GRDB DatabaseValueConvertible+Decodable.swift
+[57/163] Compiling GRDB DatabaseValueConvertible+Encodable.swift
+[58/163] Compiling GRDB DatabaseSchemaSource.swift
+[59/163] Compiling GRDB DatabaseSnapshot.swift
+[60/163] Compiling GRDB DatabaseSnapshotPool.swift
+[61/163] Compiling GRDB DatabaseValue.swift
+[62/163] Compiling GRDB DatabaseValueConvertible.swift
+[63/163] Compiling GRDB DatabaseWriter.swift
+[64/163] Compiling GRDB DispatchQueueActor.swift
+[65/163] Compiling GRDB FetchRequest.swift
+[66/163] Compiling GRDB Row.swift
+[67/163] Compiling GRDB RowAdapter.swift
+[68/163] Compiling GRDB RowDecodingError.swift
+[69/163] Compiling GRDB SQL.swift
+[70/163] Compiling GRDB SQLInterpolation.swift
+[71/163] Compiling GRDB SQLRequest.swift
+[72/163] Compiling GRDB SchedulingWatchdog.swift
+[73/163] Compiling GRDB SerializedDatabase.swift
+[74/163] Compiling GRDB Statement.swift
+[75/179] Compiling GRDB ForeignKey.swift
+[76/179] Compiling GRDB Association.swift
+[77/179] Compiling GRDB AssociationAggregate.swift
+[78/179] Compiling GRDB BelongsToAssociation.swift
+[79/179] Compiling GRDB HasManyAssociation.swift
+[80/179] Compiling GRDB HasManyThroughAssociation.swift
+[81/179] Compiling GRDB HasOneAssociation.swift
+[82/179] Compiling GRDB HasOneThroughAssociation.swift
+[83/179] Compiling GRDB JoinAssociation.swift
+[84/179] Compiling GRDB CommonTableExpression.swift
+[85/179] Compiling GRDB QueryInterfaceRequest.swift
+[86/179] Compiling GRDB RequestProtocols.swift
+[87/179] Compiling GRDB Column.swift
+[88/179] Compiling GRDB DatabasePromise.swift
+[89/179] Compiling GRDB SQLAssociation.swift
+[90/179] Compiling GRDB SQLCollection.swift
+[91/179] Compiling GRDB SQLExpression.swift
+[92/179] Emitting module GRDB
+[93/179] Compiling GRDB DatabaseValueConvertible+RawRepresentable.swift
+[94/179] Compiling GRDB JSONRequiredEncoder.swift
+[95/179] Compiling GRDB Optional.swift
+[96/179] Compiling GRDB StandardLibrary.swift
+[97/179] Compiling GRDB TransactionClock.swift
+[98/179] Compiling GRDB TransactionObserver.swift
+[99/179] Compiling GRDB WALSnapshot.swift
+[100/179] Compiling GRDB WALSnapshotTransaction.swift
+[101/179] Compiling GRDB Database+Dump.swift
+[102/179] Compiling GRDB DatabaseReader+dump.swift
+[103/179] Compiling GRDB DumpFormat.swift
+[104/179] Compiling GRDB DebugDumpFormat.swift
+[105/179] Compiling GRDB JSONDumpFormat.swift
+[106/179] Compiling GRDB LineDumpFormat.swift
+[107/179] Compiling GRDB ListDumpFormat.swift
+[108/179] Compiling GRDB QuoteDumpFormat.swift
+[109/179] Compiling GRDB FTS3.swift
+[110/179] Compiling GRDB FTS3Pattern.swift
+[111/179] Compiling GRDB FTS3TokenizerDescriptor.swift
+[112/179] Compiling GRDB FTS4.swift
+[113/179] Compiling GRDB FTS5.swift
+[114/179] Compiling GRDB FTS5CustomTokenizer.swift
+[115/179] Compiling GRDB FTS5Pattern.swift
+[116/179] Compiling GRDB FTS5Tokenizer.swift
+[117/179] Compiling GRDB FTS5TokenizerDescriptor.swift
+[118/179] Compiling GRDB FTS5WrapperTokenizer.swift
+[119/179] Compiling GRDB Fixits.swift
+[120/179] Compiling GRDB JSONColumn.swift
+[121/179] Compiling GRDB SQLJSONExpressible.swift
+[122/179] Compiling GRDB SQLJSONFunctions.swift
+[123/179] Compiling GRDB DatabaseMigrator.swift
+[124/179] Compiling GRDB Migration.swift
+[125/179] Compiling GRDB FTS3+QueryInterface.swift
+[126/179] Compiling GRDB FTS5+QueryInterface.swift
+[127/179] Compiling GRDB Configuration.swift
+[128/179] Compiling GRDB Cursor.swift
+[129/179] Compiling GRDB Database+SQLCipher.swift
+[130/179] Compiling GRDB Database+Schema.swift
+[131/179] Compiling GRDB Database+Statements.swift
+[132/179] Compiling GRDB Database.swift
+[133/179] Compiling GRDB DatabaseBackupProgress.swift
+[134/179] Compiling GRDB DatabaseCollation.swift
+[135/179] Compiling GRDB DatabaseError.swift
+[136/179] Compiling GRDB DatabaseFunction.swift
+[137/179] Compiling GRDB DatabasePool.swift
+[138/179] Compiling GRDB DatabasePublishers.swift
+[139/179] Compiling GRDB DatabaseQueue.swift
+[140/179] Compiling GRDB DatabaseReader.swift
+[141/179] Compiling GRDB DatabaseRegion.swift
+[142/179] Compiling GRDB DatabaseRegionObservation.swift
+[143/179] Compiling GRDB DatabaseSchemaCache.swift
+[144/179] Compiling GRDB Database+SchemaDefinition.swift
+[145/179] Compiling GRDB ForeignKeyDefinition.swift
+[146/179] Compiling GRDB IndexDefinition.swift
+[147/179] Compiling GRDB TableAlteration.swift
+[148/179] Compiling GRDB TableDefinition.swift
+[149/179] Compiling GRDB VirtualTableModule.swift
+[150/179] Compiling GRDB TableRecord+Association.swift
+[151/179] Compiling GRDB TableRecord+QueryInterfaceRequest.swift
+[152/179] Compiling GRDB EncodableRecord+Encodable.swift
+[153/179] Compiling GRDB EncodableRecord.swift
+[154/179] Compiling GRDB FetchableRecord+Decodable.swift
+[155/179] Compiling GRDB FetchableRecord+TableRecord.swift
+[156/179] Compiling GRDB FetchableRecord.swift
+[157/179] Compiling GRDB MutablePersistableRecord+DAO.swift
+[158/179] Compiling GRDB MutablePersistableRecord+Delete.swift
+[159/179] Compiling GRDB MutablePersistableRecord+Insert.swift
+[160/179] Compiling GRDB MutablePersistableRecord+Save.swift
+[161/179] Compiling GRDB ReadWriteLock.swift
+[162/179] Compiling GRDB ReceiveValuesOn.swift
+[163/179] Compiling GRDB Refinable.swift
+[164/179] Compiling GRDB Utils.swift
+[165/179] Compiling GRDB DatabaseCancellable.swift
+[166/179] Compiling GRDB ValueConcurrentObserver.swift
+[167/179] Compiling GRDB ValueWriteOnlyObserver.swift
+[168/179] Compiling GRDB Fetch.swift
+[169/179] Compiling GRDB Map.swift
+[170/179] Compiling GRDB RemoveDuplicates.swift
+[171/179] Compiling GRDB Trace.swift
+[172/179] Compiling GRDB ValueReducer.swift
+[173/179] Compiling GRDB SharedValueObservation.swift
+[174/179] Compiling GRDB ValueObservation.swift
+[175/179] Compiling GRDB ValueObservationScheduler.swift
+[176/179] Compiling GRDB resource_bundle_accessor.swift
+[177/258] Compiling AgentLoopCore WorkspaceScopedAccess.swift
+[178/258] Compiling AgentLoopCore ApprovalGate.swift
+[179/258] Compiling AgentLoopCore ApprovalPolicy.swift
+[180/258] Compiling AgentLoopCore BoardTools.swift
+[181/258] Compiling AgentLoopCore FileTools.swift
+[182/258] Compiling AgentLoopCore HandoffPayload.swift
+[183/258] Compiling AgentLoopCore KnowledgeTools.swift
+[184/258] Compiling AgentLoopCore ShellTool.swift
+[185/266] Compiling AgentLoopCore McpTransport.swift
+[186/266] Compiling AgentLoopCore MiniMcpClient.swift
+[187/266] Compiling AgentLoopCore CompanionAnimState.swift
+[188/266] Compiling AgentLoopCore CowTemplate.swift
+[189/266] Compiling AgentLoopCore MissionDraftFactory.swift
+[190/266] Compiling AgentLoopCore NewcomerUnlockPolicy.swift
+[191/266] Compiling AgentLoopCore ProductBootstrapService.swift
+[192/266] Compiling AgentLoopCore RuntimeProfileBootstrap.swift
+[193/266] Compiling AgentLoopCore AnthropicProvider.swift
+[194/266] Compiling AgentLoopCore DeltaCoalescer.swift
+[195/266] Compiling AgentLoopCore ExternalContent.swift
+[196/266] Compiling AgentLoopCore KeychainStore.swift
+[197/266] Compiling AgentLoopCore PosixSockets.swift
+[198/266] Compiling AgentLoopCore ShellProcessRegistry.swift
+[199/266] Compiling AgentLoopCore StateDirectoryLock.swift
+[200/266] Compiling AgentLoopCore StringError.swift
+[201/266] Compiling AgentLoopCore TextTruncation.swift
+[202/266] Compiling AgentLoopCore ContentBlock.swift
+[203/266] Compiling AgentLoopCore LLMProvider.swift
+[204/266] Compiling AgentLoopCore MockProvider.swift
+[205/266] Compiling AgentLoopCore ModelCatalogService.swift
+[206/266] Compiling AgentLoopCore OpenAIChatGPTAuth.swift
+[207/266] Compiling AgentLoopCore OpenAIOAuthSession.swift
+[208/266] Compiling AgentLoopCore OpenAIProvider.swift
+[209/266] Compiling AgentLoopCore OpenAIResponsesProvider.swift
+[210/266] Compiling AgentLoopCore ProfileScopedDefaults.swift
+[211/266] Compiling AgentLoopCore KernelDefaults.swift
+[212/266] Compiling AgentLoopCore Orchestrator.swift
+[213/266] Compiling AgentLoopCore Planner.swift
+[214/266] Compiling AgentLoopCore ScheduleMath.swift
+[215/266] Compiling AgentLoopCore Distiller.swift
+[216/266] Compiling AgentLoopCore ExpeditionReport.swift
+[217/266] Compiling AgentLoopCore MemoryDistillService.swift
+[218/266] Compiling AgentLoopCore NoteSnippet.swift
+[219/266] Compiling AgentLoopCore AgentLoop.swift
+[220/266] Compiling AgentLoopCore BoardServerBridgeMain.swift
+[221/266] Compiling AgentLoopCore BoardToolServer.swift
+[222/266] Compiling AgentLoopCore CardExecutionBackend.swift
+[223/266] Compiling AgentLoopCore CardRunner.swift
+[224/266] Compiling AgentLoopCore CliProcessBackend.swift
+[225/266] Compiling AgentLoopCore ContextPacket.swift
+[226/266] Compiling AgentLoopCore McpServerManager.swift
+[227/266] Compiling AgentLoopCore McpToolBridge.swift
+[228/266] Compiling AgentLoopCore McpToolNaming.swift
+[229/266] Compiling AgentLoopCore McpDatabase.swift
+[230/266] Compiling AgentLoopCore Records.swift
+[231/266] Compiling AgentLoopCore RuntimeProfileStore.swift
+[232/266] Compiling AgentLoopCore ScheduleStore.swift
+[233/266] Compiling AgentLoopCore ActivityFeed.swift
+[234/266] Compiling AgentLoopCore FeedService.swift
+[235/266] Compiling AgentLoopCore IngestionRecords.swift
+[236/266] Compiling AgentLoopCore CanonicalJSON.swift
+[237/266] Compiling AgentLoopCore JSONValue.swift
+[238/266] Compiling AgentLoopCore ProviderConfiguration.swift
+[239/266] Compiling AgentLoopCore SSEParser.swift
+[240/266] Compiling AgentLoopCore StopReason.swift
+[241/266] Compiling AgentLoopCore TurnAccumulator.swift
+[242/266] Compiling AgentLoopCore RuminationMaterializer.swift
+[243/266] Compiling AgentLoopCore RuminationParser.swift
+[244/266] Compiling AgentLoopCore RuminationResult.swift
+[245/266] Compiling AgentLoopCore RuminationService.swift
+[246/266] Compiling AgentLoopCore ToolAccess.swift
+[247/266] Compiling AgentLoopCore ToolDef.swift
+[248/266] Compiling AgentLoopCore ToolExecutor.swift
+[249/266] Compiling AgentLoopCore WebFetchTool.swift
+[250/266] Compiling AgentLoopCore WebSearchTool.swift
+[251/266] Compiling AgentLoopCore DurableWork.swift
+[252/266] Compiling AgentLoopCore DurableWorkSupervisor.swift
+[253/266] Compiling AgentLoopCore PlanningProviderResolver.swift
+[254/266] Emitting module AgentLoopCore
+[255/266] Compiling AgentLoopCore ChatService.swift
+[256/266] Compiling AgentLoopCore GuideChatService.swift
+[257/266] Compiling AgentLoopCore AppDatabase.swift
+[258/266] Compiling AgentLoopCore BoardCardTransactions.swift
+[259/266] Compiling AgentLoopCore DurableWorkStore.swift
+[260/266] Compiling AgentLoopCore EventKind.swift
+[261/266] Compiling AgentLoopCore HarvestDatabase.swift
+[262/266] Compiling AgentLoopCore KernelControlStore.swift
+[263/266] Compiling AgentLoopCore KnowledgeStore.swift
+[264/268] Compiling P1MigrationMatrixRunner main.swift
+[265/268] Emitting module P1MigrationMatrixRunner
+[265/268] Write Objects.LinkFileList
+ld: warning: building for macOS-14.0, but linking with dylib '/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib' which was built for newer version 26.0
+[266/268] Linking P1MigrationMatrixRunner
+[267/268] Applying P1MigrationMatrixRunner
+Build of product 'P1MigrationMatrixRunner' complete! (47.94s)
+/private/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-p1-matrix.y3G2v3/build-3.52/arm64-apple-macosx/debug/P1MigrationMatrixRunner:
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+	/System/Library/Frameworks/CFNetwork.framework/Versions/A/CFNetwork (compatibility version 1.0.0, current version 3860.255.31)
+	/System/Library/Frameworks/Combine.framework/Versions/A/Combine (compatibility version 1.0.0, current version 3023.0.0)
+	/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 4201.0.0)
+	/System/Library/Frameworks/CryptoKit.framework/Versions/A/CryptoKit (compatibility version 1.0.0, current version 1.0.0)
+	/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 4201.0.0)
+	/System/Library/Frameworks/LocalAuthentication.framework/Versions/A/LocalAuthentication (compatibility version 1.0.0, current version 2005.60.9)
+	/System/Library/Frameworks/Security.framework/Versions/A/Security (compatibility version 1.0.0, current version 61901.60.40)
+	/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib (compatibility version 9.0.0, current version 9.6.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2000.67.0)
+	/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
+	/usr/lib/swift/libswiftCore.dylib (compatibility version 0.0.0, current version 0.0.0)
+	/usr/lib/swift/libswiftCoreFoundation.dylib (compatibility version 1.0.0, current version 120.100.0)
+	/usr/lib/swift/libswiftDarwin.dylib (compatibility version 1.0.0, current version 347.40.2)
+	/usr/lib/swift/libswiftDispatch.dylib (compatibility version 1.0.0, current version 56.0.0)
+	/usr/lib/swift/libswiftIOKit.dylib (compatibility version 1.0.0, current version 1.0.0, weak)
+	/usr/lib/swift/libswiftObjectiveC.dylib (compatibility version 1.0.0, current version 951.1.0)
+	/usr/lib/swift/libswiftXPC.dylib (compatibility version 1.0.0, current version 105.0.14, weak)
+	/usr/lib/swift/libswift_Concurrency.dylib (compatibility version 1.0.0, current version 0.0.0)
+	/usr/lib/swift/libswiftos.dylib (compatibility version 1.0.0, current version 1076.40.2)
+lane.sqlite_version=3.52.0
+lane.sqlite_source_id=2026-03-06 16:01:44 557aeb43869d3585137b17690cb3b64f7de6921774daae9e56403c3717dceab6
+diagnostics.real.fresh.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.fresh.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.fresh.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.fresh.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.fresh.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.fresh.result=pass
+fixture.fresh.replay=pass
+fixture.fresh.fk=pass
+fixture.fresh.integrity=pass
+fixture.fresh.ddl=pass
+fixture.fresh.append_only=pass
+diagnostics.real.v7.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v7.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v7.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v7.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v7.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v7.result=pass
+fixture.v7.replay=pass
+fixture.v7.fk=pass
+fixture.v7.integrity=pass
+fixture.v7.ddl=pass
+fixture.v7.append_only=pass
+diagnostics.real.v8-coding-ranch.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v8-coding-ranch.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v8-coding-ranch.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v8-coding-ranch.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v8-coding-ranch.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v8-coding-ranch.result=pass
+fixture.v8-coding-ranch.replay=pass
+fixture.v8-coding-ranch.fk=pass
+fixture.v8-coding-ranch.integrity=pass
+fixture.v8-coding-ranch.ddl=pass
+fixture.v8-coding-ranch.append_only=pass
+diagnostics.real.v9-evercamp.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v9-evercamp.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v9-evercamp.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v9-evercamp.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v9-evercamp.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v9-evercamp.result=pass
+fixture.v9-evercamp.replay=pass
+fixture.v9-evercamp.fk=pass
+fixture.v9-evercamp.integrity=pass
+fixture.v9-evercamp.ddl=pass
+fixture.v9-evercamp.append_only=pass
+diagnostics.real.v10-runtime-profiles.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v10-runtime-profiles.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v10-runtime-profiles.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v10-runtime-profiles.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v10-runtime-profiles.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v10-runtime-profiles.result=pass
+fixture.v10-runtime-profiles.replay=pass
+fixture.v10-runtime-profiles.fk=pass
+fixture.v10-runtime-profiles.integrity=pass
+fixture.v10-runtime-profiles.ddl=pass
+fixture.v10-runtime-profiles.append_only=pass
+diagnostics.real.v11-cli-kinds.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v11-cli-kinds.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v11-cli-kinds.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v11-cli-kinds.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v11-cli-kinds.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v11-cli-kinds.result=pass
+fixture.v11-cli-kinds.replay=pass
+fixture.v11-cli-kinds.fk=pass
+fixture.v11-cli-kinds.integrity=pass
+fixture.v11-cli-kinds.ddl=pass
+fixture.v11-cli-kinds.append_only=pass
+fixture.v12-durable.snapshot=pass
+fixture.v12-durable.double_replay=pass
+diagnostics.real.v12-durable.work.total=56 accepted=18 check_rejected=38
+diagnostics.real.v12-durable.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.real.v12-durable.event.total=288 accepted=17 check_rejected=271
+diagnostics.real.v12-durable.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.real.v12-durable.controls.total=19 accepted=19 check_rejected=0
+diagnostics.real.v12-durable.result=pass
+fixture.v12-durable.replay=pass
+fixture.v12-durable.fk=pass
+fixture.v12-durable.integrity=pass
+fixture.v12-durable.ddl=pass
+fixture.v12-durable.append_only=pass
+rollback.real_v12.error_type=DatabaseError
+rollback.real_v12=pass
+rollback.introduction_guard.error_type=DatabaseError
+rollback.introduction_guard=pass
+literal_v11.path=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-p1-matrix.y3G2v3/lane-3.52/literal-v11.sqlite
+diagnostics.literal.work.total=56 accepted=18 check_rejected=38
+diagnostics.literal.attempt.total=40 accepted=10 check_rejected=30
+diagnostics.literal.event.total=288 accepted=17 check_rejected=271
+diagnostics.literal.sentinels.total=7 accepted=0 check_rejected=7
+diagnostics.literal.controls.total=19 accepted=19 check_rejected=0
+diagnostics.literal.result=pass
+matrix.result=pass
+Error: durable_work_attempt_event is append-only
+Error: durable_work_attempt_event is append-only
+Error: durable_work_attempt_event is append-only
+Error: CHECK constraint failed: outputJson IS NULL OR state = 'succeeded'
+Error: CHECK constraint failed: COALESCE((
+    (endedAt IS NULL AND errorCode IS NULL AND errorMessage IS NULL)
+    OR
+    (outcome = 'succeeded' AND errorCode IS NULL AND errorMessage IS NULL)
+    OR
+    (outcome = 'failed' AND errorCode IS NOT NULL)
+    OR
+    (outcome = 'canceled' AND errorCode = 'work_canceled'
+      AND errorMessage IS NOT NULL)
+    OR
+    (outcome = 'interrupted' AND errorCode = 'worker_interrupted'
+      AND errorMessage IS NULL)
+  ), 0)
+Error: CHECK constraint failed: (sequence = 0) = (eventKind = 'claimed')
+Parse error near line 190: no such table: __agentloop_forced_missing_table__
+literal.3.52=pass
+package_resolved.sha256=d2786c9b64c245c62f5793e697bb406d4960753e5f33c622250e804cd865fb3a
+p1_migration_matrix.result=pass

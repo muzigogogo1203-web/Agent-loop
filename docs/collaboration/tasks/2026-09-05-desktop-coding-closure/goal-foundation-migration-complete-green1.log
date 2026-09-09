@@ -1,0 +1,26 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Emitting module AgentLoopTestSuite
+[4/6] Compiling AgentLoopTestSuite DesktopGoalMigrationTests.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (15.66s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite DesktopGoalMigrationTests started.
+◇ Test freshAndV17UpgradeProduceSameDesktopCarrierSchema() started.
+✔ Test freshAndV17UpgradeProduceSameDesktopCarrierSchema() passed after 0.172 seconds.
+◇ Test desktopMigrationIsIdempotentAndLegacyRowsUnchanged() started.
+✔ Test desktopMigrationIsIdempotentAndLegacyRowsUnchanged() passed after 0.134 seconds.
+◇ Test redactedCarrierNullAndSafeReceiptConstraintsFailClosed() started.
+✔ Test redactedCarrierNullAndSafeReceiptConstraintsFailClosed() passed after 0.088 seconds.
+◇ Test desktopMigrationFailureDoesNotRewriteHistoricalCheckpoint() started.
+✔ Test desktopMigrationFailureDoesNotRewriteHistoricalCheckpoint() passed after 0.114 seconds.
+✔ Suite DesktopGoalMigrationTests passed after 0.510 seconds.
+✔ Test run with 4 tests in 1 suite passed after 0.510 seconds.

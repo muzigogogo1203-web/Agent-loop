@@ -1,0 +1,94 @@
+{
+  "raw_directory": "/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-runtime-halt-gate-focused1-20260908-36899-88b8u6",
+  "cwd": "/Users/muzi/Agent-loop",
+  "command": [
+    "swift",
+    "run",
+    "--skip-build",
+    "RunTests",
+    "--filter",
+    "emergencyStopCancelsRunningBeforeWaitingForPlanner"
+  ],
+  "diagnostics_enabled": true,
+  "pid": 36904,
+  "launcher_pid": 36899,
+  "uid": 501,
+  "start": "2026-09-08T22:47:19.378901000+08:00",
+  "status": "finished",
+  "binary": "/Users/muzi/Agent-loop/.build/arm64-apple-macosx/debug/RunTests",
+  "binary_sha256": "94b6e7ab743afe85ba8406bbf7f7c98dda2bffe6c26da5a5e52908fb2940b061",
+  "source_before_sha256": "ecef432164402b0ef2ea2cc83958c39b608a8edfb9ade7711167072ef255a4f8",
+  "end": "2026-09-08T22:47:26.787337000+08:00",
+  "wall_seconds": 7.408436,
+  "test_exit": 0,
+  "test_signal": null,
+  "initial_identity": {
+    "event": "identity",
+    "mono": 168899047105625,
+    "pid": 36904,
+    "ppid": 36899,
+    "uid": 501,
+    "pgid": 36899,
+    "start_sec": 1788878839,
+    "start_usec": 379232,
+    "bsd_length": 136,
+    "bsd_errno": 0,
+    "after_length": 136,
+    "after_errno": 0,
+    "path_length": 57,
+    "path_errno": 0,
+    "path": "/Library/Developer/CommandLineTools/usr/bin/swift-package",
+    "status": 0
+  },
+  "runtests_identity": null,
+  "identity_observations": 100,
+  "identity_errors": [
+    "no live RunTests image identity"
+  ],
+  "oslog": {
+    "command": [
+      "/usr/bin/log",
+      "show",
+      "--style",
+      "ndjson",
+      "--last",
+      "10m",
+      "--predicate",
+      "processIdentifier == 36904 AND subsystem == \"com.muzi.agentloop\" AND category == \"runtime-lifecycle\""
+    ],
+    "pid": 37106,
+    "exit": 0,
+    "signal": null,
+    "horizon_covers_invocation": true,
+    "raw_event_count": 82,
+    "admitted": 82,
+    "rejected": [
+
+    ],
+    "parse_errors": [
+
+    ],
+    "metadata": [
+      {
+        "count": 82,
+        "finished": 1
+      }
+    ],
+    "scope_ok": false
+  },
+  "checker": {
+    "skipped": "scope gate failed; no empty or ambiguous GREEN"
+  },
+  "source_after_sha256": "ecef432164402b0ef2ea2cc83958c39b608a8edfb9ade7711167072ef255a4f8",
+  "source_stable": true,
+  "binary_after_sha256": "94b6e7ab743afe85ba8406bbf7f7c98dda2bffe6c26da5a5e52908fb2940b061",
+  "raw_file_hashes": {
+    "events-admitted.ndjson": "e0f4c9d74cded88ad55760ac22441c380bce34bf15a5b6ab5911495e6e0f46fd",
+    "events.ndjson": "561d09b635ecb48da93b63a730cadd18032d3630c8926ebce1066c1275af69e1",
+    "events.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "identity.ndjson": "d1e5ff82dcd52944435c2e8e65b2f1839adf06df9fedca78acc3ca4816eb8eb9",
+    "source-after.sha256": "ecef432164402b0ef2ea2cc83958c39b608a8edfb9ade7711167072ef255a4f8",
+    "source-before.sha256": "ecef432164402b0ef2ea2cc83958c39b608a8edfb9ade7711167072ef255a4f8",
+    "test.log": "40c420aa656306f75c262d8681b01f0957c8e67d527ed8a64da1205d760d1233"
+  }
+}

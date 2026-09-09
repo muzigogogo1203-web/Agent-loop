@@ -1,0 +1,759 @@
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-help-progress-20260909-20260909-92831-17zgg0m/preimages/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift b/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift
+index 5638198..9dc03b5 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-help-progress-20260909-20260909-92831-17zgg0m/preimages/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift
++++ b/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift
+@@ -1138,22 +1138,62 @@ package struct CliHelpSnapshotV1: Sendable, Equatable {
+     }
+ }
+ 
++package struct CliHelpProbeRunResultV1: Sendable {
++    package let status: Int32
++    package let stdout: Data
++
++    package init(status: Int32, stdout: Data) {
++        self.status = status
++        self.stdout = stdout
++    }
++}
++
+ package struct CliHelpProbeV1: Sendable {
++    package typealias SynchronousRunner = @Sendable (
++        CliExecutableAuthorityV1, [String]
++    ) throws -> CliHelpProbeRunResultV1
++
+     private static let maximumStdoutBytes = 256 * 1_024
+     private static let deadline: Duration = .seconds(5)
+     private static let terminationGrace: Duration = .seconds(1)
+     private let processInspector: any EngineRuntimeProcessInspectingV1
++    private let injectedRunner: SynchronousRunner?
+ 
+     package init(
+         processInspector: any EngineRuntimeProcessInspectingV1
+     ) {
+         self.processInspector = processInspector
++        injectedRunner = nil
++    }
++
++    package init(
++        processInspector: any EngineRuntimeProcessInspectingV1,
++        synchronousRunner: @escaping SynchronousRunner
++    ) {
++        self.processInspector = processInspector
++        injectedRunner = synchronousRunner
+     }
+ 
+     package func snapshot(
+         for kind: RuntimeProfileKind,
+         authority: CliExecutableAuthorityV1
+     ) async throws -> CliHelpSnapshotV1 {
++        let operation = BlockingProcessOperation.start { [self] in
++            Result<CliHelpSnapshotV1, any Error> {
++                try snapshotSynchronously(
++                    for: kind,
++                    authority: authority
++                )
++            }
++        }
++        let result = await operation.value
++        return try result.get()
++    }
++
++    private func snapshotSynchronously(
++        for kind: RuntimeProfileKind,
++        authority: CliExecutableAuthorityV1
++    ) throws -> CliHelpSnapshotV1 {
+         do {
+             try authority.validateCanonical()
+         } catch {
+@@ -1167,17 +1207,19 @@ package struct CliHelpProbeV1: Sendable {
+         } catch {
+             throw CliHelpProbeFailureV1.stagedIdentity
+         }
+-        let version = try run(
++        let version = try runSynchronously(
+             authority,
+             arguments: ["--version"]
+         )
+-        let root = try run(authority, arguments: ["--help"])
++        let root = try runSynchronously(authority, arguments: ["--help"])
+         let first: ProbeResult
+         let resume: ProbeResult
+         switch kind {
+         case .cliCodex:
+-            first = try run(authority, arguments: ["exec", "--help"])
+-            resume = try run(
++            first = try runSynchronously(
++                authority, arguments: ["exec", "--help"]
++            )
++            resume = try runSynchronously(
+                 authority,
+                 arguments: ["exec", "resume", "--help"]
+             )
+@@ -1234,6 +1276,17 @@ package struct CliHelpProbeV1: Sendable {
+         let stdout: Data
+     }
+ 
++    private func runSynchronously(
++        _ authority: CliExecutableAuthorityV1,
++        arguments: [String]
++    ) throws -> ProbeResult {
++        guard let injectedRunner else {
++            return try run(authority, arguments: arguments)
++        }
++        let result = try injectedRunner(authority, arguments)
++        return ProbeResult(status: result.status, stdout: result.stdout)
++    }
++
+     package func identifyAndStage(
+         for kind: RuntimeProfileKind,
+         command: String,
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-help-progress-20260909-20260909-92831-17zgg0m/preimages/Sources/AgentLoopTestSuite/BlockingProcessOperationTests.swift b/Sources/AgentLoopTestSuite/BlockingProcessOperationTests.swift
+index ae3e2cb..a7fd4a3 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-help-progress-20260909-20260909-92831-17zgg0m/preimages/Sources/AgentLoopTestSuite/BlockingProcessOperationTests.swift
++++ b/Sources/AgentLoopTestSuite/BlockingProcessOperationTests.swift
+@@ -6,6 +6,9 @@ import Testing
+ private let blockingProgressEvidenceKey =
+     "AGENTLOOP_BLOCKING_PROGRESS_EVIDENCE"
+ private let blockingProgressLabel = "blocking-process-progress-child"
++private let helpProbeProgressEvidenceKey =
++    "AGENTLOOP_HELP_PROBE_PROGRESS_EVIDENCE"
++private let helpProbeProgressLabel = "help-probe-progress-child"
+ 
+ private enum BlockingProgressTestError: Error, CustomStringConvertible {
+     case invalidChildEnvironment
+@@ -24,6 +27,77 @@ private enum BlockingProgressTestError: Error, CustomStringConvertible {
+     }
+ }
+ 
++private enum HelpProbeProgressSentinel: Error, Equatable {
++    case blockedVersionRun
++}
++
++private final class HelpProbeProgressObservation: @unchecked Sendable {
++    private let lock = NSLock()
++    private var invocationCountStorage = 0
++    private var authorityStorage: CliExecutableAuthorityV1?
++    private var argumentsStorage: [String]?
++
++    func record(
++        authority: CliExecutableAuthorityV1,
++        arguments: [String]
++    ) {
++        lock.withLock {
++            invocationCountStorage += 1
++            authorityStorage = authority
++            argumentsStorage = arguments
++        }
++    }
++
++    var snapshot: (
++        invocationCount: Int,
++        authority: CliExecutableAuthorityV1?,
++        arguments: [String]?
++    ) {
++        lock.withLock {
++            (invocationCountStorage, authorityStorage, argumentsStorage)
++        }
++    }
++}
++
++private final class HelpProbeProgressOwnedDescriptor: @unchecked Sendable {
++    private let lock = NSLock()
++    private var descriptor: Int32
++
++    init(_ descriptor: Int32) {
++        self.descriptor = descriptor
++    }
++
++    func take() -> Int32? {
++        lock.withLock {
++            guard descriptor >= 0 else { return nil }
++            let owned = descriptor
++            descriptor = -1
++            return owned
++        }
++    }
++
++    func closeIfOwned() -> Int32? {
++        guard let owned = take() else { return nil }
++        return Darwin.close(owned) == 0 ? nil : errno
++    }
++}
++
++private struct HelpProbeProgressUnusedInspector:
++    EngineRuntimeProcessInspectingV1
++{
++    func snapshots() throws -> [EngineRuntimeProcessSnapshotV1] {
++        throw BlockingProgressTestError.invalidChildEnvironment
++    }
++
++    func send(signal: Int32, processGroupId: Int32) throws {
++        throw BlockingProgressTestError.invalidChildEnvironment
++    }
++
++    func processGroupExists(_ processGroupId: Int32) throws -> Bool {
++        throw BlockingProgressTestError.invalidChildEnvironment
++    }
++}
++
+ private struct BlockingProgressSnapshot: Sendable {
+     let readEntered: Bool
+     let siblingProgressed: Bool
+@@ -183,6 +257,64 @@ private func blockingProgressEvidenceURL(
+     return evidence
+ }
+ 
++private func helpProbeProgressEvidenceURL(
++    environment: [String: String]
++) throws -> URL {
++    guard let path = environment[helpProbeProgressEvidenceKey],
++          path.hasPrefix("/"),
++          !path.utf8.contains(0)
++    else { throw BlockingProgressTestError.invalidEvidencePath }
++    let evidence = URL(fileURLWithPath: path)
++    let base = evidence.deletingLastPathComponent()
++    let prefix = helpProbeProgressLabel + "-"
++    guard evidence.standardizedFileURL.path == path,
++          evidence.lastPathComponent == "phases.evidence",
++          base.lastPathComponent.hasPrefix(prefix),
++          UUID(uuidString: String(
++              base.lastPathComponent.dropFirst(prefix.count)
++          )) != nil,
++          base.deletingLastPathComponent().standardizedFileURL
++            == FileManager.default.temporaryDirectory.standardizedFileURL
++    else { throw BlockingProgressTestError.invalidEvidencePath }
++    return evidence
++}
++
++private func helpProbeProgressAuthority(
++    base: URL
++) throws -> CliExecutableAuthorityV1 {
++    let executable = base.appendingPathComponent("validated-not-executed")
++    let bytes = Data("help-probe fixture must not execute\n".utf8)
++    try bytes.write(to: executable, options: .withoutOverwriting)
++    guard Darwin.chmod(executable.path, 0o700) == 0 else {
++        throw BlockingProgressTestError.setup([
++            "chmod fixture errno=\(errno)",
++        ])
++    }
++    var information = stat()
++    guard executable.path.withCString({
++        Darwin.lstat($0, &information)
++    }) == 0 else {
++        throw BlockingProgressTestError.setup([
++            "lstat fixture errno=\(errno)",
++        ])
++    }
++    let hash = CanonicalJSONV1.sha256Hex(bytes)
++    return try CliExecutableAuthorityV1(
++        kind: .cliCodex,
++        command: "codex",
++        commandSourcePath: executable.path,
++        commandSourceHash: hash,
++        resolvedExecutablePath: executable.path,
++        stagedPath: executable.path,
++        executableHash: hash,
++        designatedRequirement: "help-probe-progress-fixture",
++        teamIdentifier: "2DC432GLL2",
++        cdHash: String(repeating: "0", count: 40),
++        stagedDevice: UInt64(information.st_dev),
++        stagedInode: UInt64(information.st_ino)
++    )
++}
++
+ private func closeBlockingProgressSetupDescriptors(
+     readDescriptor: inout Int32,
+     writeDescriptor: inout Int32,
+@@ -341,6 +473,177 @@ private func runBlockingProgressChild(evidence: URL) async throws {
+     )
+ }
+ 
++private func runHelpProbeProgressChild(evidence: URL) async throws {
++    let authority = try helpProbeProgressAuthority(
++        base: evidence.deletingLastPathComponent()
++    )
++    var descriptors = [Int32](repeating: -1, count: 2)
++    guard Darwin.pipe(&descriptors) == 0 else {
++        throw BlockingProgressTestError.setup(["pipe errno=\(errno)"])
++    }
++    var readDescriptor = descriptors[0]
++    var writeDescriptor = descriptors[1]
++    guard Darwin.fcntl(writeDescriptor, F_SETNOSIGPIPE, 1) == 0 else {
++        try closeBlockingProgressSetupDescriptors(
++            readDescriptor: &readDescriptor,
++            writeDescriptor: &writeDescriptor,
++            primary: "F_SETNOSIGPIPE errno=\(errno)"
++        )
++    }
++
++    let state = BlockingProgressState()
++    let observation = HelpProbeProgressObservation()
++    let ownedWriter = writeDescriptor
++    writeDescriptor = -1
++    let controller = Thread {
++        let entryDeadline = ContinuousClock.now.advanced(by: .seconds(5))
++        while !state.hasReadEntered(), ContinuousClock.now < entryDeadline {
++            Thread.sleep(forTimeInterval: 0.001)
++        }
++
++        if state.hasReadEntered() {
++            let sibling = Task.detached {
++                state.markSiblingProgressed()
++            }
++            state.retainSiblingTask(sibling)
++            let progressDeadline = ContinuousClock.now.advanced(
++                by: .seconds(1)
++            )
++            while !state.hasSiblingProgressed(),
++                  ContinuousClock.now < progressDeadline
++            {
++                Thread.sleep(forTimeInterval: 0.001)
++            }
++            if !state.hasSiblingProgressed() {
++                state.markRescueUsed()
++            }
++
++            var byte: UInt8 = 0xC7
++            var written: Int
++            repeat {
++                written = Darwin.write(ownedWriter, &byte, 1)
++            } while written < 0 && errno == EINTR
++            let writeError = written < 0 ? errno : nil
++            let closeResult = Darwin.close(ownedWriter)
++            let closeError = closeResult == 0 ? nil : errno
++            state.recordWrite(
++                count: written,
++                errorNumber: writeError,
++                closeError: closeError
++            )
++        } else {
++            state.markEntryTimedOut()
++            let closeResult = Darwin.close(ownedWriter)
++            let closeError = closeResult == 0 ? nil : errno
++            state.recordWrite(
++                count: nil,
++                errorNumber: nil,
++                closeError: closeError
++            )
++        }
++        state.completeController()
++    }
++    controller.name = "AgentLoop.test.help-probe-controller"
++    controller.qualityOfService = .utility
++    controller.start()
++
++    let readerOwner = HelpProbeProgressOwnedDescriptor(readDescriptor)
++    readDescriptor = -1
++    let probe = CliHelpProbeV1(
++        processInspector: HelpProbeProgressUnusedInspector(),
++        synchronousRunner: { observedAuthority, arguments in
++            observation.record(
++                authority: observedAuthority,
++                arguments: arguments
++            )
++            guard let ownedReader = readerOwner.take() else {
++                throw BlockingProgressTestError.setup([
++                    "help probe reader ownership lost",
++                ])
++            }
++            var byte: UInt8 = 0
++            state.markReadEntered()
++            var count: Int
++            repeat {
++                count = Darwin.read(ownedReader, &byte, 1)
++            } while count < 0 && errno == EINTR
++            let readError = count < 0 ? errno : nil
++            let closeResult = Darwin.close(ownedReader)
++            let closeError = closeResult == 0 ? nil : errno
++            state.recordRead(
++                count: count,
++                byte: byte,
++                errorNumber: readError,
++                closeError: closeError
++            )
++            throw HelpProbeProgressSentinel.blockedVersionRun
++        }
++    )
++    let snapshotTask = Task {
++        try await probe.snapshot(for: .cliCodex, authority: authority)
++    }
++    snapshotTask.cancel()
++    let cancellationObserved = snapshotTask.isCancelled
++    let result = await snapshotTask.result
++    await state.waitForControllerCompletion()
++    if let siblingTask = state.retainedSiblingTask() {
++        await siblingTask.value
++    }
++    let abandonedReaderCloseError = readerOwner.closeIfOwned()
++    let snapshot = state.snapshot()
++    let invocation = observation.snapshot
++    print(
++        "HELP PROBE PROGRESS PHASES "
++            + "cancelled=\(cancellationObserved) "
++            + "invocations=\(invocation.invocationCount) "
++            + "arguments=\(String(describing: invocation.arguments)) "
++            + "entered=\(snapshot.readEntered) "
++            + "sibling=\(snapshot.siblingProgressed) "
++            + "rescue=\(snapshot.rescueUsed) "
++            + "entry-timeout=\(snapshot.entryTimedOut) "
++            + "read=\(String(describing: snapshot.readCount)) "
++            + "read-byte=\(String(describing: snapshot.readByte)) "
++            + "read-errno=\(String(describing: snapshot.readError)) "
++            + "read-close-errno=\(String(describing: snapshot.readerCloseError)) "
++            + "write=\(String(describing: snapshot.writeCount)) "
++            + "write-errno=\(String(describing: snapshot.writeError)) "
++            + "write-close-errno=\(String(describing: snapshot.writerCloseError)) "
++            + "controller=\(snapshot.controllerCompleted)"
++    )
++
++    try #require(cancellationObserved)
++    try #require(abandonedReaderCloseError == nil)
++    try #require(invocation.invocationCount == 1)
++    try #require(invocation.authority == authority)
++    try #require(invocation.arguments == ["--version"])
++    switch result {
++    case .success:
++        throw BlockingProgressTestError.setup([
++            "injected help probe run unexpectedly succeeded",
++        ])
++    case .failure(let error):
++        try #require(
++            error as? HelpProbeProgressSentinel == .blockedVersionRun
++        )
++    }
++    try #require(snapshot.readEntered)
++    try #require(!snapshot.entryTimedOut)
++    try #require(snapshot.readCount == 1)
++    try #require(snapshot.readByte == 0xC7)
++    try #require(snapshot.readError == nil)
++    try #require(snapshot.readerCloseError == nil)
++    try #require(snapshot.writeCount == 1)
++    try #require(snapshot.writeError == nil)
++    try #require(snapshot.writerCloseError == nil)
++    try #require(snapshot.siblingProgressed)
++    try #require(snapshot.controllerCompleted)
++    try #require(!snapshot.rescueUsed)
++    try Data("help-probe-progress-ok\n".utf8).write(
++        to: evidence,
++        options: .withoutOverwriting
++    )
++}
++
+ @Test func blockingProcessOperationPreservesCooperativeProgress() async throws {
+     let environment = ProcessInfo.processInfo.environment
+     if environment[blockingProgressEvidenceKey] != nil {
+@@ -363,3 +666,28 @@ private func runBlockingProgressChild(evidence: URL) async throws {
+         containment: .seconds(15)
+     ))
+ }
++
++@Test func cliHelpProbeSnapshotPreservesCooperativeProgress() async throws {
++    let environment = ProcessInfo.processInfo.environment
++    if environment[helpProbeProgressEvidenceKey] != nil {
++        guard environment["LIBDISPATCH_COOPERATIVE_POOL_STRICT"] == "1"
++        else { throw BlockingProgressTestError.invalidChildEnvironment }
++        try await runHelpProbeProgressChild(
++            evidence: try helpProbeProgressEvidenceURL(
++                environment: environment
++            )
++        )
++        return
++    }
++    guard environment["LIBDISPATCH_COOPERATIVE_POOL_STRICT"] == nil
++    else { throw BlockingProgressTestError.invalidChildEnvironment }
++    try await runOwnedSelfExecTest(OwnedSelfExecTestRequest(
++        label: helpProbeProgressLabel,
++        filter: "cliHelpProbeSnapshotPreservesCooperativeProgress",
++        modeEnvironmentKey: "LIBDISPATCH_COOPERATIVE_POOL_STRICT",
++        mode: "1",
++        evidenceEnvironmentKey: helpProbeProgressEvidenceKey,
++        expectedEvidence: Data("help-probe-progress-ok\n".utf8),
++        containment: .seconds(15)
++    ))
++}
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-oauth-wait-20260909-20260909-93897-1wjlxll/preimages/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift b/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift
+index 50e2613..c815a12 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-oauth-wait-20260909-20260909-93897-1wjlxll/preimages/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift
++++ b/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift
+@@ -2,6 +2,17 @@ import Foundation
+ import Testing
+ import AgentLoopCore
+ 
++private let oauthControlledWaitEvidenceKey =
++    "AGENTLOOP_OAUTH_CONTROLLED_WAIT_EVIDENCE"
++private let oauthControlledWaitLabel = "oauth-controlled-wait-progress-child"
++
++private enum OAuthControlledWaitTestError: Error {
++    case invalidChildEnvironment
++    case invalidEvidencePath
++    case observerInstallationFailed
++    case registrationWasNotQueued
++}
++
+ private enum OAuthStoreAction: String, Hashable, Sendable {
+     case get, set, delete
+ }
+@@ -516,6 +527,7 @@ private final class OAuthControlledProtocolState: @unchecked Sendable {
+     private let condition = NSCondition()
+     private var pendingByKey: [String: OAuthControlledProtocol] = [:]
+     private var startsByKey: [String: Int] = [:]
++    private var onWillWaitByKey: [String: @Sendable () -> Void] = [:]
+ 
+     func register(_ value: OAuthControlledProtocol, key: String) {
+         condition.lock()
+@@ -530,11 +542,26 @@ private final class OAuthControlledProtocolState: @unchecked Sendable {
+         condition.lock()
+         defer { condition.unlock() }
+         while pendingByKey[key] == nil {
++            let onWillWait = onWillWaitByKey.removeValue(forKey: key)
++            onWillWait?()
+             if !condition.wait(until: deadline) { return false }
+         }
+         return true
+     }
+ 
++    func installOnWillWait(
++        _ observer: @escaping @Sendable () -> Void,
++        key: String
++    ) -> Bool {
++        condition.lock()
++        defer { condition.unlock() }
++        guard pendingByKey[key] == nil, onWillWaitByKey[key] == nil else {
++            return false
++        }
++        onWillWaitByKey[key] = observer
++        return true
++    }
++
+     func take(_ key: String) -> OAuthControlledProtocol? {
+         condition.lock()
+         defer { condition.unlock() }
+@@ -546,6 +573,26 @@ private final class OAuthControlledProtocolState: @unchecked Sendable {
+         defer { condition.unlock() }
+         return startsByKey[key] ?? 0
+     }
++
++    func hasPending(_ key: String) -> Bool {
++        condition.lock()
++        defer { condition.unlock() }
++        return pendingByKey[key] != nil
++    }
++
++    func hasOnWillWait(_ key: String) -> Bool {
++        condition.lock()
++        defer { condition.unlock() }
++        return onWillWaitByKey[key] != nil
++    }
++
++    func clearRegressionState(_ key: String) {
++        condition.lock()
++        pendingByKey[key] = nil
++        startsByKey[key] = nil
++        onWillWaitByKey[key] = nil
++        condition.unlock()
++    }
+ }
+ 
+ private final class OAuthControlledProtocol: URLProtocol {
+@@ -565,14 +612,39 @@ private final class OAuthControlledProtocol: URLProtocol {
+     static func waitUntilPending(
+         _ key: String,
+         timeout: TimeInterval = 5
++    ) async -> Bool {
++        await BlockingProcessOperation.start {
++            state.waitUntilPending(key, timeout: timeout)
++        }.value
++    }
++
++    static func installOnWillWait(
++        _ observer: @escaping @Sendable () -> Void,
++        key: String
+     ) -> Bool {
+-        state.waitUntilPending(key, timeout: timeout)
++        state.installOnWillWait(observer, key: key)
++    }
++
++    static func takePending(_ key: String) -> OAuthControlledProtocol? {
++        state.take(key)
+     }
+ 
+     static func startCount(_ key: String) -> Int {
+         state.startCount(key)
+     }
+ 
++    static func hasPending(_ key: String) -> Bool {
++        state.hasPending(key)
++    }
++
++    static func hasOnWillWait(_ key: String) -> Bool {
++        state.hasOnWillWait(key)
++    }
++
++    static func clearRegressionState(_ key: String) {
++        state.clearRegressionState(key)
++    }
++
+     static func respond(key: String, status: Int, data: Data) {
+         guard let source = state.take(key) else {
+             Issue.record("missing controlled OAuth request for \(key)")
+@@ -598,6 +670,129 @@ private final class OAuthControlledProtocol: URLProtocol {
+     }
+ }
+ 
++private final class OAuthControlledRegistrationTaskHolder:
++    @unchecked Sendable
++{
++    private let lock = NSLock()
++    private var task: Task<Void, Never>?
++
++    func retain(_ task: Task<Void, Never>) {
++        lock.withLock {
++            precondition(self.task == nil)
++            self.task = task
++        }
++    }
++
++    func take() -> Task<Void, Never>? {
++        lock.withLock {
++            let retained = task
++            task = nil
++            return retained
++        }
++    }
++}
++
++private func oauthControlledWaitEvidenceURL(
++    environment: [String: String]
++) throws -> URL {
++    guard let path = environment[oauthControlledWaitEvidenceKey],
++          path.hasPrefix("/"),
++          !path.utf8.contains(0)
++    else { throw OAuthControlledWaitTestError.invalidEvidencePath }
++    let evidence = URL(fileURLWithPath: path)
++    let base = evidence.deletingLastPathComponent()
++    let prefix = oauthControlledWaitLabel + "-"
++    guard evidence.standardizedFileURL.path == path,
++          evidence.lastPathComponent == "phases.evidence",
++          base.lastPathComponent.hasPrefix(prefix),
++          UUID(uuidString: String(
++            base.lastPathComponent.dropFirst(prefix.count)
++          )) != nil,
++          base.deletingLastPathComponent().standardizedFileURL
++            == FileManager.default.temporaryDirectory.standardizedFileURL
++    else { throw OAuthControlledWaitTestError.invalidEvidencePath }
++    return evidence
++}
++
++private func runOAuthControlledWaitProgressChild(evidence: URL) async throws {
++    let key = "oauth-controlled-wait-\(UUID().uuidString)"
++    let url = URL(string: "https://auth.test/\(key)")!
++    let expectedRequest = URLRequest(url: url)
++    let registration = OAuthControlledRegistrationTaskHolder()
++    guard OAuthControlledProtocol.installOnWillWait({
++        registration.retain(Task {
++            let request = URLRequest(url: url)
++            let source = OAuthControlledProtocol(
++                request: request,
++                cachedResponse: nil,
++                client: nil
++            )
++            source.startLoading()
++        })
++    }, key: key) else {
++        throw OAuthControlledWaitTestError.observerInstallationFailed
++    }
++
++    let waitSucceeded = await OAuthControlledProtocol.waitUntilPending(
++        key,
++        timeout: 0.25
++    )
++    guard let registrationTask = registration.take() else {
++        OAuthControlledProtocol.clearRegressionState(key)
++        throw OAuthControlledWaitTestError.registrationWasNotQueued
++    }
++    await registrationTask.value
++    let registered = OAuthControlledProtocol.takePending(key)
++    let exactRequest = registered?.request == expectedRequest
++    let startCount = OAuthControlledProtocol.startCount(key)
++    let observerResidue = OAuthControlledProtocol.hasOnWillWait(key)
++    let pendingResidue = OAuthControlledProtocol.hasPending(key)
++    OAuthControlledProtocol.clearRegressionState(key)
++
++    print(
++        "OAUTH CONTROLLED WAIT PHASES "
++            + "wait=\(waitSucceeded) "
++            + "exact-request=\(exactRequest) "
++            + "starts=\(startCount) "
++            + "observer-residue=\(observerResidue) "
++            + "pending-residue=\(pendingResidue)"
++    )
++    try #require(exactRequest)
++    try #require(startCount == 1)
++    try #require(!observerResidue)
++    try #require(!pendingResidue)
++    try #require(waitSucceeded)
++    try Data("oauth-controlled-wait-progress-ok\n".utf8).write(
++        to: evidence,
++        options: .withoutOverwriting
++    )
++}
++
++@Test func oauthControlledWaitPreservesCooperativeProgress() async throws {
++    let environment = ProcessInfo.processInfo.environment
++    if environment[oauthControlledWaitEvidenceKey] != nil {
++        guard environment["LIBDISPATCH_COOPERATIVE_POOL_STRICT"] == "1"
++        else { throw OAuthControlledWaitTestError.invalidChildEnvironment }
++        try await runOAuthControlledWaitProgressChild(
++            evidence: try oauthControlledWaitEvidenceURL(
++                environment: environment
++            )
++        )
++        return
++    }
++    guard environment["LIBDISPATCH_COOPERATIVE_POOL_STRICT"] == nil
++    else { throw OAuthControlledWaitTestError.invalidChildEnvironment }
++    try await runOwnedSelfExecTest(OwnedSelfExecTestRequest(
++        label: oauthControlledWaitLabel,
++        filter: "oauthControlledWaitPreservesCooperativeProgress",
++        modeEnvironmentKey: "LIBDISPATCH_COOPERATIVE_POOL_STRICT",
++        mode: "1",
++        evidenceEnvironmentKey: oauthControlledWaitEvidenceKey,
++        expectedEvidence: Data("oauth-controlled-wait-progress-ok\n".utf8),
++        containment: .seconds(15)
++    ))
++}
++
+ private func oauthRecordingReporter(
+     writer: OAuthRecordingFailureWriter,
+     sink: OAuthRecordingFailureLogSink
+@@ -1413,7 +1608,7 @@ private func verifyOAuthSessionFlightMatrix() async throws {
+         let tasks: [Task<String, Error>] = (0..<5).map { _ in
+             Task { try await session.refreshedAccessToken() }
+         }
+-        #expect(OAuthControlledProtocol.waitUntilPending(requestKey))
++        #expect(await OAuthControlledProtocol.waitUntilPending(requestKey))
+         OAuthControlledProtocol.respond(
+             key: requestKey,
+             status: 200,
+@@ -1463,8 +1658,8 @@ private func verifyOAuthSessionFlightMatrix() async throws {
+         )
+         let taskA = Task { try await sessionA.refreshedAccessToken() }
+         let taskB = Task { try await sessionB.refreshedAccessToken() }
+-        #expect(OAuthControlledProtocol.waitUntilPending(keyA))
+-        #expect(OAuthControlledProtocol.waitUntilPending(keyB))
++        #expect(await OAuthControlledProtocol.waitUntilPending(keyA))
++        #expect(await OAuthControlledProtocol.waitUntilPending(keyB))
+         OAuthControlledProtocol.respond(
+             key: keyA,
+             status: 200,
+@@ -1537,8 +1732,8 @@ private func verifyOAuthSessionFlightMatrix() async throws {
+         let deleteTask = Task {
+             try await deleteSession.refreshedAccessToken()
+         }
+-        #expect(OAuthControlledProtocol.waitUntilPending(refreshKey))
+-        #expect(OAuthControlledProtocol.waitUntilPending(deleteKey))
++        #expect(await OAuthControlledProtocol.waitUntilPending(refreshKey))
++        #expect(await OAuthControlledProtocol.waitUntilPending(deleteKey))
+ 
+         if refreshWins {
+             OAuthControlledProtocol.respond(

@@ -45,3 +45,64 @@ public enum MissionAutonomy: String, Codable, Sendable, CaseIterable, Equatable 
         }
     }
 }
+
+package struct ApprovalGrantPolicyAuthorityV1:
+    Codable, Sendable, Equatable, Hashable
+{
+    package let id: String
+    package let version: Int
+    package let actorId: String
+    package let contentHash: String
+
+    package init(id: String, version: Int, actorId: String) throws {
+        try CanonicalContractCodingV1.validateCanonicalUUID(id)
+        try CanonicalContractCodingV1.validatePositive(version)
+        try CanonicalContractCodingV1.validateNonempty(actorId)
+        let material = Material(
+            id: id,
+            version: version,
+            actorId: actorId
+        )
+        self.id = id
+        self.version = version
+        self.actorId = actorId
+        contentHash = try CanonicalContractCodingV1.hash(material)
+    }
+
+    private struct Material: Codable {
+        let id: String
+        let version: Int
+        let actorId: String
+    }
+}
+
+package struct ApprovalGrantPolicyRegistryV1: Sendable {
+    private let authorities: Set<ApprovalGrantPolicyAuthorityV1>
+
+    private init(authorities: Set<ApprovalGrantPolicyAuthorityV1>) {
+        self.authorities = authorities
+    }
+
+    package init(_ authorities: [ApprovalGrantPolicyAuthorityV1]) throws {
+        guard Set(authorities.map { "\($0.id):\($0.version)" }).count
+                == authorities.count
+        else {
+            throw P1ContractValidationError.invalidMembership
+        }
+        self.authorities = Set(authorities)
+    }
+
+    package static let empty = ApprovalGrantPolicyRegistryV1(authorities: [])
+
+    package func contains(_ grantor: ApprovalGrantorV1) -> Bool {
+        guard grantor.type == .policy,
+              let id = grantor.policyId,
+              let version = grantor.policyVersion,
+              let hash = grantor.policyHash
+        else { return false }
+        return authorities.contains(where: {
+            $0.id == id && $0.version == version
+                && $0.actorId == grantor.id && $0.contentHash == hash
+        })
+    }
+}

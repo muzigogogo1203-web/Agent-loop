@@ -91,4 +91,16 @@ private func chatterTurn(usage: Usage) -> TurnResult {
         missionId: ids.missionId, inputTokens: Int.max, outputTokens: Int.max, cacheReadTokens: 0)
     let mission = try #require(try db.mission(id: ids.missionId))
     #expect(mission.spentTokens == Int.max)
+    let event = try #require(
+        try db.pool.read { database in
+            try EventRecord
+                .filter(Column("missionId") == ids.missionId)
+                .filter(Column("kind") == EventKind.planningTokens)
+                .fetchOne(database)
+        }
+    )
+    #expect(
+        event.payloadJson
+            == #"{"cacheReadTokens":0,"inputTokens":9223372036854775807,"outputTokens":9223372036854775807}"#
+    )
 }

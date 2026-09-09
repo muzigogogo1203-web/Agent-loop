@@ -1,0 +1,74 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+[3/6] Compiling AgentLoopCore DesktopGoalWorkflowStore.swift
+[4/6] Emitting module AgentLoopCore
+[5/7] Emitting module AgentLoopApplication
+[5/9] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[7/11] Compiling AgentLoopTestSuite DesktopGoalFoundationTests.swift
+[8/11] Emitting module AgentLoopTestSuite
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[8/11] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[9/11] Linking RunTests
+[10/11] Applying RunTests
+Build of product 'RunTests' complete! (26.99s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite DesktopGoalFoundationTests started.
+◇ Test desktopTextConversionAndGoalPreserveInteriorFormatting() started.
+✔ Test desktopTextConversionAndGoalPreserveInteriorFormatting() passed after 0.002 seconds.
+◇ Test desktopTextCoachRecordCommandAndAnswerPreserveFormatting() started.
+✔ Test desktopTextCoachRecordCommandAndAnswerPreserveFormatting() passed after 0.001 seconds.
+◇ Test desktopTextUnderstandingFieldsPreserveFormattingIndependently() started.
+✔ Test desktopTextUnderstandingFieldsPreserveFormattingIndependently() passed after 0.017 seconds.
+◇ Test desktopTextContentDecodingRejectsCanonicalInvalidControlsAndEdges() started.
+✔ Test desktopTextContentDecodingRejectsCanonicalInvalidControlsAndEdges() passed after 0.060 seconds.
+◇ Test desktopTextContentDecodersRejectUnknownAndMissingRawKeys() started.
+✔ Test desktopTextContentDecodersRejectUnknownAndMissingRawKeys() passed after 0.001 seconds.
+◇ Test desktopTextStrictIdentityReferenceAndOperationalFieldsRemainStrict() started.
+✔ Test desktopTextStrictIdentityReferenceAndOperationalFieldsRemainStrict() passed after 0.082 seconds.
+◇ Test desktopTextGoalDecodingRetainsLegitimateActivatedContractState() started.
+✔ Test desktopTextGoalDecodingRetainsLegitimateActivatedContractState() passed after 0.092 seconds.
+◇ Test desktopTextRealFlowPersistsAndReplaysWithoutFormattingDrift() started.
+✔ Test desktopTextRealFlowPersistsAndReplaysWithoutFormattingDrift() passed after 0.209 seconds.
+◇ Test desktopDomainOutputPolicyHasExactCanonicalWireShape() started.
+✔ Test desktopDomainOutputPolicyHasExactCanonicalWireShape() passed after 0.001 seconds.
+◇ Test desktopDomainContextBindsPolicyAndUnresolvedRuntime() started.
+✔ Test desktopDomainContextBindsPolicyAndUnresolvedRuntime() passed after 0.003 seconds.
+◇ Test desktopDomainCaptureIntentSealsNormalizedCallerOwnedCommand() started.
+✔ Test desktopDomainCaptureIntentSealsNormalizedCallerOwnedCommand() passed after 0.001 seconds.
+◇ Test desktopDomainOutputPolicyRejectsUnsupportedWirePayloads() started.
+✔ Test desktopDomainOutputPolicyRejectsUnsupportedWirePayloads() passed after 0.001 seconds.
+◇ Test desktopDomainCaptureIntentRejectsWrongIdentityAndEmptyText() started.
+✔ Test desktopDomainCaptureIntentRejectsWrongIdentityAndEmptyText() passed after 0.001 seconds.
+◇ Test desktopTextCapturePreservesInteriorFormatting() started.
+✔ Test desktopTextCapturePreservesInteriorFormatting() passed after 0.001 seconds.
+◇ Test atomicCaptureCreatesActualInputWorkAndPreparedSubmission() started.
+✔ Test atomicCaptureCreatesActualInputWorkAndPreparedSubmission() passed after 0.109 seconds.
+◇ Test captureReceiptFailureRollsBackEveryCarrierAndDomainWrite() started.
+✔ Test captureReceiptFailureRollsBackEveryCarrierAndDomainWrite() passed after 0.120 seconds.
+◇ Test exactReplayBeforeAndAfterRestartOrInputProgressReturnsSameReceipt() started.
+✔ Test exactReplayBeforeAndAfterRestartOrInputProgressReturnsSameReceipt() passed after 0.233 seconds.
+◇ Test providerAwareOutputPolicyIsCanonicalAndReplayBound() started.
+✔ Test providerAwareOutputPolicyIsCanonicalAndReplayBound() passed after 0.428 seconds.
+◇ Test changedIntentEnvelopeContextOrStageUnderSameIdentityRejectsWithoutWrites() started.
+✔ Test changedIntentEnvelopeContextOrStageUnderSameIdentityRejectsWithoutWrites() passed after 0.171 seconds.
+◇ Test duplicateLiveSessionReservationRejectsWithoutAnyNewDomainWrite() started.
+✔ Test duplicateLiveSessionReservationRejectsWithoutAnyNewDomainWrite() passed after 0.094 seconds.
+◇ Test sealCaptureStageUsesCASAndPreservesExactCommandIdentity() started.
+✔ Test sealCaptureStageUsesCASAndPreservesExactCommandIdentity() passed after 0.117 seconds.
+◇ Test sealedStageAndReceiptCASIsReplayableButNotReplaceable() started.
+✔ Test sealedStageAndReceiptCASIsReplayableButNotReplaceable() passed after 0.174 seconds.
+◇ Test outputPolicyRejectsUnsupportedOrLegacyJSONWithoutWrites() started.
+✔ Test outputPolicyRejectsUnsupportedOrLegacyJSONWithoutWrites() passed after 0.131 seconds.
+◇ Test captureReviewPrepareRejectsUnicodeEquivalentRequestByteDrift() started.
+✔ Test captureReviewPrepareRejectsUnicodeEquivalentRequestByteDrift() passed after 0.147 seconds.
+◇ Test captureReviewSealRejectsUnicodeEquivalentRequestByteDrift() started.
+✔ Test captureReviewSealRejectsUnicodeEquivalentRequestByteDrift() passed after 0.103 seconds.
+◇ Test captureReviewFirstReceiptAppendRejectsMissingActualOutbox() started.
+✔ Test captureReviewFirstReceiptAppendRejectsMissingActualOutbox() passed after 0.104 seconds.
+✔ Suite DesktopGoalFoundationTests passed after 2.410 seconds.
+✔ Test run with 26 tests in 1 suite passed after 2.410 seconds.

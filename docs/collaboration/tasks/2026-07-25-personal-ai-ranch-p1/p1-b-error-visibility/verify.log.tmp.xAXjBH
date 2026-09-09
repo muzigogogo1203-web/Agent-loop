@@ -1,0 +1,1095 @@
+COMMAND: P1B_TERMINAL_AST_CORPUS=<fresh disposable directory> swift run RunTests
+CWD: /Users/muzi/Agent-loop
+P1B_TERMINAL_AST_CORPUS: /tmp/p1b-terminal-ast.vTgSW5
+--- STDOUT+STDERR ---
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.29s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test reconciliationSkipsModelJudgementForCliProfiles() started.
+◇ Test cliPipeDrainStopsAtGraceDeadlineWhileDataFlows() started.
+◇ Test unauthorizedNotRetried() started.
+◇ Test reworkCompletionPreservesPreviousArtifactVersion() started.
+◇ Test cancelIsNoopWhenTerminal() started.
+◇ Test turnAggregateUsageOverflowTerminalizesWithExactEvidence() started.
+◇ Test appTransportSecurityErrorDoesNotRetry() started.
+◇ Test lateManualMissionSuccessDoesNotClearNewPendingCommand() started.
+◇ Test closeoutThrowsWhenNotDelivering() started.
+◇ Test searchAndStatusToolsAreCampScoped() started.
+◇ Test terminalFailureCopiesDiagnosticsToWorkAttemptAndEvent() started.
+◇ Test scheduleMathSpringForwardUsesNextValidLocalTime() started.
+◇ Test sameMissionStartReplayDoesNotConstructProvider() started.
+◇ Test businessMutationFailureRollsBackTerminalAndAttemptClose() started.
+◇ Test validateRejectsBadShapes() started.
+◇ Test upstreamDoneUnlocksAndDispatchesDownstream() started.
+◇ Test planningProfileKindDriftBetweenPreflightAndTransactionWritesNothing() started.
+◇ Test planningSpecificSingleAndBulkCancelRemainAvailableWhileHalted() started.
+◇ Test runnerBlocksCardWhenLoopBlocksItself() started.
+◇ Test openAIOAuthSessionWithoutRefreshTokenIsPermanentFailure() started.
+◇ Test askingCompanionDoesNotBlockOthers() started.
+◇ Test planningCancelIsProjectionAtomicAndIdempotent() started.
+◇ Test nextClaimableDateRejectsNonFiniteNowBeforeRead() started.
+◇ Test decodeKnownBlocks() started.
+◇ Test codingRanchMigrationReplaysFromV7() started.
+◇ Test planningSuccessWithFallbackIsRejectedWithoutWrites() started.
+◇ Test supervisorNextDueTimerWakesRetryWithoutPolling() started.
+◇ Test proposalDismissAndRevert() started.
+◇ Test resumeOpensSupervisorOnlyAfterDurableRunningAndKicksOnce() started.
+◇ Test contractHardensAgainstExternalContentWhenWebToolsPresent() started.
+◇ Test toolResultEncoding() started.
+◇ Test candidateAppCallsiteCapturesCoordinatorCommandBeforeFirstAwait() started.
+◇ Test shutdownReportSortsUniqueUncooperativeWorkIds() started.
+◇ Test scheduleStartedTransactionSurvivesRestartBeforePlannerKick() started.
+◇ Test eventsByMissionOrdered() started.
+◇ Test mcpListToolsFollowsPaginationCursor() started.
+◇ Test searchCampNotesPinnedFirstAndCapped() started.
+◇ Test managerRestartRevivesDownServer() started.
+◇ Test distillMemoryReturnsNote() started.
+◇ Test answerResumesWithQAInContext() started.
+◇ Test autoDistillRespectsMinMessagesThreshold() started.
+◇ Test legacyRepairHaltedModeCreatesAndCancelsAttemptZeroAtomically() started.
+◇ Test cliPipeDrainRereadsAfterExitObserved() started.
+◇ Test scheduleMissionStartUsesCheckedUTCMillisecondsKey() started.
+◇ Test canonicalRejectsInvalidOrOutOfBoundsNumbers() started.
+◇ Test guideModelUsesKernelDefault() started.
+◇ Test ddlRequiresClaimedSequenceZeroAndExactEventResultingState() started.
+◇ Test legacyRepairRunningModeLinearizesBeforeConcurrentHalt() started.
+◇ Test pinnedAndRecentSplitAndOrder() started.
+◇ Test guideBroadcastLandsInGuideThread() started.
+◇ Test genericPlanningTargetAPIsRejectBeforeMutationAndClosures() started.
+◇ Test sameMissionStartPayloadOrGraphConflictFailsWithoutWrites() started.
+◇ Test staleRenewCancelsOnlyMatchingOwnedTask() started.
+◇ Test twoCardMissionWithMidwayAskUser() started.
+◇ Test cliProcessBackendCancellationReturnsCardToReady() started.
+◇ Test legacyPlanningModelUnavailableFailsMissionOnceWithExactCode() started.
+◇ Test cancelDuringConcurrentRunsTerminalizesAll() started.
+◇ Test harvestKeepsDoneAndCancelsRest() started.
+◇ Test proposalBlockRoundTripAndAccessor() started.
+◇ Test mcpCallPropagatesIsErrorFlag() started.
+◇ Test leaseRenewalReturnsNewVersionAndOldClaimCannotComplete() started.
+◇ Test jsonRoundTrip() started.
+◇ Test sameMissionStartReplayRunsBeforeCredentialAndCatalogPreflight() started.
+◇ Test packetContainsContractAndCard() started.
+◇ Test pendingRequestForCanceledCardIsHidden() started.
+◇ Test distillCloseoutFallsBackOnUnparseableEmptyText() started.
+◇ Test feedHandlesDuplicateCardIds() started.
+◇ Test directMissionAndProposalStartsAreRejectedWhileHalted() started.
+◇ Test invalidCancellationReasonIsPreSQLAndSkipsBusinessMutation() started.
+◇ Test rollupAllTerminalWithDoneIsDelivering() started.
+◇ Test failureReporterDatabaseUnwritableLogsAndReturnsSameTrace() started.
+◇ Suite RuntimeProfileCatalogTests started.
+◇ Test claimOrNextDueStoreFailureLatchesFatalAndWakesWaiters() started.
+◇ Test jsonLiterals() started.
+◇ Test legacyPlanningFailureCreatesAttemptZeroWithoutAttemptRows() started.
+◇ Test proposeSquadCreatesPendingBlockAndToolResult() started.
+◇ Test openAIOAuthSessionInvalidGrantIsPermanentFailure() started.
+◇ Test providerErrorDescriptionsAreHuman() started.
+◇ Test distillCloseoutFallsBackOnProviderFailure() started.
+◇ Test mcpDeathFailsPendingAndFiresUnexpectedClose() started.
+◇ Test dependentCardStaysTodoUntilUpstreamDone() started.
+◇ Test planningContractInvalidDoesNotFallback() started.
+◇ Test cancelActiveNoRowIsIdempotentAndSkipsMutation() started.
+◇ Test nextClaimableDateSelectsEarliestRetry() started.
+◇ Test uiPreviewUsesProcessLocalDefaultsBeforeBootstrapAndReload() started.
+◇ Test candidateConversionNeverLeavesUnlinkedMission() started.
+◇ Test runnerCancellationLeavesCardReady() started.
+◇ Test shellRunsCommandInWorkspaceAndReportsExitCode() started.
+◇ Suite OpenAIResponsesProviderRefreshTests started.
+◇ Test missingAssigneeBlocksReadyCard() started.
+◇ Test legacyPlanningRepairConflictOrCliFailsMissionOnce() started.
+◇ Test canonicalPreservesIntegerBeyondTwoToThe53() started.
+◇ Test a3Revision02EntryBoundaryRemainsByteExact() started.
+◇ Test failureRecordSameIdentityUpsertIncrementsOccurrence() started.
+◇ Suite AnthropicProviderStubTests started.
+◇ Suite A2DurableRuminationTests started.
+◇ Test secretProviderAbsentAndThrowsAreDistinct() started.
+◇ Test legacyPlanningRepairUsesUniformMemberProfile() started.
+◇ Test enqueueMissingCampThrowsRecordNotFoundAndWritesNothing() started.
+◇ Test accumulatesTextAndToolUse() started.
+◇ Test renderSectionDeterministicAndNilWhenEmpty() started.
+◇ Test openAIChatGPTAuthorizationURLMatchesCodexFlow() started.
+◇ Test failureDecoderRevalidatesAndCannotBypassInitializer() started.
+◇ Suite GatewayRefreshTests started.
+◇ Test mcpExplicitCloseDoesNotFireUnexpectedClose() started.
+◇ Test downstreamPacketCarriesUpstreamHandoffAndPaths() started.
+◇ Test missionCreationHonorsCampIdWithDefaultFallback() started.
+◇ Test distillCloseoutParsesLLMNote() started.
+◇ Suite A2CodingRanchTests started.
+◇ Test memoryDistillCreatedReturnsRecord() started.
+◇ Test runtimeProfileMigrationV10ReplaysFromV9AndPreservesCompanions() started.
+◇ Test invalidProjectionCasesAreTraceableAndNeverDefault() started.
+◇ Test sameIdempotencyAndPayloadReplaysButDifferentPayloadConflicts() started.
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+◇ Test validateCanonicalRejectsAlternateRepresentations() started.
+◇ Test pinnedAndRecentCompanionNotes() started.
+◇ Test rollupTerminalStatesSticky() started.
+◇ Test durablePlannerPreservesCancellationError() started.
+◇ Test failureRecordInsertUsesTraceAsPrimaryKey() started.
+◇ Test clampModelSelectionsHasUnifiedRules() started.
+◇ Test cliPipeDrainBacksOffPollingWhileSilent() started.
+◇ Test standardAutonomyWritesWithoutApproval() started.
+◇ Test scheduleValidationFailureAdvancesEvaluationCursorButNotLastFiredAt() started.
+◇ Test delayedStartupRecoveryCannotClearFailedEmergencyStop() started.
+◇ Test haltRacingFailureOrOverflowTerminalHasSingleOwner() started.
+◇ Test shellOutputTruncatedByteSafe() started.
+◇ Test candidateConversionRollsBackWhenWorkInsertFails() started.
+◇ Test feedMapsEventKindsToEntries() started.
+◇ Test durableWorkAttemptEventIsAppendOnlyFromIntroducingMigration() started.
+◇ Test scheduleMathDailyNextFireMovesToTomorrowAfterSlot() started.
+◇ Test codingRanchMigrationAndBootstrapAreIdempotent() started.
+◇ Test a3Revision02DebugObservationIsGuardedAndAdjacent() started.
+◇ Test workflowCancellationCannotMasqueradeAsLoaded() started.
+◇ Test managerStartFailureIsDownAndNeverAutoRetries() started.
+◇ Test haltedStartupRunsCleanupWithoutPumpTimerOrProvider() started.
+◇ Test skipStillAdvancesWatermarkButNoNote() started.
+◇ Test runnerTransportErrorSetsFailedAndBlocked() started.
+◇ Test scheduleCRUDAndClaimDedupe() started.
+◇ Test managerEnvMergePrecedenceBaseJsonSecret() started.
+◇ Test keychainReadDistinguishesNotFoundFromFailure() started.
+◇ Test closeoutDistillsFallbackNoteOnProviderFailure() started.
+◇ Test genericReservedKindOrderingUsesCallerOrderBeforeDeduplication() started.
+◇ Test nextClaimableDateReturnsEarliestFutureRetry() started.
+◇ Test scheduledTemplateValidationRejectsMissingBudgetAtSave() started.
+◇ Test runtimeProfileDeleteFailureNeverProjectsSuccess() started.
+◇ Test answerStaleRequestThrows() started.
+◇ Test truncatesOnUTF8ByteBoundary() started.
+◇ Suite BoardServerTests started.
+◇ Test stateDirectoryLockRejectsSecondFileDescriptionAndReleases() started.
+◇ Test manualMissionStartReusesPendingCommandAfterPostEnqueueFailure() started.
+◇ Test agentToolDefsComplete() started.
+◇ Test mcpSpikeAgainstRealFilesystemServer() started.
+◇ Test scheduleMathSameSlotDedupeCoversDailyAndWeekly() started.
+◇ Test negativeFirstTurnPlanningUsageTerminalizesWithoutTokenEvent() started.
+◇ Test rollupEmptyCardsIsPlanning() started.
+◇ Test haltPersistenceFailureKeepsSupervisorSuppressed() started.
+◇ Test oauthPermanentUnauthorizedDeleteFailureNeverReportsCleanRelogin() started.
+◇ Test killRestartAdoptsOrphanAndResumesToDone() started.
+◇ Test plannerForcesToolChoice() started.
+◇ Test turnTimeoutRetriesOnceThenBlocks() started.
+◇ Test rollupAllTerminalZeroDoneIsFailed() started.
+◇ Test missingArtifactKeepsCardRunning() started.
+◇ Test codingRanchBootstrapPreservesExistingExpertRoster() started.
+◇ Test scheduleMathMisfireIgnoresScheduleCreatedAfterSlot() started.
+◇ Test completeCopiesArtifactBeforeDone() started.
+◇ Test managerStartsCachesToolsAndAssembles() started.
+◇ Test mcpSecretAbsentAndReadFailureHaveDifferentCodes() started.
+◇ Test optionalDegradationPersistenceFailureDoesNotContinue() started.
+◇ Test explicitV2EmptyAllowMeansNoCapabilities() started.
+◇ Test replaySamePayloadReturnsSameFireButConflictFails() started.
+◇ Test parseFailureRetainsOnlyBoardTools() started.
+◇ Test optionalKnowledgeFailureRecordsBeforeContinuingWithMarker() started.
+◇ Test canonicalObjectRootInspectionDoesNotUseJSONValueOrRawJSONDecoder() started.
+◇ Test memoryDistillWatermarkRaceReturnsFailedWithTrace() started.
+◇ Test parseNoteJSONSkipConvention() started.
+◇ Test durablePlannerMapsProviderFailuresToStableTypedFailures() started.
+◇ Test operationTraceGeneratesAndAdoptsSafeDurableIdentity() started.
+◇ Test claimRevalidatesExactCapturedProfileModelAndCredentials() started.
+◇ Test explicitReplayUsesNewIdempotencyKeyAndDoesNotMoveCursor() started.
+◇ Test writeReadListRoundTrip() started.
+◇ Test failureRecordTraceConflictDoesNotOverwrite() started.
+◇ Test inputOutputUsageOverflowTerminalizesWithExactEvidence() started.
+◇ Test approvedTokenAllowsExactlyOnce() started.
+◇ Test plannerUserPromptOmitsEmptyCampNotes() started.
+◇ Test cancelDuringArmedTimeoutLeavesCardReady() started.
+◇ Test failureRecordResolveReopenAndOverflowAreChecked() started.
+◇ Test noToolCallFallsBack() started.
+◇ Test searchCampNotesLikeSemantics() started.
+◇ Test mcpServerInitiatedRequestGetsMethodNotFound() started.
+◇ Test carefulAutonomySuspendsWriteFileForApproval() started.
+◇ Test staleClaimAndGenerationLosersDoNotLatchFatal() started.
+◇ Test planningSpecificRecoveryAdoptsInterruptedWithoutGenericAPI() started.
+◇ Test addBudgetResumesDispatchToDone() started.
+◇ Test ddlRejectsEveryInvalidWorkAttemptEventErrorStatePair() started.
+◇ Test proposalConfirmIsIdempotentCAS() started.
+◇ Test compactSkipsWhenSummaryFailsOrEmpty() started.
+◇ Test completeBusinessMutationFailureRollsBackValidatedOutputAndTerminalRows() started.
+◇ Test blockRecordsTypedReason() started.
+◇ Test fetchesAndStripsHTML() started.
+◇ Test fetchResultWrappedAsExternalContent() started.
+◇ Test resumeEventFailureRollsBackKernelControlProjection() started.
+◇ Test broadcastFailureDoesNotRewriteStartedFire() started.
+◇ Test completeCardWritesHandoffProjection() started.
+◇ Test mcpToolInjectedWithExplicitV2Allow() started.
+◇ Test appPlanningCallsitesContainNoDirectOrchestratorStart() started.
+◇ Test legacyEmptyArrayMeansFullBuiltins() started.
+◇ Test haltDuringRunningCardLeavesReadyCardAndNoOpenRun() started.
+◇ Test staleDistillationCASRollsBackWithoutDuplicateNote() started.
+◇ Test durableHaltCASIsAtomicIdempotentAndGloballyAudited() started.
+◇ Test promptsAreDeterministic() started.
+◇ Test leaseRenewalCompletionUsesLatestClaim() started.
+◇ Test malformedV2ObjectFailsClosedWithFlag() started.
+◇ Test cliBackendPolicyMapsAutonomyWithoutEscalatingFreeTier() started.
+◇ Test legacyPlanningWithCardsFailsClosedWithExactTypedErrorAndZeroWrites() started.
+◇ Test cancelWinsOverIdleTimeout() started.
+◇ Test canonicalNumberGoldenBytes() started.
+◇ Test mockReplaysScriptInOrder() started.
+◇ Test planningSuccessOverBudgetCreatesCardsButDispatchesNone() started.
+◇ Test missionStartPreservesCallerDurableTrace() started.
+◇ Test openAIResponsesRequestMarksToolResultErrors() started.
+◇ Test guideChatDistillNoopWhenNoBacklog() started.
+◇ Test runningUnresolvedLegacyMissionKeepsExactLegacyTerminalCode() started.
+◇ Test approvalHashIsKeyOrderInsensitiveAndInputSensitive() started.
+◇ Test requiredMcpRegistryFailureBlocksCard() started.
+◇ Test cancelMissionTerminalizesAndFails() started.
+◇ Test negativeCorrectionUsagePreservesPriorValidUsage() started.
+◇ Test nextClaimableDateReturnsNowForDueRetryIncludingEquality() started.
+◇ Test handoffRequiresNonEmptyCoreFields() started.
+◇ Test mcpIgnoresNonJsonNoiseLines() started.
+◇ Test transientRetryUsesFiveThirtyOneTwentySecondBackoff() started.
+◇ Test planningIdentityAndTokenEventsPreserveIntegersAboveTwoTo53() started.
+◇ Test genericClaimScopedAndCancelCommandsRejectExistingCampDeletionBeforeMutation() started.
+◇ Test noteSnippetTruncationLimits() started.
+◇ Test keychainRoundTrip() started.
+◇ Test proposalAppCallsiteCapturesCoordinatorCommandBeforeTask() started.
+◇ Test emptyToolInputBecomesEmptyObject() started.
+◇ Test mcpServerDeletePreimageAndReverseRollbackAreAtomic() started.
+◇ Test haltEventFailureRollsBackKernelControlProjection() started.
+◇ Test oauthCredentialCommitFailureRollsBackEarlierWrites() started.
+◇ Test queuedAndRetryCancellationDoNotRequireLeaseOwner() started.
+◇ Test terminalPendingProposalRetriesOnlyAfterRenewOrExplicitKick() started.
+◇ Test resolvedCatalogUsesTheCorrectSourceWithoutWrites() started.
+◇ Test haltAfterProviderResponseCannotWriteTokensOrCards() started.
+◇ Test campNoteCRUDAndOrdering() started.
+◇ Test returningCompletedCardReopensMissionAndMarksDoneDependentsForReview() started.
+◇ Test prefersArticleContentOverChrome() started.
+◇ Test cliBackendPolicyPinsBannedFlags() started.
+◇ Test evercampMigrationV9ReplaysFromV8() started.
+◇ Test mcpRegistryRefreshFailurePreservesPriorRegistry() started.
+◇ Test planningUsageOverflowEvidencePreservesIntegersAboveTwoTo53() started.
+◇ Test startupHealsConfirmedProposalWithoutMission() started.
+◇ Test apiErrorEventThrows() started.
+◇ Test completeRejectsInvalidNonObjectOrAlternateOutputBeforeWrite() started.
+◇ Test setMissionAutonomyPersistsAndAppendsEvent() started.
+◇ Test successStoresOnlyOptionalCanonicalOutputAndNoErrors() started.
+◇ Test explicitV2AllowListIsLiteral() started.
+◇ Test planningSuccessWithNilFallbackWritesNoFallbackEvent() started.
+◇ Test nextClaimableDateReturnsNowForQueued() started.
+◇ Test applyReconciliationToleratesEmptyItemsAndMissingProfile() started.
+◇ Test memoryDistillPersistenceFailureReturnsFailedWithTrace() started.
+◇ Test claimNextUsesExactlyTheSameEligibilityPredicate() started.
+◇ Test orphanRecoveryFailureKeepsResumeClosedUntilRetried() started.
+◇ Test restartAdoptsPlanningWorkAndCreatesCardsOnce() started.
+◇ Test applyReconciliationFlipsOnlyListedCompanionsAndResetsScopes() started.
+◇ Test staleStartupRecoveryCannotStealNewResumePhase() started.
+◇ Test providerReturningAfterShutdownCannotCommit() started.
+◇ Test missingDurableControlRowKeepsStartupFailClosed() started.
+◇ Test openAIChatGPTRefreshTokenRequestUsesCodexScope() started.
+◇ Test campStatusToolReportsMissionsAndDeliverables() started.
+◇ Test failureKeepsWatermarkForRetry() started.
+◇ Test webSearchNon200ReturnsError() started.
+◇ Test openAIOAuthSessionRefreshSuccessUpdatesStoredTokensAndAccountID() started.
+◇ Test runtimeProfileBootstrapIsIdempotentAndCopiesLegacyDefaultsOnce() started.
+◇ Test durableWorkMigrationMatrixThroughV12() started.
+◇ Test genericPlanningReadSeamsRemainAvailable() started.
+◇ Test mcpCallFlattensNonTextContentToPlaceholders() started.
+◇ Test archivedCampRejectsNewMissionShell() started.
+◇ Test durableWorkMigrationHasExactTablesIndexesChecksAndTriggers() started.
+◇ Test guideSystemMentionsProposalDiscipline() started.
+◇ Test adoptionSkipsCardsWithActiveRunners() started.
+◇ Test dmMemoryReachesNextCardContextGoldenPath() started.
+◇ Test webSearchRejectsEmptyQuery() started.
+◇ Test genericEnqueueClaimScheduleAndAdoptRejectCampDeletionBeforeSQL() started.
+◇ Test planningUsageZeroWritesExactTokenEvent() started.
+◇ Test oneTerminalAttemptOutcomePerClaim() started.
+◇ Test malformedToolAccessSkipsMcpStartupAndRecordsKernelDiagnostic() started.
+✔ Test cliPipeDrainStopsAtGraceDeadlineWhileDataFlows() passed after 0.385 seconds.
+◇ Test invalidHandoffKeepsCardRunning() started.
+◇ Test nextProcessAdoptsShutdownRowAndCompletesExactlyOnce() started.
+◇ Test cliProcessBackendCapturesFinalLineWithoutNewline() started.
+◇ Test scheduleFireMigrationMatrixAndExactDDL() started.
+◇ Test validProposalPersistsCardsWithKernelIds() started.
+◇ Test failureInitializerAcceptsNilOrExactCanonicalUsage() started.
+◇ Test automaticAuthSchemeResolvesByFormat() started.
+◇ Test missingKernelControlSingletonFailsExplicitly() started.
+◇ Test enqueueReplayAfterArchiveIsRejected() started.
+◇ Test managerToolNameCollisionKeepsFirstDeterministically() started.
+◇ Test mcpRequestTimesOutWhenNoResponse() started.
+◇ Test dangerousShellSuspendsUnderStandardAutonomy() started.
+◇ Test turnStartedPrecedesEachTurn() started.
+◇ Test resumePersistenceFailureStaysHaltedAndDispatchesNothing() started.
+◇ Test assembledToolsRegistryFailureThrows() started.
+◇ Test packetRendersCampNotesAndMemorySections() started.
+◇ Test turnCompletesUnderTimeout() started.
+◇ Test recordPlanningTokensUpdatesSpentAndAppendsEvent() started.
+◇ Test scheduleMathWeeklyNextFireSameWeek() started.
+◇ Test enqueueArchivedCampThrowsCampArchivedAndWritesNothing() started.
+◇ Test attemptEventsRejectUpdateAndDelete() started.
+◇ Test runtimeProfileBootstrapOAuthDefaultReconcilesLegacyModels() started.
+◇ Test missingOrCorruptKernelControlFailsPlanningClosed() started.
+◇ Test distillMemoryThrowsOnProviderFailure() started.
+◇ Test guideChatDistillCreatesCampNote() started.
+◇ Test customAPIPlanningAcceptsProfileScopedManualModel() started.
+◇ Test haltRacingSameKeyReplayOrAbsentPreflightWritesNothing() started.
+◇ Test packageBuilds() started.
+◇ Test cliBackendPolicyRejectsBannedArguments() started.
+◇ Test guideRejectsGuideAsSquadMember() started.
+◇ Test haltCleanupFailureKeepsSupervisorSuppressedAndBlocksResume() started.
+◇ Test companionNoteCRUDIsolatedPerCompanion() started.
+◇ Test packetRenderingIsDeterministic() started.
+◇ Test slowActiveStreamDoesNotIdleTimeout() started.
+◇ Test negativePlanningUsageFailsBeforeSQL() started.
+◇ Test runtimeProfileWriteFailureNeverProjectsSuccess() started.
+◇ Test askUserValidationErrorsSelfHeal() started.
+◇ Test finishUnknownRunThrows() started.
+◇ Test returnCardForReworkRejectsAcceptedAndFailedMissions() started.
+◇ Test mcpServerCRUDAndCampEnableToggle() started.
+◇ Test stalePlannerAfterCancelCannotWriteTokensOrCards() started.
+◇ Test memoryDistillProviderFailureReturnsFailedWithTrace() started.
+◇ Test workflowProjectionPreservesPriorValueOnRefreshFailure() started.
+◇ Test unsupportedObjectVersionFailsClosedWithFlag() started.
+◇ Test memoryDistillProviderSkipAdvancesWatermarkAndReturnsSkipped() started.
+◇ Test closeoutDistillsLLMNoteWhenParseable() started.
+◇ Test dmSystemOmitsMemoryWhenNone() started.
+◇ Test scheduleFiredEventMarksScheduledOrigin() started.
+◇ Test mcpConnectAndToolListFailuresHaveDifferentCodes() started.
+◇ Test dmSystemCarriesCompanionMemory() started.
+◇ Test invalidOutputBackoffOverflowAndClosureFailureLeaveAllThreeLayersUnchanged() started.
+◇ Test distinctCompanionsRunConcurrently() started.
+◇ Test durableHaltMigrationCreatesOneRunningSingletonAndReplays() started.
+◇ Test haltedStartupRepairsAndAdoptsBeforeAtomicCleanupWithoutDispatch() started.
+◇ Test migrationV5AutonomyDefaultsToStandard() started.
+◇ Test openAIRequestBodyShape() started.
+◇ Test keychainMutationFailureNeverProjectsSuccess() started.
+◇ Test scheduleMathDailyNextFireSameDay() started.
+◇ Test codingRanchBootstrapIsAtomicAcrossEveryWriteBoundary() started.
+◇ Test feedCapsAtLimit() started.
+◇ Test scheduleMathPreviousFireIsInclusive() started.
+◇ Test boardToolsAreNeverDeniable() started.
+◇ Test sameMissionStartConflictWinsOverCurrentProviderFailure() started.
+◇ Test concurrentTerminalAndCancelHaveExactlyOneWinner() started.
+◇ Test plannerAccumulatesUsageAcrossTurns() started.
+◇ Test manualMissionStartCapturesProfileModelKeyAndTraceBeforeTask() started.
+◇ Test managerProcessDeathMarksDown() started.
+◇ Test runningCancellationCommitsProjectionAndAttemptAtomically() started.
+◇ Test plannerUserPromptCarriesCampNotes() started.
+◇ Test oauthPlanningUsesStaticCatalogAndBothCredentialAccounts() started.
+◇ Test parsesEventDataPairs() started.
+◇ Test closureToolHandlerDispatchesThroughExecutor() started.
+◇ Test globalThrottleCapsConcurrentRuns() started.
+◇ Test secondSendIncludesFirstExchangeInHistory() started.
+◇ Test feedDetectsDuplicatesButCanSaveAgain() started.
+◇ Test ddlRejectsOutputOutsideSucceeded() started.
+◇ Test rollupMixedIsExecuting() started.
+◇ Test nextClaimableDateEmptyKindsReturnsNil() started.
+◇ Test companionCRUD() started.
+◇ Test garbageJsonFailsClosedWithFlag() started.
+◇ Test mcpManagerSpikeAgainstRealPlaywright() started.
+◇ Test haltedStartupWithWorklessLegacyMissionLeavesNoActivePlanning() started.
+◇ Test cancelMissionDoesNotDispatchReadyCardDuringRunnerShutdown() started.
+◇ Test knowledgeSectionsRenderBeforeUpstreamHandoffs() started.
+◇ Test sameMissionStartReplayAfterProfileDeletionReturnsOriginalIdsAndTrace() started.
+◇ Test doublePlanIsNoopWithAuditEvent() started.
+◇ Test claimQueuedAndDueRetryAreSingleOwner() started.
+◇ Test openAIChatGPTAccountIDComesFromIDTokenClaims() started.
+◇ Test happyPathToolThenComplete() started.
+◇ Test malformedToolInputThrows() started.
+◇ Test unknownToolReturnsError() started.
+◇ Test providerFailureIsNotConvertedToFallbackCard() started.
+◇ Test eventAppendAndProjectionSameTransaction() started.
+◇ Test retryOrFailUsesDispositionOnlyEvenWhenCodeIsIdentical() started.
+◇ Test confirmedProposalMissionStartUsesProposalKeyAndPreservesFirstTrace() started.
+◇ Test transitionUnknownCardThrows() started.
+◇ Test distillGuideChatNoteAndSkip() started.
+◇ Test staleStartupRecoveryCannotActivateAfterConcurrentControlTransition() started.
+◇ Test rejectsRedirectDowngradeToHTTP() started.
+◇ Test escapeAttemptsRejected() started.
+◇ Test deriveMatrixCoversAllPriorities() started.
+◇ Test webSearchTimeoutReturnsError() started.
+◇ Test deletedOrUnsupportedCapturedProfileTerminalizesExistingWork() started.
+◇ Test messageStopWithUnfinishedBlocksThrows() started.
+◇ Test planningTerminalMutationRollbackIsTotal() started.
+◇ Test shellRejectsEmptyCommand() started.
+◇ Test systemIsStableAcrossCards() started.
+◇ Test proposeSquadValidationSelfHeals() started.
+◇ Test openAIOAuthSessionNetworkErrorIsTransient() started.
+◇ Test parseNoteJSONMalformedFallsBackToFirstLine() started.
+◇ Test tokenBudgetExhaustionBlocks() started.
+◇ Test cardStatusTransitionMatrixKeepsReturnForReworkConservative() started.
+◇ Test cliProcessBackendFinishesWithinGraceWhenGrandchildHoldsPipe() started.
+◇ Test invalidLeaseLeavesVersionLeaseAttemptsAndEventsUnchanged() started.
+◇ Test runtimeProfileStoreSetDefaultMaintainsSingleDefault() started.
+◇ Test cutIndexNilWhenHistoryShort() started.
+◇ Test mixedGatingDispatchesEagerly() started.
+◇ Test claimAndRenewRejectNonFiniteOrNonAdvancingExpirationBeforeWrite() started.
+◇ Test queuedAndRetryCancelWriteOnlyWorkCancellationDiagnostics() started.
+◇ Test legacyExplicitArrayIntersectsBuiltins() started.
+◇ Test retryDateOverflowThrowsAndRollsBack() started.
+◇ Test scheduleExtremeFiniteLastFiredAtPersistsNumericallyReloadsAndDedupes() started.
+◇ Test updateChatMessageContentRoundTrip() started.
+◇ Test reconcileIsIdempotent() started.
+◇ Test migrationV2AddsColumnsAndNormalizes() started.
+◇ Test missionsListOrderedDesc() started.
+◇ Test planningInvalidEndpointIsTypedAndDoesNotWrite() started.
+◇ Test startupProposalHealingFailureIsPersistedAndEmitted() started.
+◇ Test canonicalTypedNonConformingFloatThrows() started.
+◇ Test symlinkEscapeRejected() started.
+◇ Test runnerDrivesCardToDoneWithRunRecord() started.
+◇ Test cliOutputParserExtractsTextAndUsageFromJsonl() started.
+◇ Test haltedPlanningCannotClaimThroughGenericStore() started.
+◇ Test suppressedWaitUntilIdleDistinguishesDueFutureRetryAndHaltedCleanup() started.
+◇ Test writeFileSchemaHasOptionalAppend() started.
+◇ Test canonicalKeepsCanonicallyEquivalentButByteDistinctKeys() started.
+◇ Test confirmSquadProposalStartsMissionWithBudgetAndIsIdempotent() started.
+◇ Test coalescerPreservesOrderUnderReentrancy() started.
+◇ Test enqueueRejectsUppercaseOrNonHexClaimedInputHash() started.
+◇ Test shellTimeoutTerminatesProcess() started.
+◇ Test parseNoteJSONTruncatesLongTitle() started.
+◇ Test appendModeAppends() started.
+◇ Test jsonWireSafety() started.
+◇ Test failedSlotDoesNotSpinOrAutoRetryAfterConfigurationFix() started.
+◇ Test modelCatalogManualEntryPolicyMatrix() started.
+◇ Test unexpectedPlanningFallbackTerminalizesThroughFailureOwner() started.
+◇ Test retryBlockedCardRedispatches() started.
+◇ Test startupBootstrapGateBlocksDispatchUntilRecoveryCompletes() started.
+◇ Test endTurnWithoutTerminatorRemindsOnceThenBlocks() started.
+◇ Test candidateConversionReplayReturnsOneMission() started.
+◇ Test existingSpentUsageOverflowTerminalizesWithExactEvidence() started.
+◇ Test materializationAndMissionConversionAreIdempotent() started.
+◇ Test toolBridgeEventWriteFailureRemainsVisibleWithTrace() started.
+◇ Test dmPersistsBothSidesAndFindsThread() started.
+◇ Test runtimeProfileBootstrapSeedsBothAndHonorsPreferredSource() started.
+◇ Test messageArrivingDuringModelWorkRemainsUndistilled() started.
+◇ Test compactKeepsFirstMessageAndSuffixPairs() started.
+◇ Test retryFailureCopiesDiagnosticsToWorkAttemptAndEvent() started.
+◇ Test plannerFallbackStillCarriesSpentUsage() started.
+◇ Test illegalTransitionThrows() started.
+◇ Test transientFailureRecordsUsageAndUsesDurableBackoffOnly() started.
+◇ Test scheduledTemplateValidationRejectsFreeAutonomyAtSaveAndFireTime() started.
+◇ Test candidateWithWrongCampCowFailsBeforeWrites() started.
+◇ Test sameMissionStartReplayRequiresExplicitIdentity() started.
+◇ Test failureReporterScrubsSecretsAndRawExternalResponses() started.
+◇ Test guideToolDefsFixedTrio() started.
+◇ Test shellRegistryTerminateAllKillsRunning() started.
+◇ Test maxTurnsExhaustionBlocks() started.
+◇ Test testCowRequiresAcceptedMissionWithRealArtifactAndUnlocksOnce() started.
+◇ Test officialAPIPlanningUsesCachedPlusManualCatalog() started.
+◇ Test recordPlanningTokensSaturatesInsteadOfOverflowing() started.
+◇ Test mcpToolRequiresExplicitAllowNotInheritedByLegacyFull() started.
+◇ Test legacyPlanningRepairUsesExactlyOneDefaultOnly() started.
+◇ Test canonicalRejectsDuplicateDecodedKeysAndInvalidUnicode() started.
+◇ Test mcpBridgeDownEmitsEventAndGuidesBlockCard() started.
+◇ Test createCampProvisionsGuideAndIsListable() started.
+◇ Test normalizesBaseURL() started.
+◇ Test durableHaltCASRejectsStaleExpectedMode() started.
+◇ Test renewNonStaleFailureLatchesFatalWithoutDroppingLedgerOwnership() started.
+◇ Test progressNoteAppendsEvent() started.
+◇ Test cliPlanningProfileFailsPreflightWithoutMissionWrites() started.
+◇ Test artifactLedgerFiltersArchivedCampsAndBuildsStableReport() started.
+◇ Test completeAcceptsNilOrCanonicalObjectOutput() started.
+◇ Test claimClearsRetryAndInterruptedDiagnostics() started.
+◇ Test unknownBlockRoundTripsVerbatim() started.
+◇ Test ignoresCommentsAndPings() started.
+◇ Test campNotesNeverLeakAcrossCamps() started.
+◇ Test failureDispositionRawValuesAndCodableRoundTripAreStable() started.
+◇ Test distillationEventInsertFailureRollsBackNoteAndWatermark() started.
+◇ Test runtimeReconcileFailureNeverChangesDefault() started.
+◇ Test memoryDistillNoEligibleInputIsDistinct() started.
+◇ Test retryExhaustionStopsAtMaxAttempts() started.
+◇ Test timeoutThenSuccessDoesNotAccumulate() started.
+◇ Test userVisibleFailureContainsExactFullTrace() started.
+◇ Test planningUsageNilWritesNoTokenEvent() started.
+◇ Test scheduleLegacyTextLastFiredAtRemainsReadable() started.
+◇ Test planningSuccessCommitsTokensCardsRollupAndWorkOnce() started.
+◇ Test canonicalSlashAndUnicodeGoldenBytes() started.
+◇ Test handoffParsesWithoutArtifactsKey() started.
+◇ Test contextDegradationKernelEventOccursOnlyAfterCommit() started.
+◇ Test workspaceBookmarkCaptureAndResolveRoundtrip() started.
+◇ Test planAfterCancelIsNoop() started.
+◇ Test closeoutAcceptsFromDelivering() started.
+◇ Test runningCancelCopiesCancellationDiagnosticsAtomically() started.
+◇ Test haltedPendingReconcileDoesNotRunAnotherDatabasePass() started.
+◇ Test requestBodyToolChoiceForcesNamedTool() started.
+◇ Test manualDistillCreatesMemoryAndAdvancesWatermark() started.
+◇ Test scheduleMathMisfireDetectsPreviousUnfiredSlot() started.
+◇ Test askUserSuspendsCardAndPersistsRequest() started.
+◇ Test cliProcessBackendTimeoutBlocksCard() started.
+◇ Test terminalWaiterReturnsAfterDurableCancelWhileIdleWaitsForProviderExit() started.
+◇ Test genericClaimAndRenewReturnPersistedSubmillisecondLease() started.
+◇ Test enqueueRejectsNonCanonicalJSONBeforeDatabaseWrite() started.
+◇ Test guideNoteInsertFailureRollsBackWatermarkAndEvent() started.
+◇ Test sameCompanionCardsStaySerial() started.
+◇ Test whitelistStripsDisallowedToolFromRunner() started.
+◇ Test distillMemoryReturnsNilOnSkip() started.
+◇ Test genericPlanningKindAPIsRejectBeforeSQL() started.
+◇ Test observabilityMigrationExactDDLAndConstraints() started.
+◇ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() started.
+◇ Test loopCompactsAfterThresholdAndContinues() started.
+◇ Test streamingSessionTimeoutDefaultsSupportSlowRelays() started.
+◇ Test autonomyApprovalMatrix() started.
+◇ Test turnRetryExhaustionSurfacesLastError() started.
+◇ Test openAIChatGPTTokenRequestUsesPKCE() started.
+◇ Test capturedProfileAndModelDoNotDriftAfterDefaultChanges() started.
+◇ Test ruminationUsesNoToolsAndRetryUpdatesOneResult() started.
+◇ Test canonicalTypedAndRawPathsProduceIdenticalBytes() started.
+✔ Test validateRejectsBadShapes() passed after 0.584 seconds.
+◇ Test missionAndPlanningWorkCommitAtomically() started.
+◇ Test legacyPlanningRepairCreatesOneReplayableWork() started.
+◇ Test runtimeProfileBootstrapSeedsAPIOnly() started.
+◇ Test haltBulkPlanningCancelIsAllOrNothing() started.
+◇ Test parseNoteJSONHappyPath() started.
+◇ Test guideThreadFindOrCreateIdempotent() started.
+◇ Test ruminationFailureKeepsSourceAndCanRetry() started.
+◇ Test toolRiskMappingSingleSource() started.
+◇ Test adoptionClosesExactlyOneInterruptedAttemptWithoutLeaseExpiry() started.
+◇ Test runtimeProfileBootstrapSeedsOAuthOnly() started.
+◇ Test harvestWithNothingDoneFails() started.
+◇ Test feedQuestionCarriesRequestId() started.
+◇ Test cutIndexLandsOnAssistantBoundary() started.
+◇ Test shellNonzeroExitIsResultNotError() started.
+◇ Test malformedWhitelistExposesOnlyBoardToolsFromRunner() started.
+◇ Test guideToolLoopExecutesCampStatusThenReplies() started.
+◇ Test busyCompanionSkippedNotStarved() started.
+◇ Test databaseReadFailureIsFailedNotLoadedEmpty() started.
+◇ Test crossMissionExperienceReuseGoldenPath() started.
+◇ Test oauthCredentialRollbackFailureIsExplicitAndCritical() started.
+◇ Test runningStartupDoesNotDispatchPlanningBeforeCardOrphanAdoptionCompletes() started.
+◇ Test adoptionCopiesInterruptedDiagnosticsAndNextClaimClearsWorkError() started.
+◇ Test handoffRequiresArtifactsOrReason() started.
+◇ Test fetchTimeoutReturnsError() started.
+◇ Test failureInitializerRejectsInvalidCodeMessageAndUsageSchema() started.
+◇ Test renameCampSemantics() started.
+◇ Test scheduleMathWeeklyNextFireWrapsAcrossWeek() started.
+◇ Test missingWorkspaceExplains() started.
+◇ Test invalidKernelControlModeNeverDefaultsToRunning() started.
+◇ Test migratesAndBootstraps() started.
+◇ Test confirmedProposalLandsInGuidesCamp() started.
+◇ Test invalidProposalRetriesOnceThenFallsBack() started.
+◇ Test mcpRpcErrorResponseThrows() started.
+◇ Test pendingRequestsAcrossCards() started.
+◇ Test openAIOAuthSessionWritesRotatedRefreshToken() started.
+◇ Test planningPreflightRejectsMissingPrimaryCredentialWithoutWrites() started.
+✔ Test scheduleMathSpringForwardUsesNextValidLocalTime() passed after 0.596 seconds.
+◇ Test startupOrphanRecoveryFailureFailsClosedUntilExplicitRetry() started.
+◇ Test exhaustedBudgetStopsDispatchAndNotifiesOnce() started.
+◇ Test guideToolLoopCapsAtSixRoundsThenForcesText() started.
+◇ Test turnRetriesTransientErrorThenCompletes() started.
+◇ Test haltedWorklessUnresolvedLegacyMissionUsesEmergencyHaltAttemptZero() started.
+◇ Test claimAndRenewRejectNaNInfinityZeroAndNegativeLeaseBeforeWrite() started.
+◇ Test scheduleFireSchemaReservesRedactionWithoutAllowingOrdinaryMutation() started.
+◇ Test rejectsNonHTTPS() started.
+◇ Test coalescerDiscardDropsPendingDeltas() started.
+◇ Test deterministicFailureIsImmediatelyTerminal() started.
+◇ Test haltedStartupCleanupFailureRetriesRecoveryBeforeDurableRunning() started.
+◇ Test explicitRetryAfterStartupCardRecoveryFailureActivatesSupervisorExactlyOnce() started.
+◇ Test shutdownRacingTerminalProposalHasOneActorSerializedWinner() started.
+◇ Test nextClaimableDateIgnoresRunningTerminalAndArchivedCampRows() started.
+◇ Test explicitJsonRoundTripsAndIsDeterministic() started.
+◇ Test waitUntilIdleIgnoresFutureRetryButWaitUntilTerminalDoesNot() started.
+◇ Test reconciliationReturnsEmptyForGatewayProfiles() started.
+◇ Test planningReplayPreservesFirstTrace() started.
+◇ Test companionsDedupesDuplicateIds() started.
+◇ Test scheduleMillisecondsOverflowClaimsSlotThenRecordsMissedWithoutMission() started.
+◇ Test a1bSchedulePathDoesNotCreateScheduleFireOrChangeClaimCAS() started.
+◇ Test twoCardMissionEndToEndColdStart() started.
+◇ Test planningSpecificProviderLifecycleUsesSealedLedgerOwner() started.
+◇ Test answerGuardRejectsMismatchedRequest() started.
+◇ Test manualAppCallsiteCapturesCoordinatorCommandBeforeTask() started.
+◇ Test startupRecoveryRetryWritesNoCampHaltedOrCampResumedEvent() started.
+◇ Test manualMissionStartInputChangeCreatesNewCommandAndSuccessClearsPending() started.
+◇ Test companionsMissingIdThrows() started.
+◇ Test cliBackendLiveSpikeRunsOnlyWhenEnabled() started.
+◇ Test pauseTurnCappedAtFiveContinuations() started.
+◇ Test oauthPlanningRejectsMissingAccountIdWithoutWrites() started.
+✔ Test searchAndStatusToolsAreCampScoped() passed after 0.622 seconds.
+◇ Test planningClaimAndRenewReturnPersistedSubmillisecondLeaseAndTerminalize() started.
+◇ Test invalidCompleteOutputSkipsBusinessMutationAndLeavesAttemptRunning() started.
+◇ Test reconciliationReportsPinnedModelsOutsideTrustedCatalog() started.
+◇ Test evercampMigrationV9AdoptsValidatedLegacyV8Tables() started.
+◇ Test planningUsageOverflowEvidenceSortsDeduplicatesAndRejectsInvalidShape() started.
+◇ Test handoffParsesFromToolInput() started.
+◇ Test coalescerBatchesDeltas() started.
+◇ Test closeoutDistillsCoworkNoteWithMissionGoalPrefix() started.
+◇ Test databaseUsesFiveSecondBusyTimeoutAndWAL() started.
+◇ Test scheduleFireDSTSlotKeysAreStable() started.
+◇ Test cliProcessBackendBlocksWhenCliExitsWithoutBoardTerminator() started.
+◇ Test legacyPlanningRepairRunsBeforeCardAdoption() started.
+◇ Test undistilledWatermarkAndMark() started.
+◇ Test ruminationCanExposeProgressBeforeBackgroundProcessing() started.
+◇ Test unknownBlocksPreservedInHistory() started.
+✔ Test terminalFailureCopiesDiagnosticsToWorkAttemptAndEvent() passed after 0.640 seconds.
+◇ Test humanAnswerRendering() started.
+◇ Test deniedActionRoutesToErrorAndCardContinues() started.
+◇ Test sameClaimedHashWithDifferentPayloadIsRecomputedAndRejected() started.
+◇ Test nonFiniteScheduleFireFailsBeforeClaimWithoutWrites() started.
+◇ Test runtimeProfileBootstrapSeedsEmptyAnthropicProfileWhenNoCredentials() started.
+◇ Test oneAggregateKindHasOneActiveWorkButKeepsTerminalHistory() started.
+✔ Test businessMutationFailureRollsBackTerminalAndAttemptClose() passed after 0.642 seconds.
+◇ Test webSearchRendersResultsWithSourceMarker() started.
+◇ Test toolResultArrayContentFallsBackToUnknown() started.
+◇ Test requiredSelectedToolMissingIsTypedFailure() started.
+◇ Test scheduleDateEncodingChangesOnlyLastFiredAt() started.
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+◇ Test mcpBridgeWrapsSuccessInExternalContentEnvelope() started.
+◇ Test parseNoteJSONStripsCodeFence() started.
+◇ Test planningCredentialReadFailureIsTypedAndDoesNotWrite() started.
+◇ Test bootstrapReconcileRunsOnceAndRespectsUserChoices() started.
+◇ Test haltDuringReconcileDatabaseWindowDropsStaleCandidate() started.
+◇ Test suspendAndAnswerRoundTrip() started.
+◇ Test requestBodyAutoOmitsToolChoice() started.
+◇ Test committedVisibilityFailureCannotRepeatMutation() started.
+◇ Test workflowGenerationRejectsStaleTerminalCompletion() started.
+◇ Test haltRacingEnqueueClaimOrRenewHasControlWinnerOnly() started.
+◇ Test runtimeProfileStoreDeleteGuardsDefaultAndReferencedProfiles() started.
+◇ Test multiToolUseOrderPreservedInHistory() started.
+◇ Test multipleQARoundsAccumulate() started.
+◇ Test delayedStartupRecoveryCannotReviveShutdownKernel() started.
+◇ Test refusalBlocksImmediately() started.
+◇ Test packetOmitsEmptyKnowledgeSections() started.
+◇ Test toolUseStopWithZeroBlocksThrowsMalformed() started.
+◇ Test terminalCommitStoreFailureRetainsOwnershipAndPendingProposal() started.
+◇ Test unknownBlockDeltaThrows() started.
+◇ Test openAIResponsesRequestPreservesConversationAndTools() started.
+◇ Test toolErrorSelfHealsButThreeStrikesBlocks() started.
+◇ Test requestBodyShape() started.
+✔ Test planningProfileKindDriftBetweenPreflightAndTransactionWritesNothing() passed after 0.645 seconds.
+◇ Test openAIOAuthSessionSingleFlightsConcurrentRefreshes() started.
+◇ Test orchestratorPassesCompanionIdToProviderFactory() started.
+◇ Test contractOmitsChunkedWritesWithoutWriteFile() started.
+◇ Test inputRefreshFailurePreservesDashboardAndInbox() started.
+◇ Test requestBodyEncodesDeterministically() started.
+◇ Test dmNoteInsertFailureRollsBackWatermarkAndEvent() started.
+◇ Test mcpNamingSanitizesComposesAndParses() started.
+◇ Test startupCardOrphanAdoptionFailureKeepsPlanningSuppressedWithoutDurableTransition() started.
+◇ Test emergencyStopCancelsRunningBeforeWaitingForPlanner() started.
+◇ Test planningUsageOverflowMutationRollbackIsTotal() started.
+◇ Test emergencyStopHaltsDispatchAndResumeContinues() started.
+◇ Test fileToolWordingUnifiedWhenFileToolsStripped() started.
+◇ Test scheduleMathFallBackChoosesFirstRepeatedLocalTime() started.
+◇ Test requiredKnowledgeFailureAtomicallyBlocksAndRecordsDegradation() started.
+✔ Test decodeKnownBlocks() passed after 0.646 seconds.
+◇ Test sameSlotReplayReturnsSameMission() started.
+◇ Test plannerRetriesOnlySchemaCorrectionAndPreservesFirstTurnUsage() started.
+◇ Test runnerOmitsWebSearchWithoutKey() started.
+◇ Test scheduleAppCallsiteDelegatesClaimAndStartExclusively() started.
+◇ Test loginShellEnvironmentCapturesPath() started.
+◇ Test contractMentionsChunkedWrites() started.
+◇ Test schedulePlannerSelectionFailureClaimsSlotThenRecordsMissedOnce() started.
+◇ Test runtimeProfileMigrationV11AllowsCliKindsAndPreservesExistingRows() started.
+◇ Test campNotesSearchToolRendersHitsAndEmptyState() started.
+◇ Test memoryDistillReadFailureReturnsFailedWithTrace() started.
+◇ Test planningPreflightRejectsMissingCatalogWithoutWrites() started.
+◇ Test mcpHandshakeSendsInitializeThenInitializedNotification() started.
+✔ Test reconciliationSkipsModelJudgementForCliProfiles() passed after 0.649 seconds.
+✔ Test sameMissionStartReplayDoesNotConstructProvider() passed after 0.649 seconds.
+✔ Test turnAggregateUsageOverflowTerminalizesWithExactEvidence() passed after 0.678 seconds.
+✔ Test reworkCompletionPreservesPreviousArtifactVersion() passed after 0.728 seconds.
+✔ Test planningSpecificSingleAndBulkCancelRemainAvailableWhileHalted() passed after 0.738 seconds.
+✔ Test contractHardensAgainstExternalContentWhenWebToolsPresent() passed after 0.741 seconds.
+✔ Test toolResultEncoding() passed after 0.744 seconds.
+✔ Test nextClaimableDateRejectsNonFiniteNowBeforeRead() passed after 0.745 seconds.
+✔ Test codingRanchMigrationReplaysFromV7() passed after 0.760 seconds.
+✔ Test proposalDismissAndRevert() passed after 0.799 seconds.
+✔ Test planningCancelIsProjectionAtomicAndIdempotent() passed after 0.802 seconds.
+✔ Test planningSuccessWithFallbackIsRejectedWithoutWrites() passed after 0.814 seconds.
+✔ Test cliPipeDrainRereadsAfterExitObserved() passed after 0.822 seconds.
+✔ Test canonicalRejectsInvalidOrOutOfBoundsNumbers() passed after 0.822 seconds.
+✔ Test searchCampNotesPinnedFirstAndCapped() passed after 0.825 seconds.
+✔ Test eventsByMissionOrdered() passed after 0.832 seconds.
+✔ Test autoDistillRespectsMinMessagesThreshold() passed after 0.832 seconds.
+✔ Test guideModelUsesKernelDefault() passed after 0.851 seconds.
+✔ Test pinnedAndRecentSplitAndOrder() passed after 0.851 seconds.
+✔ Test ddlRequiresClaimedSequenceZeroAndExactEventResultingState() passed after 0.851 seconds.
+✔ Test legacyRepairHaltedModeCreatesAndCancelsAttemptZeroAtomically() passed after 0.851 seconds.
+✔ Test sameMissionStartPayloadOrGraphConflictFailsWithoutWrites() passed after 0.851 seconds.
+✔ Test genericPlanningTargetAPIsRejectBeforeMutationAndClosures() passed after 0.851 seconds.
+✔ Test jsonRoundTrip() passed after 0.851 seconds.
+✔ Test packetContainsContractAndCard() passed after 0.904 seconds.
+✔ Test pendingRequestForCanceledCardIsHidden() passed after 0.910 seconds.
+✔ Test guideBroadcastLandsInGuideThread() passed after 0.955 seconds.
+✔ Test feedHandlesDuplicateCardIds() passed after 0.956 seconds.
+✔ Test rollupAllTerminalWithDoneIsDelivering() passed after 0.956 seconds.
+✔ Test failureReporterDatabaseUnwritableLogsAndReturnsSameTrace() passed after 0.956 seconds.
+✔ Test jsonLiterals() passed after 1.056 seconds.
+✔ Test providerErrorDescriptionsAreHuman() passed after 1.091 seconds.
+✔ Test legacyPlanningModelUnavailableFailsMissionOnceWithExactCode() passed after 1.172 seconds.
+✔ Test leaseRenewalReturnsNewVersionAndOldClaimCannotComplete() passed after 1.348 seconds.
+◇ Test catalogRefreshParsesModelsAndCachesForOfficialProfiles() started.
+✔ Test proposalBlockRoundTripAndAccessor() passed after 1.466 seconds.
+✔ Test sameMissionStartReplayRunsBeforeCredentialAndCatalogPreflight() passed after 1.512 seconds.
+✔ Test invalidCancellationReasonIsPreSQLAndSkipsBusinessMutation() passed after 1.538 seconds.
+◇ Test openAIResponsesRefreshesOnceAfterUnauthorizedAndRetriesWithNewToken() started.
+✔ Test legacyPlanningFailureCreatesAttemptZeroWithoutAttemptRows() passed after 1.576 seconds.
+✔ Test canonicalPreservesIntegerBeyondTwoToThe53() passed after 1.624 seconds.
+✔ Test cancelActiveNoRowIsIdempotentAndSkipsMutation() passed after 1.654 seconds.
+◇ Test streamsTextTurnEndToEnd() started.
+✔ Test nextClaimableDateSelectsEarliestRetry() passed after 1.821 seconds.
+✔ Test accumulatesTextAndToolUse() passed after 1.888 seconds.
+◇ Test ruminationStartAndWorkAreAtomic() started.
+✔ Test renderSectionDeterministicAndNilWhenEmpty() passed after 1.914 seconds.
+✔ Test openAIChatGPTAuthorizationURLMatchesCodexFlow() passed after 1.970 seconds.
+✔ Test failureDecoderRevalidatesAndCannotBypassInitializer() passed after 2.059 seconds.
+◇ Test refreshGatewayReplacesScopedListWithoutCacheWrites() started.
+✔ Test downstreamPacketCarriesUpstreamHandoffAndPaths() passed after 2.200 seconds.
+✔ Test a3Revision02EntryBoundaryRemainsByteExact() passed after 2.374 seconds.
+◇ Test ruminationSanitizesPersistedAndVisibleDiagnostics() started.
+✔ Test failureRecordSameIdentityUpsertIncrementsOccurrence() passed after 2.441 seconds.
+✔ Test enqueueMissingCampThrowsRecordNotFoundAndWritesNothing() passed after 2.440 seconds.
+✔ Test legacyPlanningRepairConflictOrCliFailsMissionOnce() passed after 2.446 seconds.
+✔ Test validateCanonicalRejectsAlternateRepresentations() passed after 2.500 seconds.
+✔ Test legacyPlanningRepairUsesUniformMemberProfile() passed after 2.510 seconds.
+✔ Test rollupTerminalStatesSticky() passed after 2.547 seconds.
+✔ Test missionCreationHonorsCampIdWithDefaultFallback() passed after 2.569 seconds.
+✔ Test cliPipeDrainBacksOffPollingWhileSilent() passed after 2.569 seconds.
+✔ Test runtimeProfileMigrationV10ReplaysFromV9AndPreservesCompanions() passed after 2.595 seconds.
+✔ Test clampModelSelectionsHasUnifiedRules() passed after 2.625 seconds.
+✔ Test sameIdempotencyAndPayloadReplaysButDifferentPayloadConflicts() passed after 2.642 seconds.
+✔ Test failureRecordInsertUsesTraceAsPrimaryKey() passed after 2.679 seconds.
+✔ Test feedMapsEventKindsToEntries() passed after 2.692 seconds.
+✔ Test pinnedAndRecentCompanionNotes() passed after 2.699 seconds.
+✔ Test scheduleMathDailyNextFireMovesToTomorrowAfterSlot() passed after 2.698 seconds.
+✔ Test invalidProjectionCasesAreTraceableAndNeverDefault() passed after 2.794 seconds.
+✔ Test workflowCancellationCannotMasqueradeAsLoaded() passed after 2.804 seconds.
+✔ Test durableWorkAttemptEventIsAppendOnlyFromIntroducingMigration() passed after 2.810 seconds.
+✔ Test codingRanchMigrationAndBootstrapAreIdempotent() passed after 2.813 seconds.
+✔ Test haltRacingFailureOrOverflowTerminalHasSingleOwner() passed after 2.841 seconds.
+✔ Test keychainReadDistinguishesNotFoundFromFailure() passed after 2.852 seconds.
+✔ Test closeoutThrowsWhenNotDelivering() passed after 3.077 seconds.
+✔ Test cancelIsNoopWhenTerminal() passed after 3.156 seconds.
+✔ Test scheduleCRUDAndClaimDedupe() passed after 3.280 seconds.
+✔ Test genericReservedKindOrderingUsesCallerOrderBeforeDeduplication() passed after 3.309 seconds.
+◇ Test boardServerForwardsProgressSearchAndCompleteTools() started.
+✔ Test truncatesOnUTF8ByteBoundary() passed after 3.375 seconds.
+✔ Test agentToolDefsComplete() passed after 3.468 seconds.
+✔ Test mcpSpikeAgainstRealFilesystemServer() passed after 3.468 seconds.
+✔ Test scheduleMathSameSlotDedupeCoversDailyAndWeekly() passed after 3.468 seconds.
+✔ Test rollupEmptyCardsIsPlanning() passed after 3.468 seconds.
+✔ Test stateDirectoryLockRejectsSecondFileDescriptionAndReleases() passed after 3.469 seconds.
+✔ Test nextClaimableDateReturnsEarliestFutureRetry() passed after 3.489 seconds.
+✔ Test rollupAllTerminalZeroDoneIsFailed() passed after 3.458 seconds.
+✔ Test scheduledTemplateValidationRejectsMissingBudgetAtSave() passed after 3.488 seconds.
+✔ Test scheduleMathMisfireIgnoresScheduleCreatedAfterSlot() passed after 3.462 seconds.
+✔ Test missingArtifactKeepsCardRunning() passed after 3.473 seconds.
+✔ Test explicitV2EmptyAllowMeansNoCapabilities() passed after 3.467 seconds.
+✔ Test codingRanchBootstrapPreservesExistingExpertRoster() passed after 3.473 seconds.
+✔ Test parseFailureRetainsOnlyBoardTools() passed after 3.467 seconds.
+✔ Test canonicalObjectRootInspectionDoesNotUseJSONValueOrRawJSONDecoder() passed after 3.440 seconds.
+✔ Test completeCopiesArtifactBeforeDone() passed after 3.467 seconds.
+✔ Test parseNoteJSONSkipConvention() passed after 3.440 seconds.
+✔ Test operationTraceGeneratesAndAdoptsSafeDurableIdentity() passed after 3.437 seconds.
+✔ Test mcpSecretAbsentAndReadFailureHaveDifferentCodes() passed after 3.467 seconds.
+✔ Test writeReadListRoundTrip() passed after 3.433 seconds.
+✔ Test optionalKnowledgeFailureRecordsBeforeContinuingWithMarker() passed after 3.473 seconds.
+✔ Test failureRecordTraceConflictDoesNotOverwrite() passed after 3.432 seconds.
+✔ Test scheduleMissionStartUsesCheckedUTCMillisecondsKey() passed after 3.585 seconds.
+✔ Test inputOutputUsageOverflowTerminalizesWithExactEvidence() passed after 3.443 seconds.
+✔ Test failureRecordResolveReopenAndOverflowAreChecked() passed after 3.347 seconds.
+✔ Test searchCampNotesLikeSemantics() passed after 3.313 seconds.
+✔ Test explicitReplayUsesNewIdempotencyKeyAndDoesNotMoveCursor() passed after 3.457 seconds.
+✔ Test candidateAppCallsiteCapturesCoordinatorCommandBeforeFirstAwait() passed after 3.588 seconds.
+✔ Test planningSpecificRecoveryAdoptsInterruptedWithoutGenericAPI() passed after 3.304 seconds.
+✔ Test proposalConfirmIsIdempotentCAS() passed after 3.305 seconds.
+✔ Test completeBusinessMutationFailureRollsBackValidatedOutputAndTerminalRows() passed after 3.304 seconds.
+✔ Test blockRecordsTypedReason() passed after 3.304 seconds.
+✔ Test resumeEventFailureRollsBackKernelControlProjection() passed after 3.294 seconds.
+✔ Test legacyEmptyArrayMeansFullBuiltins() passed after 3.294 seconds.
+✔ Test ddlRejectsEveryInvalidWorkAttemptEventErrorStatePair() passed after 3.306 seconds.
+✔ Test completeCardWritesHandoffProjection() passed after 3.295 seconds.
+✔ Test promptsAreDeterministic() passed after 3.289 seconds.
+✔ Test malformedV2ObjectFailsClosedWithFlag() passed after 3.271 seconds.
+✔ Test cliBackendPolicyMapsAutonomyWithoutEscalatingFreeTier() passed after 3.271 seconds.
+✔ Test canonicalNumberGoldenBytes() passed after 3.272 seconds.
+✔ Test durableHaltCASIsAtomicIdempotentAndGloballyAudited() passed after 3.290 seconds.
+✔ Test openAIResponsesRequestMarksToolResultErrors() passed after 3.272 seconds.
+✔ Test legacyPlanningWithCardsFailsClosedWithExactTypedErrorAndZeroWrites() passed after 3.272 seconds.
+✔ Test planningSuccessOverBudgetCreatesCardsButDispatchesNone() passed after 3.272 seconds.
+✔ Test approvalHashIsKeyOrderInsensitiveAndInputSensitive() passed after 3.272 seconds.
+✔ Test guideChatDistillNoopWhenNoBacklog() passed after 3.272 seconds.
+✔ Test runningUnresolvedLegacyMissionKeepsExactLegacyTerminalCode() passed after 3.272 seconds.
+✔ Test handoffRequiresNonEmptyCoreFields() passed after 3.272 seconds.
+✔ Test requiredMcpRegistryFailureBlocksCard() passed after 3.272 seconds.
+✔ Test nextClaimableDateReturnsNowForDueRetryIncludingEquality() passed after 3.272 seconds.
+✔ Test noteSnippetTruncationLimits() passed after 3.268 seconds.
+✔ Test transientRetryUsesFiveThirtyOneTwentySecondBackoff() passed after 3.272 seconds.
+✔ Test genericClaimScopedAndCancelCommandsRejectExistingCampDeletionBeforeMutation() passed after 3.269 seconds.
+✔ Test emptyToolInputBecomesEmptyObject() passed after 3.268 seconds.
+✔ Test planningIdentityAndTokenEventsPreserveIntegersAboveTwoTo53() passed after 3.269 seconds.
+✔ Test haltEventFailureRollsBackKernelControlProjection() passed after 3.268 seconds.
+✔ Test keychainRoundTrip() passed after 3.269 seconds.
+✔ Test oauthCredentialCommitFailureRollsBackEarlierWrites() passed after 3.268 seconds.
+✔ Test resolvedCatalogUsesTheCorrectSourceWithoutWrites() passed after 3.269 seconds.
+✔ Test queuedAndRetryCancellationDoNotRequireLeaseOwner() passed after 3.269 seconds.
+✔ Test mcpServerDeletePreimageAndReverseRollbackAreAtomic() passed after 3.270 seconds.
+✔ Test prefersArticleContentOverChrome() passed after 3.264 seconds.
+✔ Test cliBackendPolicyPinsBannedFlags() passed after 3.264 seconds.
+✔ Test campNoteCRUDAndOrdering() passed after 3.272 seconds.
+✔ Test appPlanningCallsitesContainNoDirectOrchestratorStart() passed after 3.301 seconds.
+✔ Test mcpRegistryRefreshFailurePreservesPriorRegistry() passed after 3.264 seconds.
+✔ Test returningCompletedCardReopensMissionAndMarksDoneDependentsForReview() passed after 3.265 seconds.
+✔ Test apiErrorEventThrows() passed after 3.264 seconds.
+✔ Test evercampMigrationV9ReplaysFromV8() passed after 3.265 seconds.
+✔ Test planningUsageOverflowEvidencePreservesIntegersAboveTwoTo53() passed after 3.265 seconds.
+✔ Test setMissionAutonomyPersistsAndAppendsEvent() passed after 3.264 seconds.
+✔ Test explicitV2AllowListIsLiteral() passed after 3.263 seconds.
+✔ Test completeRejectsInvalidNonObjectOrAlternateOutputBeforeWrite() passed after 3.264 seconds.
+✔ Test startupHealsConfirmedProposalWithoutMission() passed after 3.265 seconds.
+✔ Test nextClaimableDateReturnsNowForQueued() passed after 3.263 seconds.
+✔ Test applyReconciliationToleratesEmptyItemsAndMissingProfile() passed after 3.262 seconds.
+✔ Test successStoresOnlyOptionalCanonicalOutputAndNoErrors() passed after 3.264 seconds.
+✔ Test planningSuccessWithNilFallbackWritesNoFallbackEvent() passed after 3.264 seconds.
+✔ Test proposalAppCallsiteCapturesCoordinatorCommandBeforeTask() passed after 3.273 seconds.
+✔ Test claimNextUsesExactlyTheSameEligibilityPredicate() passed after 3.259 seconds.
+✔ Test openAIChatGPTRefreshTokenRequestUsesCodexScope() passed after 3.237 seconds.
+✔ Test applyReconciliationFlipsOnlyListedCompanionsAndResetsScopes() passed after 3.260 seconds.
+✔ Test campStatusToolReportsMissionsAndDeliverables() passed after 3.241 seconds.
+✔ Test runtimeProfileBootstrapIsIdempotentAndCopiesLegacyDefaultsOnce() passed after 3.232 seconds.
+✔ Test genericPlanningReadSeamsRemainAvailable() passed after 3.232 seconds.
+✔ Test webSearchRejectsEmptyQuery() passed after 3.231 seconds.
+✔ Test durableWorkMigrationHasExactTablesIndexesChecksAndTriggers() passed after 3.232 seconds.
+✔ Test archivedCampRejectsNewMissionShell() passed after 3.232 seconds.
+✔ Test genericEnqueueClaimScheduleAndAdoptRejectCampDeletionBeforeSQL() passed after 3.226 seconds.
+✔ Test planningUsageZeroWritesExactTokenEvent() passed after 3.226 seconds.
+✔ Test oneTerminalAttemptOutcomePerClaim() passed after 3.226 seconds.
+✔ Test invalidHandoffKeepsCardRunning() passed after 3.225 seconds.
+✔ Test failureInitializerAcceptsNilOrExactCanonicalUsage() passed after 3.225 seconds.
+✔ Test automaticAuthSchemeResolvesByFormat() passed after 3.225 seconds.
+✔ Test validProposalPersistsCardsWithKernelIds() passed after 3.226 seconds.
+✔ Test missingKernelControlSingletonFailsExplicitly() passed after 3.226 seconds.
+✔ Test enqueueReplayAfterArchiveIsRejected() passed after 3.229 seconds.
+✔ Test packetRendersCampNotesAndMemorySections() passed after 3.226 seconds.
+✔ Test scheduleMathWeeklyNextFireSameWeek() passed after 3.213 seconds.
+✔ Test durableWorkMigrationMatrixThroughV12() passed after 3.237 seconds.
+✔ Test recordPlanningTokensUpdatesSpentAndAppendsEvent() passed after 3.227 seconds.
+✔ Test enqueueArchivedCampThrowsCampArchivedAndWritesNothing() passed after 3.214 seconds.
+✔ Test attemptEventsRejectUpdateAndDelete() passed after 3.214 seconds.
+✔ Test customAPIPlanningAcceptsProfileScopedManualModel() passed after 3.213 seconds.
+✔ Test runtimeProfileBootstrapOAuthDefaultReconcilesLegacyModels() passed after 3.214 seconds.
+✔ Test packageBuilds() passed after 3.213 seconds.
+✔ Test cliBackendPolicyRejectsBannedArguments() passed after 3.213 seconds.
+✔ Test uiPreviewUsesProcessLocalDefaultsBeforeBootstrapAndReload() passed after 3.616 seconds.
+✔ Test packetRenderingIsDeterministic() passed after 3.214 seconds.
+✔ Test haltRacingSameKeyReplayOrAbsentPreflightWritesNothing() passed after 3.215 seconds.
+✔ Test scheduleValidationFailureAdvancesEvaluationCursorButNotLastFiredAt() passed after 3.615 seconds.
+✔ Test companionNoteCRUDIsolatedPerCompanion() passed after 3.215 seconds.
+✔ Test negativePlanningUsageFailsBeforeSQL() passed after 3.215 seconds.
+✔ Test askUserValidationErrorsSelfHeal() passed after 3.223 seconds.
+✔ Test finishUnknownRunThrows() passed after 3.223 seconds.
+✔ Test unsupportedObjectVersionFailsClosedWithFlag() passed after 3.223 seconds.
+✔ Test mcpServerCRUDAndCampEnableToggle() passed after 3.223 seconds.
+✔ Test returnCardForReworkRejectsAcceptedAndFailedMissions() passed after 3.230 seconds.
+✔ Test scheduleFireMigrationMatrixAndExactDDL() passed after 3.252 seconds.
+✔ Test scheduleFiredEventMarksScheduledOrigin() passed after 3.240 seconds.
+✔ Test mcpConnectAndToolListFailuresHaveDifferentCodes() passed after 3.240 seconds.
+✔ Test openAIRequestBodyShape() passed after 3.239 seconds.
+✔ Test scheduleMathDailyNextFireSameDay() passed after 3.239 seconds.
+✔ Test durableHaltMigrationCreatesOneRunningSingletonAndReplays() passed after 3.239 seconds.
+✔ Test boardToolsAreNeverDeniable() passed after 3.239 seconds.
+✔ Test scheduleMathPreviousFireIsInclusive() passed after 3.239 seconds.
+✔ Test invalidOutputBackoffOverflowAndClosureFailureLeaveAllThreeLayersUnchanged() passed after 3.240 seconds.
+✔ Test migrationV5AutonomyDefaultsToStandard() passed after 3.239 seconds.
+✔ Test keychainMutationFailureNeverProjectsSuccess() passed after 3.239 seconds.
+✔ Test oauthPlanningUsesStaticCatalogAndBothCredentialAccounts() passed after 3.239 seconds.
+✔ Test parsesEventDataPairs() passed after 3.239 seconds.
+✔ Test closureToolHandlerDispatchesThroughExecutor() passed after 3.239 seconds.
+✔ Test feedCapsAtLimit() passed after 3.239 seconds.
+✔ Test rollupMixedIsExecuting() passed after 3.241 seconds.
+✔ Test sameMissionStartConflictWinsOverCurrentProviderFailure() passed after 3.242 seconds.
+✔ Test garbageJsonFailsClosedWithFlag() passed after 3.241 seconds.
+✔ Test mcpManagerSpikeAgainstRealPlaywright() passed after 3.241 seconds.
+✔ Test runningCancellationCommitsProjectionAndAttemptAtomically() passed after 3.242 seconds.
+✔ Test knowledgeSectionsRenderBeforeUpstreamHandoffs() passed after 3.241 seconds.
+✔ Test feedDetectsDuplicatesButCanSaveAgain() passed after 3.242 seconds.
+✔ Test ddlRejectsOutputOutsideSucceeded() passed after 3.242 seconds.
+✔ Test nextClaimableDateEmptyKindsReturnsNil() passed after 3.242 seconds.
+✔ Test openAIChatGPTAccountIDComesFromIDTokenClaims() passed after 3.236 seconds.
+✔ Test malformedToolInputThrows() passed after 3.236 seconds.
+✔ Test unknownToolReturnsError() passed after 3.236 seconds.
+✔ Test companionCRUD() passed after 3.242 seconds.
+✔ Test escapeAttemptsRejected() passed after 3.237 seconds.
+✔ Test deriveMatrixCoversAllPriorities() passed after 3.237 seconds.
+✔ Test doublePlanIsNoopWithAuditEvent() passed after 3.240 seconds.
+✔ Test messageStopWithUnfinishedBlocksThrows() passed after 3.239 seconds.
+✔ Test sameMissionStartReplayAfterProfileDeletionReturnsOriginalIdsAndTrace() passed after 3.245 seconds.
+✔ Test shellRejectsEmptyCommand() passed after 3.239 seconds.
+✔ Test systemIsStableAcrossCards() passed after 3.239 seconds.
+✔ Test claimQueuedAndDueRetryAreSingleOwner() passed after 3.240 seconds.
+✔ Test parseNoteJSONMalformedFallsBackToFirstLine() passed after 3.239 seconds.
+✔ Test cardStatusTransitionMatrixKeepsReturnForReworkConservative() passed after 3.239 seconds.
+✔ Test eventAppendAndProjectionSameTransaction() passed after 3.240 seconds.
+✔ Test retryOrFailUsesDispositionOnlyEvenWhenCodeIsIdentical() passed after 3.240 seconds.
+✔ Test transitionUnknownCardThrows() passed after 3.240 seconds.
+✔ Test cutIndexNilWhenHistoryShort() passed after 3.239 seconds.
+✔ Test legacyExplicitArrayIntersectsBuiltins() passed after 3.245 seconds.
+✔ Test planningTerminalMutationRollbackIsTotal() passed after 3.248 seconds.
+✔ Test invalidLeaseLeavesVersionLeaseAttemptsAndEventsUnchanged() passed after 3.248 seconds.
+✔ Test runtimeProfileStoreSetDefaultMaintainsSingleDefault() passed after 3.248 seconds.
+✔ Test claimAndRenewRejectNonFiniteOrNonAdvancingExpirationBeforeWrite() passed after 3.248 seconds.
+✔ Test planningInvalidEndpointIsTypedAndDoesNotWrite() passed after 3.248 seconds.
+✔ Test queuedAndRetryCancelWriteOnlyWorkCancellationDiagnostics() passed after 3.249 seconds.
+✔ Test symlinkEscapeRejected() passed after 3.247 seconds.
+✔ Test retryDateOverflowThrowsAndRollsBack() passed after 3.249 seconds.
+✔ Test cliOutputParserExtractsTextAndUsageFromJsonl() passed after 3.247 seconds.
+✔ Test scheduleExtremeFiniteLastFiredAtPersistsNumericallyReloadsAndDedupes() passed after 3.249 seconds.
+✔ Test canonicalTypedNonConformingFloatThrows() passed after 3.249 seconds.
+✔ Test writeFileSchemaHasOptionalAppend() passed after 3.247 seconds.
+✔ Test updateChatMessageContentRoundTrip() passed after 3.250 seconds.
+✔ Test canonicalKeepsCanonicallyEquivalentButByteDistinctKeys() passed after 3.247 seconds.
+✔ Test missingAssigneeBlocksReadyCard() passed after 3.663 seconds.
+✔ Test parseNoteJSONTruncatesLongTitle() passed after 3.247 seconds.
+✔ Test migrationV2AddsColumnsAndNormalizes() passed after 3.251 seconds.
+✔ Test jsonWireSafety() passed after 3.247 seconds.
+✔ Test appendModeAppends() passed after 3.247 seconds.
+✔ Test modelCatalogManualEntryPolicyMatrix() passed after 3.247 seconds.
+✔ Test missionsListOrderedDesc() passed after 3.252 seconds.
+✔ Test haltedPlanningCannotClaimThroughGenericStore() passed after 3.249 seconds.
+✔ Test enqueueRejectsUppercaseOrNonHexClaimedInputHash() passed after 3.252 seconds.
+✔ Test existingSpentUsageOverflowTerminalizesWithExactEvidence() passed after 3.253 seconds.
+✔ Test runtimeProfileBootstrapSeedsBothAndHonorsPreferredSource() passed after 3.255 seconds.
+✔ Test sameMissionStartReplayRequiresExplicitIdentity() passed after 3.243 seconds.
+✔ Test illegalTransitionThrows() passed after 3.253 seconds.
+✔ Test guideToolDefsFixedTrio() passed after 3.243 seconds.
+✔ Test retryFailureCopiesDiagnosticsToWorkAttemptAndEvent() passed after 3.255 seconds.
+✔ Test officialAPIPlanningUsesCachedPlusManualCatalog() passed after 3.245 seconds.
+✔ Test scheduledTemplateValidationRejectsFreeAutonomyAtSaveAndFireTime() passed after 3.246 seconds.
+✔ Test transientFailureRecordsUsageAndUsesDurableBackoffOnly() passed after 3.248 seconds.
+✔ Test canonicalRejectsDuplicateDecodedKeysAndInvalidUnicode() passed after 3.238 seconds.
+✔ Test failureReporterScrubsSecretsAndRawExternalResponses() passed after 3.251 seconds.
+✔ Test normalizesBaseURL() passed after 3.242 seconds.
+✔ Test recordPlanningTokensSaturatesInsteadOfOverflowing() passed after 3.253 seconds.
+✔ Test cliPlanningProfileFailsPreflightWithoutMissionWrites() passed after 3.241 seconds.
+✔ Test legacyPlanningRepairUsesExactlyOneDefaultOnly() passed after 3.245 seconds.
+✔ Test createCampProvisionsGuideAndIsListable() passed after 3.245 seconds.
+✔ Test durableHaltCASRejectsStaleExpectedMode() passed after 3.241 seconds.
+✔ Test unknownBlockRoundTripsVerbatim() passed after 3.229 seconds.
+✔ Test ignoresCommentsAndPings() passed after 3.229 seconds.
+✔ Test failureDispositionRawValuesAndCodableRoundTripAreStable() passed after 3.249 seconds.
+✔ Test artifactLedgerFiltersArchivedCampsAndBuildsStableReport() passed after 3.277 seconds.
+✔ Test completeAcceptsNilOrCanonicalObjectOutput() passed after 3.265 seconds.
+✔ Test claimClearsRetryAndInterruptedDiagnostics() passed after 3.272 seconds.
+✔ Test canonicalSlashAndUnicodeGoldenBytes() passed after 3.248 seconds.
+✔ Test handoffParsesWithoutArtifactsKey() passed after 3.247 seconds.
+✔ Test userVisibleFailureContainsExactFullTrace() passed after 3.249 seconds.
+✔ Test retryExhaustionStopsAtMaxAttempts() passed after 3.249 seconds.
+✔ Test scheduleLegacyTextLastFiredAtRemainsReadable() passed after 3.248 seconds.
+✔ Test planningUsageNilWritesNoTokenEvent() passed after 3.249 seconds.
+✔ Test contextDegradationKernelEventOccursOnlyAfterCommit() passed after 3.247 seconds.
+✔ Test memoryDistillNoEligibleInputIsDistinct() passed after 3.258 seconds.
+✔ Test requestBodyToolChoiceForcesNamedTool() passed after 3.246 seconds.
+✔ Test planningSuccessCommitsTokensCardsRollupAndWorkOnce() passed after 3.248 seconds.
+✔ Test scheduleMathMisfireDetectsPreviousUnfiredSlot() passed after 3.246 seconds.
+✔ Test failedSlotDoesNotSpinOrAutoRetryAfterConfigurationFix() passed after 3.336 seconds.
+✔ Test workspaceBookmarkCaptureAndResolveRoundtrip() passed after 3.247 seconds.
+✔ Test runningCancelCopiesCancellationDiagnosticsAtomically() passed after 3.248 seconds.
+✔ Test planAfterCancelIsNoop() passed after 3.248 seconds.
+✔ Test enqueueRejectsNonCanonicalJSONBeforeDatabaseWrite() passed after 3.224 seconds.
+✔ Test streamingSessionTimeoutDefaultsSupportSlowRelays() passed after 3.193 seconds.
+✔ Test autonomyApprovalMatrix() passed after 3.180 seconds.
+✔ Test openAIChatGPTTokenRequestUsesPKCE() passed after 3.180 seconds.
+✔ Test capturedProfileAndModelDoNotDriftAfterDefaultChanges() passed after 3.180 seconds.
+✔ Test canonicalTypedAndRawPathsProduceIdenticalBytes() passed after 3.178 seconds.
+✔ Test genericClaimAndRenewReturnPersistedSubmillisecondLease() passed after 3.231 seconds.
+✔ Test genericPlanningKindAPIsRejectBeforeSQL() passed after 3.200 seconds.
+✔ Test parseNoteJSONHappyPath() passed after 3.181 seconds.
+✔ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() passed after 3.200 seconds.
+✔ Test missionAndPlanningWorkCommitAtomically() passed after 3.181 seconds.
+✔ Test toolRiskMappingSingleSource() passed after 3.181 seconds.
+✔ Test guideThreadFindOrCreateIdempotent() passed after 3.181 seconds.
+✔ Test legacyPlanningRepairCreatesOneReplayableWork() passed after 3.181 seconds.
+✔ Test feedQuestionCarriesRequestId() passed after 3.173 seconds.
+✔ Test cutIndexLandsOnAssistantBoundary() passed after 3.173 seconds.
+✔ Test runtimeProfileBootstrapSeedsAPIOnly() passed after 3.181 seconds.
+✔ Test haltBulkPlanningCancelIsAllOrNothing() passed after 3.181 seconds.
+✔ Test adoptionClosesExactlyOneInterruptedAttemptWithoutLeaseExpiry() passed after 3.181 seconds.
+✔ Test runtimeProfileBootstrapSeedsOAuthOnly() passed after 3.181 seconds.
+✔ Test handoffRequiresArtifactsOrReason() passed after 3.172 seconds.
+✔ Test failureInitializerRejectsInvalidCodeMessageAndUsageSchema() passed after 3.172 seconds.
+✔ Test scheduleMathWeeklyNextFireWrapsAcrossWeek() passed after 3.171 seconds.
+✔ Test missingWorkspaceExplains() passed after 3.170 seconds.
+✔ Test planningPreflightRejectsMissingPrimaryCredentialWithoutWrites() passed after 3.175 seconds.
+✔ Test renameCampSemantics() passed after 3.178 seconds.
+✔ Test invalidKernelControlModeNeverDefaultsToRunning() passed after 3.176 seconds.
+✔ Test migratesAndBootstraps() passed after 3.176 seconds.
+✔ Test runningStartupDoesNotDispatchPlanningBeforeCardOrphanAdoptionCompletes() passed after 3.179 seconds.
+✔ Test adoptionCopiesInterruptedDiagnosticsAndNextClaimClearsWorkError() passed after 3.181 seconds.
+✔ Test rejectsNonHTTPS() passed after 3.175 seconds.
+✔ Test pendingRequestsAcrossCards() passed after 3.182 seconds.
+✔ Test haltedWorklessUnresolvedLegacyMissionUsesEmergencyHaltAttemptZero() passed after 3.181 seconds.
+✔ Test claimAndRenewRejectNaNInfinityZeroAndNegativeLeaseBeforeWrite() passed after 3.181 seconds.
+✔ Test explicitJsonRoundTripsAndIsDeterministic() passed after 3.177 seconds.
+✔ Test deterministicFailureIsImmediatelyTerminal() passed after 3.179 seconds.
+✔ Test nextClaimableDateIgnoresRunningTerminalAndArchivedCampRows() passed after 3.186 seconds.
+✔ Test reconciliationReturnsEmptyForGatewayProfiles() passed after 3.177 seconds.
+✔ Test companionsDedupesDuplicateIds() passed after 3.176 seconds.
+✔ Test planningReplayPreservesFirstTrace() passed after 3.177 seconds.
+✔ Test cliBackendLiveSpikeRunsOnlyWhenEnabled() passed after 3.175 seconds.
+✔ Test oauthPlanningRejectsMissingAccountIdWithoutWrites() passed after 3.175 seconds.
+✔ Test answerGuardRejectsMismatchedRequest() passed after 3.176 seconds.
+✔ Test planningSpecificProviderLifecycleUsesSealedLedgerOwner() passed after 3.176 seconds.
+✔ Test companionsMissingIdThrows() passed after 3.176 seconds.
+✔ Test planningUsageOverflowEvidenceSortsDeduplicatesAndRejectsInvalidShape() passed after 3.166 seconds.
+✔ Test handoffParsesFromToolInput() passed after 3.166 seconds.
+✔ Test planningClaimAndRenewReturnPersistedSubmillisecondLeaseAndTerminalize() passed after 3.167 seconds.
+✔ Test invalidCompleteOutputSkipsBusinessMutationAndLeavesAttemptRunning() passed after 3.167 seconds.
+✔ Test scheduleFireDSTSlotKeysAreStable() passed after 3.166 seconds.
+✔ Test evercampMigrationV9AdoptsValidatedLegacyV8Tables() passed after 3.167 seconds.
+✔ Test reconciliationReportsPinnedModelsOutsideTrustedCatalog() passed after 3.167 seconds.
+✔ Test databaseUsesFiveSecondBusyTimeoutAndWAL() passed after 3.166 seconds.
+✔ Test humanAnswerRendering() passed after 3.150 seconds.
+✔ Test undistilledWatermarkAndMark() passed after 3.166 seconds.
+✔ Test toolResultArrayContentFallsBackToUnknown() passed after 3.152 seconds.
+✔ Test sameClaimedHashWithDifferentPayloadIsRecomputedAndRejected() passed after 3.154 seconds.
+✔ Test runtimeProfileBootstrapSeedsEmptyAnthropicProfileWhenNoCredentials() passed after 3.152 seconds.
+✔ Test parseNoteJSONStripsCodeFence() passed after 3.151 seconds.
+✔ Test planningCredentialReadFailureIsTypedAndDoesNotWrite() passed after 3.151 seconds.
+✔ Test oneAggregateKindHasOneActiveWorkButKeepsTerminalHistory() passed after 3.152 seconds.
+✔ Test scheduleDateEncodingChangesOnlyLastFiredAt() passed after 3.152 seconds.
+✔ Test requestBodyAutoOmitsToolChoice() passed after 3.151 seconds.
+✔ Test workflowGenerationRejectsStaleTerminalCompletion() passed after 3.151 seconds.
+✔ Test bootstrapReconcileRunsOnceAndRespectsUserChoices() passed after 3.152 seconds.
+✔ Test suspendAndAnswerRoundTrip() passed after 3.152 seconds.
+✔ Test packetOmitsEmptyKnowledgeSections() passed after 3.151 seconds.
+✔ Test haltRacingEnqueueClaimOrRenewHasControlWinnerOnly() passed after 3.151 seconds.
+✔ Test unknownBlockDeltaThrows() passed after 3.151 seconds.
+✔ Test openAIResponsesRequestPreservesConversationAndTools() passed after 3.150 seconds.
+✔ Test requestBodyShape() passed after 3.152 seconds.
+✔ Test manualAppCallsiteCapturesCoordinatorCommandBeforeTask() passed after 3.186 seconds.
+✔ Test contractOmitsChunkedWritesWithoutWriteFile() passed after 3.152 seconds.
+✔ Test runtimeProfileStoreDeleteGuardsDefaultAndReferencedProfiles() passed after 3.154 seconds.
+✔ Test requestBodyEncodesDeterministically() passed after 3.152 seconds.
+✔ Test mcpNamingSanitizesComposesAndParses() passed after 3.152 seconds.
+✔ Test delayedStartupRecoveryCannotReviveShutdownKernel() passed after 3.154 seconds.
+✔ Test fileToolWordingUnifiedWhenFileToolsStripped() passed after 3.153 seconds.
+✔ Test scheduleMathFallBackChoosesFirstRepeatedLocalTime() passed after 3.153 seconds.
+✔ Test contractMentionsChunkedWrites() passed after 3.164 seconds.
+✔ Test planningUsageOverflowMutationRollbackIsTotal() passed after 3.165 seconds.
+✔ Test observabilityMigrationExactDDLAndConstraints() passed after 3.246 seconds.
+✔ Test planningPreflightRejectsMissingCatalogWithoutWrites() passed after 3.164 seconds.
+✔ Test runtimeProfileDeleteFailureNeverProjectsSuccess() passed after 3.734 seconds.
+✔ Test distillMemoryReturnsNote() passed after 3.822 seconds.
+✔ Test runtimeProfileMigrationV11AllowsCliKindsAndPreservesExistingRows() passed after 3.181 seconds.
+✔ Test campNotesSearchToolRendersHitsAndEmptyState() passed after 3.183 seconds.
+✔ Test distillCloseoutFallsBackOnUnparseableEmptyText() passed after 3.837 seconds.
+✔ Test fetchResultWrappedAsExternalContent() passed after 3.542 seconds.
+✔ Test fetchesAndStripsHTML() passed after 3.543 seconds.
+✔ Test distillCloseoutFallsBackOnProviderFailure() passed after 3.852 seconds.
+✔ Test requiredKnowledgeFailureAtomicallyBlocksAndRecordsDegradation() passed after 3.209 seconds.
+✔ Test harvestKeepsDoneAndCancelsRest() passed after 3.860 seconds.
+✔ Test webSearchNon200ReturnsError() passed after 3.484 seconds.
+✔ Test missingDurableControlRowKeepsStartupFailClosed() passed after 3.505 seconds.
+✔ Test dependentCardStaysTodoUntilUpstreamDone() passed after 3.871 seconds.
+✔ Test runtimeProfileWriteFailureNeverProjectsSuccess() passed after 3.554 seconds.
+✔ Test rejectsRedirectDowngradeToHTTP() passed after 3.712 seconds.
+✔ Test webSearchTimeoutReturnsError() passed after 3.712 seconds.
+✔ Test workflowProjectionPreservesPriorValueOnRefreshFailure() passed after 3.724 seconds.
+✔ Test distillCloseoutParsesLLMNote() passed after 4.135 seconds.
+✔ Test codingRanchBootstrapIsAtomicAcrossEveryWriteBoundary() passed after 3.733 seconds.
+✔ Test ruminationStartAndWorkAreAtomic() passed after 2.248 seconds.
+✔ Test durablePlannerPreservesCancellationError() passed after 4.167 seconds.
+✔ Test progressNoteAppendsEvent() passed after 3.715 seconds.
+✔ Test scheduleFireSchemaReservesRedactionWithoutAllowingOrdinaryMutation() passed after 3.585 seconds.
+✔ Test runtimeReconcileFailureNeverChangesDefault() passed after 3.697 seconds.
+✔ Test managerStartFailureIsDownAndNeverAutoRetries() passed after 4.354 seconds.
+✔ Test fetchTimeoutReturnsError() passed after 3.767 seconds.
+✔ Test skipStillAdvancesWatermarkButNoNote() passed after 4.365 seconds.
+✔ Test scheduleMillisecondsOverflowClaimsSlotThenRecordsMissedWithoutMission() passed after 4.835 seconds.
+✔ Test openAIOAuthSessionWithoutRefreshTokenIsPermanentFailure() passed after 5.451 seconds.
+✔ Test webSearchRendersResultsWithSourceMarker() passed after 4.818 seconds.
+✔ Test nonFiniteScheduleFireFailsBeforeClaimWithoutWrites() passed after 4.821 seconds.
+✔ Test startupCardOrphanAdoptionFailureKeepsPlanningSuppressedWithoutDurableTransition() passed after 4.895 seconds.
+✔ Test plannerForcesToolChoice() passed after 5.448 seconds.
+✔ Test plannerUserPromptOmitsEmptyCampNotes() passed after 5.418 seconds.
+--- TERMINAL ---
+EXIT: 143
+RESULT: FAILED

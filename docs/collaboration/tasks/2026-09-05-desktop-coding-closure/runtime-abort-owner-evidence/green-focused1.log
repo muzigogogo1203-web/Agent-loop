@@ -1,0 +1,18 @@
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite ExecutionEngineConformanceTests started.
+◇ Test p1f1_065AbortOwnerJoinsAfterHelloFailure() started.
+065 ABORT OWNER HELLO: body=hello gates=aborted waiters=joined guard=joined-not-expired client=shutdown-closed peer=closed reader=absent no-child=true
+✔ Test p1f1_065AbortOwnerJoinsAfterHelloFailure() passed after 0.002 seconds.
+◇ Test p1f1_065AbortOwnerJoinsAfterClientConstructionFailure() started.
+065 ABORT OWNER CONSTRUCTION: body=clientConstruction gates=aborted waiters=joined guard=joined-not-expired client=absent reader=absent no-child=true
+✔ Test p1f1_065AbortOwnerJoinsAfterClientConstructionFailure() passed after 0.001 seconds.
+◇ Test p1f1_065AbortGuardExpiryWakesPendingWaiters() started.
+065 ABORT OWNER EXPIRY: body=gateAborted async-waiters=aborted-joined first-aborts=one-per-gate releases=zero guard=joined-expired-once client=absent reader=absent no-child=true
+✔ Test p1f1_065AbortGuardExpiryWakesPendingWaiters() passed after 0.040 seconds.
+◇ Test p1f1_065AbortOwnerJoinsStartedReaderAfterBodyFailure() started.
+065 ABORT OWNER READER: body=gateCompleted.reader reader-entry=one reader=joined-eof waiters=joined guard=joined-not-expired client=shutdown-closed peer=closed no-child=true
+✔ Test p1f1_065AbortOwnerJoinsStartedReaderAfterBodyFailure() passed after 0.001 seconds.
+✔ Suite ExecutionEngineConformanceTests passed after 0.044 seconds.
+✔ Test run with 4 tests in 1 suite passed after 0.045 seconds.

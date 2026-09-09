@@ -1,0 +1,527 @@
+diff --git a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cold-gate-cleanup-before/ExecutionEngineConformanceTests.swift b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+index 0408457..ad1286a 100644
+--- a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cold-gate-cleanup-before/ExecutionEngineConformanceTests.swift
++++ b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+@@ -152,6 +152,133 @@ private enum P1F1D065SignatureFixtureError: Error, Sendable, Equatable {
+ private enum P1F1D065MechanicsFixtureError: Error, Sendable, Equatable {
+     case coldGateReadinessTimedOut
+     case resumeFailureReadinessTimedOut
++    case coldDiagnosticsAlreadyConfigured
++}
++
++private enum P1F1D065ColdForcedFailure: Error, Sendable, Equatable {
++    case afterReady
++}
++
++private struct P1F1D065ColdIdentity: Sendable {
++    let fixtureId: UUID
++    let executionId: String
++    let rootPath: String
++}
++
++private struct P1F1D065SignalObservation: Sendable {
++    let signal: Int32
++    let group: Int32
++    let target: Int32
++    let result: Int32
++    let errorNumber: Int32
++}
++
++private func p1f1d065ColdErrorCategory(_ error: any Error) -> String {
++    if (error as? P1F1D065ColdForcedFailure) == .afterReady {
++        return "forcedFailure.afterReady"
++    }
++    if (error as? P1F1D065MechanicsFixtureError) == .coldGateReadinessTimedOut {
++        return "coldGateReadinessTimedOut"
++    }
++    return String(reflecting: type(of: error))
++}
++
++private func p1f1d065ColdLog(
++    _ identity: P1F1D065ColdIdentity,
++    _ message: String
++) {
++    print("065-cold fixture=\(identity.fixtureId.uuidString) execution=\(identity.executionId) \(message)")
++}
++
++private struct P1F1D065ColdCleanupResult: Sendable {
++    let cancellation: Result<CliProcessExitEvidenceV1, any Error>
++    let stream: Result<[CliProcessFrameV1], any Error>
++}
++
++private struct P1F1D065ColdOwnedReport: Sendable {
++    let body: Result<Void, any Error>
++    let cleanup: P1F1D065ColdCleanupResult
++}
++
++// The stream stays cold until the one cancellation attempt settles. Detached
++// cleanup cannot inherit a cancelled caller's state and is always joined.
++private func p1f1d065RunOwnedColdStream(
++    stream: AsyncThrowingStream<CliProcessFrameV1, Error>,
++    backend: CliProcessBackend,
++    executionId: String,
++    identity: P1F1D065ColdIdentity,
++    body: @Sendable () async throws -> Void
++) async -> P1F1D065ColdOwnedReport {
++    let bodyResult: Result<Void, any Error>
++    do {
++        try await body()
++        bodyResult = .success(())
++    } catch {
++        bodyResult = .failure(error)
++        p1f1d065ColdLog(identity, "body-error category=\(p1f1d065ColdErrorCategory(error))")
++    }
++    let cleanup = Task.detached { () -> P1F1D065ColdCleanupResult in
++        let cancellation: Result<CliProcessExitEvidenceV1, any Error>
++        p1f1d065ColdLog(identity, "cancel-start")
++        do {
++            let evidence = try await backend.cancel(executionId: executionId)
++            cancellation = .success(evidence)
++            p1f1d065ColdLog(identity, "cancel-result success=true pid=\(evidence.pid) group=\(evidence.processGroupID) status=\(evidence.status) term=\(evidence.termSent) kill=\(evidence.killSent) stdoutEOF=\(evidence.stdoutEOF) stderrEOF=\(evidence.stderrEOF) childReaped=\(evidence.childReaped)")
++        } catch {
++            cancellation = .failure(error)
++            p1f1d065ColdLog(identity, "cancel-result success=false category=\(p1f1d065ColdErrorCategory(error))")
++        }
++        var frames: [CliProcessFrameV1] = []
++        let streamResult: Result<[CliProcessFrameV1], any Error>
++        p1f1d065ColdLog(identity, "stream-join-start")
++        do {
++            for try await frame in stream {
++                frames.append(frame)
++                if case let .exited(status) = frame {
++                    p1f1d065ColdLog(identity, "stream-exited status=\(status)")
++                }
++            }
++            streamResult = .success(frames)
++            p1f1d065ColdLog(identity, "stream-join-result success=true")
++        } catch {
++            streamResult = .failure(error)
++            p1f1d065ColdLog(identity, "stream-join-result success=false category=\(p1f1d065ColdErrorCategory(error))")
++        }
++        return P1F1D065ColdCleanupResult(
++            cancellation: cancellation, stream: streamResult
++        )
++    }
++    return P1F1D065ColdOwnedReport(
++        body: bodyResult, cleanup: await cleanup.value
++    )
++}
++
++private struct P1F1D065ColdObservationError: Error, Sendable {
++    let operation: String
++    let result: Int32
++    let errorNumber: Int32
++}
++
++private struct P1F1D065ColdCleanupError: Error, CustomStringConvertible {
++    struct Failure: Sendable {
++        let operation: String
++        let error: any Error
++    }
++
++    let primary: (any Error)?
++    var cleanupFailures: [Failure]
++    let retainedFixturePath: String?
++
++    var description: String {
++        let primaryLabel = primary.map(p1f1d065ColdErrorCategory) ?? "none"
++        let failures = cleanupFailures.map { failure in
++            if let observation = failure.error as? P1F1D065ColdObservationError {
++                return "operation=\(failure.operation) result=\(observation.result) errno=\(observation.errorNumber)"
++            }
++            return "operation=\(failure.operation) category=\(p1f1d065ColdErrorCategory(failure.error))"
++        }.joined(separator: "; ")
++        return "065 cold cleanup primary=\(primaryLabel) failures=[\(failures)] retainedFixturePath=\(retainedFixturePath ?? "none")"
++    }
+ }
+ 
+ private enum P1F1D065GateCompletion: Sendable {
+@@ -333,6 +460,8 @@ private final class P1F1D065ProcessInspector:
+     private var snapshotCalls = 0
+     private var signals: [(Int32, Int32)] = []
+     private var injectedResumeFailure = false
++    private var observedSignals: [P1F1D065SignalObservation] = []
++    private var coldIdentity: P1F1D065ColdIdentity?
+ 
+     init(
+         authority: CliExecutableAuthorityV1,
+@@ -346,6 +475,30 @@ private final class P1F1D065ProcessInspector:
+         self.resumeReadyURL = resumeReadyURL
+     }
+ 
++    func configureColdDiagnostics(_ identity: P1F1D065ColdIdentity) throws {
++        try lock.withLock {
++            guard coldIdentity == nil else {
++                throw P1F1D065MechanicsFixtureError.coldDiagnosticsAlreadyConfigured
++            }
++            coldIdentity = identity
++        }
++    }
++
++    func signalObservations() -> [P1F1D065SignalObservation] {
++        lock.withLock { observedSignals }
++    }
++
++    func logCold(_ message: String) {
++        if let identity = lock.withLock({ coldIdentity }) {
++            p1f1d065ColdLog(identity, message)
++        }
++    }
++
++    private func recordSignal(_ observation: P1F1D065SignalObservation) {
++        lock.withLock { observedSignals.append(observation) }
++        logCold("signal=\(observation.signal) group=\(observation.group) target=\(observation.target) result=\(observation.result) errno=\(observation.errorNumber)")
++    }
++
+     func snapshots() throws -> [EngineRuntimeProcessSnapshotV1] {
+         lock.withLock {
+             snapshotCalls += 1
+@@ -409,9 +562,13 @@ private final class P1F1D065ProcessInspector:
+         }
+         if shouldInjectResumeFailure {
+             missingImageGate?.enterAndWait()
+-            guard Darwin.kill(-processGroupId, signal) == 0
+-                    || errno == ESRCH
+-            else {
++            let result = Darwin.kill(-processGroupId, signal)
++            let errorNumber = result == 0 ? 0 : errno
++            recordSignal(P1F1D065SignalObservation(
++                signal: signal, group: processGroupId, target: -processGroupId,
++                result: result, errorNumber: errorNumber
++            ))
++            guard result == 0 || errorNumber == ESRCH else {
+                 throw EngineContextValidationErrorV1()
+             }
+             for _ in 0..<3_000 {
+@@ -429,7 +586,13 @@ private final class P1F1D065ProcessInspector:
+             throw P1F1D065MechanicsFixtureError
+                 .resumeFailureReadinessTimedOut
+         }
+-        guard Darwin.kill(-processGroupId, signal) == 0 || errno == ESRCH else {
++        let result = Darwin.kill(-processGroupId, signal)
++        let errorNumber = result == 0 ? 0 : errno
++        recordSignal(P1F1D065SignalObservation(
++            signal: signal, group: processGroupId, target: -processGroupId,
++            result: result, errorNumber: errorNumber
++        ))
++        guard result == 0 || errorNumber == ESRCH else {
+             throw EngineContextValidationErrorV1()
+         }
+     }
+@@ -633,6 +796,131 @@ private final class P1F1D065MechanicsHarness: @unchecked Sendable {
+         }
+         try? FileManager.default.removeItem(at: root)
+     }
++
++    func removeChecked() throws {
++        if !lifecycleLock.withLock({ directoryAuthorityClosed }) {
++            try checkedCloseDirectoryAuthority()
++        }
++        try FileManager.default.removeItem(at: root)
++    }
++}
++
++private func p1f1d065AssessColdCleanup(
++    report: P1F1D065ColdOwnedReport,
++    harness: P1F1D065MechanicsHarness,
++    registry: ShellProcessRegistry,
++    socketURL: URL,
++    executionId: String,
++    removalAllowed: inout Bool
++) -> P1F1D065ColdCleanupError {
++    removalAllowed = false
++    var failures: [P1F1D065ColdCleanupError.Failure] = []
++    func observe(
++        _ operation: String, result: Int32, errorNumber: Int32, passed: Bool
++    ) {
++        harness.processInspector.logCold("observation=\(operation) result=\(result) errno=\(errorNumber) passed=\(passed)")
++        if !passed {
++            failures.append(.init(
++                operation: operation,
++                error: P1F1D065ColdObservationError(
++                    operation: operation, result: result, errorNumber: errorNumber
++                )
++            ))
++        }
++    }
++
++    let signals = harness.processInspector.signalObservations()
++    harness.processInspector.logCold("final-signal-count=\(signals.count) assessment-execution=\(executionId)")
++    for signal in signals {
++        harness.processInspector.logCold("final-signal=\(signal.signal) group=\(signal.group) target=\(signal.target) result=\(signal.result) errno=\(signal.errorNumber)")
++    }
++    let continued = signals.filter { $0.signal == SIGCONT && $0.result == 0 }
++    let continuationIsValid = continued.count == 1
++        && continued[0].group > 0
++        && continued[0].target == -continued[0].group
++    observe("successful-SIGCONT-identity", result: Int32(clamping: continued.count),
++            errorNumber: 0, passed: continuationIsValid)
++    // Only an actual successful continuation supplies this fixture's PID.
++    let pid: Int32? = continuationIsValid ? continued[0].group : nil
++
++    switch report.cleanup.cancellation {
++    case .success(let evidence):
++        observe("cancellation-identity", result: evidence.pid, errorNumber: 0,
++                passed: evidence.pid > 0 && evidence.pid == pid
++                    && evidence.processGroupID == evidence.pid)
++        observe("cancellation-childReaped", result: evidence.childReaped ? 1 : 0,
++                errorNumber: 0, passed: evidence.childReaped)
++        observe("cancellation-stdoutEOF", result: evidence.stdoutEOF ? 1 : 0,
++                errorNumber: 0, passed: evidence.stdoutEOF)
++        observe("cancellation-stderrEOF", result: evidence.stderrEOF ? 1 : 0,
++                errorNumber: 0, passed: evidence.stderrEOF)
++    case .failure(let error):
++        failures.append(.init(operation: "cancellation", error: error))
++        harness.processInspector.logCold("observation=cancellation passed=false category=\(p1f1d065ColdErrorCategory(error))")
++    }
++
++    if let pid {
++        for target in [pid, -pid] {
++            let result = Darwin.kill(target, 0)
++            let errorNumber = result == 0 ? 0 : errno
++            observe("kill(\(target),0)", result: result, errorNumber: errorNumber,
++                    passed: result == -1 && errorNumber == ESRCH)
++        }
++        var information = siginfo_t()
++        var waitResult: Int32
++        var waitError: Int32
++        repeat {
++            // WNOWAIT is essential: ownership stays with the backend reaper.
++            waitResult = Darwin.waitid(
++                P_PID, id_t(pid), &information, WEXITED | WNOHANG | WNOWAIT
++            )
++            waitError = waitResult == 0 ? 0 : errno
++        } while waitResult == -1 && waitError == EINTR
++        observe("waitid(WEXITED|WNOHANG|WNOWAIT)", result: waitResult,
++                errorNumber: waitError, passed: waitResult == -1 && waitError == ECHILD)
++    } else {
++        observe("pid-group-waitid-unavailable", result: -1, errorNumber: 0, passed: false)
++    }
++
++    var socketInformation = stat()
++    let (socketResult, socketError) = socketURL.path.withCString {
++        let result = Darwin.lstat($0, &socketInformation)
++        let errorNumber = result == 0 ? 0 : errno
++        return (result, errorNumber)
++    }
++    observe("socket-lstat", result: socketResult, errorNumber: socketError,
++            passed: socketResult == -1 && socketError == ENOENT)
++    let activeCount = registry.activeCount
++    observe("registry-activeCount", result: Int32(clamping: activeCount), errorNumber: 0,
++            passed: activeCount == 0)
++
++    switch report.cleanup.stream {
++    case .success(let frames):
++        let statuses = frames.compactMap { frame -> Int32? in
++            if case let .exited(status) = frame { return status }
++            return nil
++        }
++        for status in statuses {
++            harness.processInspector.logCold("final-stream-exited status=\(status)")
++        }
++        observe("joined-stream-exited", result: Int32(clamping: statuses.count),
++                errorNumber: 0, passed: !statuses.isEmpty)
++    case .failure(let error):
++        failures.append(.init(operation: "joined-stream", error: error))
++        harness.processInspector.logCold("observation=joined-stream passed=false category=\(p1f1d065ColdErrorCategory(error))")
++    }
++
++    removalAllowed = failures.isEmpty
++    let primary: (any Error)?
++    switch report.body {
++    case .success: primary = nil
++    case .failure(let error): primary = error
++    }
++    harness.processInspector.logCold("cleanup-certified=\(removalAllowed) retained-root=\(removalAllowed ? "none" : harness.root.path)")
++    return P1F1D065ColdCleanupError(
++        primary: primary, cleanupFailures: failures,
++        retainedFixturePath: removalAllowed ? nil : harness.root.path
++    )
+ }
+ 
+ private enum P1F1D065SocketClientError: Error, Sendable, Equatable {
+@@ -4983,7 +5271,15 @@ struct ExecutionEngineConformanceTests {
+ 
+     @Test func p1f1_065CancellationCleansProcessAndCommitsOnce() async throws {
+         let gateHarness = try P1F1D065MechanicsHarness(label: "gate")
+-        defer { gateHarness.remove() }
++        var gateRemovalAllowed = true
++        defer {
++            if gateRemovalAllowed {
++                do { try gateHarness.removeChecked() }
++                catch { Issue.record(error) }
++            } else {
++                Issue.record("retained 065 gate fixture: \(gateHarness.root.path)")
++            }
++        }
+ 
+         let productionExecutionId =
+             "00000000-0000-4000-8000-000000000265"
+@@ -5252,6 +5548,15 @@ struct ExecutionEngineConformanceTests {
+             ],
+             token: "5"
+         )
++        let coldSocketURL = try gateHarness.socketURL(executionId: gateRequest.executionId)
++        let coldIdentity = P1F1D065ColdIdentity(
++            fixtureId: UUID(), executionId: gateRequest.executionId,
++            rootPath: gateHarness.root.path
++        )
++        try gateHarness.processInspector.configureColdDiagnostics(coldIdentity)
++        p1f1d065ColdLog(coldIdentity, "fixture-root=\(coldIdentity.rootPath)")
++        p1f1d065ColdLog(coldIdentity, "launch-called")
++        gateRemovalAllowed = false
+         let coldGateStream = gateBackend.launch(gateRequest)
+         let coldGateReadyURL = gateHarness.root.appendingPathComponent(
+             "cold-ready"
+@@ -5259,20 +5564,35 @@ struct ExecutionEngineConformanceTests {
+         let coldGateReadyDeadline = ContinuousClock.now.advanced(
+             by: .seconds(3)
+         )
+-        while !FileManager.default.fileExists(atPath: coldGateReadyURL.path),
+-              ContinuousClock.now < coldGateReadyDeadline
+-        {
+-            try await Task.sleep(for: .milliseconds(10))
+-        }
+-        guard FileManager.default.fileExists(atPath: coldGateReadyURL.path)
+-        else {
+-            throw P1F1D065MechanicsFixtureError.coldGateReadinessTimedOut
++        p1f1d065ColdLog(coldIdentity, "launch-returned")
++        let report = await p1f1d065RunOwnedColdStream(
++            stream: coldGateStream, backend: gateBackend,
++            executionId: gateRequest.executionId, identity: coldIdentity
++        ) {
++            p1f1d065ColdLog(coldIdentity, "readiness-start observed=\(FileManager.default.fileExists(atPath: coldGateReadyURL.path))")
++            defer {
++                p1f1d065ColdLog(coldIdentity, "readiness-end observed=\(FileManager.default.fileExists(atPath: coldGateReadyURL.path))")
++            }
++            while !FileManager.default.fileExists(atPath: coldGateReadyURL.path),
++                  ContinuousClock.now < coldGateReadyDeadline
++            {
++                try await Task.sleep(for: .milliseconds(10))
++            }
++            guard FileManager.default.fileExists(atPath: coldGateReadyURL.path)
++            else {
++                throw P1F1D065MechanicsFixtureError.coldGateReadinessTimedOut
++            }
+         }
+-        let gateEvidence = try await gateBackend.cancel(
+-            executionId: gateRequest.executionId
++        let assessment = p1f1d065AssessColdCleanup(
++            report: report, harness: gateHarness, registry: gateRegistry,
++            socketURL: coldSocketURL, executionId: gateRequest.executionId,
++            removalAllowed: &gateRemovalAllowed
+         )
+-        var gateFrames: [CliProcessFrameV1] = []
+-        for try await frame in coldGateStream { gateFrames.append(frame) }
++        if assessment.primary != nil || !assessment.cleanupFailures.isEmpty {
++            throw assessment
++        }
++        let gateEvidence = try report.cleanup.cancellation.get()
++        let gateFrames = try report.cleanup.stream.get()
+         #expect(gateEvidence.termSent)
+         #expect(gateEvidence.stdoutEOF && gateEvidence.stderrEOF)
+         #expect(gateEvidence.childReaped)
+@@ -5389,6 +5709,103 @@ struct ExecutionEngineConformanceTests {
+         #expect(mainHarness.processInspector.effectSnapshot.signalCount > 0)
+     }
+ 
++    @Test func p1f1_065ColdGateForcedFailureStillJoinsCleanup() async throws {
++        let harness = try P1F1D065MechanicsHarness(label: "cold-error")
++        var removalAllowed = true
++        defer {
++            if removalAllowed {
++                do { try harness.removeChecked() }
++                catch { Issue.record(error) }
++            } else {
++                Issue.record("retained 065 cold-error fixture: \(harness.root.path)")
++            }
++        }
++        let registry = ShellProcessRegistry()
++        let revalidator = P1F1D065SignatureRevalidator(
++            expectedCLI: harness.executableAuthority,
++            expectedBoardBridge: harness.bridgeAuthority
++        )
++        let backend = try p1f1d065GateBackend(
++            harness: harness, registry: registry, revalidator: revalidator
++        )
++        let request = try harness.request(
++            executionId: "00000000-0000-4000-8000-000000000865",
++            arguments: [
++                "-c",
++                "trap '' TERM; : > \"$1\"; while :; do :; done",
++                "p1f1d-065-cold-gate",
++                harness.root.appendingPathComponent("cold-ready").path,
++            ],
++            token: "8"
++        )
++        let socketURL = try harness.socketURL(executionId: request.executionId)
++        let identity = P1F1D065ColdIdentity(
++            fixtureId: UUID(), executionId: request.executionId,
++            rootPath: harness.root.path
++        )
++        try harness.processInspector.configureColdDiagnostics(identity)
++        p1f1d065ColdLog(identity, "fixture-root=\(identity.rootPath)")
++        p1f1d065ColdLog(identity, "launch-called")
++        removalAllowed = false
++        let stream = backend.launch(request)
++        let readyURL = harness.root.appendingPathComponent("cold-ready")
++        let readyDeadline = ContinuousClock.now.advanced(by: .seconds(3))
++        p1f1d065ColdLog(identity, "launch-returned")
++        let report = await p1f1d065RunOwnedColdStream(
++            stream: stream, backend: backend, executionId: request.executionId,
++            identity: identity
++        ) {
++            p1f1d065ColdLog(identity, "readiness-start observed=\(FileManager.default.fileExists(atPath: readyURL.path))")
++            defer {
++                p1f1d065ColdLog(identity, "readiness-end observed=\(FileManager.default.fileExists(atPath: readyURL.path))")
++            }
++            while !FileManager.default.fileExists(atPath: readyURL.path),
++                  ContinuousClock.now < readyDeadline
++            {
++                try await Task.sleep(for: .milliseconds(10))
++            }
++            guard FileManager.default.fileExists(atPath: readyURL.path) else {
++                throw P1F1D065MechanicsFixtureError.coldGateReadinessTimedOut
++            }
++            let continued = harness.processInspector.signalObservations().filter {
++                $0.signal == SIGCONT && $0.result == 0
++            }
++            try #require(continued.count == 1)
++            let pid = continued[0].group
++            try #require(pid > 0)
++            try #require(Darwin.getpgid(pid) == pid)
++            try #require(Darwin.kill(pid, 0) == 0)
++            throw P1F1D065ColdForcedFailure.afterReady
++        }
++        var assessment = p1f1d065AssessColdCleanup(
++            report: report, harness: harness, registry: registry,
++            socketURL: socketURL, executionId: request.executionId,
++            removalAllowed: &removalAllowed
++        )
++        do {
++            let evidence = try report.cleanup.cancellation.get()
++            let frames = try report.cleanup.stream.get()
++            try #require(evidence.termSent)
++            try #require(evidence.killSent)
++            try #require(evidence.pid > 0)
++            try #require(evidence.processGroupID == evidence.pid)
++            let continued = harness.processInspector.signalObservations().filter {
++                $0.signal == SIGCONT && $0.result == 0
++            }
++            try #require(continued.count == 1)
++            try #require(evidence.pid == continued[0].group)
++            try #require(revalidator.snapshot() == [.cli, .boardBridge])
++            try #require(frames.contains { if case .exited = $0 { return true }; return false })
++        } catch {
++            assessment.cleanupFailures.append(.init(
++                operation: "forced-error-evidence-verification", error: error
++            ))
++        }
++        guard (assessment.primary as? P1F1D065ColdForcedFailure) == .afterReady,
++              assessment.cleanupFailures.isEmpty
++        else { throw assessment }
++    }
++
+     @Test func p1f1_066UsageCostAndOverflowMatrix() async throws {
+         let durableUsage = EngineUsageV1(
+             inputTokens: 2,

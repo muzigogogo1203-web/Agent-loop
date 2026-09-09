@@ -1,0 +1,21 @@
+Building for debugging...
+[0/5] Write sources
+[1/5] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/7] Emitting module AgentLoopTestSuite
+[4/7] Compiling AgentLoopTestSuite DesktopGoalMigrationTests.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (14.66s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite DesktopGoalMigrationTests started.
+◇ Test freshAndV17UpgradeProduceSameDesktopCarrierSchema() started.
+✘ Test freshAndV17UpgradeProduceSameDesktopCarrierSchema() recorded an issue at DesktopGoalMigrationTests.swift:182:13: Expectation failed: (registeredHead → "v17-p1-engine-coordination") == "desktop-goal-workflow-v1"
+✘ Test freshAndV17UpgradeProduceSameDesktopCarrierSchema() failed after 0.149 seconds with 1 issue.
+✘ Suite DesktopGoalMigrationTests failed after 0.149 seconds with 1 issue.
+✘ Test run with 1 test in 1 suite failed after 0.149 seconds with 1 issue.

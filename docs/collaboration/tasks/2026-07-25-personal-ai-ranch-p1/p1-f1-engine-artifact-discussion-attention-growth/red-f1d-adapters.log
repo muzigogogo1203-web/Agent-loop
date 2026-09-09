@@ -1,0 +1,70 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite ExecutionEngineConformanceTests started.
+◇ Suite BoardServerTests started.
+◇ Test p1f1_080AnsweredRequestChangesContextNotSessionScope() started.
+◇ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() started.
+◇ Test p1f1_077BoardToolsOnlyEmitTerminalProposal() started.
+◇ Test p1f1_076OrchestratorSelectsByRequiredCapabilitiesNotProfileKind() started.
+◇ Test p1f1_071ModelLoopAdapterCannotMutateRunCard() started.
+◇ Test p1f1_073ClaudeFakeCLIExactSessionBindAndResume() started.
+◇ Test p1f1_074CLINeverUsesLastContinueAndReinjectsFlags() started.
+◇ Test p1f1_079CardRunnerAndCLIBackendCannotStartOrFinishRun() started.
+◇ Test p1f1_062DescriptorsTellCapabilitiesAndReplayTruth() started.
+◇ Test p1f1_072CodexFakeCLIExactSessionBindAndResume() started.
+◇ Test p1f1_078BoardServerForwardsProposalWithoutDatabaseAuthority() started.
+✘ Test p1f1_072CodexFakeCLIExactSessionBindAndResume() recorded an issue at CliBackendTests.swift:497:21: Caught error: P1-F1D 072 capability missing: commandBuild
+✘ Test p1f1_062DescriptorsTellCapabilitiesAndReplayTruth() recorded an issue at ExecutionEngineConformanceTests.swift:20:21: Caught error: P1-F1D 062 capability missing: select
+✘ Test p1f1_072CodexFakeCLIExactSessionBindAndResume() failed after 0.001 seconds with 1 issue.
+✘ Test p1f1_062DescriptorsTellCapabilitiesAndReplayTruth() failed after 0.001 seconds with 1 issue.
+◇ Test p1f1_063CompletedBlockedFailedCanceledMatrix() started.
+✘ Test p1f1_077BoardToolsOnlyEmitTerminalProposal() recorded an issue at BoardToolsTests.swift:272:21: Caught error: P1-F1D 077 capability missing: terminalIntent
+✘ Test p1f1_077BoardToolsOnlyEmitTerminalProposal() failed after 0.001 seconds with 1 issue.
+✘ Test p1f1_063CompletedBlockedFailedCanceledMatrix() recorded an issue at ExecutionEngineConformanceTests.swift:38:21: Caught error: P1-F1D 063 capability missing: terminalIntent
+✘ Test p1f1_063CompletedBlockedFailedCanceledMatrix() failed after 0.001 seconds with 1 issue.
+◇ Test p1f1_064EOFParserAndMissingTerminatorFailClosed() started.
+✘ Test p1f1_064EOFParserAndMissingTerminatorFailClosed() recorded an issue at ExecutionEngineConformanceTests.swift:20:21: Caught error: P1-F1D 064 capability missing: codexParse
+✘ Test p1f1_064EOFParserAndMissingTerminatorFailClosed() failed after 0.001 seconds with 1 issue.
+◇ Test p1f1_065CancellationCleansProcessAndCommitsOnce() started.
+✘ Test p1f1_074CLINeverUsesLastContinueAndReinjectsFlags() recorded an issue at CliBackendTests.swift:497:21: Caught error: P1-F1D 074 capability missing: commandBuild
+✘ Test p1f1_073ClaudeFakeCLIExactSessionBindAndResume() recorded an issue at CliBackendTests.swift:497:21: Caught error: P1-F1D 073 capability missing: commandBuild
+✘ Test p1f1_074CLINeverUsesLastContinueAndReinjectsFlags() failed after 0.002 seconds with 1 issue.
+✘ Test p1f1_073ClaudeFakeCLIExactSessionBindAndResume() failed after 0.002 seconds with 1 issue.
+✘ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() recorded an issue at CliBackendTests.swift:513:21: Caught error: P1-F1D 075 capability missing: helpProbe
+✘ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() failed after 0.003 seconds with 1 issue.
+✘ Test p1f1_078BoardServerForwardsProposalWithoutDatabaseAuthority() recorded an issue at BoardServerTests.swift:491:25: Caught error: P1-F1D 078 capability missing: terminalIntent
+✘ Test p1f1_078BoardServerForwardsProposalWithoutDatabaseAuthority() failed after 0.004 seconds with 1 issue.
+✘ Suite BoardServerTests failed after 0.005 seconds with 1 issue.
+✘ Test p1f1_065CancellationCleansProcessAndCommitsOnce() recorded an issue at ExecutionEngineConformanceTests.swift:38:21: Caught error: P1-F1D 065 capability missing: processCancel
+✘ Test p1f1_079CardRunnerAndCLIBackendCannotStartOrFinishRun() recorded an issue at CardRunnerTests.swift:840:21: Caught error: P1-F1D 079 capability missing: processLaunch
+✘ Test p1f1_071ModelLoopAdapterCannotMutateRunCard() recorded an issue at CardRunnerTests.swift:710:21: Caught error: P1-F1D 071 capability missing: execute
+✘ Test p1f1_076OrchestratorSelectsByRequiredCapabilitiesNotProfileKind() recorded an issue at OrchestratorTests.swift:2329:21: Caught error: P1-F1D 076 capability missing: select
+✘ Test p1f1_076OrchestratorSelectsByRequiredCapabilitiesNotProfileKind() failed after 0.146 seconds with 1 issue.
+✘ Test p1f1_065CancellationCleansProcessAndCommitsOnce() failed after 0.146 seconds with 1 issue.
+◇ Test p1f1_066UsageCostAndOverflowMatrix() started.
+✘ Test p1f1_066UsageCostAndOverflowMatrix() recorded an issue at ExecutionEngineConformanceTests.swift:38:21: Caught error: P1-F1D 066 capability missing: progressIntent
+✘ Test p1f1_066UsageCostAndOverflowMatrix() failed after 0.001 seconds with 1 issue.
+◇ Test p1f1_067SessionBindResumeMatrix() started.
+✘ Test p1f1_067SessionBindResumeMatrix() recorded an issue at ExecutionEngineConformanceTests.swift:38:21: Caught error: P1-F1D 067 capability missing: execute
+✘ Test p1f1_067SessionBindResumeMatrix() failed after 0.001 seconds with 1 issue.
+◇ Test p1f1_068ResumeMismatchAndUnsupportedMatrix() started.
+✘ Test p1f1_068ResumeMismatchAndUnsupportedMatrix() recorded an issue at ExecutionEngineConformanceTests.swift:1978:25: Caught error: P1-F1D 068 capability missing: select
+✘ Test p1f1_068ResumeMismatchAndUnsupportedMatrix() failed after 0.001 seconds with 1 issue.
+◇ Test p1f1_069BoardTerminalExactlyOnceMatrix() started.
+✘ Test p1f1_069BoardTerminalExactlyOnceMatrix() recorded an issue at ExecutionEngineConformanceTests.swift:38:21: Caught error: P1-F1D 069 capability missing: terminalIntent
+✘ Test p1f1_069BoardTerminalExactlyOnceMatrix() failed after 0.001 seconds with 1 issue.
+◇ Test p1f1_070ErrorsAreSecretFree() started.
+✘ Test p1f1_070ErrorsAreSecretFree() recorded an issue at ExecutionEngineConformanceTests.swift:20:21: Caught error: P1-F1D 070 capability missing: secretSanitize
+✘ Test p1f1_070ErrorsAreSecretFree() failed after 0.001 seconds with 1 issue.
+✘ Suite ExecutionEngineConformanceTests failed after 0.149 seconds with 9 issues.
+✘ Test p1f1_080AnsweredRequestChangesContextNotSessionScope() recorded an issue at ContextPacketTests.swift:268:21: Caught error: P1-F1D 080 capability missing: contextResolve
+✘ Test p1f1_080AnsweredRequestChangesContextNotSessionScope() failed after 0.156 seconds with 1 issue.
+✘ Test p1f1_071ModelLoopAdapterCannotMutateRunCard() failed after 0.168 seconds with 1 issue.
+✘ Test p1f1_079CardRunnerAndCLIBackendCannotStartOrFinishRun() failed after 0.170 seconds with 1 issue.
+✘ Test run with 19 tests in 2 suites failed after 0.170 seconds with 19 issues.
+RUN_STATUS=1
+TEE_STATUS=0

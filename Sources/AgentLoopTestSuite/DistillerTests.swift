@@ -8,40 +8,44 @@ private func textTurn(_ text: String) -> TurnResult {
 
 // MARK: - 解析（剥围栏 → JSON → 首行回退）
 
-@Test func parseNoteJSONHappyPath() {
-    let parsed = Distiller.parseNoteJSON(###"{"title":"露营经验","body":"## 做了什么\n搭了帐篷"}"###)
+@Test func parseNoteJSONHappyPath() throws {
+    let parsed = try Distiller.parseNoteJSON(###"{"title":"露营经验","body":"## 做了什么\n搭了帐篷"}"###)
     #expect(parsed == .note(title: "露营经验", body: "## 做了什么\n搭了帐篷"))
 }
 
-@Test func parseNoteJSONStripsCodeFence() {
+@Test func parseNoteJSONStripsCodeFence() throws {
     let fenced = """
     ```json
     {"title":"带围栏","body":"正文"}
     ```
     """
-    #expect(Distiller.parseNoteJSON(fenced) == .note(title: "带围栏", body: "正文"))
+    #expect(try Distiller.parseNoteJSON(fenced) == .note(title: "带围栏", body: "正文"))
 }
 
-@Test func parseNoteJSONTruncatesLongTitle() {
+@Test func parseNoteJSONTruncatesLongTitle() throws {
     let long = String(repeating: "长", count: 50)
-    let parsed = Distiller.parseNoteJSON(#"{"title":"\#(long)","body":"b"}"#)
+    let parsed = try Distiller.parseNoteJSON(#"{"title":"\#(long)","body":"b"}"#)
     guard case .note(let title, _) = parsed else { Issue.record("expected note"); return }
     #expect(title.count == 30)
 }
 
 @Test func parseNoteJSONMalformedFallsBackToFirstLine() {
-    let parsed = Distiller.parseNoteJSON("这是标题行\n这是正文第一行\n这是正文第二行")
-    #expect(parsed == .note(title: "这是标题行", body: "这是正文第一行\n这是正文第二行"))
-
-    // 单行畸形输出：题体同源
-    let single = Distiller.parseNoteJSON("只有一行")
-    #expect(single == .note(title: "只有一行", body: "只有一行"))
+    #expect(throws: DistillerError.invalidPayload) {
+        try Distiller.parseNoteJSON("这是标题行\n这是正文第一行\n这是正文第二行")
+    }
+    #expect(throws: DistillerError.invalidPayload) {
+        try Distiller.parseNoteJSON("只有一行")
+    }
 }
 
-@Test func parseNoteJSONSkipConvention() {
-    #expect(Distiller.parseNoteJSON(#"{"skip":true}"#) == .skip)
-    #expect(Distiller.parseNoteJSON("") == .skip)
-    #expect(Distiller.parseNoteJSON("   \n  ") == .skip)
+@Test func parseNoteJSONSkipConvention() throws {
+    #expect(try Distiller.parseNoteJSON(#"{"skip":true}"#) == .skip)
+    #expect(throws: DistillerError.invalidPayload) {
+        try Distiller.parseNoteJSON("")
+    }
+    #expect(throws: DistillerError.invalidPayload) {
+        try Distiller.parseNoteJSON("   \n  ")
+    }
 }
 
 // MARK: - Prompt 确定性（无时间戳）

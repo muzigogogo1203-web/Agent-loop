@@ -1,11 +1,11 @@
 import Foundation
 import UserNotifications
-import os
+import AgentLoopCore
+import AgentLoopApplication
 
 @MainActor
 final class ScheduledMissionNotifier {
     private let center: UNUserNotificationCenter
-    private let logger = Logger(subsystem: "com.muzi.agentloop", category: "scheduled-notifications")
     private static let authorizationRequestedKey = "scheduledMissionNotificationAuthorizationRequested"
 
     init(center: UNUserNotificationCenter = .current()) {
@@ -16,61 +16,83 @@ final class ScheduledMissionNotifier {
         Bundle.main.bundleURL.pathExtension == "app" && Bundle.main.bundleIdentifier != nil
     }
 
-    func requestAuthorizationOnFirstScheduleEnable() async {
-        guard canUseUserNotifications else { return }
-        guard !UserDefaults.standard.bool(forKey: Self.authorizationRequestedKey) else { return }
+    func requestAuthorization() async throws -> ScheduleAuthorizationReceipt {
+        guard canUseUserNotifications else {
+            return ScheduleAuthorizationReceipt(disposition: .unavailable)
+        }
+        guard !UserDefaults.standard.bool(
+            forKey: Self.authorizationRequestedKey
+        ) else {
+            return ScheduleAuthorizationReceipt(
+                disposition: .alreadyRequested
+            )
+        }
         UserDefaults.standard.set(true, forKey: Self.authorizationRequestedKey)
         do {
-            _ = try await center.requestAuthorization(options: [.alert, .sound])
+            let granted = try await center.requestAuthorization(
+                options: [.alert, .sound]
+            )
+            return ScheduleAuthorizationReceipt(
+                disposition: granted ? .granted : .denied
+            )
         } catch {
-            logger.error("notification authorization request failed: \(String(describing: error), privacy: .public)")
+            throw SchedulePlatformFailure.authorization
         }
     }
 
-    func postCloseout(missionId: String, title: String) async {
-        await post(
-            missionId: missionId,
-            title: "定时行动已收营",
-            body: title
-        )
-    }
-
-    func postFailure(missionId: String, title: String) async {
-        await post(
-            missionId: missionId,
-            title: "定时行动受阻",
-            body: title
-        )
-    }
-
-    func postBudgetExhausted(missionId: String, title: String) async {
-        await post(
-            missionId: missionId,
-            title: "定时行动预算用尽",
-            body: title
-        )
-    }
-
-    private func post(missionId: String, title: String, body: String) async {
-        guard canUseUserNotifications else { return }
+    func submit(
+        _ request: ScheduleNotificationRequest
+    ) async throws -> ScheduleNotificationReceipt {
+        guard canUseUserNotifications else {
+            return ScheduleNotificationReceipt(
+                notificationId: request.notificationId,
+                disposition: .unavailable
+            )
+        }
         let settings = await center.notificationSettings()
-        guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
-            return
+        guard settings.authorizationStatus == .authorized
+                || settings.authorizationStatus == .provisional
+        else {
+            return ScheduleNotificationReceipt(
+                notificationId: request.notificationId,
+                disposition: .notAuthorized
+            )
         }
         let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
+        content.title = request.title
+        content.body = request.body
         content.sound = .default
-        content.userInfo = ["missionId": missionId]
-        let request = UNNotificationRequest(
-            identifier: "agentloop.scheduled.\(missionId).\(title)",
+        content.userInfo = ["missionId": request.missionId]
+        let platformRequest = UNNotificationRequest(
+            identifier: request.notificationId,
             content: content,
             trigger: nil
         )
         do {
-            try await center.add(request)
+            try await center.add(platformRequest)
+            return ScheduleNotificationReceipt(
+                notificationId: request.notificationId,
+                disposition: .submitted
+            )
         } catch {
-            logger.error("posting scheduled notification failed: \(String(describing: error), privacy: .public)")
+            throw SchedulePlatformFailure.notificationSubmission
         }
+    }
+
+    func port() -> ScheduleNotificationPort {
+        ScheduleNotificationPort(
+            requestAuthorization: { [weak self] in
+                guard let self else {
+                    throw SchedulePlatformFailure.authorization
+                }
+                return try await self.requestAuthorization()
+            },
+            submit: { [weak self] request in
+                guard let self else {
+                    throw SchedulePlatformFailure.notificationSubmission
+                }
+                return try await self.submit(request)
+            }
+        )
     }
 }

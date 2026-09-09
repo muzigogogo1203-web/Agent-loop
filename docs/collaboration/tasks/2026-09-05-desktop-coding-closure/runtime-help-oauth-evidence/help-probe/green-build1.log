@@ -1,0 +1,54 @@
+Building for debugging...
+[0/5] Write sources
+[2/5] Write swift-version--1AB21518FC5DEDBE.txt
+[4/7] Compiling AgentLoopCore CliEngineAdapter.swift
+[5/7] Emitting module AgentLoopCore
+[6/8] Compiling AgentLoopCore Orchestrator.swift
+[7/9] Emitting module AgentLoopApplication
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[8/28] Compiling AgentLoopTestSuite KnowledgeGoldenPathTests.swift
+[9/28] Compiling AgentLoopTestSuite McpTests.swift
+[10/28] Compiling AgentLoopTestSuite CrashRecoveryTests.swift
+[11/28] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+[12/28] Compiling AgentLoopTestSuite ApplicationWorkflowTests.swift
+[13/28] Compiling AgentLoopTestSuite AskUserTests.swift
+[14/28] Compiling AgentLoopTestSuite MultiCampTests.swift
+[15/28] Compiling AgentLoopTestSuite OpenAIOAuthSessionTests.swift
+[16/28] Emitting module AgentLoopTestSuite
+[17/28] Compiling AgentLoopTestSuite FailureVisibilityTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[18/28] Compiling AgentLoopTestSuite GoldenPathTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[19/28] Compiling AgentLoopTestSuite HarvestTests.swift
+[20/28] Compiling AgentLoopTestSuite IngestionDeletionContractTests.swift
+[21/28] Compiling AgentLoopTestSuite BlockingProcessOperationTests.swift
+[22/28] Compiling AgentLoopTestSuite BudgetTests.swift
+[23/28] Compiling AgentLoopTestSuite CliBackendTests.swift
+[24/28] Compiling AgentLoopTestSuite ContextPacketTests.swift
+[25/28] Compiling AgentLoopTestSuite GuideChatTests.swift
+[26/28] Compiling AgentLoopTestSuite HaltAndCooldownTests.swift
+[27/30] Compiling AgentLoopTestSuite OrchestratorTests.swift
+[28/30] Compiling AgentLoopTestSuite RuntimeProfileTests.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[29/32] Emitting module RunTests
+[29/32] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[30/32] Linking RunTests
+[31/32] Applying RunTests
+Build of product 'RunTests' complete! (48.48s)

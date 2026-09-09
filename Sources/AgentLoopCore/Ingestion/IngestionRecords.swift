@@ -9,6 +9,73 @@ public enum IngestionStatus: String, Codable, Sendable, CaseIterable {
     case queued, ruminating, needsReview, materialized, failed, discarded
 }
 
+package enum RuminationStartPreparation: Sendable, Equatable {
+    case replay(ingestionId: String, workId: String)
+    case new(
+        ingestionId: String,
+        expectedPreviousAttempt: Int,
+        generation: Int,
+        idempotencyKey: String
+    )
+}
+
+package struct RuminationStartCommand: Sendable, Equatable {
+    package let ingestionId: String
+    package let expectedPreviousAttempt: Int
+    package let generation: Int
+    package let idempotencyKey: String
+    package let traceId: String
+    package let input: RuminationWorkInput
+
+    package init(
+        preparation: RuminationStartPreparation,
+        traceId: String,
+        input: RuminationWorkInput
+    ) throws {
+        guard case let .new(
+            ingestionId,
+            expectedPreviousAttempt,
+            generation,
+            idempotencyKey
+        ) = preparation,
+              generation >= 1,
+              expectedPreviousAttempt >= 0,
+              expectedPreviousAttempt.addingReportingOverflow(1)
+                  == (generation, false),
+              !traceId.trimmingCharacters(
+                  in: .whitespacesAndNewlines
+              ).isEmpty
+        else {
+            throw InvalidDurableWorkStateError()
+        }
+        self.ingestionId = ingestionId
+        self.expectedPreviousAttempt = expectedPreviousAttempt
+        self.generation = generation
+        self.idempotencyKey = idempotencyKey
+        self.traceId = traceId
+        self.input = input
+    }
+}
+
+package enum LegacyRuminationStartupSnapshot:
+    Sendable, Equatable
+{
+    case valid(runtimeProfileId: String, model: String)
+    case legacyProfileUnresolved
+    case legacyModelUnavailable
+    case legacyProfileCLIUnsupported
+}
+
+public struct RuminationStartRecoveryRequiredError:
+    Error, Sendable, Equatable
+{
+    public let ingestionId: String
+
+    public init(ingestionId: String) {
+        self.ingestionId = ingestionId
+    }
+}
+
 public struct IngestionItemRecord: Codable, Sendable, Equatable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "ingestion_item"
 

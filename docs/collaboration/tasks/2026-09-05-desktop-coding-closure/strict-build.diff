@@ -1,0 +1,164 @@
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/strict-build-before/Sources/AgentLoopCore/Kernel/Orchestrator.swift	2026-08-30 14:38:35
++++ Sources/AgentLoopCore/Kernel/Orchestrator.swift	2026-09-05 22:51:40
+@@ -1378,7 +1378,7 @@
+             } catch {
+                 result = .failure(error)
+             }
+-            await self.finishPrimary(
++            self.finishPrimary(
+                 executionId: executionId,
+                 generation: generation,
+                 attemptToken: token,
+@@ -4243,7 +4243,11 @@
+             guard pathResult == 0 else {
+                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+             }
+-            let path = String(cString: pathBytes)
++            let path = String(
++                decoding: pathBytes.prefix { $0 != 0 }
++                    .map { UInt8(bitPattern: $0) },
++                as: UTF8.self
++            )
+             guard path.hasPrefix("/"),
+                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+             else {
+@@ -4323,7 +4327,11 @@
+               directoryURL.path.hasPrefix("/"),
+               ownedDescriptor >= 0,
+               descriptorPathResult == 0,
+-              String(cString: descriptorPath) == directoryURL.path,
++              String(
++                  decoding: descriptorPath.prefix { $0 != 0 }
++                      .map { UInt8(bitPattern: $0) },
++                  as: UTF8.self
++              ) == directoryURL.path,
+               Darwin.fstat(ownedDescriptor, &info) == 0,
+               info.st_mode & S_IFMT == S_IFDIR,
+               UInt64(info.st_dev) == device,
+@@ -5166,7 +5174,11 @@
+         guard Darwin.fcntl(parentDescriptor, F_GETPATH, &bytes) == 0 else {
+             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+         }
+-        let parentPath = String(cString: bytes)
++        let parentPath = String(
++            decoding: bytes.prefix { $0 != 0 }
++                .map { UInt8(bitPattern: $0) },
++            as: UTF8.self
++        )
+         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+             .appendingPathComponent(authorityName, isDirectory: true)
+             .appendingPathComponent("executable")
+@@ -5891,7 +5903,11 @@
+             if errno == ESRCH { return nil }
+             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+         }
+-        let path = String(cString: pathBytes)
++        let path = String(
++            decoding: pathBytes.prefix { $0 != 0 }
++                .map { UInt8(bitPattern: $0) },
++            as: UTF8.self
++        )
+         let file = try EngineRuntimeIdentityReaderV1.file(
+             path: path,
+             requireExecutable: true
+@@ -6749,7 +6765,11 @@
+               UInt64(info.st_dev) == identity.device,
+               UInt64(info.st_ino) == identity.inode,
+               UInt32(info.st_uid) == identity.uid,
+-              String(cString: path) == identity.canonicalPath
++              String(
++                  decoding: path.prefix { $0 != 0 }
++                      .map { UInt8(bitPattern: $0) },
++                  as: UTF8.self
++              ) == identity.canonicalPath
+         else {
+             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+         }
+@@ -6868,14 +6888,22 @@
+         }) == required else {
+             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+         }
+-        let systemPath = String(cString: systemBytes)
++        let systemPath = String(
++            decoding: systemBytes.prefix { $0 != 0 }
++                .map { UInt8(bitPattern: $0) },
++            as: UTF8.self
++        )
+         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+         guard systemPath.withCString({ source in
+             Darwin.realpath(source, &resolvedBytes)
+         }) != nil else {
+             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+         }
+-        let resolved = String(cString: resolvedBytes)
++        let resolved = String(
++            decoding: resolvedBytes.prefix { $0 != 0 }
++                .map { UInt8(bitPattern: $0) },
++            as: UTF8.self
++        )
+         let canonical = resolved.hasPrefix("/var/")
+             ? "/private" + resolved
+             : resolved
+@@ -6957,7 +6985,11 @@
+                 &frozenPath
+             )
+             guard pathResult == 0,
+-                  String(cString: frozenPath) == url.path
++                  String(
++                      decoding: frozenPath.prefix { $0 != 0 }
++                          .map { UInt8(bitPattern: $0) },
++                      as: UTF8.self
++                  ) == url.path
+             else {
+                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+             }
+@@ -7041,7 +7073,7 @@
+     ) throws -> [EngineRuntimeExecutableRemovalSnapshotV1] {
+         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+         for boot in oldBoots {
+-            var bootDescriptor = try openExistingDirectory(
++            let bootDescriptor = try openExistingDirectory(
+                 parent: engineRootDescriptor,
+                 name: boot.name,
+                 mode: directoryMode
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/strict-build-before/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift	2026-08-30 17:46:33
++++ Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift	2026-09-05 22:51:40
+@@ -210,7 +210,11 @@
+         guard socketPath.hasPrefix("/"),
+               !socketPath.utf8.contains(0),
+               resolvedPathResult != nil,
+-              String(cString: resolvedPathBytes) == socketPath,
++              String(
++                  decoding: resolvedPathBytes.prefix { $0 != 0 }
++                      .map { UInt8(bitPattern: $0) },
++                  as: UTF8.self
++              ) == socketPath,
+               Self.isLowercaseHex(token, count: 64)
+         else {
+             throw BoardToolServerError.invalidFrame(
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/strict-build-before/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift	2026-08-30 17:54:42
++++ Sources/AgentLoopCore/Loop/CliEngineAdapter.swift	2026-09-05 22:51:40
+@@ -1885,7 +1885,11 @@
+         }) != nil else {
+             throw EngineContextValidationErrorV1()
+         }
+-        let result = String(cString: buffer)
++        let result = String(
++            decoding: buffer.prefix { $0 != 0 }
++                .map { UInt8(bitPattern: $0) },
++            as: UTF8.self
++        )
+         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+             throw EngineContextValidationErrorV1()
+         }
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/strict-build-before/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift	2026-08-14 17:10:27
++++ Sources/AgentLoopCore/Work/PlanningProviderResolver.swift	2026-09-05 22:51:40
+@@ -414,7 +414,7 @@
+             )
+         }
+         let trustedCatalog = try Self.mapCatalogSourceFailure {
+-            try ModelCatalogService.trustedCatalog(
++            ModelCatalogService.trustedCatalog(
+                 profile: profile,
+                 defaults: defaults
+             )

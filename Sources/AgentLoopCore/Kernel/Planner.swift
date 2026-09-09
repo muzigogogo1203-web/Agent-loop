@@ -130,10 +130,92 @@ public struct Planner: Sendable {
         }
     }
 
+    package func proposeDurable(
+        goal: String,
+        roster: [CompanionRecord],
+        workspacePath: String?,
+        campNotes: [NoteSnippet] = []
+    ) async throws -> PlanResult {
+        var history: [APIMessage] = [
+            .user(
+                userPrompt(
+                    goal: goal,
+                    roster: roster,
+                    workspacePath: workspacePath,
+                    campNotes: campNotes
+                )
+            ),
+        ]
+        var accumulatedUsage = Usage()
+
+        let first = try await durableProviderTurn(
+            history: history,
+            accumulatedUsage: accumulatedUsage,
+            hasCompletedUsage: false
+        )
+        accumulatedUsage = first.accumulatedUsage
+        switch parse(first.turn, rosterCount: roster.count) {
+        case .valid(let proposal):
+            return PlanResult(
+                proposal: proposal,
+                fallbackReason: nil,
+                usage: accumulatedUsage
+            )
+        case .invalidToolUse(let toolUseId, let error):
+            history.append(.assistant(first.turn.content))
+            history.append(
+                .user(
+                    toolResults: [
+                        .toolResult(
+                            toolUseId: toolUseId,
+                            content: error,
+                            isError: true
+                        ),
+                    ]
+                )
+            )
+        case .noToolUse:
+            history.append(.assistant(first.turn.content))
+            history.append(
+                .user("必须调用 propose_plan 并给出全部必填参数。")
+            )
+        }
+
+        let correction = try await durableProviderTurn(
+            history: history,
+            accumulatedUsage: accumulatedUsage,
+            hasCompletedUsage: true
+        )
+        accumulatedUsage = correction.accumulatedUsage
+        switch parse(correction.turn, rosterCount: roster.count) {
+        case .valid(let proposal):
+            return PlanResult(
+                proposal: proposal,
+                fallbackReason: nil,
+                usage: accumulatedUsage
+            )
+        case .invalidToolUse, .noToolUse:
+            let failure = try PlanningAttemptFailure(
+                code: "planning_contract_invalid",
+                safeMessage: Self.safePlanningMessage(
+                    code: "planning_contract_invalid"
+                ),
+                disposition: .deterministic,
+                usage: accumulatedUsage
+            )
+            throw failure
+        }
+    }
+
     private enum ParseResult {
         case valid(PlanProposal)
         case invalidToolUse(toolUseId: String, error: String)
         case noToolUse
+    }
+
+    private struct DurableTurn {
+        let turn: TurnResult
+        let accumulatedUsage: Usage
     }
 
     private func parse(_ turn: TurnResult, rosterCount: Int) -> ParseResult {
@@ -183,6 +265,211 @@ public struct Planner: Sendable {
                 try Task.checkCancellation()
                 try await Task.sleep(for: retryDelays[retryCount - 1])
             }
+        }
+    }
+
+    private func durableProviderTurn(
+        history: [APIMessage],
+        accumulatedUsage: Usage,
+        hasCompletedUsage: Bool
+    ) async throws -> DurableTurn {
+        let turn: TurnResult
+        do {
+            turn = try await providerTurnOnce(history: history)
+        } catch {
+            if error is CancellationError {
+                throw error
+            }
+            throw try Self.mapProviderFailure(
+                error,
+                usage: hasCompletedUsage ? accumulatedUsage : nil
+            )
+        }
+
+        guard turn.usage.inputTokens >= 0,
+              turn.usage.outputTokens >= 0,
+              turn.usage.cacheReadTokens >= 0
+        else {
+            let failure = try PlanningAttemptFailure(
+                code: "planning_usage_invalid",
+                safeMessage: Self.safePlanningMessage(
+                    code: "planning_usage_invalid"
+                ),
+                disposition: .deterministic,
+                usage: hasCompletedUsage ? accumulatedUsage : nil
+            )
+            throw failure
+        }
+
+        return DurableTurn(
+            turn: turn,
+            accumulatedUsage: try Self.checkedPlanningUsageSum(
+                accumulatedUsage,
+                turn.usage
+            )
+        )
+    }
+
+    private func providerTurnOnce(
+        history: [APIMessage]
+    ) async throws -> TurnResult {
+        var turn: TurnResult?
+        let stream = await durableProviderStream(history: history)
+        for try await event in stream {
+            if case .turn(let result) = event {
+                turn = result
+            }
+        }
+        guard let turn else {
+            throw ProviderError.malformedStream(
+                "no planning turn result"
+            )
+        }
+        return turn
+    }
+
+    private func durableProviderStream(
+        history: [APIMessage]
+    ) async -> AsyncThrowingStream<ProviderEvent, Error> {
+        let provider = provider
+        return await withUnsafeContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                continuation.resume(
+                    returning: provider.streamTurn(
+                        system: Self.systemPrompt,
+                        history: history,
+                        tools: [Self.proposePlanTool],
+                        toolChoice: .tool(name: "propose_plan"),
+                        maxTokens: KernelDefaults.maxTokensPerTurn
+                    )
+                )
+            }
+        }
+    }
+
+    private static func checkedPlanningUsageSum(
+        _ prior: Usage,
+        _ incoming: Usage
+    ) throws -> Usage {
+        let priorCounters = try PlanningUsageCountersV1(usage: prior)
+        let incomingCounters = try PlanningUsageCountersV1(usage: incoming)
+
+        let (cacheReadTokens, cacheReadOverflow) =
+            prior.cacheReadTokens.addingReportingOverflow(
+                incoming.cacheReadTokens
+            )
+        let (inputTokens, inputOverflow) =
+            prior.inputTokens.addingReportingOverflow(incoming.inputTokens)
+        let (outputTokens, outputOverflow) =
+            prior.outputTokens.addingReportingOverflow(
+                incoming.outputTokens
+            )
+
+        var overflowFields: [PlanningUsageOverflowField] = []
+        if cacheReadOverflow {
+            overflowFields.append(.cacheReadTokens)
+        }
+        if inputOverflow {
+            overflowFields.append(.inputTokens)
+        }
+        if outputOverflow {
+            overflowFields.append(.outputTokens)
+        }
+        if !overflowFields.isEmpty {
+            overflowFields.sort {
+                $0.rawValue.utf8.lexicographicallyPrecedes(
+                    $1.rawValue.utf8
+                )
+            }
+            throw UsageOverflowError(
+                evidence: .turnAggregate(
+                    priorAccumulatedUsage: priorCounters,
+                    incomingUsage: incomingCounters,
+                    overflowFields: overflowFields
+                )
+            )
+        }
+
+        return Usage(
+            inputTokens: inputTokens,
+            outputTokens: outputTokens,
+            cacheReadTokens: cacheReadTokens
+        )
+    }
+
+    private static func mapProviderFailure(
+        _ error: Error,
+        usage: Usage?
+    ) throws -> PlanningAttemptFailure {
+        let code: String
+        let disposition: DurableWorkFailureDisposition
+
+        if error is URLError {
+            code = "planning_transport_error"
+            disposition = .transient
+        } else if let providerError = error as? ProviderError {
+            switch providerError {
+            case .http(let status, _)
+                where status == 429 || (500...599).contains(status):
+                code = "planning_provider_unavailable"
+                disposition = .transient
+            case .overloadedRetriesExhausted:
+                code = "planning_provider_unavailable"
+                disposition = .transient
+            case .apiError(let type, _)
+                where type == "overloaded_error"
+                    || type == "rate_limit_error"
+                    || type == "server_error":
+                code = "planning_provider_unavailable"
+                disposition = .transient
+            case .malformedStream:
+                code = "planning_provider_malformed_response"
+                disposition = .transient
+            case .unauthorized:
+                code = "planning_provider_unauthorized"
+                disposition = .deterministic
+            case .http:
+                code = "planning_provider_http_error"
+                disposition = .deterministic
+            case .apiError:
+                code = "planning_provider_api_error"
+                disposition = .deterministic
+            }
+        } else {
+            code = "planning_provider_failed"
+            disposition = .deterministic
+        }
+
+        return try PlanningAttemptFailure(
+            code: code,
+            safeMessage: safePlanningMessage(code: code),
+            disposition: disposition,
+            usage: usage
+        )
+    }
+
+    private static func safePlanningMessage(code: String) -> String {
+        switch code {
+        case "planning_contract_invalid":
+            return "规划结果不符合约定格式。"
+        case "planning_usage_invalid":
+            return "规划模型返回了无效的用量数据。"
+        case "planning_transport_error":
+            return "规划模型网络连接失败。"
+        case "planning_provider_unavailable":
+            return "规划模型服务暂时不可用。"
+        case "planning_provider_malformed_response":
+            return "规划模型响应不完整。"
+        case "planning_provider_unauthorized":
+            return "规划模型凭据无效或无权限。"
+        case "planning_provider_http_error":
+            return "规划模型服务返回了无法处理的响应。"
+        case "planning_provider_api_error":
+            return "规划模型服务拒绝了本次请求。"
+        case "planning_provider_failed":
+            return "规划模型调用失败。"
+        default:
+            preconditionFailure("Unknown durable planning failure code")
         }
     }
 

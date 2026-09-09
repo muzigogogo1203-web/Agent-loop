@@ -172,8 +172,10 @@ final class McpStore {
         }
     }
 
-    func assembledTools(serverId: String) async -> [McpServerManager.AssembledTool] {
-        await manager.assembledTools(serverId: serverId)
+    func assembledTools(
+        serverId: String
+    ) async throws -> [McpServerManager.AssembledTool] {
+        try await manager.assembledTools(serverId: serverId)
     }
 
     // MARK: - 营地启用

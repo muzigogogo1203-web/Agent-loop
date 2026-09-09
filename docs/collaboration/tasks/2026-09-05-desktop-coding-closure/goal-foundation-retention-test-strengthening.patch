@@ -1,0 +1,245 @@
+*** Begin Patch
+*** Update File: /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DesktopGoalFoundationTests.swift
+@@
+             let after = try desktopCaptureSQLSnapshot(reopened)
+             #expect(after == before)
+         }
+     }
+ }
++
++// Negative-case arrangement only: the input was actually deleted by its domain command.
++// This schema-valid NULL/redacted fixture makes each independent corruption reachable
++// before production hooks exist; the positive deletion tests prove the hooks themselves.
++private func desktopRetentionArrangeDeletedCarrier(
++    _ database: AppDatabase, intent: DesktopGoalCaptureIntentV1
++) throws {
++    try database.pool.write { db in
++        let inputValue = try InputEnvelopeRecord.fetchOne(db, key: intent.context.inputId)
++        let input = try #require(inputValue)
++        #expect(input.status == .deletedTombstone)
++        #expect(input.retentionState == .deletedTombstone)
++        try db.execute(sql: "UPDATE desktop_goal_context SET retentionState='redacted',contextJson=NULL WHERE inputId=?", arguments: [input.id])
++        try db.execute(sql: "UPDATE desktop_goal_operation SET phase='redacted',requestJson=NULL,resultJson=NULL WHERE inputId=?", arguments: [input.id])
++    }
++}
++
++extension DesktopGoalFoundationTests {
++    @Test func retentionStrengtheningRedactsEveryOwnedOperation() throws {
++        for branch in ["cancel", "complete"] {
++            let (database, _) = try desktopTextDatabase()
++            let intent = try desktopRetentionIntent()
++            let capture = try DesktopGoalWorkflowStore(database: database).prepareSubmission(intent)
++            let extraID = "60000000-0000-4000-8000-000000000004"
++            let inertRequest = "{\"purpose\":\"inert-system-retention-probe\"}"
++            let inertHash = CanonicalJSONV1.sha256Hex(Data(inertRequest.utf8))
++            try CanonicalJSONV1.validateCanonical(rawUTF8: Data(inertRequest.utf8))
++            // Schema-valid inert journal data, not a dispatched command, attempt or fake result.
++            try database.pool.write { db in
++                try db.execute(sql: """
++                    INSERT INTO desktop_goal_operation(id,inputId,kind,ownerKind,version,requestJson,requestHash,phase,resultJson,safeReceiptJson,safeErrorCode,createdAt,updatedAt)
++                    VALUES (?,?,'inertRetentionProbe','system',7,?,?,'prepared','[]',NULL,NULL,100,100)
++                    """, arguments: [extraID, intent.context.inputId, inertRequest, inertHash])
++            }
++            let originalDelete: DesktopRetentionOriginalDelete
++            if branch == "cancel" { originalDelete = .cancel(try desktopRetentionCancel(database, intent: intent)) }
++            else { originalDelete = .complete(try desktopRetentionCompleteCommand(database, intent: intent)) }
++            let beforeOperations = try database.pool.read { db in
++                try Row.fetchAll(db, sql: "SELECT * FROM desktop_goal_operation WHERE inputId=? ORDER BY id", arguments: [intent.context.inputId])
++            }
++            #expect(beforeOperations.count == 2)
++            let deletionReceipt = try originalDelete.replay(in: database)
++            let expectedSafe = try CanonicalContractCodingV1.encode(capture)
++            let expectedContextHash = try CanonicalContractCodingV1.hash(intent.context)
++            try database.pool.read { db in
++                let contextValue = try Row.fetchOne(db, sql: "SELECT * FROM desktop_goal_context WHERE inputId=?", arguments: [intent.context.inputId])
++                let context = try #require(contextValue)
++                let state: String = context["retentionState"]
++                let json: String? = context["contextJson"]
++                let hash: String = context["contextHash"]
++                let version: Int = context["version"]
++                #expect(state == "redacted")
++                #expect(json == nil)
++                #expect(hash == expectedContextHash)
++                #expect(version == 2)
++                let afterOperations = try Row.fetchAll(db, sql: "SELECT * FROM desktop_goal_operation WHERE inputId=? ORDER BY id", arguments: [intent.context.inputId])
++                #expect(afterOperations.count == 2)
++                for row in afterOperations {
++                    let id: String = row["id"]
++                    let previousValue = beforeOperations.first { ($0["id"] as String) == id }
++                    let previous = try #require(previousValue)
++                    let phase: String = row["phase"]
++                    let request: String? = row["requestJson"]
++                    let result: String? = row["resultJson"]
++                    let requestHash: String = row["requestHash"]
++                    let previousHash: String = previous["requestHash"]
++                    let rowVersion: Int = row["version"]
++                    let previousVersion: Int = previous["version"]
++                    let safeJSON: String? = row["safeReceiptJson"]
++                    #expect(phase == "redacted")
++                    #expect(request == nil)
++                    #expect(result == nil)
++                    #expect(requestHash == previousHash)
++                    #expect(rowVersion == previousVersion + 1)
++                    if id == extraID {
++                        #expect(safeJSON == nil)
++                        #expect(rowVersion == 8)
++                        #expect(requestHash == inertHash)
++                    } else {
++                        #expect(id == intent.operationId)
++                        #expect(rowVersion == 4)
++                        #expect(safeJSON.map { Data($0.utf8) } == expectedSafe)
++                    }
++                }
++            }
++            let deletedRows = try desktopCaptureSQLSnapshot(database)
++            let replay = try originalDelete.replay(in: database)
++            #expect(replay == deletionReceipt)
++            #expect(throws: Never.self) {
++                try database.pool.write { db in
++                    try DesktopGoalWorkflowStore.redact(inputId: intent.context.inputId, at: Date(timeIntervalSince1970: 150), in: db)
++                }
++            }
++            let afterReplays = try desktopCaptureSQLSnapshot(database)
++            #expect(afterReplays == deletedRows)
++        }
++    }
++
++    @Test func retentionStrengtheningRejectsLiveOperationUnderRedactedContext() throws {
++        for branch in ["cancel", "complete"] {
++            let (database, path) = try desktopTextDatabase()
++            let intent = try desktopRetentionIntent()
++            _ = try DesktopGoalWorkflowStore(database: database).prepareSubmission(intent)
++            let originalDelete: DesktopRetentionOriginalDelete
++            if branch == "cancel" { originalDelete = .cancel(try desktopRetentionCancel(database, intent: intent)) }
++            else { originalDelete = .complete(try desktopRetentionCompleteCommand(database, intent: intent)) }
++            _ = try originalDelete.replay(in: database)
++            try desktopRetentionArrangeDeletedCarrier(database, intent: intent)
++            let contextBefore = try database.pool.read { db in
++                try Row.fetchOne(db, sql: "SELECT * FROM desktop_goal_context WHERE inputId=?", arguments: [intent.context.inputId])
++            }
++            try database.pool.write { db in
++                // Only the operation is corrupted; its context stays NULL/redacted.
++                try db.execute(sql: "UPDATE desktop_goal_operation SET phase='prepared',requestJson='not-json',resultJson='not-json' WHERE id=?", arguments: [intent.operationId])
++                let contextAfter = try Row.fetchOne(db, sql: "SELECT * FROM desktop_goal_context WHERE inputId=?", arguments: [intent.context.inputId])
++                #expect(contextAfter == contextBefore)
++            }
++            let corrupted = try desktopCaptureSQLSnapshot(database)
++            try database.pool.close()
++            let reopened = try AppDatabase(path: path)
++            let store = DesktopGoalWorkflowStore(database: reopened)
++            #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) { _ = try store.snapshot(inputId: intent.context.inputId, campId: intent.campId) }
++            #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) { _ = try store.list(campId: intent.campId) }
++            #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) { _ = try store.prepareSubmission(intent) }
++            #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) { _ = try originalDelete.replay(in: reopened) }
++            #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) {
++                try reopened.pool.write { db in
++                    try DesktopGoalWorkflowStore.redact(inputId: intent.context.inputId, at: Date(timeIntervalSince1970: 150), in: db)
++                }
++            }
++            let after = try desktopCaptureSQLSnapshot(reopened)
++            #expect(after == corrupted)
++        }
++    }
++
++    @Test func retentionStrengtheningRejectsOtherActualCaptureSafeReceipt() throws {
++        // Both actual deletion paths must reject foreign or payload-bearing receipts before commit.
++        for branch in ["cancel", "complete"] {
++          for corruption in ["foreignActualReceipt", "unexpectedOriginalText"] {
++            let (beforeDB, _) = try desktopTextDatabase()
++            let first = try desktopRetentionIntent()
++            let second = try desktopCaptureSecondIntent()
++            let beforeStore = DesktopGoalWorkflowStore(database: beforeDB)
++            let firstCapture = try beforeStore.prepareSubmission(first)
++            let foreign = try beforeStore.prepareSubmission(second)
++            let originalDelete: DesktopRetentionOriginalDelete
++            if branch == "cancel" { originalDelete = .cancel(try desktopRetentionCancel(beforeDB, intent: first)) }
++            else { originalDelete = .complete(try desktopRetentionCompleteCommand(beforeDB, intent: first)) }
++            let foreignBytes = try CanonicalContractCodingV1.encode(foreign)
++            let decodedForeign = try CanonicalContractCodingV1.decode(DesktopGoalCaptureReceiptV1.self, from: foreignBytes)
++            #expect(decodedForeign == foreign)
++            let replacementBytes: Data
++            if corruption == "foreignActualReceipt" { replacementBytes = foreignBytes }
++            else {
++                let ownObjectValue = try JSONSerialization.jsonObject(with: CanonicalContractCodingV1.encode(firstCapture))
++                var ownObject = try #require(ownObjectValue as? [String: Any])
++                ownObject["originalText"] = "forbidden-retained-body"
++                replacementBytes = try desktopTextCanonicalFixture(ownObject)
++            }
++            try beforeDB.pool.write { db in
++                try db.execute(sql: "UPDATE desktop_goal_operation SET safeReceiptJson=? WHERE id=?",
++                               arguments: [String(decoding: replacementBytes, as: UTF8.self), first.operationId])
++            }
++            let inputBeforeValue = try InputGoalStore(database: beforeDB).input(id: first.context.inputId)
++            let inputBefore = try #require(inputBeforeValue)
++            let workID = try #require(firstCapture.captureReceipt.refs.first(where: { $0.kind == .durableWork })?.id)
++            let workBeforeValue = try DurableWorkStore(database: beforeDB).work(id: workID)
++            let workBefore = try #require(workBeforeValue)
++            let beforeAttempt = try desktopCaptureSQLSnapshot(beforeDB)
++            #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) {
++                _ = try originalDelete.replay(in: beforeDB)
++            }
++            let afterAttempt = try desktopCaptureSQLSnapshot(beforeDB)
++            #expect(afterAttempt == beforeAttempt)
++            let inputValue = try InputGoalStore(database: beforeDB).input(id: first.context.inputId)
++            let input = try #require(inputValue)
++            #expect(input == inputBefore)
++            #expect(input.inlineText == first.originalText)
++            let workValue = try DurableWorkStore(database: beforeDB).work(id: workID)
++            #expect(workValue == workBefore)
++            if branch == "cancel" {
++                #expect(input.status == .captured)
++                #expect(input.retentionState == .active)
++                #expect(workValue?.state == .queued)
++            } else {
++                #expect(input.status == .coaching)
++                #expect(input.retentionState == .deletionRequested)
++                #expect(workValue?.state == .succeeded)
++            }
++          }
++        }
++
++      for branch in ["cancel", "complete"] {
++        let (database, path) = try desktopTextDatabase()
++        let intent = try desktopRetentionIntent()
++        let other = try desktopCaptureSecondIntent()
++        let store = DesktopGoalWorkflowStore(database: database)
++        let firstCapture = try store.prepareSubmission(intent)
++        let otherCapture = try store.prepareSubmission(other)
++        #expect(firstCapture.inputId != otherCapture.inputId)
++        #expect(firstCapture.operationId != otherCapture.operationId)
++        let originalDelete: DesktopRetentionOriginalDelete
++        if branch == "cancel" { originalDelete = .cancel(try desktopRetentionCancel(database, intent: intent)) }
++        else { originalDelete = .complete(try desktopRetentionCompleteCommand(database, intent: intent)) }
++        _ = try originalDelete.replay(in: database)
++        try desktopRetentionArrangeDeletedCarrier(database, intent: intent)
++        let otherBytes = try CanonicalContractCodingV1.encode(otherCapture)
++        let otherDecoded = try CanonicalContractCodingV1.decode(DesktopGoalCaptureReceiptV1.self, from: otherBytes)
++        #expect(otherDecoded == otherCapture)
++        #expect(otherDecoded.captureReceipt.code == .inputCaptured)
++        try database.pool.write { db in
++            try db.execute(sql: "UPDATE desktop_goal_operation SET safeReceiptJson=? WHERE id=?",
++                           arguments: [String(decoding: otherBytes, as: UTF8.self), intent.operationId])
++        }
++        let corrupted = try desktopCaptureSQLSnapshot(database)
++        try database.pool.close()
++        let reopened = try AppDatabase(path: path)
++        #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) {
++            _ = try DesktopGoalWorkflowStore(database: reopened).snapshot(inputId: intent.context.inputId, campId: intent.campId)
++        }
++        #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) {
++            _ = try DesktopGoalWorkflowStore(database: reopened).list(campId: intent.campId)
++        }
++        #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) {
++            try reopened.pool.write { db in
++                try DesktopGoalWorkflowStore.redact(inputId: intent.context.inputId, at: Date(timeIntervalSince1970: 150), in: db)
++            }
++        }
++        #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) {
++            _ = try originalDelete.replay(in: reopened)
++        }
++        let after = try desktopCaptureSQLSnapshot(reopened)
++        #expect(after == corrupted)
++      }
++    }
++}
+*** End Patch

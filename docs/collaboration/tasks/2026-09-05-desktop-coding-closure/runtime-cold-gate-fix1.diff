@@ -1,0 +1,22 @@
+diff --git a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cold-gate-fix1-before/ExecutionEngineConformanceTests.swift b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+index ad1286a..a45452f 100644
+--- a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cold-gate-fix1-before/ExecutionEngineConformanceTests.swift
++++ b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+@@ -5755,11 +5755,14 @@ struct ExecutionEngineConformanceTests {
+             stream: stream, backend: backend, executionId: request.executionId,
+             identity: identity
+         ) {
+-            p1f1d065ColdLog(identity, "readiness-start observed=\(FileManager.default.fileExists(atPath: readyURL.path))")
++            p1f1d065ColdLog(identity, "readiness-start observed=\(FileManager.default.fileExists(atPath: readyURL.path)) successfulContinuations=\(harness.processInspector.signalObservations().filter { $0.signal == SIGCONT && $0.result == 0 }.count)")
+             defer {
+-                p1f1d065ColdLog(identity, "readiness-end observed=\(FileManager.default.fileExists(atPath: readyURL.path))")
++                p1f1d065ColdLog(identity, "readiness-end observed=\(FileManager.default.fileExists(atPath: readyURL.path)) successfulContinuations=\(harness.processInspector.signalObservations().filter { $0.signal == SIGCONT && $0.result == 0 }.count)")
+             }
+-            while !FileManager.default.fileExists(atPath: readyURL.path),
++            while (!FileManager.default.fileExists(atPath: readyURL.path)
++                || !harness.processInspector.signalObservations().contains(where: {
++                    $0.signal == SIGCONT && $0.result == 0
++                })),
+                   ContinuousClock.now < readyDeadline
+             {
+                 try await Task.sleep(for: .milliseconds(10))

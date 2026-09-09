@@ -28,8 +28,12 @@ public enum MissionStatus: String, Sendable, Codable {
 extension MissionStatus {
     public static func rollup(current: MissionStatus, cards: [CardStatus]) -> MissionStatus {
         switch current {
-        case .accepted, .failed:
+        case .failed:
             return current
+        case .accepted:
+            let terminal: Set<CardStatus> = [.done, .canceled]
+            return cards.contains(where: { !terminal.contains($0) })
+                ? .executing : .accepted
         case .planning, .executing, .delivering:
             break
         }
@@ -112,6 +116,11 @@ public struct CampArchivedError: Error, Equatable, Sendable {
     public init(campId: String) {
         self.campId = campId
     }
+}
+
+public enum CampArchiveBlockedError: Error, Equatable, Sendable {
+    case activeMission
+    case enabledSchedule
 }
 
 // MARK: - Camp
@@ -419,10 +428,308 @@ public struct RunRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
     }
 }
 
+// MARK: - P1-F1 Engine Coordination (v17)
+
+package enum EngineSessionStateV1:
+    String, Codable, Sendable, Equatable, CaseIterable
+{
+    case active
+    case closed
+    case invalid
+}
+
+package enum EngineExecutionDispatchStateV1:
+    String, Codable, Sendable, Equatable, CaseIterable
+{
+    case prepared
+    case started
+    case sessionBound
+    case terminalProposed
+    case terminal
+}
+
+package enum EngineExecutionStateV1:
+    String, Codable, Sendable, Equatable, CaseIterable
+{
+    case running
+    case completed
+    case blocked
+    case failed
+    case canceled
+}
+
+package enum EngineTerminalProposalStateV1:
+    String, Codable, Sendable, Equatable, CaseIterable
+{
+    case pending
+    case committed
+    case invalid
+}
+
+package enum EngineProposalArtifactStateV1:
+    String, Codable, Sendable, Equatable, CaseIterable
+{
+    case declared
+    case prepared
+}
+
+package struct EngineSessionRecord:
+    Codable, Sendable, Equatable, FetchableRecord, PersistableRecord
+{
+    package static let databaseTableName = "engine_session"
+
+    package var id: String
+    package var campId: String
+    package var adapterId: String
+    package var adapterVersion: String
+    package var profileId: String
+    package var externalSessionId: String?
+    package var workspaceHash: String
+    package var sessionScopeJson: String
+    package var sessionScopeHash: String
+    package var state: EngineSessionStateV1
+    package var version: Int
+    package var createdAt: Date
+    package var updatedAt: Date
+    package var redactedAt: Date?
+
+    package init(
+        id: String,
+        campId: String,
+        adapterId: String,
+        adapterVersion: String,
+        profileId: String,
+        externalSessionId: String?,
+        workspaceHash: String,
+        sessionScopeJson: String,
+        sessionScopeHash: String,
+        state: EngineSessionStateV1,
+        version: Int,
+        createdAt: Date,
+        updatedAt: Date,
+        redactedAt: Date?
+    ) {
+        self.id = id
+        self.campId = campId
+        self.adapterId = adapterId
+        self.adapterVersion = adapterVersion
+        self.profileId = profileId
+        self.externalSessionId = externalSessionId
+        self.workspaceHash = workspaceHash
+        self.sessionScopeJson = sessionScopeJson
+        self.sessionScopeHash = sessionScopeHash
+        self.state = state
+        self.version = version
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.redactedAt = redactedAt
+    }
+}
+
+package struct EngineExecutionRecord:
+    Codable, Sendable, Equatable, FetchableRecord, PersistableRecord
+{
+    package static let databaseTableName = "engine_execution"
+
+    package var id: String
+    package var campId: String
+    package var campLifecycleVersion: Int
+    package var idempotencyKey: String
+    package var runId: String
+    package var cardId: String
+    package var adapterId: String
+    package var adapterVersion: String
+    package var profileId: String
+    package var engineKind: String
+    package var model: String
+    package var requestJson: String
+    package var requestHash: String
+    package var contextJson: String
+    package var contextHash: String
+    package var sessionScopeJson: String
+    package var sessionScopeHash: String
+    package var sessionId: String?
+    package var replayClass: EngineExecutionReplayClassV1
+    package var dispatchState: EngineExecutionDispatchStateV1
+    package var state: EngineExecutionStateV1
+    package var terminalSubtype: EngineTerminalSubtypeV1?
+    package var nextSequence: Int
+    package var terminalReceiptIdempotencyKey: String?
+    package var terminalReceiptHash: String?
+    package var inputTokens: Int
+    package var outputTokens: Int
+    package var cacheReadTokens: Int
+    package var costMicros: Int
+    package var version: Int
+    package var createdAt: Date
+    package var updatedAt: Date
+    package var dispatchStartedAt: Date?
+    package var cancellationRequestedAt: Date?
+    package var cancellationReason: String?
+    package var finishedAt: Date?
+    package var redactedAt: Date?
+}
+
+package struct EngineTerminalProposalRecord:
+    Codable, Sendable, Equatable, FetchableRecord, PersistableRecord
+{
+    package static let databaseTableName = "engine_terminal_proposal"
+
+    package var id: String
+    package var executionId: String
+    package var terminalIdempotencyKey: String
+    package var sequence: Int
+    package var terminalKind: EngineTerminalKindV1
+    package var terminalSubtype: EngineTerminalSubtypeV1?
+    package var proposalJson: String
+    package var proposalHash: String
+    package var payloadJson: String
+    package var payloadHash: String
+    package var artifactManifestJson: String
+    package var artifactManifestHash: String
+    package var state: EngineTerminalProposalStateV1
+    package var version: Int
+    package var createdAt: Date
+    package var committedAt: Date?
+    package var invalidReason: String?
+    package var invalidatedAt: Date?
+    package var redactedAt: Date?
+}
+
+package struct EngineProposalArtifactRecord:
+    Codable, Sendable, Equatable, FetchableRecord, PersistableRecord
+{
+    package static let databaseTableName = "engine_proposal_artifact"
+
+    package var id: String
+    package var proposalId: String
+    package var artifactId: String
+    package var ordinal: Int
+    package var sourceRelativePath: String
+    package var kind: String
+    package var label: String
+    package var byteCount: Int
+    package var contentHash: String
+    package var state: EngineProposalArtifactStateV1
+    package var preparedAt: Date?
+    package var version: Int
+    package var redactedAt: Date?
+}
+
+package enum ArtifactBlobStateV1:
+    String, Codable, Sendable, Equatable, CaseIterable
+{
+    case available
+    case quarantined
+    case deletedTombstone
+}
+
+package enum ArtifactBlobReferenceStateV1:
+    String, Codable, Sendable, Equatable, CaseIterable
+{
+    case active
+    case tombstoned
+}
+
+package enum ArtifactStorageOriginStateV1:
+    String, Codable, Sendable, Equatable, CaseIterable
+{
+    case active
+    case tombstoned
+}
+
+package enum ArtifactStorageClassV1:
+    String, Codable, Sendable, Equatable, CaseIterable
+{
+    case managed
+    case workspaceExternal
+    case unresolved
+}
+
+package enum ArtifactStorageEvidenceKindV1:
+    String, Codable, Sendable, Equatable, CaseIterable
+{
+    case typedPreparedArtifact
+    case verifiedManagedRootCapability
+    case explicitWorkspaceExternal
+    case verifiedOutsideAllManagedRoots
+    case legacyUnknown
+}
+
+package enum ArtifactTerminalDispositionV1:
+    String, Codable, Sendable, Equatable, CaseIterable
+{
+    case managedDeleted
+    case managedAlreadyAbsent
+    case managedSharedDetached
+    case workspaceExternalDetached
+    case unresolvedDetached
+}
+
+package struct ArtifactBlobRecord:
+    Codable, Sendable, Equatable, FetchableRecord, PersistableRecord
+{
+    package static let databaseTableName = "artifact_blob"
+
+    package var contentHash: String
+    package var byteCount: Int
+    package var relativePath: String
+    package var state: ArtifactBlobStateV1
+    package var version: Int
+    package var createdAt: Date
+    package var verifiedAt: Date
+    package var deletedAt: Date?
+}
+
+package struct ArtifactBlobReferenceRecord:
+    Codable, Sendable, Equatable, FetchableRecord, PersistableRecord
+{
+    package static let databaseTableName = "artifact_blob_reference"
+
+    package var artifactId: String
+    package var proposalArtifactId: String
+    package var executionId: String
+    package var campId: String
+    package var contentHash: String
+    package var state: ArtifactBlobReferenceStateV1
+    package var createdAt: Date
+    package var tombstonedAt: Date?
+}
+
+package struct ArtifactStorageOriginRecord:
+    Codable, Sendable, Equatable, FetchableRecord, PersistableRecord
+{
+    package static let databaseTableName = "artifact_storage_origin"
+
+    package var artifactId: String
+    package var campId: String
+    package var state: ArtifactStorageOriginStateV1
+    package var storageClass: ArtifactStorageClassV1
+    package var evidenceKind: ArtifactStorageEvidenceKindV1
+    package var managedRootId: String?
+    package var objectId: String?
+    package var contentHash: String?
+    package var fileIdentityHash: String?
+    package var originalRefHash: String
+    package var classificationEvidenceHash: String
+    package var terminalDisposition: ArtifactTerminalDispositionV1?
+    package var terminalAuthorityHash: String?
+    package var version: Int
+    package var classifiedAt: Date
+    package var redactedAt: Date?
+}
+
 // MARK: - Event (append-only — no UPDATE/DELETE paths)
 
 public struct EventRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "event"
+
+    public static func databaseDateEncodingStrategy(
+        for column: String
+    ) -> DatabaseDateEncodingStrategy {
+        column == "createdAt" ? .timeIntervalSince1970 : .deferredToDate
+    }
+
     public var id: String
     public var missionId: String?
     public var cardId: String?
@@ -475,6 +782,13 @@ public struct UserRequestRecord: Codable, Sendable, FetchableRecord, Persistable
         case approval
     }
 
+    public enum LifecycleState: String, Codable, Sendable {
+        case open
+        case answered
+        case withdrawn
+        case redacted
+    }
+
     public var id: String
     public var cardId: String
     public var kind: Kind
@@ -483,6 +797,9 @@ public struct UserRequestRecord: Codable, Sendable, FetchableRecord, Persistable
     public var answerJson: String?
     public var createdAt: Date
     public var answeredAt: Date?
+    public var lifecycleState: LifecycleState
+    public var terminalReason: String?
+    public var redactedAt: Date?
 
     public init(
         id: String,
@@ -492,7 +809,10 @@ public struct UserRequestRecord: Codable, Sendable, FetchableRecord, Persistable
         optionsJson: String?,
         answerJson: String?,
         createdAt: Date,
-        answeredAt: Date?
+        answeredAt: Date?,
+        lifecycleState: LifecycleState = .open,
+        terminalReason: String? = nil,
+        redactedAt: Date? = nil
     ) {
         self.id = id
         self.cardId = cardId
@@ -502,6 +822,9 @@ public struct UserRequestRecord: Codable, Sendable, FetchableRecord, Persistable
         self.answerJson = answerJson
         self.createdAt = createdAt
         self.answeredAt = answeredAt
+        self.lifecycleState = lifecycleState
+        self.terminalReason = terminalReason
+        self.redactedAt = redactedAt
     }
 
     public func humanAnswer() -> String {

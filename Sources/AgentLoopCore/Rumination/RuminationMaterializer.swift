@@ -13,17 +13,55 @@ public struct RuminationMaterializer: Sendable {
 
     public func materialize(ingestionId: String, edited: RuminationResult) throws -> RuminationMaterialization {
         try db.pool.write { database in
-            guard var ingestion = try IngestionItemRecord.fetchOne(database, key: ingestionId) else {
+            guard let ingestion = try IngestionItemRecord.fetchOne(database, key: ingestionId) else {
                 throw FeedServiceError.ingestionNotFound(ingestionId)
             }
-            guard var resultRecord = try RuminationResultRecord
+            _ = try Self.requireActiveLifecycle(
+                database,
+                campId: ingestion.campId
+            )
+            guard let ingestionFence = try Row.fetchOne(
+                database,
+                sql: "SELECT version,terminalReason,redactedAt FROM ingestion_item WHERE id=?",
+                arguments: [ingestionId]
+            ) else {
+                throw FeedServiceError.ingestionNotFound(ingestionId)
+            }
+            let ingestionVersion: Int = ingestionFence["version"]
+            let terminalReason: String? = ingestionFence["terminalReason"]
+            let ingestionRedactedAt: Date? = ingestionFence["redactedAt"]
+            guard let resultRecord = try RuminationResultRecord
                 .filter(Column("ingestionId") == ingestionId).fetchOne(database) else {
                 throw FeedServiceError.invalidState(ingestion.status)
             }
+            guard let resultFence = try Row.fetchOne(
+                database,
+                sql: "SELECT version,redactedAt FROM rumination_result WHERE id=? AND ingestionId=?",
+                arguments: [resultRecord.id, ingestionId]
+            ) else {
+                throw FeedServiceError.invalidState(ingestion.status)
+            }
+            let resultVersion: Int = resultFence["version"]
+            let resultRedactedAt: Date? = resultFence["redactedAt"]
             if resultRecord.materializedAt != nil,
                let link = try KnowledgeSourceLinkRecord.filter(Column("ingestionId") == ingestionId).fetchOne(database) {
+                guard ingestion.status == .materialized,
+                      terminalReason == nil,
+                      ingestionRedactedAt == nil,
+                      resultRedactedAt == nil
+                else {
+                    throw FeedServiceError.invalidState(ingestion.status)
+                }
                 let ids = try ActionCandidateRecord.filter(Column("ingestionId") == ingestionId).fetchAll(database).map(\.id)
                 return .init(noteId: link.campNoteId, candidateIds: ids, alreadyMaterialized: true)
+            }
+            guard ingestion.status == .needsReview,
+                  terminalReason == nil,
+                  ingestionRedactedAt == nil,
+                  resultRecord.materializedAt == nil,
+                  resultRedactedAt == nil
+            else {
+                throw FeedServiceError.invalidState(ingestion.status)
             }
 
             let now = Date()
@@ -71,13 +109,56 @@ public struct RuminationMaterializer: Sendable {
             }
             for candidate in candidates { try candidate.insert(database) }
 
-            resultRecord.userEditedJson = try RuminationCoding.encode(edited)
-            resultRecord.materializedAt = now
-            resultRecord.updatedAt = now
-            try resultRecord.update(database)
-            ingestion.status = .materialized
-            ingestion.updatedAt = now
-            try ingestion.update(database)
+            let (nextResultVersion, resultOverflow) =
+                resultVersion.addingReportingOverflow(1)
+            guard !resultOverflow else {
+                throw InvalidDurableWorkStateError()
+            }
+            try database.execute(
+                sql: """
+                    UPDATE rumination_result
+                    SET userEditedJson=?,materializedAt=?,updatedAt=?,version=?
+                    WHERE id=? AND ingestionId=? AND version=?
+                      AND materializedAt IS NULL AND redactedAt IS NULL
+                    """,
+                arguments: [
+                    try RuminationCoding.encode(edited),
+                    now,
+                    now,
+                    nextResultVersion,
+                    resultRecord.id,
+                    ingestionId,
+                    resultVersion,
+                ]
+            )
+            guard database.changesCount == 1 else {
+                throw StaleDurableWorkClaimError()
+            }
+            let (nextIngestionVersion, ingestionOverflow) =
+                ingestionVersion.addingReportingOverflow(1)
+            guard !ingestionOverflow else {
+                throw InvalidDurableWorkStateError()
+            }
+            try database.execute(
+                sql: """
+                    UPDATE ingestion_item
+                    SET status='materialized',updatedAt=?,version=?
+                    WHERE id=? AND campId=? AND version=?
+                      AND status='needsReview' AND attempt=?
+                      AND terminalReason IS NULL AND redactedAt IS NULL
+                    """,
+                arguments: [
+                    now,
+                    nextIngestionVersion,
+                    ingestion.id,
+                    ingestion.campId,
+                    ingestionVersion,
+                    ingestion.attempt,
+                ]
+            )
+            guard database.changesCount == 1 else {
+                throw StaleDurableWorkClaimError()
+            }
             try AppDatabase.appendEvent(
                 database, missionId: nil, cardId: nil, runId: nil,
                 kind: EventKind.ruminationMaterialized,
@@ -85,6 +166,39 @@ public struct RuminationMaterializer: Sendable {
             )
             return .init(noteId: note.id, candidateIds: candidates.map(\.id), alreadyMaterialized: false)
         }
+    }
+
+    @discardableResult
+    private static func requireActiveLifecycle(
+        _ database: Database,
+        campId: String
+    ) throws -> Int {
+        guard let row = try Row.fetchOne(
+            database,
+            sql: """
+                SELECT lifecycle.state,lifecycle.version,camp.archived
+                FROM camp_lifecycle AS lifecycle
+                JOIN camp ON camp.id=lifecycle.campId
+                WHERE lifecycle.campId=?
+                """,
+            arguments: [campId]
+        ) else {
+            throw CampLifecycleWriteAuthorizationError.missing
+        }
+        let version: Int = row["version"]
+        guard let state = CampLifecycleStateV1(
+            rawValue: row["state"] as String
+        ), state == .active else {
+            throw CampLifecycleWriteAuthorizationError.inactive(
+                CampLifecycleStateV1(
+                    rawValue: row["state"] as String
+                ) ?? .deletedTombstone
+            )
+        }
+        guard (row["archived"] as Int) == 0 else {
+            throw CampLifecycleWriteAuthorizationError.legacyArchived
+        }
+        return version
     }
 
     private static func noteBody(_ value: RuminationResult) -> String {

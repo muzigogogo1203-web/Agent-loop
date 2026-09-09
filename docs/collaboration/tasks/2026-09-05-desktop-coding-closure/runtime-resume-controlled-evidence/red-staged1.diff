@@ -1,0 +1,527 @@
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-controlled-waits-20260909-20260909-62258-1eqnatd/ExecutionEngineConformanceTests.swift.before b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+index 82c0ab7..989d2f8 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-controlled-waits-20260909-20260909-62258-1eqnatd/ExecutionEngineConformanceTests.swift.before
++++ b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+@@ -305,31 +305,34 @@ private enum P1F1D065GateCompletion: Sendable {
+     case reader
+ }
+ 
+ private enum P1F1D065GateWaitOutcome: Sendable {
+     case entered
+     case completed(P1F1D065GateCompletion)
+ }
+ 
+ private final class P1F1D065SynchronousGate: @unchecked Sendable {
+     private let condition = NSCondition()
+     private var entered = false
+     private var released = false
++    private var entryCount = 0
++    private var releaseCount = 0
+     private var completed: P1F1D065GateCompletion?
+     private var enteredWaiters: [
+         CheckedContinuation<P1F1D065GateWaitOutcome, Never>
+     ] = []
+ 
+     func enterAndWait() {
+         condition.lock()
++        entryCount += 1
+         entered = true
+         let waiters = enteredWaiters
+         enteredWaiters.removeAll()
+         condition.broadcast()
+         condition.unlock()
+         waiters.forEach { $0.resume(returning: .entered) }
+         condition.lock()
+         while !released {
+             condition.wait()
+         }
+         condition.unlock()
+     }
+@@ -356,37 +359,52 @@ private final class P1F1D065SynchronousGate: @unchecked Sendable {
+             condition.unlock()
+             return
+         }
+         completed = completion
+         let waiters = enteredWaiters
+         enteredWaiters.removeAll()
+         condition.unlock()
+         waiters.forEach { $0.resume(returning: .completed(completion)) }
+     }
+ 
+     func release() {
+         condition.lock()
++        releaseCount += 1
+         released = true
+         condition.broadcast()
+         condition.unlock()
+     }
+ 
++    var controlledWaitCounts: (entries: Int, releases: Int) {
++        condition.lock()
++        defer { condition.unlock() }
++        return (entryCount, releaseCount)
++    }
++
++}
++
++private func p1f1d065AwaitSynchronousBoundary<Value: Sendable>(
++    _ operation: @escaping @Sendable () throws -> Value
++) async throws -> Value {
++    try operation()
+ }
+ 
+ private struct P1F1D065BlockingProgressSink: EngineProgressSink {
+     let gate: P1F1D065SynchronousGate
+ 
+     func submit(_ payload: EngineExecutionEventPayloadV1) async throws {
+         _ = payload
+-        gate.enterAndWait()
++        try await p1f1d065AwaitSynchronousBoundary { [gate] in
++            gate.enterAndWait()
++        }
+     }
+ }
+ 
+ private enum P1F1D065DirectoryCloseObservation: Sendable, Equatable {
+     case closed
+     case notAttempted
+     case failed(String)
+ }
+ 
+ private struct P1F1D065CleanupPublicationObservation: Sendable, Equatable {
+     let cleanupRemoved: Bool
+     let socketRemoved: Bool
+@@ -988,24 +1006,29 @@ private func p1f1d065AssessColdCleanup(
+         retainedFixturePath: removalAllowed ? nil : harness.root.path
+     )
+ }
+ 
+ private enum P1F1D065SocketClientError: Error, Sendable, Equatable {
+     case closed
+ }
+ 
+ private final class P1F1D065SocketClient: @unchecked Sendable {
+     private let lock = NSLock()
+     private var descriptor: Int32 = -1
+ 
++    init(ownedDescriptor: Int32) {
++        precondition(ownedDescriptor >= 0)
++        descriptor = ownedDescriptor
++    }
++
+     init(path: String) throws {
+         let opened = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
+         guard opened >= 0 else {
+             throw BoardToolServerError.socketSetupFailed(
+                 String(cString: strerror(errno))
+             )
+         }
+         guard PosixSockets.disableSIGPIPE(opened) else {
+             _ = Darwin.close(opened)
+             throw BoardToolServerError.socketSetupFailed(
+                 "065 client SO_NOSIGPIPE failed"
+             )
+@@ -1065,24 +1088,43 @@ private final class P1F1D065SocketClient: @unchecked Sendable {
+                 else { return nil }
+                 return line
+             }
+             buffer.append(byte)
+         }
+     }
+ 
+     func interruptRead() {
+         let owned = lock.withLock { descriptor }
+         if owned >= 0 { _ = Darwin.shutdown(owned, SHUT_RDWR) }
+     }
+ 
++    // Used only after the socketpair reader has joined. The existing client's
++    // interrupt/close lifetime is unchanged; this reports the new fixture's FD
++    // close result instead of letting deinit hide a cleanup error.
++    func closeChecked() throws {
++        let owned = try lock.withLock { () throws -> Int32 in
++            guard descriptor >= 0 else {
++                throw P1F1D065SocketClientError.closed
++            }
++            let value = descriptor
++            descriptor = -1
++            return value
++        }
++        guard Darwin.close(owned) == 0 else {
++            throw P1F1D065ControlledWaitError.setup([
++                "close reader errno=\(errno)",
++            ])
++        }
++    }
++
+     func close() {
+         let owned = lock.withLock { () -> Int32 in
+             guard descriptor >= 0 else { return -1 }
+             let value = descriptor
+             descriptor = -1
+             return value
+         }
+         guard owned >= 0 else { return }
+         _ = Darwin.shutdown(owned, SHUT_RDWR)
+         _ = Darwin.close(owned)
+     }
+ 
+@@ -7616,24 +7658,284 @@ private func p1f1d069ExerciseSharedRecoveryActionMatrix() async throws {
+         )
+         #expect(
+             ledger.count("makeAdapter")
+                 == (recoveryCase == .prepareAndCommitProposal ? 0 : 1)
+         )
+         #expect(await completions.snapshotCount() == 0)
+         #expect(await active.snapshotCounts().live == 0)
+         #expect(await active.snapshotCounts().pending == 0)
+         #expect(await active.snapshotCounts().inFlight == 0)
+     }
+ }
+ 
++private func p1f1d065ReadResultLinesUntilEOF(
++    _ client: P1F1D065SocketClient,
++    onReadEntered: @escaping @Sendable () -> Void = {},
++    onLine: @escaping @Sendable (String) -> Void = { _ in }
++) async throws {
++    try await p1f1d065AwaitSynchronousBoundary {
++        onReadEntered()
++        while let line = try client.readLine() { onLine(line) }
++    }
++}
++
++private let p1f1d065ControlledWaitEvidenceKey =
++    "AGENTLOOP_065_CONTROLLED_WAIT_EVIDENCE"
++private let p1f1d065ControlledWaitLabel = "065-controlled-wait-child"
++
++private enum P1F1D065ControlledWaitError: Error {
++    case invalidChildEnvironment
++    case invalidEvidencePath
++    case setup([String])
++}
++
++private final class P1F1D065ControlledWaitState: @unchecked Sendable {
++    private let lock = NSLock()
++    private var readEntered = false
++    private var reachedEOF = false
++    private var siblingProgressed = false
++    private var lines: [String] = []
++    private var controllerStarted = false
++    private var controllerStartWaiter: CheckedContinuation<Void, Never>?
++
++    func enterRead() { lock.withLock { readEntered = true } }
++    func finishRead() { lock.withLock { reachedEOF = true } }
++    func append(_ line: String) { lock.withLock { lines.append(line) } }
++    func progress() { lock.withLock { siblingProgressed = true } }
++    var hasEnteredRead: Bool { lock.withLock { readEntered } }
++    var hasProgressed: Bool { lock.withLock { siblingProgressed } }
++    var readResult: (lines: [String], reachedEOF: Bool) {
++        lock.withLock { (lines, reachedEOF) }
++    }
++
++    func markControllerStarted() {
++        let waiter = lock.withLock {
++            precondition(!controllerStarted)
++            controllerStarted = true
++            let waiter = controllerStartWaiter
++            controllerStartWaiter = nil
++            return waiter
++        }
++        waiter?.resume()
++    }
++
++    func waitUntilControllerStarted() async {
++        await withCheckedContinuation { continuation in
++            let started = lock.withLock {
++                if controllerStarted { return true }
++                precondition(controllerStartWaiter == nil)
++                controllerStartWaiter = continuation
++                return false
++            }
++            if started { continuation.resume() }
++        }
++    }
++}
++
++private struct P1F1D065ControlledWaitControllerReport: Sendable {
++    let entryTimedOut: Bool
++    let rescueUsed: Bool
++    let sibling: Task<Void, Never>?
++    let release: Result<Int, any Error>
++}
++
++// This controller has its own native worker; it must be able to release the
++// real wait even when the selected strict-pool child pins its only worker.
++private func p1f1d065StartControlledWaitController(
++    state: P1F1D065ControlledWaitState,
++    hasEntered: @escaping @Sendable () -> Bool,
++    release: @escaping @Sendable () throws -> Int
++) -> Task<P1F1D065ControlledWaitControllerReport, Never> {
++    BlockingProcessOperation.start {
++        state.markControllerStarted()
++        let entryDeadline = ContinuousClock.now.advanced(by: .seconds(5))
++        while !hasEntered(), ContinuousClock.now < entryDeadline {
++            Thread.sleep(forTimeInterval: 0.001)
++        }
++        let entered = hasEntered()
++        var sibling: Task<Void, Never>?
++        var rescueUsed = false
++        if entered {
++            sibling = Task.detached { state.progress() }
++            let progressDeadline = ContinuousClock.now.advanced(
++                by: .seconds(1)
++            )
++            while !state.hasProgressed,
++                  ContinuousClock.now < progressDeadline
++            {
++                Thread.sleep(forTimeInterval: 0.001)
++            }
++            rescueUsed = !state.hasProgressed
++        }
++        return P1F1D065ControlledWaitControllerReport(
++            entryTimedOut: !entered,
++            rescueUsed: rescueUsed,
++            sibling: sibling,
++            release: Result { try release() }
++        )
++    }
++}
++
++private func p1f1d065WriteAndCloseControlledPeer(
++    _ peer: Int32
++) throws -> Int {
++    let bytes = Array("first-result\nsecond-result\n".utf8)
++    var failures: [String] = []
++    var offset = 0
++    bytes.withUnsafeBytes { buffer in
++        guard let base = buffer.baseAddress else { return }
++        while offset < buffer.count {
++            let count = Darwin.write(
++                peer, base.advanced(by: offset), buffer.count - offset
++            )
++            if count < 0, errno == EINTR { continue }
++            guard count > 0 else {
++                let errorNumber = count < 0 ? errno : 0
++                failures.append("write peer count=\(count) errno=\(errorNumber)")
++                break
++            }
++            offset += count
++        }
++    }
++    if Darwin.close(peer) != 0 {
++        failures.append("close peer errno=\(errno)")
++    }
++    guard failures.isEmpty else {
++        throw P1F1D065ControlledWaitError.setup(failures)
++    }
++    return offset
++}
++
++private func p1f1d065ControlledWaitEvidenceURL(
++    _ environment: [String: String]
++) throws -> URL {
++    guard let path = environment[p1f1d065ControlledWaitEvidenceKey],
++          path.hasPrefix("/"), !path.utf8.contains(0)
++    else { throw P1F1D065ControlledWaitError.invalidEvidencePath }
++    let evidence = URL(fileURLWithPath: path)
++    let base = evidence.deletingLastPathComponent()
++    let prefix = p1f1d065ControlledWaitLabel + "-"
++    guard evidence.standardizedFileURL.path == path,
++          evidence.lastPathComponent == "phases.evidence",
++          base.lastPathComponent.hasPrefix(prefix),
++          UUID(uuidString: String(
++              base.lastPathComponent.dropFirst(prefix.count)
++          )) != nil,
++          base.deletingLastPathComponent().standardizedFileURL
++            == FileManager.default.temporaryDirectory.standardizedFileURL
++    else { throw P1F1D065ControlledWaitError.invalidEvidencePath }
++    return evidence
++}
++
++private func p1f1d065RunControlledWaitChild(evidence: URL) async throws {
++    let gate = P1F1D065SynchronousGate()
++    let gateState = P1F1D065ControlledWaitState()
++    let gateController = p1f1d065StartControlledWaitController(
++        state: gateState,
++        hasEntered: { gate.controlledWaitCounts.entries != 0 },
++        release: {
++            gate.release()
++            return 1
++        }
++    )
++    await gateState.waitUntilControllerStarted()
++    let sink = P1F1D065BlockingProgressSink(gate: gate)
++    let gateWaiter = Task {
++        try await sink.submit(.progress(message: "controlled wait"))
++    }
++    gateWaiter.cancel()
++    let gateWasCancelled = gateWaiter.isCancelled
++    let gateResult = await gateWaiter.result
++    let gateControl = await gateController.value
++    if let sibling = gateControl.sibling { await sibling.value }
++    let gateCounts = gate.controlledWaitCounts
++
++    // Set up the socket only after the gate's complete ownership has joined.
++    // No no-rescue assertion may prevent this second real boundary running.
++    var pair = [Int32](repeating: -1, count: 2)
++    guard Darwin.socketpair(AF_UNIX, SOCK_STREAM, 0, &pair) == 0 else {
++        throw P1F1D065ControlledWaitError.setup(["socketpair errno=\(errno)"])
++    }
++    guard PosixSockets.disableSIGPIPE(pair[1]) else {
++        var failures = ["peer SO_NOSIGPIPE errno=\(errno)"]
++        for descriptor in pair {
++            if Darwin.close(descriptor) != 0 {
++                failures.append("close setup descriptor errno=\(errno)")
++            }
++        }
++        throw P1F1D065ControlledWaitError.setup(failures)
++    }
++    let client = P1F1D065SocketClient(ownedDescriptor: pair[0])
++    let peer = pair[1]
++    let socketState = P1F1D065ControlledWaitState()
++    let socketController = p1f1d065StartControlledWaitController(
++        state: socketState,
++        hasEntered: { socketState.hasEnteredRead },
++        release: { try p1f1d065WriteAndCloseControlledPeer(peer) }
++    )
++    await socketState.waitUntilControllerStarted()
++    let socketWaiter = Task {
++        try await p1f1d065ReadResultLinesUntilEOF(
++            client,
++            onReadEntered: { socketState.enterRead() },
++            onLine: { line in
++                socketState.append(line)
++            }
++        )
++        socketState.finishRead()
++    }
++    socketWaiter.cancel()
++    let socketWasCancelled = socketWaiter.isCancelled
++    let socketResult = await socketWaiter.result
++    let socketControl = await socketController.value
++    if let sibling = socketControl.sibling { await sibling.value }
++    let readerClose = Result { try client.closeChecked() }
++    let read = socketState.readResult
++
++    print(
++        "065 CONTROLLED WAIT PHASES "
++            + "gate-cancelled=\(gateWasCancelled) "
++            + "gate-entry=\(gateCounts.entries) gate-release=\(gateCounts.releases) "
++            + "gate-sibling=\(gateState.hasProgressed) "
++            + "gate-rescue=\(gateControl.rescueUsed) "
++            + "gate-entry-timeout=\(gateControl.entryTimedOut) "
++            + "socket-cancelled=\(socketWasCancelled) "
++            + "socket-entry=\(socketState.hasEnteredRead) "
++            + "socket-lines=\(read.lines) socket-eof=\(read.reachedEOF) "
++            + "socket-sibling=\(socketState.hasProgressed) "
++            + "socket-rescue=\(socketControl.rescueUsed) "
++            + "socket-entry-timeout=\(socketControl.entryTimedOut) "
++            + "controllers-and-siblings-joined=true"
++    )
++    try gateResult.get()
++    try socketResult.get()
++    try readerClose.get()
++    let gateRelease = try gateControl.release.get()
++    let bytesWritten = try socketControl.release.get()
++    try #require(gateWasCancelled && socketWasCancelled)
++    try #require(gateCounts.entries == 1 && gateCounts.releases == 1)
++    try #require(gateRelease == 1)
++    try #require(!gateControl.entryTimedOut && !socketControl.entryTimedOut)
++    try #require(gateControl.sibling != nil && socketControl.sibling != nil)
++    try #require(gateState.hasProgressed && socketState.hasProgressed)
++    try #require(socketState.hasEnteredRead && read.reachedEOF)
++    try #require(bytesWritten == 27)
++    try #require(read.lines == ["first-result", "second-result"])
++    // All ownership and both boundary outcomes are established before RED.
++    try #require(!gateControl.rescueUsed && !socketControl.rescueUsed)
++    try Data("065-controlled-waits-ok\n".utf8).write(
++        to: evidence, options: .withoutOverwriting
++    )
++}
++
+ @Suite(.serialized)
+ struct ExecutionEngineConformanceTests {
+     @Test func p1f1_062DescriptorsTellCapabilitiesAndReplayTruth() throws {
+         let calls = P1F1D062CallLedger()
+         let modelProfile = p1f1dProfile(.anthropicAPI)
+         let modelDescriptor = p1f1dDescriptor(kind: .anthropicAPI)
+         let logicalDefinitions: [ToolDef] = [
+             .completeCard, .blockCard, .addProgressNote, .askUser,
+         ]
+         let contextRequest = try EngineContextResolveRequestV1(
+             campId: p1f1EngineCampID,
+             cardId: p1f1dCardID,
+@@ -8258,24 +8560,47 @@ struct ExecutionEngineConformanceTests {
+         let eofRequest = try p1f1dRequest()
+         for try await _ in adapter.execute(request: eofRequest) {}
+         let terminalIntents = await terminalRecorder.snapshot()
+         #expect(terminalIntents.count == 1)
+         guard case let .blocked(subtype, reasonCode, _) = terminalIntents.first else {
+             Issue.record("EOF without Board terminal did not fail closed")
+             return
+         }
+         #expect(subtype == .engineProtocolError)
+         #expect(reasonCode == "engine_protocol_error")
+     }
+ 
++    @Test func p1f1_065ControlledWaitsPreserveCooperativeProgress() async throws {
++        let environment = ProcessInfo.processInfo.environment
++        if environment[p1f1d065ControlledWaitEvidenceKey] != nil {
++            guard environment["LIBDISPATCH_COOPERATIVE_POOL_STRICT"] == "1"
++            else { throw P1F1D065ControlledWaitError.invalidChildEnvironment }
++            try await p1f1d065RunControlledWaitChild(
++                evidence: try p1f1d065ControlledWaitEvidenceURL(environment)
++            )
++            return
++        }
++        guard environment["LIBDISPATCH_COOPERATIVE_POOL_STRICT"] == nil
++        else { throw P1F1D065ControlledWaitError.invalidChildEnvironment }
++        try await runOwnedSelfExecTest(OwnedSelfExecTestRequest(
++            label: p1f1d065ControlledWaitLabel,
++            filter: "p1f1_065ControlledWaitsPreserveCooperativeProgress",
++            modeEnvironmentKey: "LIBDISPATCH_COOPERATIVE_POOL_STRICT",
++            mode: "1",
++            evidenceEnvironmentKey: p1f1d065ControlledWaitEvidenceKey,
++            expectedEvidence: Data("065-controlled-waits-ok\n".utf8),
++            containment: .seconds(15)
++        ))
++    }
++
+     @Test func p1f1_065CleanupFailurePreservesPrimaryAndAuthorityCause() async throws {
+         let harness = try P1F1D065MechanicsHarness(label: "cleanup-cause")
+         defer {
+             do { try harness.removeChecked() }
+             catch { Issue.record(error) }
+         }
+         let executionId = "00000000-0000-4000-8000-000000000765"
+         let cleanup = try harness.makeCleanupAuthority("cleanup.json")
+         let retainedOriginalURL = harness.root.appendingPathComponent(
+             "cleanup-original.json"
+         )
+         try FileManager.default.moveItem(
+@@ -8548,25 +8873,25 @@ struct ExecutionEngineConformanceTests {
+               try JSONValue.decoded(from: helloLine)["type"]?.stringValue
+                 == "hello_ok"
+         else { throw EngineContextValidationErrorV1() }
+         try abortClient.send([
+             "arguments": ["text": "hold cleanup publication"],
+             "cardId": .string(p1f1EngineCardID),
+             "id": "p1f1d-065-cleanup-publication",
+             "name": "add_progress_note",
+             "type": "tool_call",
+         ])
+         let resultReader = Task { () throws -> Void in
+             defer { cleanupPublicationGate.complete(.reader) }
+-            while try abortClient.readLine() != nil {}
++            try await p1f1d065ReadResultLinesUntilEOF(abortClient)
+         }
+         switch await cleanupPublicationGate.waitUntilEnteredOrCompleted() {
+         case .entered:
+             break
+         case .completed(.stream):
+             abortClient.interruptRead()
+             try await resultReader.value
+             let report = await streamWaiter.value
+             if let error = report.terminalError { throw error }
+             throw EngineContextValidationErrorV1()
+         case .completed(.cancellation):
+             abortClient.interruptRead()

@@ -1,10 +1,18 @@
 # AgentLoop 开发范式：Claude 规划/审查 × Codex 实现
 
+> **2026-09-05 主动覆写（当前生效）**：牧场主已确认由 Codex 担任产品与工程负责人，自主负责产品设计、优先级、优化、实现和交付。在已确认方向和安全边界内，日常、可逆决策由 Codex 自行处理；实质性不确定、核心不变量变更或新权限需求仍向用户升级。默认 reviewer 是与实现职责隔离的 Codex agent；Claude Code 仅在被单独请求或授权时作为可选规划者、调研者或职责隔离 reviewer，不再是默认规划/验收入口。独立 Review、阶段门、证据门和 Git/发布/数据/外部操作权限边界仍然有效。当前决策记录为 `docs/collaboration/tasks/2026-09-05-product-takeover-baseline/spec.md`。
+>
+> 下文作为历史协作协议保留，用于追溯旧任务与按需复用。其中的旧角色固定、触发流程、CLI 命令、模型与 reasoning effort 选择不再是当前强制指令；冲突时以本覆写、`AGENTS.md` 和当前 task spec/plan 为准。
+
+## 历史协议正文（保留）
+
 本文档是 AgentLoop 项目的**默认开发协议**。除非用户明确说"这次不用协作流程"，所有非琐碎实现工作都按此执行。
+
+长期产品与系统方向以已接受的 `docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md` 为准。历史 plan/spec 只对其原任务保留证据价值。
 
 核心目标：
 
-1. 节省 Claude token —— 所有可外包的工作（写代码、探索代码库、跑测试、读日志）都交给 Codex（GPT-5.5, xhigh）。
+1. 节省 Claude token —— 所有可外包的工作（写代码、探索代码库、跑测试、读日志）都交给 Codex。
 2. 保证质量 —— Claude 负责决策完备的规划与完备的 review，Codex 不做架构决策。
 3. 稳定触发、不留死角 —— 每个环节都有明确的触发命令、产物文件、退出条件和兜底路径。
 
@@ -24,7 +32,9 @@
 
 - **Level 0（琐碎）**：typo、注释、单行文案。Claude 直接改或一句话让 Codex 改，不走流程。
 - **Level 1（局部）**：单文件/单组件修复。Claude 写一段简短任务说明 → Codex 实现 → Claude review diff。可跳过正式 plan 文件。
-- **Level 2/3（跨模块/高风险）**：完整流程（§3）。涉及 GRDB schema、卡片状态机、交接包契约、并发模型、Keychain/沙箱的一律按 Level 3，plan 需用户确认后才触发实现。
+- **Level 2/3（跨模块/高风险）**：完整流程（§3）。涉及 GRDB schema、卡片状态机、交接包契约、并发模型、Keychain/权限边界的一律按 Level 3。
+
+在已接受的长期总 spec 和激活的 Codex 长期实施 Goal 下，Level 3 plan 若完整落在当前阶段 spec、已决产品决定与现有授权内，Open questions 为空，并通过独立 Review，则无需例行向用户重复确认。只要需要新产品决定、新权限、破坏性操作、外部真实用户/发布/付款操作，或会改变阶段范围与完成门，必须暂停并请用户决定。
 
 ## 3. 完整流程（Level 2/3）
 
@@ -32,7 +42,7 @@
 
 ```text
 1. Claude 澄清需求，必要时向用户提问（高影响决策不得自行发明）。
-2. Claude 写 $TASK/plan.md（见 §4 决策完备标准），Level 3 需用户点头。
+2. Claude 写 $TASK/plan.md（见 §4 决策完备标准），并按当前阶段的授权与暂停规则决定是否需要用户点头。
 3. Claude 触发 Codex 实现（§5 命令）。
 4. Codex 实现 + 自测，产出 $TASK/impl-report.md 与 $TASK/verify.log。
 5. Claude review（§6 清单），结论写 $TASK/reviews/NN-claude-review.md。
@@ -49,7 +59,7 @@ Codex 不应需要发明任何重大决策。plan 必须包含：
 - **数据模型/契约变化**：GRDB 表、HandoffPayload、工具 schema 等逐字段写清。
 - **边界与错误路径**：取消、超时、流中断、校验失败时的行为。
 - **测试要求**：新增哪些测试、放在 `Sources/AgentLoopTestSuite/` 哪个文件。
-- **验证命令**：本仓库权威跑法是 `swift run RunTests`（CLT-only 机器上 `swift test` 输出不可靠）；UI 可启动性用 `swift run AgentLoopApp` 构建通过为准。
+- **验证命令**：本仓库权威跑法是 `swift run RunTests`（CLT-only 机器上 `swift test` 输出不可靠）；编译门使用 `swift build --product AgentLoopApp`；真实 UI 启动与交互必须使用 `scripts/run-app.sh` 及匹配风险的活体证据，不能用 build 代替。
 - **明确的完成定义**。
 
 plan 里留一节「Open questions」——若非空，先问用户，不触发实现。
@@ -84,6 +94,7 @@ cd /Users/muzi/Agent-loop && codex exec resume --last \
 ### 死角兜底
 
 - Codex 无输出/崩溃 → 重试一次；再失败则 Claude 接管实现并告知用户（协议降级，不静默卡死）。
+- Claude Code 无输出/不可用 → 重试一次；仍失败时只能使用职责隔离、证据可追踪且已获授权的替代 reviewer。没有可用替代者时写入 `blocked.md` 并升级用户，Codex 不得自批。
 - Codex 写了 blocked.md → Claude 回答或转问用户，答案追加进 plan.md，resume 继续。
 - Codex 越权改了 plan 外的东西 → review 中标 P0，要求回滚该部分。
 - 工作树有用户未提交改动 → 触发前 `git status` 快照，review 时核对 Codex 没动无关文件。
@@ -107,7 +118,7 @@ review 方式：读 `git diff`（增量）+ impl-report + verify.log 关键行�
 
 - Codex 不 commit；commit 由 Claude 在验收通过后执行（或按用户指示）。
 - 不 push、不 rebase、不动用户未提交的改动。
-- Level 2/3 建议在 feature 分支上进行（沿用现有 feat/* 习惯）。
+- Level 2/3 在独立分支上进行；Codex 创建的分支使用 `codex/*` 前缀。
 
 ## 8. 历史雷点（review 必查项来源）
 

@@ -1,0 +1,80 @@
+[0/1] Planning build
+Building for debugging...
+[0/4] Write sources
+[1/4] Write swift-version--1AB21518FC5DEDBE.txt
+[3/8] Emitting module AgentLoopCore
+[4/8] Compiling AgentLoopCore CliProcessBackend.swift
+[5/8] Compiling AgentLoopCore Orchestrator.swift
+[6/8] Compiling AgentLoopCore BoardToolServer.swift
+[7/9] Compiling AgentLoopCore CliEngineAdapter.swift
+[7/11] Write sources
+[9/12] Emitting module AgentLoopApplication
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[10/18] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1232:12: warning: no calls to throwing functions occur within 'try' expression
+1230 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1231 |     }
+1232 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1233 |         profile: profile,
+1234 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:4626:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+4624 |                 progressSink: P1F1DProgressRecorder(),
+4625 |                 modelLoopDriver: try #require(
+4626 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+4627 |                 ),
+4628 |                 cliProcessDriver: nil,
+[11/18] Compiling AgentLoopTestSuite BoardServerTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:829:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 827 |             client.close()
+ 828 |             try server?.stop()
+ 829 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 830 |             server = nil
+ 831 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[12/18] Emitting module AgentLoopTestSuite
+[13/18] Compiling AgentLoopTestSuite CliBackendTests.swift
+[14/18] Compiling AgentLoopTestSuite CardRunnerTests.swift
+[15/18] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[15/18] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[16/18] Linking RunTests
+[17/18] Applying RunTests
+Build of product 'RunTests' complete! (48.58s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerForwardsProgressAndCompleteTools() started.
+✔ Test boardServerForwardsProgressAndCompleteTools() passed after 0.004 seconds.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.005 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.004 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.001 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.002 seconds.
+◇ Test boardServerRejectsSecondConcurrentConnection() started.
+✔ Test boardServerRejectsSecondConcurrentConnection() passed after 0.003 seconds.
+◇ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() started.
+✔ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() passed after 0.005 seconds.
+◇ Test boardServerAsyncStopJoinsCleanupDespiteCallerCancellation(replaceSocket:) started.
+◇ Test case passing 1 argument replaceSocket → false to boardServerAsyncStopJoinsCleanupDespiteCallerCancellation(replaceSocket:) started.
+◇ Test case passing 1 argument replaceSocket → true to boardServerAsyncStopJoinsCleanupDespiteCallerCancellation(replaceSocket:) started.
+✔ Test boardServerAsyncStopJoinsCleanupDespiteCallerCancellation(replaceSocket:) with 2 test cases passed after 0.031 seconds.
+◇ Test boardServerStopWaitsForBlockedHandlerThenCloses() started.
+✔ Test boardServerStopWaitsForBlockedHandlerThenCloses() passed after 2.302 seconds.
+◇ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() started.
+✔ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() passed after 0.299 seconds.
+◇ Test boardServerDefinitionsExposeExactlyFourBoardTools() started.
+✔ Test boardServerDefinitionsExposeExactlyFourBoardTools() passed after 0.001 seconds.
+◇ Test p1f1_078BoardServerForwardsProposalWithoutDatabaseAuthority() started.
+✔ Test p1f1_078BoardServerForwardsProposalWithoutDatabaseAuthority() passed after 0.148 seconds.
+✔ Suite BoardServerTests passed after 7.811 seconds.
+✔ Test run with 12 tests in 1 suite passed after 7.811 seconds.

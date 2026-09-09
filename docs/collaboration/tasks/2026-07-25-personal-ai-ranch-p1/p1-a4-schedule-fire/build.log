@@ -1,0 +1,93 @@
+=== debug-core ===
+Building for debugging...
+[0/1] Write swift-version--1AB21518FC5DEDBE.txt
+Build of target: 'AgentLoopCore' complete! (0.16s)
+PASS debug-core
+=== debug-testsuite ===
+Building for debugging...
+[0/1] Write swift-version--1AB21518FC5DEDBE.txt
+Build of target: 'AgentLoopTestSuite' complete! (0.16s)
+PASS debug-testsuite
+=== debug-app ===
+Building for debugging...
+[0/1] Write swift-version--1AB21518FC5DEDBE.txt
+[2/37] Compiling AgentLoopApp CowRosterView.swift
+[3/37] Compiling AgentLoopApp FeedComposerView.swift
+[4/37] Compiling AgentLoopApp CodingRanchPreviewFixtures.swift
+[5/37] Compiling AgentLoopApp MissionDraftConfirmationView.swift
+[6/40] Compiling AgentLoopApp Theme.swift
+[7/40] Compiling AgentLoopApp TrophyCenterView.swift
+[8/40] Compiling AgentLoopApp resource_bundle_accessor.swift
+[9/40] Compiling AgentLoopApp CompanionAvatarView.swift
+[10/40] Compiling AgentLoopApp FeedView.swift
+[11/40] Compiling AgentLoopApp McpStationSection.swift
+[12/40] Compiling AgentLoopApp NoteListPane.swift
+[13/40] Compiling AgentLoopApp RanchArtView.swift
+[14/40] Compiling AgentLoopApp ReturnSummaryView.swift
+[15/40] Compiling AgentLoopApp RuminationViews.swift
+[16/40] Compiling AgentLoopApp CompanionEditorView.swift
+[17/40] Emitting module AgentLoopApp
+[18/40] Compiling AgentLoopApp ScheduleManagerView.swift
+[19/40] Compiling AgentLoopApp SettingsView.swift
+[20/40] Compiling AgentLoopApp TaskRunView.swift
+[21/40] Compiling AgentLoopApp CodingRanchCommonViews.swift
+[22/40] Compiling AgentLoopApp CodingRanchHomeView.swift
+[23/40] Compiling AgentLoopApp CodingRanchLiveHosts.swift
+[24/40] Compiling AgentLoopApp CodingRanchOnboardingView.swift
+[25/40] Compiling AgentLoopApp TypingIndicatorView.swift
+[26/40] Compiling AgentLoopApp DMChatView.swift
+[27/40] Compiling AgentLoopApp RootView.swift
+[28/40] Compiling AgentLoopApp RuntimeProfileViews.swift
+[29/40] Compiling AgentLoopApp AgentLoopApp.swift
+[30/40] Compiling AgentLoopApp AppStore.swift
+[31/40] Compiling AgentLoopApp CodingRanchContracts.swift
+[32/40] Compiling AgentLoopApp CodingRanchStoreAdapter.swift
+[33/40] Compiling AgentLoopApp McpStore.swift
+[34/40] Compiling AgentLoopApp MissionScheduler.swift
+[35/40] Compiling AgentLoopApp ScheduledMissionNotifications.swift
+[36/40] Compiling AgentLoopApp CampHomeView.swift
+[37/40] Compiling AgentLoopApp AskUserPromptView.swift
+[38/40] Compiling AgentLoopApp CardDetailInspector.swift
+[39/40] Compiling AgentLoopApp CardRowView.swift
+[40/40] Compiling AgentLoopApp CodingPastureTheaterView.swift
+Build of target: 'AgentLoopApp' complete! (9.57s)
+PASS debug-app
+=== release-core ===
+[0/1] Planning build
+Building for production...
+[0/2] Write sources
+[1/2] Write swift-version--1AB21518FC5DEDBE.txt
+[3/3] Compiling AgentLoopCore ChatService.swift
+Build of target: 'AgentLoopCore' complete! (33.50s)
+PASS release-core
+=== release-testsuite ===
+Building for production...
+[0/2] Write sources
+[1/2] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/3] Compiling AgentLoopTestSuite AgentLoopTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+Build of target: 'AgentLoopTestSuite' complete! (111.13s)
+PASS release-testsuite
+=== release-app ===
+Building for production...
+[0/1] Write swift-version--1AB21518FC5DEDBE.txt
+[2/2] Compiling AgentLoopApp AgentLoopApp.swift
+Build of target: 'AgentLoopApp' complete! (38.42s)
+PASS release-app

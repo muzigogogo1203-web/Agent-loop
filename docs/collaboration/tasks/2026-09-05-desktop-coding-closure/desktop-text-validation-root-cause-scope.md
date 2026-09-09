@@ -1,0 +1,62 @@
+# Desktop narrative-text validation: root cause and bounded scope
+
+Status: read-only investigation; proposed amendment, not implementation authorization or acceptance. No source, database, Provider, App, compiler or test execution was performed by this reviewer. Source line references describe the inspected tree and may shift under the parent’s sole-writer work.
+
+## Finding and demonstrated boundary
+
+This is a domain-validation mismatch, not an encoding or SQL limitation. `CanonicalContractCodingV1.validateNonempty` rejects every scalar in `CharacterSet.controlCharacters`, in addition to requiring nonempty/already-trimmed values (`Sources/AgentLoopCore/Domain/CanonicalContractCoding.swift:76–96`). LF, CR and TAB therefore fail wherever narrative text uses this identifier-style helper.
+
+The desktop adapter preserves the intended interior source text: `DesktopGoalCaptureIntentV1` trims outer whitespace once on initial construction, preserves sealed bytes on decoding, and passes `originalText` directly to the real capture command with its exact UTF-8 SHA-256 (`Sources/AgentLoopCore/Domain/DesktopGoalWorkflow.swift:275–315,321–367`). The command reaches `InputContractValidationV1.validateBody`, whose current optional-nonempty checks treat inline text and payload reference identically (`Sources/AgentLoopCore/Domain/InputEnvelope.swift:535,997–1006`). Changing the desktop string or stripping newlines would conceal the actual shared contract defect.
+
+The parent’s existing `desktop-text-capture-red1.log:18–24` reports three `P1ContractValidationError.invalidValue` failures at `DesktopGoalFoundationTests.swift:195`, one test, 0.002 seconds. The inspected source and parent-reported LF/CRLF/TAB inputs support this root cause. This is an observed RED, not evidence that any proposed repair passes.
+
+Fixing only capture would move the same failure downstream: conversion and Goal construction revalidate `rawIntent`; Coach question/answer and Understanding prose use the same strict helper. These are real persisted domain seams, not unused UI wrappers.
+
+## Contract evidence and deliberate restrictions
+
+- Master §§8.1–8.2 describe natural-language goals/materials and retaining original content or durable references (`docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md:369–412`). §§9.2–9.3 describe interview answers, recommendations/reasons and rich Understanding content (`:438–467`). No explicit single-line narrative requirement was found in these relevant accepted sections.
+- The canonical stage source is `docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p0/p1-stage-spec.md`, not a similarly named file under P1. Its canonical JSON rules preserve Unicode scalar sequences without normalization and encode LF/TAB/CR as escapes (`:120–140`). A prohibition on newlines in canonical JSON formatting is not a prohibition on escaped newlines inside string values. Input, Goal, Coach and Understanding field contracts (`:2067–2202`) do not explicitly require single-line narrative text.
+- The historical P1-C plan §5.1 explicitly discusses empty/whitespace/control-character **identity** validation and already-trimmed stored strings (`docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-c-control-contracts/plan.md:579–612`). Candidate camp identities remain exact/control-free (`:1068–1109`). Preserve that strict identity rule and the existing outer-edge validation; do not reinterpret this as permission for global validator relaxation.
+- A deliberate prose-looking exception exists: durable cancellation `reason` is explicitly 1–1000 Unicode scalars, no C0/C1 controls, and must not be trimmed/truncated/replaced (`p1-stage-spec.md:312–316`). Do not confuse this operational reason with a Coach question’s explanatory `reason`. Keep cancellation reasons and existing error/code fields unchanged.
+- The current `AppDatabase.swift` SQL uses `TEXT` for input inlineText, Goal rawIntent, Coach prose and Understanding prose/JSON, without single-line CHECKs (`Sources/AgentLoopCore/Database/AppDatabase.swift:3934–4100`). Preserve migration SQL, schema objects and historical migration receipts. No schema migration is needed for this finding.
+
+## Exact minimal proposed production seams
+
+All paths below are under `Sources/AgentLoopCore/Domain/`. Add a distinct narrative validator; retain the old validators and all their other call sites unchanged.
+
+| File / location | Proposed change | Keep strict / unchanged |
+| --- | --- | --- |
+| `CanonicalContractCoding.swift:76–96` | Add a separate nonempty, already-trimmed text validator permitting only U+0009 TAB, U+000A LF and U+000D CR as exceptions to the existing control-character rejection. It validates; it never rewrites. | Existing `validateNonempty`, optional helper, camp/UUID/hash validators; canonical encoder, decoder configuration and whole-command bytes/hash. |
+| `InputEnvelope.swift:997–1006` | Use text validation for non-nil `inlineText` in shared `validateBody`; both command and record validation then benefit (`:535,1096`). | XOR invariant, payloadRef, connector/author/worker IDs, input/parse identities, error fields. |
+| `InputEnvelope.swift:836–837` | ConvertInputToGoalCommand: text validation for `rawIntent`. | `title` remains a short display-label contract in this bounded proposal; no widening of every String. |
+| `GoalController.swift:58–61` | GoalControllerRecord constructor: text validation for `rawIntent`, also used by real createFromInput (`:144–167`). | title, actor ID, lifecycle/membership checks, P1-D extension and decoder behavior. |
+| `CoachContracts.swift:161–163,439,503–505` | Text validation for question record and RecordCoachQuestionCommand prompt/recommendation/reason; CoachAnswerV1.text. | decisionKey (`:502`), trace and command identities, unrelated operational reasons/errors. |
+| `UnderstandingCard.swift:36–48` | Text validation for problem/scenario/targetAudience and entries in goals/nonGoals/deliverables/constraints/acceptanceCriteria/verificationPlan/assumptions/acceptedRisks. Split the current combined loop. | resourceRefs, requiredCapabilities, budgetPolicy keys **and values** retain their existing strict structured-token checks. Do not relax these accidentally through the combined loop. |
+
+The allowed control set must be enumerated, not “any whitespace control.” All other characters rejected by the existing control predicate remain rejected, including NUL, BEL, backspace, vertical tab, form feed, ESC, DEL and C1 controls. This preserves non-whitespace-control rejection and avoids newly admitting VT/FF/NEL merely because a platform classifies them as whitespace. LF versus CRLF and tabs versus spaces remain distinct scalar/byte sequences. Existing rejection of empty, whitespace-only, leading/trailing whitespace values remains at domain construction; the desktop’s documented one-time outer trim remains its separate boundary.
+
+Leaving title and structured budget values strict is a conservative scope decision, not a claim that the accepted spec explicitly mandates single-line titles. Conversion regressions should use a literal single-line title and the exact original multiline rawIntent. Title derivation is an A3 followthrough item, not part of this repair.
+
+## Decode boundary: explicitly separate the amendment
+
+`CoachAnswerV1` (`CoachContracts.swift:436–442`) and `UnderstandingContentV1` (`UnderstandingCard.swift:4–64`) currently synthesize `Decodable`; Swift does not call their throwing value initializers when decoding. Canonical round-trip validation (`CanonicalContractCoding.swift:49–63`) proves canonical bytes/key representation, not semantic field validation. Thus changing constructors alone must **not** be claimed to guarantee rejection of disallowed controls on every decoded content path.
+
+A narrowly reviewed A2 amendment can add validating, exact-key `init(from:)` only for those two content types, forwarding to their invariant-safe content initializers and preserving their current encoded field shape. `InputContractValidationV1.requireExactKeys` (`InputEnvelope.swift:976`) is an existing seam. Verify the same valid bytes encode before/after, and test semantic rejection on canonical decode. These two custom decoders are additional behavior/entry-boundary work that must be named in the amendment, not slipped into the capture fix as incidental cleanup.
+
+Do **not** apply that pattern indiscriminately to `GoalControllerRecord`. Its constructor requires currentOutcomeContractId/currentOutcomeContractVersion to be nil (`GoalController.swift:64–69`), a creation-era invariant that does not hold for later P1-D persisted goal states. Making its synthesized decoder call this constructor would break legitimate contract-linked goal reads. Preserve Goal decoding and the P1-D extension in this scope. A broader historical domain decoding audit is separate work; do not claim it has been completed here.
+
+## Frozen boundary and amendment ownership
+
+`DurablePlanningTests.swift:5347–5374` already lists all five existing production paths and `InputEnvelopeContractTests.swift`/`GoalCoachContractTests.swift` in the historical exact P1-C allowlist; GoalController is also P1-D allowlisted (`:5392`). Therefore this proposal needs no new A3 source exemption, no widening of an existing allowlist, and no frozen manifest/hash regeneration. Existing membership is a sentinel fact, **not authorization** to edit beyond the desktop A1 exact file list.
+
+The current A1 plan’s exact allowed files and capture contract (`goal-foundation-plan.md:15–23,41–46`) do not authorize these five historical domain edits. Parent must approve a bounded text-contract amendment before implementation. Proposed source footprint is exactly those five existing files; put regressions in the two existing P1-C test files, retaining the already-added A1 desktop capture regression. No InputGoalStore, CoachUnderstandingStore, worker, Provider, SQL, UI or generic Codable redesign is justified by this finding.
+
+## Required regression evidence for the amendment
+
+1. Before repairing the remaining consumers, add explicit behavioral RED cases for conversion/Goal, Coach question/answer and Understanding; the current capture RED does not establish those test paths. Preserve exact UTF-8 for interior LF, CRLF, TAB and mixed multiline/indented text at each changed constructor. Retain existing edge/empty checks. Test representative remaining controls (including VT/FF/NEL) reject. Strict camp/actor/worker/decision keys, payload/resource refs, capability names and budget keys/values still reject the three newly permitted narrative characters.
+2. Reuse real isolated GRDB fixtures: `InputEnvelopeContractTests.swift` capture/replay helpers/tests (`:122–148,295–328`) and `GoalCoachContractTests.swift` conversion, question/answer and Understanding helpers/tests (`:186,435–457,596,831–876,1278`). Drive capture → parse → conversion → open coach → record question/answer → Understanding persistence/read, with fixed IDs/time and no external Provider. Assert source and prose preservation rather than mere no-throw construction. Private helpers need not become production/test-shared APIs.
+3. Exact replay after progress/reopen returns the original receipt; changing an interior newline/tab under the same replay identity conflicts without extra rows/events/work. LF and CRLF must produce different hashes, while identical input produces identical canonical command/receipt bytes. Existing single-line canonical golden/hash fixtures in `DomainEventContractTests.swift:450–561` remain unchanged.
+4. Invalid controls fail before mutation on the exercised command boundaries; compare relevant rows/events/receipts/work before and after. For the separately admitted two content decoders, canonical JSON containing a disallowed control must fail semantically, while LF/CRLF/TAB round-trip without normalization; retain exact-key rejection.
+5. Retain/read a legitimate P1-D goal with current outcome-contract membership to guard against accidental lifecycle decoder changes. Do not replace its persisted state with a creation-only fixture.
+
+The existing capture RED establishes entry failure only. Constructor green, scoped chain/replay green, authoritative full runtime, strict App build and later desktop acceptance remain different gates. This report, and the prior runtime green baseline, do not admit the text repair or complete A1/A2.

@@ -1,0 +1,34 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'AgentLoopApp' complete! (0.22s)
+/private/tmp/agentloop-r25-bundle.Ozi6d3/AgentLoop.app/Contents/Info.plist: OK
+/private/tmp/agentloop-r25-bundle.Ozi6d3/AgentLoop.app: replacing existing signature
+/private/tmp/agentloop-r25-bundle.Ozi6d3/AgentLoop.app: valid on disk
+/private/tmp/agentloop-r25-bundle.Ozi6d3/AgentLoop.app: satisfies its Designated Requirement
+[0/1] Planning build
+Building for production...
+[0/1] Write swift-version--1AB21518FC5DEDBE.txt
+Build of target: 'AgentLoopCore' complete! (0.33s)
+Building for production...
+[0/2] Write sources
+[1/2] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/3] Compiling AgentLoopTestSuite AgentLoopTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+Build of target: 'AgentLoopTestSuite' complete! (87.74s)

@@ -1,0 +1,139 @@
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cli-signal-before/RuntimeLifecycleDiagnostics.swift	2026-09-06 01:50:24
++++ Sources/AgentLoopCore/Observability/RuntimeLifecycleDiagnostics.swift	2026-09-06 01:51:50
+@@ -27,6 +27,12 @@
+     case cliFixtureFirstStdoutRecorded, cliFixtureStreamFinished
+     case cliFixtureReadyAwaitQueued, cliFixtureReadyWaitStarted, cliFixtureReadyWaitEnded
+     case cliFixtureConsumerJoined
++    case processSignalPath, processSignalTarget, processSignalNumber
++    case processSignalResult, processSignalErrno
++    case cliFixtureCancellationState, cliFixtureCancellationPID, cliFixtureCancellationGroup
++    case cliFixtureCancellationStatus, cliFixtureTermSent, cliFixtureKillSent
++    case cliFixtureChildReaped, cliFixtureStdoutEOF, cliFixtureStderrEOF
++    case cliFixtureExitFrameCount, cliFixtureExitFrameStatus
+ }
+ 
+ package enum RuntimeLifecycleDiagnostics {
+@@ -39,6 +45,28 @@
+ 
+     package static var isEnabled: Bool { enabled }
+ 
++    package static func signalWillSend(
++        target: Int32, signal: Int32, path: Int
++    ) -> UUID? {
++        guard isEnabled else { return nil }
++        let owner = UUID()
++        event(.processSignalPath, owner: owner, value: path)
++        event(.processSignalTarget, owner: owner, value: Int(target))
++        event(.processSignalNumber, owner: owner, value: Int(signal))
++        return owner
++    }
++
++    package static func signalDidSend(
++        owner: UUID?, result: Int32, errorNumber: Int32
++    ) {
++        guard let owner else { return }
++        event(.processSignalResult, owner: owner, value: Int(result))
++        event(
++            .processSignalErrno, owner: owner,
++            value: result == 0 ? 0 : Int(errorNumber)
++        )
++    }
++
+     package static func event(
+         _ stage: RuntimeLifecycleStage, owner: UUID, value: Int = 0
+     ) {
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cli-signal-before/ShellProcessRegistry.swift	2026-09-06 01:50:24
++++ Sources/AgentLoopCore/Support/ShellProcessRegistry.swift	2026-09-06 01:51:50
+@@ -37,7 +37,17 @@
+         pids.removeAll()
+         lock.unlock()
+         for pid in snapshot {
+-            kill(pid, SIGTERM)
++            let diagnostic = RuntimeLifecycleDiagnostics.isEnabled
++                ? RuntimeLifecycleDiagnostics.signalWillSend(
++                    target: pid, signal: SIGTERM,
++                    path: self === Self.shared ? 2 : 1
++                )
++                : nil
++            let result = kill(pid, SIGTERM)
++            let failure = errno
++            RuntimeLifecycleDiagnostics.signalDidSend(
++                owner: diagnostic, result: result, errorNumber: failure
++            )
+         }
+     }
+ }
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cli-signal-before/CliBackendTests.swift	2026-09-06 01:50:24
++++ Sources/AgentLoopTestSuite/CliBackendTests.swift	2026-09-06 01:51:50
+@@ -749,8 +749,14 @@
+     }
+ 
+     func send(signal: Int32, processGroupId: Int32) throws {
++        let diagnostic = RuntimeLifecycleDiagnostics.signalWillSend(
++            target: -processGroupId, signal: signal, path: 0
++        )
+         let result = Darwin.kill(-processGroupId, signal)
+         let failure = errno
++        RuntimeLifecycleDiagnostics.signalDidSend(
++            owner: diagnostic, result: result, errorNumber: failure
++        )
+         guard result == 0 || failure == ESRCH else {
+             throw EngineContextValidationErrorV1()
+         }
+@@ -1225,9 +1231,55 @@
+         .cliFixtureConsumerJoined,
+         owner: recorderDiagnosticId, value: diagnosticOutcome
+     )
++    let cancellationResult = await cancellation.resultIfRequested()
++    if RuntimeLifecycleDiagnostics.isEnabled {
++        let state: Int
++        switch cancellationResult {
++        case nil:
++            state = 0
++        case .some(.failure):
++            state = 1
++        case let .some(.success(evidence)):
++            state = 2
++            let fields: [(RuntimeLifecycleStage, Int)] = [
++                (.cliFixtureCancellationPID, Int(evidence.pid)),
++                (.cliFixtureCancellationGroup, Int(evidence.processGroupID)),
++                (.cliFixtureCancellationStatus, Int(evidence.status)),
++                (.cliFixtureTermSent, evidence.termSent ? 1 : 0),
++                (.cliFixtureKillSent, evidence.killSent ? 1 : 0),
++                (.cliFixtureChildReaped, evidence.childReaped ? 1 : 0),
++                (.cliFixtureStdoutEOF, evidence.stdoutEOF ? 1 : 0),
++                (.cliFixtureStderrEOF, evidence.stderrEOF ? 1 : 0),
++            ]
++            for (stage, value) in fields {
++                RuntimeLifecycleDiagnostics.event(
++                    stage, owner: recorderDiagnosticId, value: value
++                )
++            }
++        }
++        RuntimeLifecycleDiagnostics.event(
++            .cliFixtureCancellationState, owner: recorderDiagnosticId, value: state
++        )
++        if case let .success(received) = streamResult {
++            let statuses = received.compactMap { frame -> Int32? in
++                if case let .exited(status) = frame { return status }
++                return nil
++            }
++            RuntimeLifecycleDiagnostics.event(
++                .cliFixtureExitFrameCount,
++                owner: recorderDiagnosticId, value: statuses.count
++            )
++            if let status = statuses.first {
++                RuntimeLifecycleDiagnostics.event(
++                    .cliFixtureExitFrameStatus,
++                    owner: recorderDiagnosticId, value: Int(status)
++                )
++            }
++        }
++    }
+     return CliMechanicsOwnedStreamReport(
+         body: bodyResult,
+-        cancellation: await cancellation.resultIfRequested(),
++        cancellation: cancellationResult,
+         stream: streamResult
+     )
+ }

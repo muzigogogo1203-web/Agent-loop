@@ -1,0 +1,215 @@
+===== A1B ISOLATED UI PREVIEW LAUNCH — 2026-07-27 =====
+command=AGENTLOOP_STATE_DIR=<fresh-absolute-temp-root> scripts/run-app.sh --preview
+preview.state_root=/private/tmp/agentloop-a1b-preview.F6d2Lo
+preview.normal_root=/Users/muzi/Library/Application Support/AgentLoop
+[0/1] Planning build
+Building for debugging...
+[0/7] Write swift-version--1AB21518FC5DEDBE.txt
+[2/6] Compiling P1MigrationMatrixRunner main.swift
+[3/6] Emitting module P1MigrationMatrixRunner
+[3/6] Write Objects.LinkFileList
+[4/6] Linking P1MigrationMatrixRunner
+[5/6] Applying P1MigrationMatrixRunner
+Build complete! (3.43s)
+.build/AgentLoop.app: replacing existing signature
+preview.launch_services_request=pass
+===== A1B ISOLATED UI PREVIEW PROCESS AND VISIBLE-STATE EVIDENCE =====
+preview.pid=16652
+preview.process=16652     1 S    02:03 /Users/muzi/Agent-loop/.build/AgentLoop.app/Contents/MacOS/AgentLoop
+preview.environment:
+AGENTLOOP_STATE_DIR=/private/tmp/agentloop-a1b-preview.F6d2Lo
+AGENTLOOP_UI_PREVIEW=1
+preview.state_files:
+/private/tmp/agentloop-a1b-preview.F6d2Lo
+/private/tmp/agentloop-a1b-preview.F6d2Lo/.agentloop.lock
+/private/tmp/agentloop-a1b-preview.F6d2Lo/agentloop.sqlite
+/private/tmp/agentloop-a1b-preview.F6d2Lo/agentloop.sqlite-shm
+/private/tmp/agentloop-a1b-preview.F6d2Lo/agentloop.sqlite-wal
+preview.normal_root_open_count=0
+preview.root_open_files:
+n/private/tmp/agentloop-a1b-preview.F6d2Lo/agentloop.sqlite-shm
+n/private/tmp/agentloop-a1b-preview.F6d2Lo/.agentloop.lock
+n/private/tmp/agentloop-a1b-preview.F6d2Lo/agentloop.sqlite
+n/private/tmp/agentloop-a1b-preview.F6d2Lo/agentloop.sqlite-wal
+n/private/tmp/agentloop-a1b-preview.F6d2Lo/agentloop.sqlite-shm
+n/private/tmp/agentloop-a1b-preview.F6d2Lo/agentloop.sqlite
+n/private/tmp/agentloop-a1b-preview.F6d2Lo/agentloop.sqlite-wal
+preview.ax.window_title=Coding 牧场
+preview.ax.selected_sidebar=我的营地
+preview.ax.camp_status=营地管家，空闲
+preview.ax.planning_entry=发起放牛
+preview.ax.credential_or_error_prompt=absent
+preview.screenshot=/Users/muzi/Agent-loop/docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a1b-durable-planning/evidence/preview-smoke.png
+docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a1b-durable-planning/evidence/preview-smoke.png: JPEG image data, JFIF standard 1.01, aspect ratio, density 72x72, segment length 16, Exif Standard: [TIFF image data, big-endian, direntries=1], baseline, precision 8, 1033x732, components 3
+/Users/muzi/Agent-loop/docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a1b-durable-planning/evidence/preview-smoke.png
+  pixelWidth: 1033
+  pixelHeight: 732
+b488db3706ac02d047b8b53fbcff169c10ddb614516738af9aba83c112fba8dc  docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a1b-durable-planning/evidence/preview-smoke.png
+preview.visible_state=pass
+===== A1B PREVIEW SCREENSHOT TRUE-PNG CORRECTION =====
+preview.screenshot_initial_format=jpeg-bytes-with-png-extension
+preview.screenshot_correction=sips lossless PNG re-encode of same captured frame
+docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a1b-durable-planning/evidence/preview-smoke.png: PNG image data, 1033 x 732, 8-bit/color RGB, non-interlaced
+/Users/muzi/Agent-loop/docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a1b-durable-planning/evidence/preview-smoke.png
+  pixelWidth: 1033
+  pixelHeight: 732
+ae350ba992e1a32ce9c72510db91b13730d0b8dfb86330099d08801e8ebb30bd  docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a1b-durable-planning/evidence/preview-smoke.png
+preview.screenshot_true_png=pass
+===== A1B ISOLATED UI PREVIEW EXIT EVIDENCE =====
+preview.quit_event=command-q
+preview.process_exited=fail
+===== A1B ISOLATED UI PREVIEW EXIT RETRY EVIDENCE =====
+preview.quit_retry=app-menu Quit Coding 牧场
+preview.process_exited_after_menu_quit=fail
+===== A1B PREVIEW FAILURE ROOT-CAUSE SAMPLE =====
+preview.quit_attempts=command-q,app-menu-quit
+preview.quit_result=blocked
+preview.main_thread=AppStore.init -> AppStore.reload -> KeychainStore.get -> SecItemCopyMatching
+preview.root_cause=OAuth presence lookups are not short-circuited by AGENTLOOP_UI_PREVIEW
+preview.current_run_acceptance=failed
+preview.failed_process_cleanup=pass method=SIGTERM pid=16652
+===== A1B ISOLATED UI PREVIEW RETRY AFTER KEYCHAIN FIX — 2026-07-27 =====
+command=AGENTLOOP_STATE_DIR=<fresh-absolute-temp-root> scripts/run-app.sh --preview
+preview.retry.state_root=/private/tmp/agentloop-a1b-preview.PY6T06
+preview.normal_root=/Users/muzi/Library/Application Support/AgentLoop
+[0/1] Planning build
+Building for debugging...
+[0/7] Write swift-version--1AB21518FC5DEDBE.txt
+Build complete! (1.41s)
+.build/AgentLoop.app: replacing existing signature
+preview.retry.launch_services_request=pass
+===== A1B ISOLATED UI PREVIEW RETRY PROCESS AND VISIBLE-STATE EVIDENCE =====
+preview.retry.pid=20227
+preview.retry.process=20227     1 S    01:11 /Users/muzi/Agent-loop/.build/AgentLoop.app/Contents/MacOS/AgentLoop
+preview.retry.environment:
+AGENTLOOP_STATE_DIR=/private/tmp/agentloop-a1b-preview.PY6T06
+AGENTLOOP_UI_PREVIEW=1
+preview.retry.state_files:
+/private/tmp/agentloop-a1b-preview.PY6T06
+/private/tmp/agentloop-a1b-preview.PY6T06/.agentloop.lock
+/private/tmp/agentloop-a1b-preview.PY6T06/agentloop.sqlite
+/private/tmp/agentloop-a1b-preview.PY6T06/agentloop.sqlite-shm
+/private/tmp/agentloop-a1b-preview.PY6T06/agentloop.sqlite-wal
+preview.retry.normal_root_open_count=0
+preview.retry.root_open_files:
+n/private/tmp/agentloop-a1b-preview.PY6T06/agentloop.sqlite-shm
+n/private/tmp/agentloop-a1b-preview.PY6T06/.agentloop.lock
+n/private/tmp/agentloop-a1b-preview.PY6T06/agentloop.sqlite
+n/private/tmp/agentloop-a1b-preview.PY6T06/agentloop.sqlite-wal
+n/private/tmp/agentloop-a1b-preview.PY6T06/agentloop.sqlite-shm
+n/private/tmp/agentloop-a1b-preview.PY6T06/agentloop.sqlite
+n/private/tmp/agentloop-a1b-preview.PY6T06/agentloop.sqlite-wal
+preview.retry.ax.window_title=Coding 牧场
+preview.retry.ax.selected_sidebar=我的营地
+preview.retry.ax.camp_status=营地管家，空闲
+preview.retry.ax.planning_entry=发起放牛
+preview.retry.ax.credential_or_error_prompt=absent
+preview.retry.main_thread=NSApplication event loop waiting for next event
+preview.retry.main_thread_keychain_block=absent
+preview.retry.screenshot=/Users/muzi/Agent-loop/docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a1b-durable-planning/evidence/preview-smoke.png
+docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a1b-durable-planning/evidence/preview-smoke.png: PNG image data, 1033 x 732, 8-bit/color RGB, non-interlaced
+/Users/muzi/Agent-loop/docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a1b-durable-planning/evidence/preview-smoke.png
+  pixelWidth: 1033
+  pixelHeight: 732
+087eca5b5cb3ad8d5c9c7a02f5beb834e18e5aa3c626495662c7503202b3bceb  docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a1b-durable-planning/evidence/preview-smoke.png
+preview.retry.screenshot_true_png=pass
+preview.retry.visible_state=pass
+===== A1B ISOLATED UI PREVIEW RETRY EXIT EVIDENCE =====
+preview.retry.quit_event=command-q
+preview.retry.process_exited=fail
+===== A1B ISOLATED UI PREVIEW RETRY MENU-QUIT EVIDENCE =====
+preview.retry.quit_retry=app-menu Quit Coding 牧场
+preview.retry.process_exited_after_menu_quit=fail
+===== A1B ISOLATED UI PREVIEW RETRY STANDARD-QUIT EVIDENCE =====
+preview.retry.quit_delivery=Apple quit event via application bundle id
+preview.retry.prior_ui_quit_delivery=not_observed_by_process
+preview.retry.process_exited_after_standard_quit=pass pid=20227
+preview.retry.no_remaining_agentloop_process=pass
+preview.retry.result=pass
+preview.final_result=pass
+
+=== 2026-07-27 Review01 process-local defaults isolation rerun ===
+command=AGENTLOOP_STATE_DIR=<fresh-absolute-temp-root> scripts/run-app.sh --preview
+preview.review01.state_root=/private/tmp/agentloop-a1b-review01-preview.CDsP2O
+preview.review01.state_root_was_empty=true
+preview.review01.defaults.regression=uiPreviewUsesProcessLocalDefaultsBeforeBootstrapAndReload pass
+preview.review01.defaults.store=ProcessLocalPreviewUserDefaults
+preview.review01.defaults.scope=process-local locked dictionary
+preview.review01.defaults.suite_identity=unique PID plus UUID
+preview.review01.defaults.normal_domain_examined=false
+preview.review01.launch_services_request=pass
+preview.review01.pid=50856
+preview.review01.executable=/Users/muzi/Agent-loop/.build/AgentLoop.app/Contents/MacOS/AgentLoop
+preview.review01.environment.AGENTLOOP_STATE_DIR=/private/tmp/agentloop-a1b-review01-preview.CDsP2O
+preview.review01.environment.AGENTLOOP_UI_PREVIEW=1
+preview.review01.state_files=.agentloop.lock,agentloop.sqlite,agentloop.sqlite-shm,agentloop.sqlite-wal
+preview.review01.normal_state_root_open_count=0
+preview.review01.ax.window_title=Coding 牧场
+preview.review01.ax.sidebar=我的营地
+preview.review01.ax.cow_status=基础牛，空闲
+preview.review01.ax.planning_entry=发起放牛…
+preview.review01.ax.blocking_error_prompt=absent
+preview.review01.main_thread=NSApplication event loop
+preview.review01.main_thread_keychain_block=absent
+preview.review01.screenshot_initial_format=jpeg-bytes-with-png-extension
+preview.review01.screenshot_correction=sips PNG re-encode of same captured frame
+preview.review01.screenshot_png=1190x732
+preview.review01.screenshot.sha256=90ae69421b6a0be472e5ba22afacb6279b16e2838df75ee13d285e384e3648c8
+preview.review01.quit_event=Computer Use Command-Q
+preview.review01.process_exited=pass pid=50856
+preview.review01.post_quit_ui_probe=invalid
+preview.review01.post_quit_ui_probe_effect=Computer Use auto-launched non-preview PID 51012
+preview.review01.post_quit_non_preview_environment=AGENTLOOP_STATE_DIR and AGENTLOOP_UI_PREVIEW absent
+preview.review01.post_quit_cleanup=SIGTERM exact PID 51012; process exited
+preview.review01.normal_defaults_or_keychain_examined=false
+preview.review01.result=rejected due post-quit non-preview auto-launch
+
+command=AGENTLOOP_STATE_DIR=<fresh-absolute-temp-root> scripts/run-app.sh --preview
+preview.review01.retry.state_root=/private/tmp/agentloop-a1b-review01-preview.sy7T0L
+preview.review01.retry.state_root_was_empty=true
+preview.review01.retry.defaults.regression=uiPreviewUsesProcessLocalDefaultsBeforeBootstrapAndReload pass
+preview.review01.retry.defaults.store=ProcessLocalPreviewUserDefaults
+preview.review01.retry.defaults.scope=process-local locked dictionary
+preview.review01.retry.defaults.suite_identity=unique PID plus UUID
+preview.review01.retry.defaults.normal_domain_examined=false
+preview.review01.retry.launch_services_request=pass
+preview.review01.retry.pid=51258
+preview.review01.retry.executable=/Users/muzi/Agent-loop/.build/AgentLoop.app/Contents/MacOS/AgentLoop
+preview.review01.retry.environment.AGENTLOOP_STATE_DIR=/private/tmp/agentloop-a1b-review01-preview.sy7T0L
+preview.review01.retry.environment.AGENTLOOP_UI_PREVIEW=1
+preview.review01.retry.state_files=.agentloop.lock,agentloop.sqlite,agentloop.sqlite-shm,agentloop.sqlite-wal
+preview.review01.retry.normal_state_root_open_count=0
+preview.review01.retry.ax.window_title=Coding 牧场
+preview.review01.retry.ax.sidebar=我的营地
+preview.review01.retry.ax.cow_status=基础牛，空闲
+preview.review01.retry.ax.planning_entry=发起放牛…
+preview.review01.retry.ax.blocking_error_prompt=absent
+preview.review01.retry.visible_no_model_state=还没有连接模型；可进入营地保存资料
+preview.review01.retry.main_thread=NSApplication event loop
+preview.review01.retry.main_thread_keychain_block=absent
+preview.review01.retry.screenshot_initial_format=jpeg-bytes-with-png-extension
+preview.review01.retry.screenshot_correction=sips PNG re-encode of same captured frame
+preview.review01.retry.screenshot_png=1190x732
+preview.review01.retry.screenshot.sha256=90ae69421b6a0be472e5ba22afacb6279b16e2838df75ee13d285e384e3648c8
+preview.review01.retry.quit_event=Computer Use Command-Q
+preview.review01.retry.process_exited=pass pid=51258
+preview.review01.retry.no_remaining_agentloop_process=pass
+preview.review01.retry.post_quit_ui_probe=not_run
+preview.review01.retry.result=pass
+preview.final_result=pass
+[0/1] Planning build
+Building for debugging...
+[0/8] Write sources
+[1/8] Write swift-version--1AB21518FC5DEDBE.txt
+[2/7] Write Objects.LinkFileList
+[3/9] Linking P1MigrationMatrixRunner
+[4/9] Applying P1MigrationMatrixRunner
+[6/9] Compiling AgentLoopApp AppStore.swift
+[7/9] Emitting module AgentLoopApp
+Build complete! (4.64s)
+.build/AgentLoop.app: replacing existing signature
+[0/1] Planning build
+Building for debugging...
+[0/7] Write swift-version--1AB21518FC5DEDBE.txt
+Build complete! (1.53s)
+.build/AgentLoop.app: replacing existing signature

@@ -499,7 +499,9 @@ private final class RuntimeProviderCallRecorder: @unchecked Sendable {
 
 @Test func orchestratorPassesCompanionIdToProviderFactory() async throws {
     let db = try runtimeProfileTempDB()
-    let companion = runtimeCompanion(model: "model-a")
+    let camp = try db.ensureDefaultCamp()
+    var companion = runtimeCompanion(model: "model-a")
+    companion.campId = camp.id
     try db.saveCompanion(companion)
     let ids = try db.createSingleCardMission(
         campName: "Camp",
@@ -509,11 +511,40 @@ private final class RuntimeProviderCallRecorder: @unchecked Sendable {
         cardDescription: "d",
         expectedOutput: "o",
         assigneeId: companion.id,
-        maxTurns: 2
+        maxTurns: 2,
+        campId: camp.id
     )
+    let workspaceRoot = try attachP1F1DispatchContext(
+        db: db,
+        missionId: ids.missionId,
+        companionId: companion.id
+    )
+    defer { try? FileManager.default.removeItem(at: workspaceRoot) }
     let recorder = RuntimeProviderCallRecorder()
+    let stateRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "runtime-companion-factory-state-\(UUID().uuidString)",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: stateRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
+    defer { try? FileManager.default.removeItem(at: stateRoot) }
+    let artifactRoot = stateRoot.appendingPathComponent(
+        "artifacts",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: artifactRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
     let orch = Orchestrator(
         db: db,
+        planningProviderResolver: TestPlanningProviderResolver(
+            provider: MockProvider(script: [])
+        ),
         makeProvider: { model, companionId in
             recorder.record(model: model, companionId: companionId)
             return MockProvider(script: [TurnResult(
@@ -526,7 +557,7 @@ private final class RuntimeProviderCallRecorder: @unchecked Sendable {
                 stopReason: .toolUse
             )])
         },
-        artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
+        artifactStoreRoot: artifactRoot,
         tickInterval: nil
     )
 
@@ -539,4 +570,617 @@ private final class RuntimeProviderCallRecorder: @unchecked Sendable {
     }
 
     #expect(recorder.snapshot.contains { $0.model == "model-a" && $0.companionId == companion.id })
+    await orch.shutdown()
+}
+
+private final class PlanningResolverProfileSource:
+    PlanningRuntimeProfileSource, @unchecked Sendable
+{
+    private let lock = NSLock()
+    private let profiles: [String: RuntimeProfileRecord]
+    private var defaultProfileId: String
+    private var requestedProfileIds: [String] = []
+
+    init(
+        profiles: [RuntimeProfileRecord],
+        defaultProfileId: String
+    ) {
+        self.profiles = Dictionary(
+            uniqueKeysWithValues: profiles.map { ($0.id, $0) }
+        )
+        self.defaultProfileId = defaultProfileId
+    }
+
+    func setDefaultProfileId(_ profileId: String) {
+        lock.withLock {
+            defaultProfileId = profileId
+        }
+    }
+
+    func planningRuntimeProfile(
+        id: String
+    ) throws -> RuntimeProfileRecord? {
+        lock.withLock {
+            requestedProfileIds.append(id)
+            return profiles[id.isEmpty ? defaultProfileId : id]
+        }
+    }
+
+    var requestedIds: [String] {
+        lock.withLock { requestedProfileIds }
+    }
+}
+
+private final class PlanningResolverCallRecorder: @unchecked Sendable {
+    enum FactoryCall: Sendable, Equatable {
+        case api(
+            format: ProviderAPIFormat,
+            credential: String,
+            model: String,
+            baseURL: URL
+        )
+        case oauth(
+            accessToken: String,
+            accountId: String,
+            model: String
+        )
+    }
+
+    private let lock = NSLock()
+    private var catalogCallsStorage: [String] = []
+    private var credentialCallsStorage: [String] = []
+    private var factoryCallsStorage: [FactoryCall] = []
+
+    func recordCatalog(_ call: String) {
+        lock.withLock {
+            catalogCallsStorage.append(call)
+        }
+    }
+
+    func recordCredential(_ account: String) {
+        lock.withLock {
+            credentialCallsStorage.append(account)
+        }
+    }
+
+    func recordFactory(_ call: FactoryCall) {
+        lock.withLock {
+            factoryCallsStorage.append(call)
+        }
+    }
+
+    var catalogCalls: [String] {
+        lock.withLock { catalogCallsStorage }
+    }
+
+    var credentialCalls: [String] {
+        lock.withLock { credentialCallsStorage }
+    }
+
+    var factoryCalls: [FactoryCall] {
+        lock.withLock { factoryCallsStorage }
+    }
+}
+
+private struct PlanningResolverCatalogSource:
+    PlanningModelCatalogSource, Sendable
+{
+    let cached: [String: [String]]
+    let choices: [String: [String]]
+    let manual: [String: [String]]
+    let recorder: PlanningResolverCallRecorder
+
+    func planningCachedCatalog(profileId: String) throws -> [String]? {
+        recorder.recordCatalog("cached:\(profileId)")
+        return cached[profileId]
+    }
+
+    func planningModelChoices(profileId: String) throws -> [String]? {
+        recorder.recordCatalog("choices:\(profileId)")
+        return choices[profileId]
+    }
+
+    func planningManualModels(profileId: String) throws -> [String] {
+        recorder.recordCatalog("manual:\(profileId)")
+        return manual[profileId] ?? []
+    }
+}
+
+private struct PlanningResolverCredentialReadError: Error {}
+
+private struct PlanningResolverCredentialSource:
+    PlanningCredentialSource, Sendable
+{
+    let values: [String: String]
+    let failingAccounts: Set<String>
+    let recorder: PlanningResolverCallRecorder
+
+    func planningCredential(account: String) throws -> String? {
+        recorder.recordCredential(account)
+        if failingAccounts.contains(account) {
+            throw PlanningResolverCredentialReadError()
+        }
+        return values[account]
+    }
+}
+
+private struct PlanningResolverProviderFactory:
+    PlanningProviderFactory, Sendable
+{
+    let recorder: PlanningResolverCallRecorder
+
+    func makePlanningAPIProvider(
+        format: ProviderAPIFormat,
+        credential: String,
+        model: String,
+        baseURL: URL
+    ) throws -> any LLMProvider {
+        recorder.recordFactory(
+            .api(
+                format: format,
+                credential: credential,
+                model: model,
+                baseURL: baseURL
+            )
+        )
+        return MockProvider(script: [])
+    }
+
+    func makePlanningOAuthProvider(
+        accessToken: String,
+        accountId: String,
+        model: String
+    ) throws -> any LLMProvider {
+        recorder.recordFactory(
+            .oauth(
+                accessToken: accessToken,
+                accountId: accountId,
+                model: model
+            )
+        )
+        return MockProvider(script: [])
+    }
+}
+
+private func planningResolverProfile(
+    id: String,
+    kind: RuntimeProfileKind,
+    baseURL: String?,
+    credentialAccount: String?
+) -> RuntimeProfileRecord {
+    RuntimeProfileRecord(
+        id: id,
+        kind: kind,
+        name: id,
+        baseURL: baseURL,
+        credentialAccount: credentialAccount,
+        isDefault: false,
+        createdAt: Date(timeIntervalSince1970: 1)
+    )
+}
+
+private func strictPlanningResolver(
+    profiles: PlanningResolverProfileSource,
+    cached: [String: [String]] = [:],
+    choices: [String: [String]] = [:],
+    manual: [String: [String]] = [:],
+    credentials: [String: String] = [:],
+    failingAccounts: Set<String> = [],
+    recorder: PlanningResolverCallRecorder
+) -> StrictPlanningProviderResolver {
+    StrictPlanningProviderResolver(
+        profiles: profiles,
+        catalogs: PlanningResolverCatalogSource(
+            cached: cached,
+            choices: choices,
+            manual: manual,
+            recorder: recorder
+        ),
+        credentials: PlanningResolverCredentialSource(
+            values: credentials,
+            failingAccounts: failingAccounts,
+            recorder: recorder
+        ),
+        factory: PlanningResolverProviderFactory(recorder: recorder)
+    )
+}
+
+private func planningResolutionFailure(
+    _ operation: () throws -> Void
+) -> PlanningProviderResolutionError? {
+    do {
+        try operation()
+        Issue.record("expected PlanningProviderResolutionError")
+        return nil
+    } catch let error as PlanningProviderResolutionError {
+        return error
+    } catch {
+        Issue.record("unexpected planning resolver error: \(type(of: error))")
+        return nil
+    }
+}
+
+@Test func capturedProfileAndModelDoNotDriftAfterDefaultChanges() throws {
+    let captured = planningResolverProfile(
+        id: "captured",
+        kind: .openAIAPI,
+        baseURL: "https://api.openai.com",
+        credentialAccount: "captured-key"
+    )
+    let newDefault = planningResolverProfile(
+        id: "new-default",
+        kind: .anthropicAPI,
+        baseURL: "https://api.anthropic.com",
+        credentialAccount: "default-key"
+    )
+    let profiles = PlanningResolverProfileSource(
+        profiles: [captured, newDefault],
+        defaultProfileId: captured.id
+    )
+    profiles.setDefaultProfileId(newDefault.id)
+    let recorder = PlanningResolverCallRecorder()
+    let resolver = strictPlanningResolver(
+        profiles: profiles,
+        cached: [
+            captured.id: ["captured-model"],
+            newDefault.id: ["default-model"],
+        ],
+        credentials: [
+            "captured-key": "captured-secret",
+            "default-key": "default-secret",
+        ],
+        recorder: recorder
+    )
+
+    _ = try resolver.resolvePlanningProvider(
+        profileId: captured.id,
+        model: "captured-model"
+    )
+
+    #expect(profiles.requestedIds == [captured.id])
+    #expect(recorder.credentialCalls == ["captured-key"])
+    #expect(
+        recorder.factoryCalls == [
+            .api(
+                format: .openAIChatCompletions,
+                credential: "captured-secret",
+                model: "captured-model",
+                baseURL: URL(string: "https://api.openai.com")!
+            ),
+        ]
+    )
+}
+
+@Test func cliPlanningProfileFailsPreflightWithoutMissionWrites() throws {
+    let profile = planningResolverProfile(
+        id: "cli",
+        kind: .cliCodex,
+        baseURL: nil,
+        credentialAccount: nil
+    )
+    let profiles = PlanningResolverProfileSource(
+        profiles: [profile],
+        defaultProfileId: profile.id
+    )
+    let recorder = PlanningResolverCallRecorder()
+    let resolver = strictPlanningResolver(
+        profiles: profiles,
+        recorder: recorder
+    )
+
+    let error = try #require(
+        planningResolutionFailure {
+            _ = try resolver.resolvePlanningProvider(
+                profileId: profile.id,
+                model: "ignored"
+            )
+        }
+    )
+    #expect(error.code == "planning_profile_cli_unsupported")
+    #expect(!error.safeMessage.isEmpty)
+    #expect(recorder.catalogCalls.isEmpty)
+    #expect(recorder.credentialCalls.isEmpty)
+    #expect(recorder.factoryCalls.isEmpty)
+}
+
+@Test func oauthPlanningUsesStaticCatalogAndBothCredentialAccounts() throws {
+    let profile = planningResolverProfile(
+        id: "oauth",
+        kind: .chatGPTOAuth,
+        baseURL: "not-used",
+        credentialAccount: "oauth-token"
+    )
+    let profiles = PlanningResolverProfileSource(
+        profiles: [profile],
+        defaultProfileId: profile.id
+    )
+    let recorder = PlanningResolverCallRecorder()
+    let model = try #require(KernelDefaults.chatGPTStaticModels.first)
+    let resolver = strictPlanningResolver(
+        profiles: profiles,
+        cached: [profile.id: ["must-not-be-read"]],
+        choices: [profile.id: ["must-not-be-read"]],
+        manual: [profile.id: ["must-not-be-read"]],
+        credentials: [
+            "oauth-token": "access-token",
+            "oauth-chatgpt-account-id": "account-id",
+        ],
+        recorder: recorder
+    )
+
+    _ = try resolver.resolvePlanningProvider(
+        profileId: profile.id,
+        model: model
+    )
+
+    #expect(recorder.catalogCalls.isEmpty)
+    #expect(
+        recorder.credentialCalls == [
+            "oauth-token",
+            "oauth-chatgpt-account-id",
+        ]
+    )
+    #expect(
+        recorder.factoryCalls == [
+            .oauth(
+                accessToken: "access-token",
+                accountId: "account-id",
+                model: model
+            ),
+        ]
+    )
+}
+
+@Test func officialAPIPlanningUsesCachedPlusManualCatalog() throws {
+    let profile = planningResolverProfile(
+        id: "official",
+        kind: .anthropicAPI,
+        baseURL: "https://api.anthropic.com/v1",
+        credentialAccount: "api-key"
+    )
+    let profiles = PlanningResolverProfileSource(
+        profiles: [profile],
+        defaultProfileId: profile.id
+    )
+    let recorder = PlanningResolverCallRecorder()
+    let resolver = strictPlanningResolver(
+        profiles: profiles,
+        cached: [profile.id: [" cached-model ", "shared"]],
+        choices: [profile.id: ["must-not-be-read"]],
+        manual: [profile.id: ["manual-model", "shared"]],
+        credentials: ["api-key": "secret"],
+        recorder: recorder
+    )
+
+    _ = try resolver.resolvePlanningProvider(
+        profileId: profile.id,
+        model: "manual-model"
+    )
+
+    #expect(
+        Set(recorder.catalogCalls) == [
+            "cached:\(profile.id)",
+            "manual:\(profile.id)",
+        ]
+    )
+    #expect(
+        recorder.factoryCalls == [
+            .api(
+                format: .anthropicMessages,
+                credential: "secret",
+                model: "manual-model",
+                baseURL: URL(string: "https://api.anthropic.com")!
+            ),
+        ]
+    )
+}
+
+@Test func customAPIPlanningAcceptsProfileScopedManualModel() throws {
+    let profile = planningResolverProfile(
+        id: "custom",
+        kind: .openAIAPI,
+        baseURL: "https://gateway.example.com/v1",
+        credentialAccount: "gateway-key"
+    )
+    let profiles = PlanningResolverProfileSource(
+        profiles: [profile],
+        defaultProfileId: profile.id
+    )
+    let recorder = PlanningResolverCallRecorder()
+    let resolver = strictPlanningResolver(
+        profiles: profiles,
+        cached: [profile.id: ["must-not-be-read"]],
+        choices: [profile.id: ["remote-model"]],
+        manual: [profile.id: ["manual-model"]],
+        credentials: ["gateway-key": "gateway-secret"],
+        recorder: recorder
+    )
+
+    _ = try resolver.resolvePlanningProvider(
+        profileId: profile.id,
+        model: "manual-model"
+    )
+
+    #expect(
+        Set(recorder.catalogCalls) == [
+            "choices:\(profile.id)",
+            "manual:\(profile.id)",
+        ]
+    )
+    #expect(
+        recorder.factoryCalls == [
+            .api(
+                format: .openAIChatCompletions,
+                credential: "gateway-secret",
+                model: "manual-model",
+                baseURL: URL(string: "https://gateway.example.com")!
+            ),
+        ]
+    )
+}
+
+@Test func planningPreflightRejectsMissingCatalogWithoutWrites() throws {
+    let profile = planningResolverProfile(
+        id: "missing-catalog",
+        kind: .anthropicAPI,
+        baseURL: "https://api.anthropic.com",
+        credentialAccount: "api-key"
+    )
+    let profiles = PlanningResolverProfileSource(
+        profiles: [profile],
+        defaultProfileId: profile.id
+    )
+    let recorder = PlanningResolverCallRecorder()
+    let resolver = strictPlanningResolver(
+        profiles: profiles,
+        credentials: ["api-key": "must-not-be-read"],
+        recorder: recorder
+    )
+
+    let error = try #require(
+        planningResolutionFailure {
+            _ = try resolver.resolvePlanningProvider(
+                profileId: profile.id,
+                model: "missing"
+            )
+        }
+    )
+    #expect(error.code == "model_catalog_unavailable")
+    #expect(!error.safeMessage.isEmpty)
+    #expect(recorder.credentialCalls.isEmpty)
+    #expect(recorder.factoryCalls.isEmpty)
+}
+
+@Test func planningPreflightRejectsMissingPrimaryCredentialWithoutWrites()
+    throws
+{
+    let profile = planningResolverProfile(
+        id: "missing-credential",
+        kind: .openAIAPI,
+        baseURL: "https://api.openai.com",
+        credentialAccount: "missing-key"
+    )
+    let profiles = PlanningResolverProfileSource(
+        profiles: [profile],
+        defaultProfileId: profile.id
+    )
+    let recorder = PlanningResolverCallRecorder()
+    let resolver = strictPlanningResolver(
+        profiles: profiles,
+        cached: [profile.id: ["model"]],
+        recorder: recorder
+    )
+
+    let error = try #require(
+        planningResolutionFailure {
+            _ = try resolver.resolvePlanningProvider(
+                profileId: profile.id,
+                model: "model"
+            )
+        }
+    )
+    #expect(error.code == "credential_not_found")
+    #expect(recorder.credentialCalls == ["missing-key"])
+    #expect(recorder.factoryCalls.isEmpty)
+}
+
+@Test func oauthPlanningRejectsMissingAccountIdWithoutWrites() throws {
+    let profile = planningResolverProfile(
+        id: "oauth-missing-account",
+        kind: .chatGPTOAuth,
+        baseURL: nil,
+        credentialAccount: "oauth-token"
+    )
+    let profiles = PlanningResolverProfileSource(
+        profiles: [profile],
+        defaultProfileId: profile.id
+    )
+    let recorder = PlanningResolverCallRecorder()
+    let model = try #require(KernelDefaults.chatGPTStaticModels.first)
+    let resolver = strictPlanningResolver(
+        profiles: profiles,
+        credentials: ["oauth-token": "access-token"],
+        recorder: recorder
+    )
+
+    let error = try #require(
+        planningResolutionFailure {
+            _ = try resolver.resolvePlanningProvider(
+                profileId: profile.id,
+                model: model
+            )
+        }
+    )
+    #expect(error.code == "oauth_account_id_not_found")
+    #expect(
+        recorder.credentialCalls == [
+            "oauth-token",
+            "oauth-chatgpt-account-id",
+        ]
+    )
+    #expect(recorder.factoryCalls.isEmpty)
+}
+
+@Test func planningCredentialReadFailureIsTypedAndDoesNotWrite() throws {
+    let profile = planningResolverProfile(
+        id: "credential-read-failure",
+        kind: .anthropicAPI,
+        baseURL: "https://api.anthropic.com",
+        credentialAccount: "unreadable"
+    )
+    let profiles = PlanningResolverProfileSource(
+        profiles: [profile],
+        defaultProfileId: profile.id
+    )
+    let recorder = PlanningResolverCallRecorder()
+    let resolver = strictPlanningResolver(
+        profiles: profiles,
+        cached: [profile.id: ["model"]],
+        failingAccounts: ["unreadable"],
+        recorder: recorder
+    )
+
+    let error = try #require(
+        planningResolutionFailure {
+            _ = try resolver.resolvePlanningProvider(
+                profileId: profile.id,
+                model: "model"
+            )
+        }
+    )
+    #expect(error.code == "credential_read_failed")
+    #expect(!error.safeMessage.contains("unreadable"))
+    #expect(recorder.factoryCalls.isEmpty)
+}
+
+@Test func planningInvalidEndpointIsTypedAndDoesNotWrite() throws {
+    let profile = planningResolverProfile(
+        id: "invalid-endpoint",
+        kind: .openAIAPI,
+        baseURL: "file:///tmp/not-an-api",
+        credentialAccount: "api-key"
+    )
+    let profiles = PlanningResolverProfileSource(
+        profiles: [profile],
+        defaultProfileId: profile.id
+    )
+    let recorder = PlanningResolverCallRecorder()
+    let resolver = strictPlanningResolver(
+        profiles: profiles,
+        choices: [profile.id: ["model"]],
+        credentials: ["api-key": "secret"],
+        recorder: recorder
+    )
+
+    let error = try #require(
+        planningResolutionFailure {
+            _ = try resolver.resolvePlanningProvider(
+                profileId: profile.id,
+                model: "model"
+            )
+        }
+    )
+    #expect(error.code == "endpoint_invalid")
+    #expect(recorder.credentialCalls == ["api-key"])
+    #expect(recorder.factoryCalls.isEmpty)
 }

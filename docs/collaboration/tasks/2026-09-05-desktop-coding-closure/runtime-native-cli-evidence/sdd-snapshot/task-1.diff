@@ -1,0 +1,1241 @@
+--- /var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-native-cli-20260908-20260908-58897-z0xxu1/preimages/Sources/AgentLoopCore/Loop/CliProcessBackend.swift	2026-09-08 23:53:16
++++ Sources/AgentLoopCore/Loop/CliProcessBackend.swift	2026-09-09 00:06:03
+@@ -309,6 +309,7 @@
+     private let processInspector: any EngineRuntimeProcessInspectingV1
+     private let codeSignatureRevalidator:
+         any CliProcessCodeSignatureRevalidatingV1
++    private let environmentProvider: @Sendable () async -> [String: String]
+     private let mechanicsState: CliProcessMechanicsState
+ 
+     package init(
+@@ -325,7 +326,10 @@
+             registry: registry,
+             processInspector: processInspector,
+             codeSignatureRevalidator:
+-                CliProcessLiveCodeSignatureRevalidatorV1()
++                CliProcessLiveCodeSignatureRevalidatorV1(),
++            environmentProvider: {
++                await LoginShellEnvironment.shared.environment()
++            }
+         )
+     }
+ 
+@@ -336,7 +340,10 @@
+         registry: ShellProcessRegistry = .shared,
+         processInspector: any EngineRuntimeProcessInspectingV1,
+         codeSignatureRevalidator:
+-            any CliProcessCodeSignatureRevalidatingV1
++            any CliProcessCodeSignatureRevalidatingV1,
++        environmentProvider: @escaping @Sendable () async -> [String: String] = {
++            await LoginShellEnvironment.shared.environment()
++        }
+     ) throws {
+         guard terminationGrace >= .zero,
+               killGrace > .zero,
+@@ -351,6 +358,7 @@
+         self.registry = registry
+         self.processInspector = processInspector
+         self.codeSignatureRevalidator = codeSignatureRevalidator
++        self.environmentProvider = environmentProvider
+         mechanicsState = CliProcessMechanicsState()
+     }
+ }
+@@ -370,6 +378,7 @@
+                 registry: registry,
+                 processInspector: processInspector,
+                 codeSignatureRevalidator: codeSignatureRevalidator,
++                environmentProvider: environmentProvider,
+                 owner: mechanicsState,
+                 continuation: continuation
+             )
+@@ -528,6 +537,7 @@
+     private let processInspector: any EngineRuntimeProcessInspectingV1
+     private let codeSignatureRevalidator:
+         any CliProcessCodeSignatureRevalidatingV1
++    private let environmentProvider: @Sendable () async -> [String: String]
+     private let owner: CliProcessMechanicsState
+     private let diagnosticId = UUID()
+     private let continuation:
+@@ -551,6 +561,7 @@
+         processInspector: any EngineRuntimeProcessInspectingV1,
+         codeSignatureRevalidator:
+             any CliProcessCodeSignatureRevalidatingV1,
++        environmentProvider: @escaping @Sendable () async -> [String: String],
+         owner: CliProcessMechanicsState,
+         continuation:
+             AsyncThrowingStream<CliProcessFrameV1, Error>.Continuation
+@@ -563,6 +574,7 @@
+         self.registry = registry
+         self.processInspector = processInspector
+         self.codeSignatureRevalidator = codeSignatureRevalidator
++        self.environmentProvider = environmentProvider
+         self.owner = owner
+         self.continuation = continuation
+     }
+@@ -614,7 +626,7 @@
+             RuntimeLifecycleDiagnostics.event(
+                 .cliEnvironmentRequested, owner: diagnosticId
+             )
+-            var environment = await LoginShellEnvironment.shared.environment()
++            var environment = await environmentProvider()
+             RuntimeLifecycleDiagnostics.event(
+                 .cliEnvironmentReady, owner: diagnosticId
+             )
+--- /var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-native-cli-20260908-20260908-58897-z0xxu1/preimages/Sources/AgentLoopTestSuite/CliBackendTests.swift	2026-09-08 23:53:16
++++ Sources/AgentLoopTestSuite/CliBackendTests.swift	2026-09-09 00:13:56
+@@ -269,13 +269,7 @@
+             Issue.record("retained CLI mechanics fixture: \(harness.base.path)")
+         }
+     }
+-    let request = try harness.request(
+-        command: "/bin/sh",
+-        arguments: [
+-            "-c",
+-            "(sleep 0.3) >&2 & printf '%s\\n' 'parent-exited'; exit 0",
+-        ]
+-    )
++    let request = try harness.fixtureRequest(mode: .heldStderrParent)
+     let signatureRevalidator = CliMechanicsSignatureRevalidator(
+         expectedCLI: request.cliExecutableAuthority,
+         expectedBoardBridge: request.bridgeExecutableAuthority
+@@ -283,13 +277,16 @@
+     let backend = try CliProcessBackend(
+         pipeDrainGrace: .milliseconds(50),
+         processInspector: harness.processInspector,
+-        codeSignatureRevalidator: signatureRevalidator
++        codeSignatureRevalidator: signatureRevalidator,
++        environmentProvider: { harness.fixtureEnvironment }
+     )
+     removalAllowed = false
+     let report = await cliMechanicsRunOwned(backend: backend, request: request) {
+         frames, _ in
+         var result: Result<[CliProcessFrameV1], any Error>?
++        var sawParentMarker = false
+         for _ in 0..<200 {
++            sawParentMarker = await frames.containsStdout("parent-exited")
+             if let value = await frames.completedResult() {
+                 result = value
+                 break
+@@ -299,6 +296,9 @@
+         guard let result else {
+             throw CliMechanicsFixtureFailure.watchdog
+         }
++        guard sawParentMarker || await frames.containsStdout("parent-exited") else {
++            throw CliMechanicsFixtureFailure.missingParentMarker
++        }
+         switch result {
+         case .success:
+             throw CliMechanicsFixtureFailure.heldPipeCleanupReportedCertain
+@@ -331,23 +331,22 @@
+         !FileManager.default.fileExists(atPath: harness.socketURL.path)
+     )
+     #expect(signatureRevalidator.snapshot() == [.cli, .boardBridge])
++    #expect(report.recordedFrames == [.stdoutLine("parent-exited")])
+ }
+ 
+ @Test func cliProcessBackendCapturesFinalLineWithoutNewline() async throws {
+     guard agentLoopCanBindListenerSocket() else { return }
+     let harness = try CliMechanicsHarness(identity: "213")
+     defer { harness.remove() }
+-    let request = try harness.request(
+-        command: "/bin/sh",
+-        arguments: ["-c", "printf '%s' 'final-line'; exit 0"]
+-    )
++    let request = try harness.fixtureRequest(mode: .printFinalLine)
+     let signatureRevalidator = CliMechanicsSignatureRevalidator(
+         expectedCLI: request.cliExecutableAuthority,
+         expectedBoardBridge: request.bridgeExecutableAuthority
+     )
+     let backend = try CliProcessBackend(
+         processInspector: harness.processInspector,
+-        codeSignatureRevalidator: signatureRevalidator
++        codeSignatureRevalidator: signatureRevalidator,
++        environmentProvider: { harness.fixtureEnvironment }
+     )
+     var frames: [CliProcessFrameV1] = []
+     for try await frame in backend.launch(request) {
+@@ -482,13 +481,7 @@
+             Issue.record("retained CLI mechanics fixture: \(harness.base.path)")
+         }
+     }
+-    let request = try harness.request(
+-        command: "/bin/sh",
+-        arguments: [
+-            "-c",
+-            "trap '' TERM; printf '%s\\n' 'ready'; while :; do sleep 1; done",
+-        ]
+-    )
++    let request = try harness.fixtureRequest(mode: .ignoreTerm)
+     let signatureRevalidator = CliMechanicsSignatureRevalidator(
+         expectedCLI: request.cliExecutableAuthority,
+         expectedBoardBridge: request.bridgeExecutableAuthority
+@@ -498,9 +491,9 @@
+         killGrace: .seconds(1),
+         pipeDrainGrace: .seconds(1),
+         processInspector: harness.processInspector,
+-        codeSignatureRevalidator: signatureRevalidator
++        codeSignatureRevalidator: signatureRevalidator,
++        environmentProvider: { harness.fixtureEnvironment }
+     )
+-    _ = await LoginShellEnvironment.shared.environment()
+     removalAllowed = false
+     let report = await cliMechanicsRunOwned(backend: backend, request: request) {
+         frames, cancellation in
+@@ -545,13 +538,7 @@
+             Issue.record("retained CLI mechanics fixture: \(harness.base.path)")
+         }
+     }
+-    let request = try harness.request(
+-        command: "/bin/sh",
+-        arguments: [
+-            "-c",
+-            "printf '%s\\n' 'ready'; exec /bin/sleep 30",
+-        ]
+-    )
++    let request = try harness.fixtureRequest(mode: .waitTerm)
+     let signatureRevalidator = CliMechanicsSignatureRevalidator(
+         expectedCLI: request.cliExecutableAuthority,
+         expectedBoardBridge: request.bridgeExecutableAuthority
+@@ -561,9 +548,9 @@
+         killGrace: .seconds(1),
+         pipeDrainGrace: .seconds(1),
+         processInspector: harness.processInspector,
+-        codeSignatureRevalidator: signatureRevalidator
++        codeSignatureRevalidator: signatureRevalidator,
++        environmentProvider: { harness.fixtureEnvironment }
+     )
+-    _ = await LoginShellEnvironment.shared.environment()
+     removalAllowed = false
+     let report = await cliMechanicsRunOwned(backend: backend, request: request) {
+         frames, cancellation in
+@@ -607,13 +594,7 @@
+             Issue.record("retained CLI mechanics fixture: \(harness.base.path)")
+         }
+     }
+-    let request = try harness.request(
+-        command: "/bin/sh",
+-        arguments: [
+-            "-c",
+-            "trap '' TERM; printf '%s\\n' 'ready'; while :; do sleep 1; done",
+-        ]
+-    )
++    let request = try harness.fixtureRequest(mode: .ignoreTerm)
+     let signatureRevalidator = CliMechanicsSignatureRevalidator(
+         expectedCLI: request.cliExecutableAuthority,
+         expectedBoardBridge: request.bridgeExecutableAuthority
+@@ -623,9 +604,9 @@
+         killGrace: .seconds(1),
+         pipeDrainGrace: .seconds(1),
+         processInspector: harness.processInspector,
+-        codeSignatureRevalidator: signatureRevalidator
++        codeSignatureRevalidator: signatureRevalidator,
++        environmentProvider: { harness.fixtureEnvironment }
+     )
+-    _ = await LoginShellEnvironment.shared.environment()
+     removalAllowed = false
+     let report = await cliMechanicsRunOwned(backend: backend, request: request) {
+         frames, _ in
+@@ -682,6 +663,70 @@
+     #expect(signatureRevalidator.snapshot() == [.cli, .boardBridge])
+ }
+ 
++@Test func cliProcessBackendUsesInjectedEnvironmentExactlyOnce() async throws {
++    guard agentLoopCanBindListenerSocket() else { return }
++    let harness = try CliMechanicsHarness(identity: "548")
++    defer { harness.remove() }
++    let request = try harness.fixtureRequest(mode: .environmentSentinel)
++    let signatureRevalidator = CliMechanicsSignatureRevalidator(
++        expectedCLI: request.cliExecutableAuthority,
++        expectedBoardBridge: request.bridgeExecutableAuthority
++    )
++    let provider = CliMechanicsEnvironmentProvider(
++        environment: harness.fixtureEnvironment.merging([
++            "AGENTLOOP_FIXTURE_SENTINEL": "present",
++        ]) { _, new in new }
++    )
++    let backend = try CliProcessBackend(
++        processInspector: harness.processInspector,
++        codeSignatureRevalidator: signatureRevalidator,
++        environmentProvider: { provider.environment() }
++    )
++    var frames: [CliProcessFrameV1] = []
++    for try await frame in backend.launch(request) { frames.append(frame) }
++
++    #expect(provider.invocationCount == 1)
++    #expect(frames.contains(.stdoutLine(
++        "environment-sentinel=present;path=1;locale=1;home=1;tmpdir=1"
++    )))
++    #expect(frames.contains(.exited(0)))
++    #expect(signatureRevalidator.snapshot() == [.cli, .boardBridge])
++    #expect(!FileManager.default.fileExists(atPath: harness.socketURL.path))
++}
++
++@Test func cliProcessBackendRejectsInjectedEnvironmentNULBeforeSpawn() async throws {
++    guard agentLoopCanBindListenerSocket() else { return }
++    let harness = try CliMechanicsHarness(identity: "549")
++    defer { harness.remove() }
++    let request = try harness.fixtureRequest(mode: .exitZero)
++    let signatureRevalidator = CliMechanicsSignatureRevalidator(
++        expectedCLI: request.cliExecutableAuthority,
++        expectedBoardBridge: request.bridgeExecutableAuthority
++    )
++    let backend = try CliProcessBackend(
++        processInspector: harness.processInspector,
++        codeSignatureRevalidator: signatureRevalidator,
++        environmentProvider: {
++            harness.fixtureEnvironment.merging(["INVALID": "bad\0value"]) {
++                _, new in new
++            }
++        }
++    )
++    do {
++        for try await _ in backend.launch(request) {}
++        Issue.record("invalid injected environment reached process launch")
++    } catch let error as CliProcessBackendError {
++        #expect(error == .invalidMechanicsConfiguration(
++            "process environment contains invalid bytes"
++        ))
++    }
++    #expect(harness.processInspector.continuedProcessGroups().isEmpty)
++    #expect(harness.processInspector.effectSnapshot.snapshotCalls == 0)
++    #expect(harness.processInspector.effectSnapshot.continuedCount == 0)
++    #expect(signatureRevalidator.snapshot() == [.cli, .boardBridge])
++    #expect(!FileManager.default.fileExists(atPath: harness.socketURL.path))
++}
++
+ @Test func cliBackendLiveSpikeRunsMechanicsOnlyWhenEnabled() async throws {
+     guard ProcessInfo.processInfo.environment["AGENTLOOP_CLI_SPIKE"] == "1"
+     else { return }
+@@ -708,12 +753,14 @@
+     private let lock = NSLock()
+     private var authority: CliExecutableAuthorityV1?
+     private var continuedGroups: [Int32] = []
++    private var snapshotCalls = 0
+ 
+     func select(_ authority: CliExecutableAuthorityV1) {
+         lock.withLock { self.authority = authority }
+     }
+ 
+     func snapshots() throws -> [EngineRuntimeProcessSnapshotV1] {
++        lock.withLock { snapshotCalls += 1 }
+         guard let authority = lock.withLock({ authority }) else {
+             throw EngineContextValidationErrorV1()
+         }
+@@ -769,6 +816,10 @@
+         lock.withLock { continuedGroups }
+     }
+ 
++    var effectSnapshot: (snapshotCalls: Int, continuedCount: Int) {
++        lock.withLock { (snapshotCalls, continuedGroups.count) }
++    }
++
+     func processGroupExists(_ processGroupId: Int32) throws -> Bool {
+         if Darwin.kill(-processGroupId, 0) == 0 { return true }
+         if errno == ESRCH { return false }
+@@ -835,7 +886,26 @@
+     }
+ }
+ 
+-private struct CliMechanicsHarness {
++private final class CliMechanicsEnvironmentProvider: @unchecked Sendable {
++    private let lock = NSLock()
++    private let storedEnvironment: [String: String]
++    private var count = 0
++
++    init(environment: [String: String]) {
++        storedEnvironment = environment
++    }
++
++    func environment() -> [String: String] {
++        lock.withLock {
++            count += 1
++            return storedEnvironment
++        }
++    }
++
++    var invocationCount: Int { lock.withLock { count } }
++}
++
++private struct CliMechanicsHarness: @unchecked Sendable {
+     let base: URL
+     let workspace: URL
+     let socketURL: URL
+@@ -843,6 +913,15 @@
+     let socketDirectoryAuthority: EngineBoardSocketDirectoryAuthorityV1
+     let processInspector = CliMechanicsProcessInspector()
+ 
++    var fixtureEnvironment: [String: String] {
++        [
++            "PATH": "/usr/bin:/bin",
++            "LC_ALL": "C",
++            "HOME": workspace.path,
++            "TMPDIR": base.path,
++        ]
++    }
++
+     init(identity: String) throws {
+         let suffix = String(repeating: "0", count: 12 - identity.count)
+             + identity
+@@ -923,17 +1002,10 @@
+             withIntermediateDirectories: false
+         )
+         let staged = stagedDirectory.appendingPathComponent("executable")
+-        if command == "/bin/sh" {
+-            try Data("#!/bin/sh\nexec /bin/sh \"$@\"\n".utf8).write(
+-                to: staged,
+-                options: .atomic
+-            )
+-        } else {
+-            try FileManager.default.copyItem(
+-                at: URL(fileURLWithPath: sourcePath),
+-                to: staged
+-            )
+-        }
++        try FileManager.default.copyItem(
++            at: URL(fileURLWithPath: sourcePath),
++            to: staged
++        )
+         try FileManager.default.setAttributes(
+             [.posixPermissions: 0o500],
+             ofItemAtPath: staged.path
+@@ -996,6 +1068,18 @@
+         )
+     }
+ 
++    func fixtureRequest(
++        mode: CliMechanicsFixtureMode,
++        arguments: [String] = [],
++        cleanupURLs: [URL] = []
++    ) throws -> CliProcessLaunchRequestV1 {
++        try request(
++            command: cliMechanicsCurrentRunnerURL().path,
++            arguments: [cliMechanicsFixtureSwitch, mode.rawValue] + arguments,
++            cleanupURLs: cleanupURLs
++        )
++    }
++
+     func remove() {
+         do {
+             try socketDirectoryAuthority.close()
+@@ -1075,8 +1159,14 @@
+ 
+     func completedResult() -> Result<[CliProcessFrameV1], any Error>? {
+         storedResult
++    }
++
++    func containsStdout(_ expected: String) -> Bool {
++        frames.contains(.stdoutLine(expected))
+     }
+ 
++    func snapshot() -> [CliProcessFrameV1] { frames }
++
+     func waitForStdout(_ expected: String) async throws {
+         let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+         RuntimeLifecycleDiagnostics.event(
+@@ -1148,6 +1238,7 @@
+     let body: Result<Void, any Error>
+     let cancellation: Result<CliProcessExitEvidenceV1, any Error>?
+     let stream: Result<[CliProcessFrameV1], any Error>
++    let recordedFrames: [CliProcessFrameV1]
+ 
+     var streamFailure: String? {
+         if case let .failure(error) = stream { return String(describing: error) }
+@@ -1280,7 +1371,8 @@
+     return CliMechanicsOwnedStreamReport(
+         body: bodyResult,
+         cancellation: cancellationResult,
+-        stream: streamResult
++        stream: streamResult,
++        recordedFrames: await frames.snapshot()
+     )
+ }
+ 
+@@ -1290,6 +1382,7 @@
+ 
+ private enum CliMechanicsFixtureFailure: Error, CustomStringConvertible {
+     case watchdog
++    case missingParentMarker
+     case heldPipeCleanupReportedCertain
+     case missingCancellation(String)
+     case missingExitedFrame(String)
+@@ -1302,6 +1395,8 @@
+         switch self {
+         case .watchdog:
+             return "CLI mechanics stream did not finish before watchdog"
++        case .missingParentMarker:
++            return "held-stderr parent exited without its acknowledgement marker"
+         case .heldPipeCleanupReportedCertain:
+             return "held pipe cleanup was reported as certain"
+         case let .missingCancellation(executionId):
+--- /var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-native-cli-20260908-20260908-58897-z0xxu1/preimages/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift	2026-09-08 23:53:16
++++ Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift	2026-09-09 00:05:52
+@@ -620,6 +620,15 @@
+     let bridgeAuthority: EngineBoardBridgeExecutableAuthorityV1
+     let directoryAuthority: EngineBoardSocketDirectoryAuthorityV1
+     let processInspector: P1F1D065ProcessInspector
++
++    var fixtureEnvironment: [String: String] {
++        [
++            "PATH": "/usr/bin:/bin",
++            "LC_ALL": "C",
++            "HOME": workspace.path,
++            "TMPDIR": root.path,
++        ]
++    }
+ 
+     private let lifecycleLock = NSLock()
+     private var directoryAuthorityClosed = false
+@@ -643,11 +652,9 @@
+             ofItemAtPath: root.path
+         )
+ 
+-        let staged = root.appendingPathComponent("controlled-shell")
+-        try Data("#!/bin/sh\nexec /bin/sh \"$@\"\n".utf8).write(
+-            to: staged,
+-            options: .atomic
+-        )
++        let source = try cliMechanicsCurrentRunnerURL()
++        let staged = root.appendingPathComponent("controlled-native-runner")
++        try FileManager.default.copyItem(at: source, to: staged)
+         try FileManager.default.setAttributes(
+             [.posixPermissions: 0o500],
+             ofItemAtPath: staged.path
+@@ -663,9 +670,9 @@
+         executableAuthority = try CliExecutableAuthorityV1(
+             kind: .cliCodex,
+             command: "codex",
+-            commandSourcePath: staged.path,
++            commandSourcePath: source.path,
+             commandSourceHash: stagedHash,
+-            resolvedExecutablePath: staged.path,
++            resolvedExecutablePath: source.path,
+             stagedPath: staged.path,
+             executableHash: stagedHash,
+             designatedRequirement:
+@@ -738,7 +745,8 @@
+ 
+     func request(
+         executionId: String,
+-        arguments: [String],
++        mode: CliMechanicsFixtureMode,
++        readinessFileName: String? = nil,
+         token: Character,
+         cleanupAuthorities: [CliCleanupFileAuthorityV1] = [],
+         progressSink: any EngineProgressSink = P1F1DProgressRecorder()
+@@ -751,7 +759,8 @@
+             executionId: executionId,
+             spec: CliCommandSpec(
+                 command: executableAuthority.stagedPath,
+-                arguments: arguments,
++                arguments: [cliMechanicsFixtureSwitch, mode.rawValue]
++                    + (readinessFileName.map { [root.path, $0] } ?? []),
+                 environment: [:],
+                 stdinBytes: Data("p1f1d controlled mechanics stdin".utf8),
+                 cleanupAuthorities: cleanupAuthorities
+@@ -1100,7 +1109,8 @@
+         pipeDrainGrace: .seconds(1),
+         registry: registry,
+         processInspector: harness.processInspector,
+-        codeSignatureRevalidator: revalidator
++        codeSignatureRevalidator: revalidator,
++        environmentProvider: { harness.fixtureEnvironment }
+     )
+ }
+ 
+@@ -8218,7 +8228,7 @@
+         )
+         let productionRequest = try gateHarness.request(
+             executionId: productionExecutionId,
+-            arguments: ["-c", "exit 0"],
++            mode: .exitZero,
+             token: "2",
+             cleanupAuthorities: [productionCleanup.authority]
+         )
+@@ -8230,7 +8240,7 @@
+         )
+         do {
+             for try await _ in productionBackend.launch(productionRequest) {}
+-            Issue.record("production signature gate accepted unsigned fixture")
++            Issue.record("production signature gate accepted controlled fixture")
+         } catch is EngineContextValidationErrorV1 {}
+         #expect(
+             !FileManager.default.fileExists(atPath: productionCleanup.url.path)
+@@ -8253,7 +8263,7 @@
+         )
+         let rejectedRequest = try gateHarness.request(
+             executionId: rejectedExecutionId,
+-            arguments: ["-c", "exit 0"],
++            mode: .exitZero,
+             token: "3",
+             cleanupAuthorities: [rejectedCleanup.authority]
+         )
+@@ -8303,12 +8313,8 @@
+             "00000000-0000-4000-8000-000000000465"
+         let abortRequest = try abortHarness.request(
+             executionId: abortExecutionId,
+-            arguments: [
+-                "-c",
+-                ": > \"$1\"; while :; do :; done",
+-                "p1f1d-065-resume-failure",
+-                abortHarness.root.appendingPathComponent("resume-ready").path,
+-            ],
++            mode: .readyFile,
++            readinessFileName: "resume-ready",
+             token: "4",
+             cleanupAuthorities: [abortCleanup.authority],
+             progressSink: P1F1D065BlockingProgressSink(
+@@ -8470,12 +8476,8 @@
+         )
+         let gateRequest = try gateHarness.request(
+             executionId: "00000000-0000-4000-8000-000000000065",
+-            arguments: [
+-                "-c",
+-                "trap '' TERM; : > \"$1\"; while :; do :; done",
+-                "p1f1d-065-cold-gate",
+-                gateHarness.root.appendingPathComponent("cold-ready").path,
+-            ],
++            mode: .readyFileIgnoreTerm,
++            readinessFileName: "cold-ready",
+             token: "5"
+         )
+         let coldSocketURL = try gateHarness.socketURL(executionId: gateRequest.executionId)
+@@ -8541,15 +8543,13 @@
+             pipeDrainGrace: .seconds(1),
+             registry: mainRegistry,
+             processInspector: mainHarness.processInspector,
+-            codeSignatureRevalidator: mainRevalidator
++            codeSignatureRevalidator: mainRevalidator,
++            environmentProvider: { mainHarness.fixtureEnvironment }
+         )
+         let frames = P1F1DFrameRecorder()
+         let request = try mainHarness.request(
+             executionId: p1f1dExecutionID,
+-            arguments: [
+-                "-c",
+-                "trap '' TERM; printf 'p1f1d-ready\\n'; printf 'p1f1d-drain\\n' >&2; while :; do :; done",
+-            ],
++            mode: .readyAndDrainIgnoreTerm,
+             token: "6"
+         )
+         let consumer = Task {
+@@ -8660,12 +8660,8 @@
+         )
+         let request = try harness.request(
+             executionId: "00000000-0000-4000-8000-000000000865",
+-            arguments: [
+-                "-c",
+-                "trap '' TERM; : > \"$1\"; while :; do :; done",
+-                "p1f1d-065-cold-gate",
+-                harness.root.appendingPathComponent("cold-ready").path,
+-            ],
++            mode: .readyFileIgnoreTerm,
++            readinessFileName: "cold-ready",
+             token: "8"
+         )
+         let socketURL = try harness.socketURL(executionId: request.executionId)
+--- /var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-native-cli-20260908-20260908-58897-z0xxu1/preimages/Sources/RunTests/main.swift	2026-09-08 23:53:16
++++ Sources/RunTests/main.swift	2026-09-09 00:07:35
+@@ -8,6 +8,7 @@
+ // __swiftPMEntryPoint is underscored SPI verified against Swift 6.2.3.
+ @main struct Runner {
+     static func main() async {
++        runCliMechanicsFixtureIfRequested()
+         await Testing.__swiftPMEntryPoint() as Never
+     }
+ }
+--- /var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-native-cli-20260908-20260908-58897-z0xxu1/preimages/Sources/AgentLoopTestSuite/DurablePlanningTests.swift	2026-09-08 23:53:16
++++ Sources/AgentLoopTestSuite/DurablePlanningTests.swift	2026-09-09 00:15:05
+@@ -2489,6 +2489,21 @@
+ private let desktopCodingClosureBlockingProgressSuccessorFiles20260908: Set<String> = [
+     "Sources/AgentLoopCore/Support/BlockingProcessOperation.swift",
+     "Sources/AgentLoopTestSuite/BlockingProcessOperationTests.swift",
++]
++
++// The 2026-09-08 hermetic native CLI fixture repair changes one historical
++// runner and adds one test-library helper. Keep both exact successors separate
++// from the frozen A3 manifest and from the earlier blocking-progress repair.
++private let desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908: Set<String> = [
++    "Sources/AgentLoopTestSuite/CliMechanicsFixture.swift",
++    "Sources/RunTests/main.swift",
++]
++
++private let desktopCodingClosureNativeCLIFixtureSuccessorHashes20260908 = [
++    "Sources/AgentLoopTestSuite/CliMechanicsFixture.swift":
++        "aba8a0bd17321ed6821369646e08af970606843e95727896bd1951f63d99e312",
++    "Sources/RunTests/main.swift":
++        "67d034114d15b735133f5f3749158d885656c6c895365e78fcd35f4c2cca4b37",
+ ]
+ 
+ // The 2026-09-06 desktop Coding closure packaging review approved this exact
+@@ -5704,6 +5719,25 @@
+         try a3RequireRegularNonSymlink(root.appendingPathComponent(path))
+     }
+     for path in desktopCodingClosureBlockingProgressSuccessorFiles20260908 {
++        try a3RequireRegularNonSymlink(root.appendingPathComponent(path))
++    }
++    #expect(desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908.count == 2)
++    #expect(
++        desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908 == [
++            "Sources/AgentLoopTestSuite/CliMechanicsFixture.swift",
++            "Sources/RunTests/main.swift",
++        ]
++    )
++    #expect(
++        desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908
++            .intersection(manifestPaths) == ["Sources/RunTests/main.swift"]
++    )
++    #expect(
++        desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908
++            .intersection(desktopCodingClosureBlockingProgressSuccessorFiles20260908)
++            .isEmpty
++    )
++    for path in desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908 {
+         try a3RequireRegularNonSymlink(root.appendingPathComponent(path))
+     }
+     let liveEntries = entries.filter {
+@@ -5717,6 +5751,18 @@
+             && !r9fProviderCompletionHandleFiles.contains($0.path)
+     }
+     #expect(liveEntries.count == 102)
++    let unaffectedHistoricalEntries = liveEntries.filter {
++        !desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908
++            .contains($0.path)
++    }
++    #expect(unaffectedHistoricalEntries.count == 101)
++    let originalRunnerEntry = try #require(entries.first {
++        $0.path == "Sources/RunTests/main.swift"
++    })
++    #expect(
++        originalRunnerEntry.hash
++            == "70417b226a6a3b83f2ef876628028a87618392cbb0688de903ce9d10305dbfd3"
++    )
+     var enumerated = try a3RegularFilesRecursively(
+         under: root.appendingPathComponent("Sources"),
+         repositoryRoot: root
+@@ -5732,16 +5778,17 @@
+             && !desktopCodingClosureRuntimeDiagnosticsSuccessorFiles.contains($0)
+             && !desktopCodingClosureA1FoundationSuccessorFiles20260905.contains($0)
+             && !desktopCodingClosureBlockingProgressSuccessorFiles20260908.contains($0)
++            && !desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908.contains($0)
+     }
+     enumerated.append("Package.resolved")
+     enumerated.removeAll {
+         a4HistoricalManifestExclusions.contains($0)
+     }
+     enumerated.sort()
+-    #expect(enumerated.count == 102)
+-    #expect(enumerated == liveEntries.map(\.path))
++    #expect(enumerated.count == 101)
++    #expect(enumerated == unaffectedHistoricalEntries.map(\.path))
+ 
+-    for entry in liveEntries {
++    for entry in unaffectedHistoricalEntries {
+         let url = root.appendingPathComponent(entry.path)
+         try a3RequireRegularNonSymlink(url)
+         #expect(
+@@ -5750,13 +5797,22 @@
+         )
+     }
+ 
++    #expect(desktopCodingClosureNativeCLIFixtureSuccessorHashes20260908.count == 2)
++    #expect(
++        Set(desktopCodingClosureNativeCLIFixtureSuccessorHashes20260908.keys)
++            == desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908
++    )
++    for (path, expectedHash) in
++        desktopCodingClosureNativeCLIFixtureSuccessorHashes20260908
++    {
++        #expect(try a3SHA256(at: root.appendingPathComponent(path)) == expectedHash)
++    }
++
+     let frozenEntryHashes = [
+         "Package.resolved":
+             "d2786c9b64c245c62f5793e697bb406d4960753e5f33c622250e804cd865fb3a",
+-        "Sources/RunTests/main.swift":
+-            "70417b226a6a3b83f2ef876628028a87618392cbb0688de903ce9d10305dbfd3",
+     ]
+-    #expect(frozenEntryHashes.count == 2)
++    #expect(frozenEntryHashes.count == 1)
+     for (path, expectedHash) in frozenEntryHashes {
+         let url = root.appendingPathComponent(path)
+         try a3RequireRegularNonSymlink(url)
+--- /dev/null	2026-09-09 00:16:09
++++ Sources/AgentLoopTestSuite/CliMechanicsFixture.swift	2026-09-09 00:14:40
+@@ -0,0 +1,477 @@
++import Darwin
++import Foundation
++
++let cliMechanicsFixtureSwitch = "--agentloop-cli-mechanics-fixture"
++
++enum CliMechanicsFixtureMode: String {
++    case exitZero = "exit-zero"
++    case printFinalLine = "print-final-line"
++    case waitTerm = "wait-term"
++    case ignoreTerm = "ignore-term"
++    case readyFileIgnoreTerm = "ready-file-ignore-term"
++    case readyFile = "ready-file"
++    case readyAndDrainIgnoreTerm = "ready-and-drain-ignore-term"
++    case heldStderrParent = "held-stderr-parent"
++    case heldStderrChild = "held-stderr-child"
++    case environmentSentinel = "environment-sentinel"
++}
++
++private enum CliMechanicsNativeFixtureError: Error, CustomStringConvertible {
++    case invalidArguments
++    case systemCall(String, Int32)
++    case invalidReadinessAuthority
++    case invalidEnvironment
++    case childProcessGroup
++    case childAcknowledgement
++    case childCleanup(primary: String, cleanup: String)
++
++    var description: String {
++        switch self {
++        case .invalidArguments:
++            return "invalid fixture arguments"
++        case let .systemCall(operation, code):
++            return "fixture \(operation) failed errno=\(code)"
++        case .invalidReadinessAuthority:
++            return "fixture readiness authority is invalid"
++        case .invalidEnvironment:
++            return "fixture environment sentinel is invalid"
++        case .childProcessGroup:
++            return "fixture child did not inherit the parent process group"
++        case .childAcknowledgement:
++            return "fixture child acknowledgement was invalid"
++        case let .childCleanup(primary, cleanup):
++            return "fixture child failure primary=[\(primary)] cleanup=[\(cleanup)]"
++        }
++    }
++}
++
++func cliMechanicsCurrentRunnerURL() throws -> URL {
++    guard let first = CommandLine.arguments.first, !first.isEmpty else {
++        throw CliMechanicsNativeFixtureError.invalidArguments
++    }
++    let url = URL(fileURLWithPath: first).resolvingSymlinksInPath()
++        .standardizedFileURL
++    var info = stat()
++    let result = url.path.withCString { Darwin.lstat($0, &info) }
++    guard result == 0,
++          info.st_mode & S_IFMT == S_IFREG,
++          info.st_uid == getuid(),
++          info.st_nlink == 1,
++          info.st_mode & S_IXUSR != 0
++    else {
++        throw CliMechanicsNativeFixtureError.systemCall(
++            "current runner identity", result == 0 ? EINVAL : errno
++        )
++    }
++    return url
++}
++
++public func runCliMechanicsFixtureIfRequested() {
++    let arguments = CommandLine.arguments
++    guard arguments.count >= 2, arguments[1] == cliMechanicsFixtureSwitch else {
++        return
++    }
++    do {
++        try runCliMechanicsFixture(arguments: Array(arguments.dropFirst(2)))
++        Darwin.exit(EXIT_SUCCESS)
++    } catch {
++        let message = "AgentLoop CLI mechanics fixture: \(error)\n"
++        try? cliMechanicsWrite(Data(message.utf8), to: STDERR_FILENO)
++        Darwin.exit(64)
++    }
++}
++
++private func runCliMechanicsFixture(arguments: [String]) throws {
++    guard let rawMode = arguments.first,
++          let mode = CliMechanicsFixtureMode(rawValue: rawMode)
++    else { throw CliMechanicsNativeFixtureError.invalidArguments }
++    let trailing = Array(arguments.dropFirst())
++
++    switch mode {
++    case .exitZero:
++        try requireNoArguments(trailing)
++        try cliMechanicsDrainStdin()
++    case .printFinalLine:
++        try requireNoArguments(trailing)
++        try cliMechanicsDrainStdin()
++        try cliMechanicsWrite(Data("final-line".utf8), to: STDOUT_FILENO)
++    case .waitTerm:
++        try requireNoArguments(trailing)
++        try cliMechanicsDrainStdin()
++        try cliMechanicsWrite(Data("ready\n".utf8), to: STDOUT_FILENO)
++        try cliMechanicsWaitForever()
++    case .ignoreTerm:
++        try requireNoArguments(trailing)
++        try cliMechanicsIgnoreTerm()
++        try cliMechanicsDrainStdin()
++        try cliMechanicsWrite(Data("ready\n".utf8), to: STDOUT_FILENO)
++        try cliMechanicsWaitForever()
++    case .readyFileIgnoreTerm:
++        try cliMechanicsIgnoreTerm()
++        try cliMechanicsDrainStdin()
++        try cliMechanicsCreateReadyFile(arguments: trailing)
++        try cliMechanicsWaitForever()
++    case .readyFile:
++        // The backend creates its stdin writer only after the inspector's
++        // synchronous SIGCONT call returns, so readiness must precede draining.
++        try cliMechanicsCreateReadyFile(arguments: trailing)
++        try cliMechanicsWaitForever()
++    case .readyAndDrainIgnoreTerm:
++        try requireNoArguments(trailing)
++        try cliMechanicsIgnoreTerm()
++        try cliMechanicsDrainStdin()
++        try cliMechanicsWrite(Data("p1f1d-ready\n".utf8), to: STDOUT_FILENO)
++        try cliMechanicsWrite(Data("p1f1d-drain\n".utf8), to: STDERR_FILENO)
++        try cliMechanicsWaitForever()
++    case .heldStderrParent:
++        try requireNoArguments(trailing)
++        try cliMechanicsDrainStdin()
++        try cliMechanicsRunHeldStderrParent()
++    case .heldStderrChild:
++        try cliMechanicsRunHeldStderrChild(arguments: trailing)
++    case .environmentSentinel:
++        try requireNoArguments(trailing)
++        try cliMechanicsDrainStdin()
++        try cliMechanicsReportEnvironmentSentinel()
++    }
++}
++
++private func requireNoArguments(_ arguments: [String]) throws {
++    guard arguments.isEmpty else {
++        throw CliMechanicsNativeFixtureError.invalidArguments
++    }
++}
++
++private func cliMechanicsDrainStdin() throws {
++    var bytes = [UInt8](repeating: 0, count: 4_096)
++    while true {
++        let count = bytes.withUnsafeMutableBytes {
++            Darwin.read(STDIN_FILENO, $0.baseAddress, $0.count)
++        }
++        if count > 0 { continue }
++        if count == 0 { return }
++        if errno == EINTR { continue }
++        throw CliMechanicsNativeFixtureError.systemCall("stdin read", errno)
++    }
++}
++
++private func cliMechanicsWrite(_ data: Data, to descriptor: Int32) throws {
++    try data.withUnsafeBytes { bytes in
++        var offset = 0
++        while offset < bytes.count {
++            let result = Darwin.write(
++                descriptor,
++                bytes.baseAddress!.advanced(by: offset),
++                bytes.count - offset
++            )
++            if result > 0 {
++                offset += result
++                continue
++            }
++            if result < 0, errno == EINTR { continue }
++            throw CliMechanicsNativeFixtureError.systemCall("write", errno)
++        }
++    }
++}
++
++private func cliMechanicsIgnoreTerm() throws {
++    var action = sigaction()
++    action.__sigaction_u.__sa_handler = SIG_IGN
++    action.sa_flags = 0
++    guard sigemptyset(&action.sa_mask) == 0,
++          Darwin.sigaction(SIGTERM, &action, nil) == 0 else {
++        throw CliMechanicsNativeFixtureError.systemCall("signal", errno)
++    }
++}
++
++private func cliMechanicsWaitForever() throws -> Never {
++    while true {
++        if Darwin.pause() == -1, errno == EINTR { continue }
++        throw CliMechanicsNativeFixtureError.systemCall("pause", errno)
++    }
++}
++
++private func cliMechanicsCreateReadyFile(arguments: [String]) throws {
++    guard arguments.count == 2 else {
++        throw CliMechanicsNativeFixtureError.invalidArguments
++    }
++    let root = URL(fileURLWithPath: arguments[0], isDirectory: true)
++        .standardizedFileURL
++    let leaf = arguments[1]
++    let readyURL = root.appendingPathComponent(leaf).standardizedFileURL
++    let workspace = root.appendingPathComponent("workspace", isDirectory: true)
++        .standardizedFileURL
++    let currentDirectory = URL(
++        fileURLWithPath: FileManager.default.currentDirectoryPath,
++        isDirectory: true
++    ).resolvingSymlinksInPath().standardizedFileURL
++    guard root.path.hasPrefix("/tmp/al65-"),
++          currentDirectory.path
++            == workspace.resolvingSymlinksInPath().standardizedFileURL.path,
++          readyURL.deletingLastPathComponent().path == root.path,
++          ["cold-ready", "resume-ready"].contains(leaf)
++    else { throw CliMechanicsNativeFixtureError.invalidReadinessAuthority }
++
++    let rootFD = root.path.withCString {
++        Darwin.open($0, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW)
++    }
++    guard rootFD >= 0 else {
++        throw CliMechanicsNativeFixtureError.systemCall("readiness root open", errno)
++    }
++    var rootOpen = true
++    defer { if rootOpen { _ = Darwin.close(rootFD) } }
++    var rootInfo = stat()
++    guard Darwin.fstat(rootFD, &rootInfo) == 0,
++          rootInfo.st_mode & S_IFMT == S_IFDIR,
++          rootInfo.st_uid == getuid(),
++          rootInfo.st_mode & mode_t(0o777) == mode_t(0o700)
++    else { throw CliMechanicsNativeFixtureError.invalidReadinessAuthority }
++    let readyFD = leaf.withCString {
++        Darwin.openat(
++            rootFD, $0,
++            O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW,
++            mode_t(0o600)
++        )
++    }
++    guard readyFD >= 0 else {
++        throw CliMechanicsNativeFixtureError.systemCall("readiness file open", errno)
++    }
++    guard Darwin.close(readyFD) == 0 else {
++        throw CliMechanicsNativeFixtureError.systemCall("readiness file close", errno)
++    }
++    guard Darwin.close(rootFD) == 0 else {
++        rootOpen = false
++        throw CliMechanicsNativeFixtureError.systemCall("readiness root close", errno)
++    }
++    rootOpen = false
++}
++
++private func cliMechanicsRunHeldStderrParent() throws {
++    var pipeFDs: [Int32] = [-1, -1]
++    guard Darwin.pipe(&pipeFDs) == 0 else {
++        throw CliMechanicsNativeFixtureError.systemCall("ack pipe", errno)
++    }
++    var readFD = pipeFDs[0]
++    var writeFD = pipeFDs[1]
++    defer {
++        if readFD >= 0 { _ = Darwin.close(readFD) }
++        if writeFD >= 0 { _ = Darwin.close(writeFD) }
++    }
++    let childAckFD = Int32(3)
++    try cliMechanicsNormalizeOwnedDescriptor(&readFD, minimum: childAckFD + 1)
++    try cliMechanicsNormalizeOwnedDescriptor(&writeFD, minimum: childAckFD + 1)
++    var actions: posix_spawn_file_actions_t?
++    var code = posix_spawn_file_actions_init(&actions)
++    guard code == 0 else {
++        throw CliMechanicsNativeFixtureError.systemCall("spawn actions init", code)
++    }
++    defer { posix_spawn_file_actions_destroy(&actions) }
++    try cliMechanicsCheckSpawn(posix_spawn_file_actions_addclose(&actions, readFD))
++    try "/dev/null".withCString { path in
++        try cliMechanicsCheckSpawn(posix_spawn_file_actions_addopen(
++            &actions, STDIN_FILENO, path, O_RDONLY, 0
++        ))
++        try cliMechanicsCheckSpawn(posix_spawn_file_actions_addopen(
++            &actions, STDOUT_FILENO, path, O_WRONLY, 0
++        ))
++    }
++    try cliMechanicsCheckSpawn(posix_spawn_file_actions_adddup2(
++        &actions, STDERR_FILENO, STDERR_FILENO
++    ))
++    try cliMechanicsCheckSpawn(posix_spawn_file_actions_adddup2(
++        &actions, writeFD, childAckFD
++    ))
++    try cliMechanicsCheckSpawn(posix_spawn_file_actions_addclose(&actions, writeFD))
++
++    var attributes: posix_spawnattr_t?
++    code = posix_spawnattr_init(&attributes)
++    guard code == 0 else {
++        throw CliMechanicsNativeFixtureError.systemCall("spawn attributes init", code)
++    }
++    defer { posix_spawnattr_destroy(&attributes) }
++    var defaultSignals = sigset_t()
++    var signalMask = sigset_t()
++    guard sigemptyset(&defaultSignals) == 0,
++          sigaddset(&defaultSignals, SIGTERM) == 0,
++          sigemptyset(&signalMask) == 0
++    else { throw CliMechanicsNativeFixtureError.systemCall("spawn signals", errno) }
++    try cliMechanicsCheckSpawn(posix_spawnattr_setsigdefault(
++        &attributes, &defaultSignals
++    ))
++    try cliMechanicsCheckSpawn(posix_spawnattr_setsigmask(&attributes, &signalMask))
++    try cliMechanicsCheckSpawn(posix_spawnattr_setflags(
++        &attributes,
++        Int16(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK)
++    ))
++
++    let executable = try cliMechanicsCurrentRunnerURL().path
++    var argv = try cliMechanicsCStringVector([
++        executable, cliMechanicsFixtureSwitch,
++        CliMechanicsFixtureMode.heldStderrChild.rawValue, String(childAckFD),
++    ])
++    defer { cliMechanicsFreeCStringVector(argv) }
++    var envp = try cliMechanicsCStringVector(["LC_ALL=C", "PATH=/usr/bin:/bin"])
++    defer { cliMechanicsFreeCStringVector(envp) }
++    var child: pid_t = 0
++    code = executable.withCString { path in
++        argv.withUnsafeMutableBufferPointer { argvBuffer in
++            envp.withUnsafeMutableBufferPointer { envBuffer in
++                posix_spawn(
++                    &child, path, &actions, &attributes,
++                    argvBuffer.baseAddress, envBuffer.baseAddress
++                )
++            }
++        }
++    }
++    guard code == 0 else {
++        throw CliMechanicsNativeFixtureError.systemCall("spawn held child", code)
++    }
++    guard Darwin.close(writeFD) == 0 else {
++        let closeError = errno
++        writeFD = -1
++        try cliMechanicsRethrowAfterOwnedChildCleanup(
++            CliMechanicsNativeFixtureError.systemCall(
++                "parent ack write close", closeError
++            ),
++            child: child
++        )
++    }
++    writeFD = -1
++    do {
++        let acknowledgement = try cliMechanicsReadAcknowledgement(from: readFD)
++        guard acknowledgement == 0x41 else {
++            throw CliMechanicsNativeFixtureError.childAcknowledgement
++        }
++        guard Darwin.getpgid(child) == Darwin.getpgrp() else {
++            throw CliMechanicsNativeFixtureError.childProcessGroup
++        }
++        guard Darwin.close(readFD) == 0 else {
++            throw CliMechanicsNativeFixtureError.systemCall("parent ack read close", errno)
++        }
++        readFD = -1
++        try cliMechanicsWrite(Data("parent-exited\n".utf8), to: STDOUT_FILENO)
++    } catch {
++        try cliMechanicsRethrowAfterOwnedChildCleanup(error, child: child)
++    }
++}
++
++private func cliMechanicsNormalizeOwnedDescriptor(
++    _ descriptor: inout Int32,
++    minimum: Int32
++) throws {
++    guard descriptor >= 0 else {
++        throw CliMechanicsNativeFixtureError.systemCall("ack descriptor", EBADF)
++    }
++    if descriptor >= minimum {
++        guard Darwin.fcntl(descriptor, F_SETFD, FD_CLOEXEC) == 0 else {
++            throw CliMechanicsNativeFixtureError.systemCall("ack cloexec", errno)
++        }
++        return
++    }
++    let original = descriptor
++    let duplicate = Darwin.fcntl(original, F_DUPFD_CLOEXEC, minimum)
++    guard duplicate >= minimum else {
++        throw CliMechanicsNativeFixtureError.systemCall("ack duplicate", errno)
++    }
++    descriptor = duplicate
++    guard Darwin.close(original) == 0 else {
++        throw CliMechanicsNativeFixtureError.systemCall("ack original close", errno)
++    }
++}
++
++private func cliMechanicsRethrowAfterOwnedChildCleanup(
++    _ primary: any Error,
++    child: pid_t
++) throws -> Never {
++    do {
++        try cliMechanicsTerminateOwnedChild(child)
++    } catch {
++        throw CliMechanicsNativeFixtureError.childCleanup(
++            primary: String(describing: primary),
++            cleanup: String(describing: error)
++        )
++    }
++    throw primary
++}
++
++private func cliMechanicsRunHeldStderrChild(arguments: [String]) throws -> Never {
++    guard arguments.count == 1,
++          let descriptor = Int32(arguments[0]), descriptor == 3,
++          Darwin.fcntl(descriptor, F_GETFD) >= 0
++    else { throw CliMechanicsNativeFixtureError.invalidArguments }
++    try cliMechanicsWrite(Data([0x41]), to: descriptor)
++    guard Darwin.close(descriptor) == 0 else {
++        throw CliMechanicsNativeFixtureError.systemCall("child ack close", errno)
++    }
++    try cliMechanicsWaitForever()
++}
++
++private func cliMechanicsTerminateOwnedChild(_ child: pid_t) throws {
++    if Darwin.kill(child, SIGKILL) != 0, errno != ESRCH {
++        throw CliMechanicsNativeFixtureError.systemCall("child kill", errno)
++    }
++    var status: Int32 = 0
++    while true {
++        let result = Darwin.waitpid(child, &status, 0)
++        if result == child { return }
++        if result < 0, errno == EINTR { continue }
++        if result < 0, errno == ECHILD { return }
++        throw CliMechanicsNativeFixtureError.systemCall("child reap", errno)
++    }
++}
++
++private func cliMechanicsReadAcknowledgement(from descriptor: Int32) throws -> UInt8 {
++    var acknowledgement: UInt8 = 0
++    while true {
++        let count = withUnsafeMutableBytes(of: &acknowledgement) { bytes in
++            Darwin.read(descriptor, bytes.baseAddress, 1)
++        }
++        if count == 1 { return acknowledgement }
++        if count < 0, errno == EINTR { continue }
++        if count == 0 { throw CliMechanicsNativeFixtureError.childAcknowledgement }
++        throw CliMechanicsNativeFixtureError.systemCall("ack read", errno)
++    }
++}
++
++private func cliMechanicsReportEnvironmentSentinel() throws {
++    func value(_ key: String) -> String? {
++        key.withCString { keyPointer in
++            guard let raw = getenv(keyPointer) else { return nil }
++            return String(cString: raw)
++        }
++    }
++    guard let sentinel = value("AGENTLOOP_FIXTURE_SENTINEL"),
++          sentinel == "present" else {
++        throw CliMechanicsNativeFixtureError.invalidEnvironment
++    }
++    let report = "environment-sentinel=present;path=\(value("PATH") == "/usr/bin:/bin" ? 1 : 0);locale=\(value("LC_ALL") == "C" ? 1 : 0);home=\(value("HOME") == nil ? 0 : 1);tmpdir=\(value("TMPDIR") == nil ? 0 : 1)\n"
++    try cliMechanicsWrite(Data(report.utf8), to: STDOUT_FILENO)
++}
++
++private func cliMechanicsCheckSpawn(_ code: Int32) throws {
++    guard code == 0 else {
++        throw CliMechanicsNativeFixtureError.systemCall("spawn setup", code)
++    }
++}
++
++private func cliMechanicsCStringVector(
++    _ strings: [String]
++) throws -> [UnsafeMutablePointer<CChar>?] {
++    var result: [UnsafeMutablePointer<CChar>?] = []
++    result.reserveCapacity(strings.count + 1)
++    for string in strings {
++        guard let pointer = strdup(string) else {
++            cliMechanicsFreeCStringVector(result)
++            throw CliMechanicsNativeFixtureError.systemCall("argv allocation", ENOMEM)
++        }
++        result.append(pointer)
++    }
++    result.append(nil)
++    return result
++}
++
++private func cliMechanicsFreeCStringVector(
++    _ vector: [UnsafeMutablePointer<CChar>?]
++) {
++    for case let pointer? in vector { free(pointer) }
++}

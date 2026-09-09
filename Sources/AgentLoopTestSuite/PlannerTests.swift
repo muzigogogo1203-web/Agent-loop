@@ -239,3 +239,320 @@ private func persist(_ result: PlanResult, db: AppDatabase, missionId: String) t
     guard case .text(let user) = history.first?.content.first else { return }
     #expect(!user.contains("营地笔记"))
 }
+
+private actor DurablePlannerScriptProvider: LLMProvider {
+    enum Step: Sendable {
+        case turn(TurnResult)
+        case providerFailure(ProviderError)
+        case urlFailure
+        case unknownFailure
+        case cancellation
+    }
+
+    private var steps: [Step]
+    private(set) var callCount = 0
+    private(set) var recordedHistories: [[APIMessage]] = []
+
+    init(steps: [Step]) {
+        self.steps = steps
+    }
+
+    nonisolated func streamTurn(
+        system: String,
+        history: [APIMessage],
+        tools: [ToolDef],
+        toolChoice: ToolChoice,
+        maxTokens: Int
+    ) -> AsyncThrowingStream<ProviderEvent, Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                let step = await self.next(history: history)
+                switch step {
+                case .turn(let turn):
+                    continuation.yield(.turn(turn))
+                    continuation.finish()
+                case .providerFailure(let error):
+                    continuation.finish(throwing: error)
+                case .urlFailure:
+                    continuation.finish(
+                        throwing: URLError(.timedOut)
+                    )
+                case .unknownFailure:
+                    continuation.finish(
+                        throwing: DurablePlannerUnknownError()
+                    )
+                case .cancellation:
+                    continuation.finish(throwing: CancellationError())
+                }
+            }
+        }
+    }
+
+    private func next(history: [APIMessage]) -> Step {
+        callCount += 1
+        recordedHistories.append(history)
+        guard !steps.isEmpty else {
+            return .providerFailure(
+                .malformedStream("durable planner script exhausted")
+            )
+        }
+        return steps.removeFirst()
+    }
+}
+
+private struct DurablePlannerUnknownError: Error {}
+
+private func durablePlannerRoster() -> [CompanionRecord] {
+    [
+        CompanionRecord.new(
+            name: "规划牛",
+            color: "blue",
+            rolePrompt: "负责规划",
+            model: "planner-model"
+        ),
+    ]
+}
+
+private func capturedPlanningAttemptFailure(
+    _ operation: () async throws -> Void
+) async -> PlanningAttemptFailure? {
+    do {
+        try await operation()
+        Issue.record("expected PlanningAttemptFailure")
+        return nil
+    } catch let failure as PlanningAttemptFailure {
+        return failure
+    } catch {
+        Issue.record("unexpected planner error: \(type(of: error))")
+        return nil
+    }
+}
+
+@Test func providerFailureIsNotConvertedToFallbackCard() async throws {
+    let provider = DurablePlannerScriptProvider(
+        steps: [
+            .providerFailure(.unauthorized),
+        ]
+    )
+    let planner = Planner(provider: provider)
+
+    let failure = try #require(
+        await capturedPlanningAttemptFailure {
+            _ = try await planner.proposeDurable(
+                goal: "交付结果",
+                roster: durablePlannerRoster(),
+                workspacePath: nil
+            )
+        }
+    )
+
+    #expect(failure.failure.code == "planning_provider_unauthorized")
+    #expect(failure.failure.disposition == .deterministic)
+    #expect(failure.failure.message == "规划模型凭据无效或无权限。")
+    #expect(failure.usage == nil)
+    #expect(await provider.callCount == 1)
+}
+
+@Test func planningContractInvalidDoesNotFallback() async throws {
+    let provider = DurablePlannerScriptProvider(
+        steps: [
+            .turn(
+                TurnResult(
+                    content: [.text("没有调用工具")],
+                    stopReason: .endTurn,
+                    usage: Usage(
+                        inputTokens: 2,
+                        outputTokens: 3,
+                        cacheReadTokens: 5
+                    )
+                )
+            ),
+            .turn(
+                TurnResult(
+                    content: [.text("仍然没有调用工具")],
+                    stopReason: .endTurn,
+                    usage: Usage(
+                        inputTokens: 7,
+                        outputTokens: 11,
+                        cacheReadTokens: 13
+                    )
+                )
+            ),
+        ]
+    )
+    let planner = Planner(provider: provider)
+
+    let failure = try #require(
+        await capturedPlanningAttemptFailure {
+            _ = try await planner.proposeDurable(
+                goal: "交付结果",
+                roster: durablePlannerRoster(),
+                workspacePath: nil
+            )
+        }
+    )
+
+    #expect(failure.failure.code == "planning_contract_invalid")
+    #expect(failure.failure.disposition == .deterministic)
+    #expect(
+        failure.usage == Usage(
+            inputTokens: 9,
+            outputTokens: 14,
+            cacheReadTokens: 18
+        )
+    )
+    #expect(await provider.callCount == 2)
+}
+
+@Test func plannerRetriesOnlySchemaCorrectionAndPreservesFirstTurnUsage()
+    async throws
+{
+    let provider = DurablePlannerScriptProvider(
+        steps: [
+            .turn(
+                TurnResult(
+                    content: [
+                        .toolUse(
+                            id: "invalid-plan",
+                            name: "propose_plan",
+                            input: proposalInput(
+                                cards: [
+                                    cardDraftInput(
+                                        title: "A",
+                                        dependsOn: [1]
+                                    ),
+                                ]
+                            )
+                        ),
+                    ],
+                    stopReason: .toolUse,
+                    usage: Usage(
+                        inputTokens: 17,
+                        outputTokens: 19,
+                        cacheReadTokens: 23
+                    )
+                )
+            ),
+            .providerFailure(
+                .http(status: 503, body: "secret provider body")
+            ),
+        ]
+    )
+    let planner = Planner(provider: provider)
+
+    let failure = try #require(
+        await capturedPlanningAttemptFailure {
+            _ = try await planner.proposeDurable(
+                goal: "交付结果",
+                roster: durablePlannerRoster(),
+                workspacePath: nil
+            )
+        }
+    )
+
+    #expect(failure.failure.code == "planning_provider_unavailable")
+    #expect(failure.failure.disposition == .transient)
+    #expect(failure.failure.message == "规划模型服务暂时不可用。")
+    #expect(!failure.failure.message!.contains("secret provider body"))
+    #expect(
+        failure.usage == Usage(
+            inputTokens: 17,
+            outputTokens: 19,
+            cacheReadTokens: 23
+        )
+    )
+    #expect(await provider.callCount == 2)
+    let histories = await provider.recordedHistories
+    let correctionHistory = try #require(histories.last)
+    guard case .toolResult(let id, let content, let isError) =
+        correctionHistory.last?.content.first
+    else {
+        Issue.record("expected schema correction tool result")
+        return
+    }
+    #expect(id == "invalid-plan")
+    #expect(isError)
+    #expect(content.contains("dependsOn"))
+}
+
+@Test func durablePlannerMapsProviderFailuresToStableTypedFailures()
+    async throws
+{
+    let cases: [
+        (
+            DurablePlannerScriptProvider.Step,
+            String,
+            DurableWorkFailureDisposition
+        )
+    ] = [
+        (.urlFailure, "planning_transport_error", .transient),
+        (
+            .providerFailure(.http(status: 429, body: "raw")),
+            "planning_provider_unavailable",
+            .transient
+        ),
+        (
+            .providerFailure(.http(status: 400, body: "raw")),
+            "planning_provider_http_error",
+            .deterministic
+        ),
+        (
+            .providerFailure(.overloadedRetriesExhausted),
+            "planning_provider_unavailable",
+            .transient
+        ),
+        (
+            .providerFailure(.malformedStream("raw")),
+            "planning_provider_malformed_response",
+            .transient
+        ),
+        (
+            .providerFailure(
+                .apiError(type: "server_error", message: "raw")
+            ),
+            "planning_provider_unavailable",
+            .transient
+        ),
+        (
+            .providerFailure(
+                .apiError(type: "invalid_request", message: "raw")
+            ),
+            "planning_provider_api_error",
+            .deterministic
+        ),
+        (.unknownFailure, "planning_provider_failed", .deterministic),
+    ]
+
+    for (step, expectedCode, expectedDisposition) in cases {
+        let provider = DurablePlannerScriptProvider(steps: [step])
+        let planner = Planner(provider: provider)
+        let failure = try #require(
+            await capturedPlanningAttemptFailure {
+                _ = try await planner.proposeDurable(
+                    goal: "交付结果",
+                    roster: durablePlannerRoster(),
+                    workspacePath: nil
+                )
+            }
+        )
+        #expect(failure.failure.code == expectedCode)
+        #expect(failure.failure.disposition == expectedDisposition)
+        #expect(failure.failure.message?.contains("raw") == false)
+        #expect(failure.usage == nil)
+        #expect(await provider.callCount == 1)
+    }
+}
+
+@Test func durablePlannerPreservesCancellationError() async {
+    let provider = DurablePlannerScriptProvider(steps: [.cancellation])
+    let planner = Planner(provider: provider)
+
+    await #expect(throws: CancellationError.self) {
+        _ = try await planner.proposeDurable(
+            goal: "交付结果",
+            roster: durablePlannerRoster(),
+            workspacePath: nil
+        )
+    }
+    #expect(await provider.callCount == 1)
+}

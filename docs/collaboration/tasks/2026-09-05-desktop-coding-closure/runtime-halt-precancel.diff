@@ -1,0 +1,280 @@
+--- before/RuntimeLifecycleDiagnostics.swift
++++ after/RuntimeLifecycleDiagnostics.swift
+@@ -51,6 +51,17 @@
+     case haltProviderCancellationCaught, haltProviderCancellationRecorded
+     case haltProviderWaitStarted, haltProviderWaitEnded
+     case haltPlannerGateEntered, haltPlannerGateOpened
++    case haltCoordinatorEntered, haltCoordinatorStateLoadCalled, haltCoordinatorStateLoadReturned
++    case haltStateReadCalled, haltStateReadBodyEntered, haltStateReadBodyReturned
++    case haltCoordinatorTerminalPath
++    case haltClaimCancellationCalled, haltClaimCancellationEntered
++    case haltClaimCancellationSelected, haltClaimCancellationReturned
++    case haltInstalledCancellationQueued, haltInstalledCancellationStarted
++    case haltInstalledGateOpenCalled, haltInstalledGateOpenReturned
++    case haltInstalledGateWaitCalled, haltInstalledGateWaitReturned
++    case haltCancellationObserverCalled, haltCancellationObserverReturned
++    case haltCancellationResolveCalled, haltCancellationStateEntered
++    case haltCancellationStateSelected, haltCancellationResolverCalled
+ }
+ 
+ package enum RuntimeLifecycleDiagnostics {
+--- before/Orchestrator.swift
++++ after/Orchestrator.swift
+@@ -662,6 +662,9 @@
+         handle: EngineExecutionCompletionHandleV1,
+         reason proposedReason: String
+     ) async throws -> EngineTerminalCommitReceiptV1 {
++        haltExecutionDiagnosticEvent(
++            .haltCancellationStateEntered, executionId: handle.executionId
++        )
+         try EngineContractValidationV1.validateReasonCode(proposedReason)
+         if let reason {
+             guard reason == proposedReason else {
+@@ -670,8 +673,18 @@
+         } else {
+             reason = proposedReason
+         }
+-        if let resolvedReceipt { return resolvedReceipt }
++        if let resolvedReceipt {
++            haltExecutionDiagnosticEvent(
++                .haltCancellationStateSelected, executionId: handle.executionId,
++                value: 1
++            )
++            return resolvedReceipt
++        }
+         if resolutionInFlight {
++            haltExecutionDiagnosticEvent(
++                .haltCancellationStateSelected, executionId: handle.executionId,
++                value: 2
++            )
+             return try await withCheckedThrowingContinuation {
+                 resolutionWaiters.append($0)
+             }
+@@ -679,9 +692,18 @@
+         guard let resolver, !resolverDiscarded else {
+             throw EngineDispatchConflictErrorV1()
+         }
++        haltExecutionDiagnosticEvent(
++            .haltCancellationStateSelected, executionId: handle.executionId,
++            value: 3
++        )
+         self.resolver = nil
+         resolutionInFlight = true
+         do {
++            haltExecutionDiagnosticEvent(
++                .haltCancellationResolverCalled,
++                executionId: handle.executionId,
++                value: 0
++            )
+             let receipt = try await resolver(handle, proposedReason)
+             guard receipt.executionId == handle.executionId else {
+                 throw EngineDispatchConflictErrorV1()
+@@ -1430,6 +1452,9 @@
+         makeHandle: @Sendable () throws
+             -> EngineExecutionCompletionHandleV1
+     ) async throws -> EngineExecutionCompletionTaskClaimV1 {
++        haltExecutionDiagnosticEvent(
++            .haltClaimCancellationEntered, executionId: executionId
++        )
+         try validateExecutionID(executionId)
+         try EngineContractValidationV1.validateReasonCode(reason)
+         let handle: EngineExecutionCompletionHandleV1
+@@ -1469,6 +1494,10 @@
+            entry.authorizedReceipt != nil
+         {
+             entries[executionId] = entry
++            haltExecutionDiagnosticEvent(
++                .haltClaimCancellationSelected, executionId: executionId,
++                value: 1
++            )
+             return EngineExecutionCompletionTaskClaimV1(
+                 handle: handle,
+                 task: current.outcomeTask,
+@@ -1482,6 +1511,10 @@
+            current.phase == .terminalOwned
+         {
+             entries[executionId] = entry
++            haltExecutionDiagnosticEvent(
++                .haltClaimCancellationSelected, executionId: executionId,
++                value: 2
++            )
+             return EngineExecutionCompletionTaskClaimV1(
+                 handle: handle,
+                 task: current.outcomeTask,
+@@ -1495,6 +1528,10 @@
+                 throw EngineDispatchConflictErrorV1()
+             }
+             entries[executionId] = entry
++            haltExecutionDiagnosticEvent(
++                .haltClaimCancellationSelected, executionId: executionId,
++                value: entry.attempt?.cancellation?.origin == .primary ? 3 : 4
++            )
+             return EngineExecutionCompletionTaskClaimV1(
+                 handle: handle,
+                 task: entry.attempt!.outcomeTask,
+@@ -1512,6 +1549,10 @@
+                 throw EngineDispatchConflictErrorV1()
+             }
+             entries[executionId] = entry
++            haltExecutionDiagnosticEvent(
++                .haltClaimCancellationSelected, executionId: executionId,
++                value: 5
++            )
+             return EngineExecutionCompletionTaskClaimV1(
+                 handle: handle,
+                 task: current.outcomeTask,
+@@ -1543,9 +1584,21 @@
+             standaloneExternalOwner: didInstallStandaloneOwner
+         )
+         entries[executionId] = entry
++        haltExecutionDiagnosticEvent(
++            .haltClaimCancellationSelected, executionId: executionId,
++            value: didInstallStandaloneOwner ? 7 : 6
++        )
+         installed.primaryToCancel?.cancel()
+         do {
++            haltExecutionDiagnosticEvent(
++                .haltInstalledGateOpenCalled, executionId: executionId,
++                value: 0
++            )
+             try await installed.gate.open()
++            haltExecutionDiagnosticEvent(
++                .haltInstalledGateOpenReturned, executionId: executionId,
++                value: 0
++            )
+         } catch {
+             installed.task.cancel()
+             throw error
+@@ -1622,7 +1675,15 @@
+         entries[executionId] = entry
+         installed.primaryToCancel?.cancel()
+         do {
++            haltExecutionDiagnosticEvent(
++                .haltInstalledGateOpenCalled, executionId: executionId,
++                value: 1
++            )
+             try await installed.gate.open()
++            haltExecutionDiagnosticEvent(
++                .haltInstalledGateOpenReturned, executionId: executionId,
++                value: 1
++            )
+         } catch {
+             installed.task.cancel()
+             throw error
+@@ -1686,11 +1747,35 @@
+         if origin == .external {
+             outcome.suppressPrimaryResolution()
+         }
++        haltExecutionDiagnosticEvent(
++            .haltInstalledCancellationQueued, executionId: executionId,
++            value: origin == .external ? 0 : 1
++        )
+         let task = Task {
++            haltExecutionDiagnosticEvent(
++                .haltInstalledCancellationStarted, executionId: executionId,
++                value: origin == .external ? 0 : 1
++            )
+             let result: Result<EngineTerminalCommitReceiptV1, any Error>
+             do {
++                haltExecutionDiagnosticEvent(
++                    .haltInstalledGateWaitCalled, executionId: executionId,
++                    value: origin == .external ? 0 : 1
++                )
+                 try await gate.waitUntilOpened()
++                haltExecutionDiagnosticEvent(
++                    .haltInstalledGateWaitReturned, executionId: executionId,
++                    value: origin == .external ? 0 : 1
++                )
++                haltExecutionDiagnosticEvent(
++                    .haltCancellationObserverCalled, executionId: executionId,
++                    value: origin == .external ? 0 : 1
++                )
+                 await self.cancellationCommandObserver(executionId)
++                haltExecutionDiagnosticEvent(
++                    .haltCancellationObserverReturned, executionId: executionId,
++                    value: origin == .external ? 0 : 1
++                )
+                 if standaloneExternalOwner {
+                     try await handle
+                         .markStandaloneExternalCancellationOwner()
+@@ -1698,6 +1783,10 @@
+                 if let lifecycle {
+                     try await cancellationState.publishLifecycle(lifecycle)
+                 }
++                haltExecutionDiagnosticEvent(
++                    .haltCancellationResolveCalled, executionId: executionId,
++                    value: origin == .external ? 0 : 1
++                )
+                 result = .success(
+                     try await cancellationState.resolve(
+                         handle: handle,
+@@ -2386,9 +2475,23 @@
+         executionId: String,
+         reason: String
+     ) async throws {
++        haltExecutionDiagnosticEvent(
++            .haltCoordinatorEntered, executionId: executionId
++        )
+         try EngineContractValidationV1.validateReasonCode(reason)
++        haltExecutionDiagnosticEvent(
++            .haltCoordinatorStateLoadCalled, executionId: executionId
++        )
+         let execution = try loadExecutionAnyState(executionId)
++        haltExecutionDiagnosticEvent(
++            .haltCoordinatorStateLoadReturned, executionId: executionId,
++            value: execution.state == .running ? 0 : 1
++        )
+         if execution.state != .running {
++            haltExecutionDiagnosticEvent(
++                .haltCoordinatorTerminalPath, executionId: executionId,
++                value: 1
++            )
+             guard case let .terminalWon(receipt) = try store
+                 .requestCancellation(
+                     executionId: executionId,
+@@ -2405,6 +2508,10 @@
+             executionId: execution.id,
+             workspace: nil
+         )
++        haltExecutionDiagnosticEvent(
++            .haltClaimCancellationCalled, executionId: execution.id,
++            value: 0
++        )
+         let claimed = try await completionRegistry.claimCancellation(
+             executionId: execution.id,
+             reason: reason,
+@@ -2421,6 +2528,10 @@
+                 )
+             }
+         )
++        haltExecutionDiagnosticEvent(
++            .haltClaimCancellationReturned, executionId: execution.id,
++            value: 0
++        )
+         if !claimed.didInstallGeneration { release.releaseWorkspace() }
+         _ = try await claimed.task.value
+     }
+@@ -2891,7 +3002,13 @@
+         } catch {
+             throw EngineDispatchConflictErrorV1()
+         }
++        haltExecutionDiagnosticEvent(
++            .haltStateReadCalled, executionId: executionId
++        )
+         return try contextResolver.database.pool.read { database in
++            haltExecutionDiagnosticEvent(
++                .haltStateReadBodyEntered, executionId: executionId
++            )
+             guard let execution = try EngineExecutionRecord.fetchOne(
+                 database,
+                 key: executionId
+@@ -2900,6 +3017,9 @@
+             else {
+                 throw EngineDispatchConflictErrorV1()
+             }
++            haltExecutionDiagnosticEvent(
++                .haltStateReadBodyReturned, executionId: executionId
++            )
+             return execution
+         }
+     }

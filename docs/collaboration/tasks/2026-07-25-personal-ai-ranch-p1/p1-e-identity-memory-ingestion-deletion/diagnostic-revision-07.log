@@ -1,0 +1,72 @@
+P1-E REVISION 07 READ-ONLY DIAGNOSTIC SNAPSHOT
+date=2026-08-27
+repository=/Users/muzi/Agent-loop
+branch=codex/personal-ai-ranch-p0
+head=02334ec8d21533be81d93d39191bc7d9b9c24f7f
+
+AUTHORITATIVE DEFAULT-PARALLEL RED
+source=verify-revision-07-red.log
+sha256=8ab32c3445412823bf0f4ccf117c79f3b7d5ed464a4da43cebdf81dd66640f7d
+tests=992
+suites=24
+issues=4
+elapsed_seconds=60.079
+command_code=1
+tee_code=0
+
+failure.shutdown=test wall-clock elapsed 1.784037209s exceeded 1s
+failure.cooldown=second card acquired a run before the test's fixed 400ms window assertion
+failure.board_framing=receiveTimedOut after 5.564s
+failure.board_failed_connect_fd=process-global /dev/fd delta was +2
+
+DEFAULT-PARALLEL LOAD ACCOUNTING
+logical_cpus=10
+peak_simultaneously_active_tests=657
+active_at_cooldown_start=418
+active_at_shutdown_start=491
+other_active_at_board_framing_start=183
+other_active_at_board_fd_measurement=21
+board_suite_serialization_scope=suite-local only
+runner_sha256=70417b226a6a3b83f2ef876628028a87618392cbb0688de903ce9d10305dbfd3
+
+SHUTDOWN AND COOLDOWN CONTROL RUNS
+pair_run_1_sha256=2ab40f6b41fbdb53b694c6a4ce1b2e3dccd2610564d7245e2498609581b6f262
+pair_run_2_sha256=42eecb5a052ac0871a082efa1fb7ef7ab39a0f95455b10420f34d1c5c33b5c02
+pair_run_3_sha256=e233f3ce82775a91af210eb1d4d0420cf6f97ed6c67da2719996f943fca74a8f
+pair_run_4_sha256=74bbf2d58e79948602cf87d76ce923716637b30a35cf141a6147ad3b85521d37
+pair_run_5_sha256=39fe4ce7ab69c132a43adeb77bdfa1935104d9c9b8f8f6095f928395316dd7ab
+pair_runs=5/5 green
+shutdown_isolated_5x=green, 0.112s..0.151s
+shutdown_pair_5x=green, 0.121s..0.135s
+shutdown_serial_full=green, 0.103s
+cooldown_isolated_5x=green, 0.670s..0.704s
+cooldown_pair_5x=green, 0.688s..0.708s
+cooldown_serial_full=green, 0.686s
+shutdown_root=test uses a real scheduler-dependent deadline despite an existing injected sleep seam
+cooldown_root=test consumes a real fixed 400ms window while the product hard-codes ContinuousClock.now
+
+BOARD CONTROL RUNS AND OWNERSHIP ACCOUNTING
+baseline_run_1_sha256=be3e82e5cb150ffded4e70fe14495f7b8dd11b00ce39ca2cd7e58d60f1af8927
+baseline_run_10_sha256=7710f7f6c0eef9279b807c65b1dafecdc44ae791163d115b90316ff2d2137068
+framing_plus_failed_connect_isolated=10/10 green
+board_first_four_sha256=5771670e7893a59a6618e34a9568960d7dc2e5b5ac1e97edacca30d03f27a325
+board_first_four_global_fd_delta=-2
+board_112_run_2_sha256=06bd9aedf486149f46ca119a9c12a05e95658e73561c561ca60708edb79b9730
+board_112_run_3_sha256=789fa43fc8b6d12d4d09ac3f604fc7d065d2f4e7c6f5331d30395d38c06c6e63
+board_112_three_runs=green, framing 1.746s/2.979s/2.105s
+board_sample_sha256=7c4f1f696482e2cb944e7bea228289c385d7c8d82fe0f8e628b57ba5fdef7a1a
+board_sample_client_read_blocked=557/586 samples
+board_sample_later_tool_semaphore_wait=27 samples
+board_revision06_failed_init_catch_close=present
+board_failed_connect_isolated_owned_leak=none
+board_fd_root=/dev/fd is process-global and changes in both directions under unrelated test lifecycle
+board_framing_root=functional test shares a global utility handler queue with unrelated default-parallel load
+
+BOUNDED CONCLUSIONS
+1=DurableWorkSupervisor state machine and cancellation-ignoring provider double remain unchanged.
+2=Replace the shutdown wall-clock assertion with a controlled injected-deadline causal proof.
+3=Inject package-only monotonic now into Orchestrator cooldown set/check and use a manual instant in the test.
+4=Keep BoardToolServer production bytes and every socket timeout/protocol assertion unchanged.
+5=Use a dedicated ready serial handler queue only in the Board framing functional test.
+6=Replace process-global FD delta with synchronous per-client open/real-close ownership observations.
+7=Do not disable default parallelism, rerun the full gate by chance, extend durations, or lower assertions.

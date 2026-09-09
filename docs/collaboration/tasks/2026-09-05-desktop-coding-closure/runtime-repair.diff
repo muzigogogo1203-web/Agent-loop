@@ -1,0 +1,423 @@
+diff --git a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-repair-before/Sources/AgentLoopCore/Kernel/Orchestrator.swift b/Sources/AgentLoopCore/Kernel/Orchestrator.swift
+index 4f776d3..9e4785e 100644
+--- a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-repair-before/Sources/AgentLoopCore/Kernel/Orchestrator.swift
++++ b/Sources/AgentLoopCore/Kernel/Orchestrator.swift
+@@ -8190,7 +8190,7 @@ package final class EngineManagedProbeLiveDrainV1:
+             owner: diagnosticId,
+             value: streamValue
+         )
+-        DispatchQueue.global(qos: .utility).async {
++        let worker = Thread {
+             [state, control, group, diagnosticId] in
+             RuntimeLifecycleDiagnostics.event(
+                 .drainStarted,
+@@ -8276,6 +8276,11 @@ package final class EngineManagedProbeLiveDrainV1:
+                 return
+             }
+         }
++        worker.name = standardError
++            ? "AgentLoop.managed-probe.stderr"
++            : "AgentLoop.managed-probe.stdout"
++        worker.qualityOfService = .utility
++        worker.start()
+     }
+ }
+ 
+diff --git a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-repair-before/Sources/AgentLoopCore/Loop/BoardToolServer.swift b/Sources/AgentLoopCore/Loop/BoardToolServer.swift
+index 66cb0f8..2769f43 100644
+--- a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-repair-before/Sources/AgentLoopCore/Loop/BoardToolServer.swift
++++ b/Sources/AgentLoopCore/Loop/BoardToolServer.swift
+@@ -50,8 +50,8 @@ public final class BoardToolServer: @unchecked Sendable {
+     private let progressSink: any EngineProgressSink
+     private let validatePeer: EngineBoardPeerValidateV1
+     private let onTerminalAccepted: @Sendable () -> Void
+-    private let acceptQueue: DispatchQueue
+-    private let handlerQueue: DispatchQueue
++    private let acceptQueue: DispatchQueue?
++    private let handlerQueue: DispatchQueue?
+     private let diagnosticId = UUID()
+     private let acceptGroup = DispatchGroup()
+     private let handlerGroup = DispatchGroup()
+@@ -67,6 +67,8 @@ public final class BoardToolServer: @unchecked Sendable {
+     private var socketCleanupComplete = false
+     private var terminalIntentAccepted = false
+     private var asyncFailure: BoardToolServerError?
++    private var asyncStopInFlight = false
++    private var asyncStopWaiters: [CheckedContinuation<Void, any Error>] = []
+ 
+     package init(
+         directoryAuthority: EngineBoardSocketDirectoryAuthorityV1,
+@@ -78,8 +80,8 @@ public final class BoardToolServer: @unchecked Sendable {
+         boundCapabilityTools: EngineBoundCapabilityToolsV1,
+         validatePeer: @escaping EngineBoardPeerValidateV1,
+         onTerminalAccepted: @escaping @Sendable () -> Void,
+-        acceptQueue: DispatchQueue,
+-        handlerQueue: DispatchQueue
++        acceptQueue: DispatchQueue? = nil,
++        handlerQueue: DispatchQueue? = nil
+     ) throws {
+         try CanonicalContractCodingV1.validateCanonicalUUID(cardId)
+         guard Self.isLowercaseHex(token, count: 64),
+@@ -327,7 +329,8 @@ public final class BoardToolServer: @unchecked Sendable {
+             .boardAcceptQueued,
+             owner: diagnosticId
+         )
+-        acceptQueue.async { [weak self, group, diagnosticId] in
++        Self.scheduleWorker(on: acceptQueue, name: "AgentLoop.board.accept") {
++            [weak self, group, diagnosticId] in
+             RuntimeLifecycleDiagnostics.event(
+                 .boardAcceptStarted,
+                 owner: diagnosticId
+@@ -343,6 +346,52 @@ public final class BoardToolServer: @unchecked Sendable {
+         }
+     }
+ 
++    private static func scheduleWorker(
++        on queue: DispatchQueue?,
++        name: String,
++        work: @escaping @Sendable () -> Void
++    ) {
++        if let queue {
++            queue.async(execute: work)
++        } else {
++            let worker = Thread(block: work)
++            worker.name = name
++            worker.qualityOfService = .utility
++            worker.start()
++        }
++    }
++
++    package func stopAsync() async throws {
++        // Cancellation of an awaiting caller never abandons owned cleanup.
++        try await withCheckedThrowingContinuation {
++            (continuation: CheckedContinuation<Void, any Error>) in
++            let shouldStart = lock.withLock {
++                asyncStopWaiters.append(continuation)
++                guard !asyncStopInFlight else { return false }
++                asyncStopInFlight = true
++                return true
++            }
++            guard shouldStart else { return }
++            Self.scheduleWorker(on: nil, name: "AgentLoop.board.stop") { [self] in
++                let result: Result<Void, any Error>
++                do {
++                    try stop()
++                    result = .success(())
++                } catch {
++                    result = .failure(error)
++                }
++                let waiters = lock.withLock {
++                    let waiters = asyncStopWaiters
++                    asyncStopWaiters.removeAll()
++                    asyncStopInFlight = false
++                    return waiters
++                }
++                // Reset before resuming so a later caller can retry checked cleanup.
++                for waiter in waiters { waiter.resume(with: result) }
++            }
++        }
++    }
++
+     package func stop() throws {
+         RuntimeLifecycleDiagnostics.event(
+             .boardStopStarted,
+@@ -592,7 +641,8 @@ public final class BoardToolServer: @unchecked Sendable {
+                 .boardHandlerQueued,
+                 owner: diagnosticId
+             )
+-            handlerQueue.async { [self, group, diagnosticId] in
++            Self.scheduleWorker(on: handlerQueue, name: "AgentLoop.board.handler") {
++                [self, group, diagnosticId] in
+                 RuntimeLifecycleDiagnostics.event(
+                     .boardHandlerStarted,
+                     owner: diagnosticId
+diff --git a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-repair-before/Sources/AgentLoopCore/Loop/CliProcessBackend.swift b/Sources/AgentLoopCore/Loop/CliProcessBackend.swift
+index d92fe20..b19f813 100644
+--- a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-repair-before/Sources/AgentLoopCore/Loop/CliProcessBackend.swift
++++ b/Sources/AgentLoopCore/Loop/CliProcessBackend.swift
+@@ -652,9 +652,7 @@ private final class CliProcessExecution: @unchecked Sendable {
+                 },
+                 onTerminalAccepted: { [weak self] in
+                     self?.requestStreamCancellation()
+-                },
+-                acceptQueue: DispatchQueue.global(qos: .utility),
+-                handlerQueue: DispatchQueue.global(qos: .utility)
++                }
+             )
+             server = boardServer
+             try boardServer.start()
+@@ -683,7 +681,7 @@ private final class CliProcessExecution: @unchecked Sendable {
+                 var cleanupFailed = false
+                 if let server {
+                     do {
+-                        try server.stop()
++                        try await server.stopAsync()
+                     } catch {
+                         cleanupFailed = true
+                     }
+@@ -1210,7 +1208,7 @@ private final class CliProcessExecution: @unchecked Sendable {
+             owner: diagnosticId
+         )
+         do {
+-            try core.server.stop()
++            try await core.server.stopAsync()
+             RuntimeLifecycleDiagnostics.event(
+                 .cliServerStopFinished,
+                 owner: diagnosticId,
+diff --git a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-repair-before/Sources/AgentLoopTestSuite/BoardServerTests.swift b/Sources/AgentLoopTestSuite/BoardServerTests.swift
+index 2e4ed4a..eaceba3 100644
+--- a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-repair-before/Sources/AgentLoopTestSuite/BoardServerTests.swift
++++ b/Sources/AgentLoopTestSuite/BoardServerTests.swift
+@@ -206,6 +206,62 @@ private final class BoardServerStopProbe: @unchecked Sendable {
+     var failed: Bool? { lock.withLock { errorStorage } }
+ }
+ 
++private final class BoardAsyncStopTestLatch: @unchecked Sendable {
++    private let lock = NSLock()
++    private var result: Result<Void, any Error>?
++    private var waiters: [CheckedContinuation<Void, any Error>] = []
++
++    var finished: Bool { lock.withLock { result != nil } }
++
++    func finish(_ result: Result<Void, any Error> = .success(())) {
++        let pending = lock.withLock { () -> [CheckedContinuation<Void, any Error>] in
++            guard self.result == nil else { return [] }
++            self.result = result
++            let pending = waiters
++            waiters.removeAll()
++            return pending
++        }
++        for waiter in pending { waiter.resume(with: result) }
++    }
++
++    func wait(phase: String) async throws {
++        try await withCheckedThrowingContinuation {
++            (continuation: CheckedContinuation<Void, any Error>) in
++            let completed = lock.withLock { () -> Result<Void, any Error>? in
++                if let result { return result }
++                waiters.append(continuation)
++                return nil
++            }
++            if let completed {
++                continuation.resume(with: completed)
++            } else {
++                // This is failure containment, never an ordering delay.
++                DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
++                    self.finish(.failure(BoardToolServerError.socketCleanupFailed(
++                        "async stop test timed out: \(phase)"
++                    )))
++                }
++            }
++        }
++    }
++}
++
++private final class BoardSuspendedHandlerTestGate: @unchecked Sendable {
++    let queue = DispatchQueue(label: "board-async-stop-handler-test")
++    private let lock = NSLock()
++    private var released = false
++
++    init() { queue.suspend() }
++
++    func release() {
++        lock.withLock {
++            guard !released else { return }
++            released = true
++            queue.resume()
++        }
++    }
++}
++
+ private struct P1F1D078BoardSnapshot: Sendable {
+     let intents: [EngineBoardTerminalIntentV1]
+     let unexpectedErrorType: String?
+@@ -304,10 +360,8 @@ private final class P1F1D078BoardHarness: @unchecked Sendable {
+                 ),
+                 validatePeer: { try peerProbe.validate($0) },
+                 onTerminalAccepted: { acceptedCounter.increment() },
+-                acceptQueue: acceptQueue
+-                    ?? DispatchQueue.global(qos: .utility),
++                acceptQueue: acceptQueue,
+                 handlerQueue: handlerQueue
+-                    ?? DispatchQueue.global(qos: .utility)
+             )
+             if startServer {
+                 try server.start()
+@@ -358,10 +412,8 @@ private final class P1F1D078ServerFixture: @unchecked Sendable {
+                 boundCapabilityTools: boundCapabilityTools,
+                 validatePeer: { try peerProbe.validate($0) },
+                 onTerminalAccepted: { accepted.increment() },
+-                acceptQueue: acceptQueue
+-                    ?? DispatchQueue.global(qos: .userInitiated),
++                acceptQueue: acceptQueue,
+                 handlerQueue: handlerQueue
+-                    ?? DispatchQueue.global(qos: .userInitiated)
+             )
+         } catch {
+             let primary = error
+@@ -589,6 +641,103 @@ private final class P1F1D078ServerFixture: @unchecked Sendable {
+         client.close()
+     }
+ 
++    @Test(arguments: [false, true])
++    func boardServerAsyncStopJoinsCleanupDespiteCallerCancellation(
++        replaceSocket: Bool
++    ) async throws {
++        guard agentLoopCanBindListenerSocket() else { return }
++        let gate = BoardSuspendedHandlerTestGate()
++        var harness: P1F1D078BoardHarness?
++        var client: BoardSocketTestClient?
++        var probe: BoardSocketTestClient?
++        var movedSocket: URL?
++        defer {
++            // Every failure path unblocks the owned handler before joining it.
++            gate.release()
++            probe?.close()
++            client?.close()
++            if let movedSocket, let harness {
++                do {
++                    if FileManager.default.fileExists(atPath: harness.server.socketURL.path) {
++                        try FileManager.default.removeItem(at: harness.server.socketURL)
++                    }
++                    try FileManager.default.moveItem(at: movedSocket, to: harness.server.socketURL)
++                } catch {
++                    Issue.record("async stop test socket authority restoration failed: \(error)")
++                }
++            }
++            if let harness { Self.closeRecordingFailure(harness) }
++        }
++        let made = try Self.makeBoardHarness(startServer: true, handlerQueue: gate.queue)
++        harness = made
++        let server = made.server
++        let activeClient = try Self.connectClientWithRetry(path: server.socketURL.path)
++        client = activeClient
++        let secondClient = try Self.connectClientWithRetry(path: server.socketURL.path)
++        probe = secondClient
++        let sent = try secondClient.sendObservingPeerClosure([
++            "type": "hello", "token": .string(server.token), "cardId": .string(made.cardId),
++        ])
++        // Rejection proves the first connection owns the controlled handler slot.
++        try #require(sent ? (try secondClient.readRawLine() == nil) : true)
++        secondClient.close()
++        probe = nil
++
++        let arrivals = (0..<3).map { _ in BoardAsyncStopTestLatch() }
++        let completions = (0..<3).map { _ in BoardAsyncStopTestLatch() }
++        let callers = (0..<3).map { index in
++            Task {
++                arrivals[index].finish()
++                do {
++                    try await server.stopAsync()
++                    completions[index].finish()
++                } catch {
++                    completions[index].finish(.failure(error))
++                }
++            }
++        }
++        defer { for caller in callers { caller.cancel() } }
++        for arrival in arrivals { try await arrival.wait(phase: "caller arrival") }
++        // Arrival is not evidence that every caller registered as a stop waiter.
++        // EOF and closed listener establish that real cleanup has started.
++        try #require(try activeClient.readRawLine() == nil)
++        try Self.p1f1d078WaitForListenerClosed(path: server.socketURL.path)
++        for completion in completions { #expect(!completion.finished) }
++        callers[0].cancel()
++
++        if replaceSocket {
++            let moved = server.socketURL.deletingLastPathComponent()
++                .appendingPathComponent("original.sock")
++            try FileManager.default.moveItem(at: server.socketURL, to: moved)
++            movedSocket = moved
++            try Data("replacement sentinel".utf8).write(to: server.socketURL)
++        }
++        // Independent async test work must be able to release the join dependency.
++        await Task { gate.release() }.value
++        for completion in completions {
++            do {
++                try await completion.wait(phase: "checked stop completion")
++                #expect(!replaceSocket)
++            } catch {
++                #expect(replaceSocket)
++                #expect(error as? BoardToolServerError == .socketIdentityMismatch)
++            }
++        }
++        #expect(callers[0].isCancelled)
++        #expect(try activeClient.readRawLine() == nil)
++        if let moved = movedSocket {
++            #expect(try Data(contentsOf: server.socketURL) == Data("replacement sentinel".utf8))
++            try FileManager.default.removeItem(at: server.socketURL)
++            try FileManager.default.moveItem(at: moved, to: server.socketURL)
++            movedSocket = nil
++            // A completed failure cannot be cached: restored authority permits retry.
++            try await server.stopAsync()
++        }
++        #expect(!FileManager.default.fileExists(atPath: server.socketURL.path))
++        try await server.stopAsync()
++        try made.close()
++    }
++
+     @Test func boardServerStopWaitsForBlockedHandlerThenCloses() throws {
+         guard agentLoopCanBindListenerSocket() else { return }
+         let baseline = Self.fileDescriptorCount()
+@@ -597,9 +746,19 @@ private final class P1F1D078ServerFixture: @unchecked Sendable {
+             queue.suspend()
+             // 释放挂起状态的队列会被 libdispatch trap 掉整个进程；任何 throw 路径都必须恰好 resume 一次
+             var queueResumed = false
+-            defer { if !queueResumed { queue.resume() } }
+             var server: BoardToolServer?
+             var harness: P1F1D078BoardHarness?
++            var ownedClient: BoardSocketTestClient?
++            var ownedProbe: BoardSocketTestClient?
++            defer {
++                if !queueResumed {
++                    queueResumed = true
++                    queue.resume()
++                }
++                ownedProbe?.close()
++                ownedClient?.close()
++                if let harness { Self.closeRecordingFailure(harness) }
++            }
+             var cardId = ""
+             do {
+                 let made = try Self.makeBoardHarness(
+@@ -613,7 +772,9 @@ private final class P1F1D078ServerFixture: @unchecked Sendable {
+             try server?.start()
+             // backlog=1：acceptLoop 尚未取走上一个连接时新 connect 会被拒，需有界重试
+             let client = try Self.connectClientWithRetry(path: server!.socketURL.path)
++            ownedClient = client
+             let probe = try Self.connectClientWithRetry(path: server!.socketURL.path)
++            ownedProbe = probe
+             let sent = try probe.sendObservingPeerClosure(["type": "hello", "token": .string(server!.token), "cardId": .string(cardId)])
+             #expect(sent ? (try probe.readLine() == nil) : true)
+             probe.close()
+@@ -647,6 +808,11 @@ private final class P1F1D078ServerFixture: @unchecked Sendable {
+         for _ in 0..<100 {
+             var server: BoardToolServer?
+             var harness: P1F1D078BoardHarness?
++            var ownedClient: BoardSocketTestClient?
++            defer {
++                ownedClient?.close()
++                if let harness { Self.closeRecordingFailure(harness) }
++            }
+             var cardId = ""
+             do {
+                 let made = try Self.makeBoardHarness(startServer: true)
+@@ -656,6 +822,7 @@ private final class P1F1D078ServerFixture: @unchecked Sendable {
+             }
+             let socketPath = server!.socketURL.path
+             let client = try BoardSocketTestClient(path: socketPath)
++            ownedClient = client
+             try client.hello(token: server!.token, cardId: cardId)
+             client.close()
+             try server?.stop()
+@@ -1263,9 +1430,7 @@ private final class P1F1D078ServerFixture: @unchecked Sendable {
+                 progressSink: BoardServerProgressRecorder(),
+                 boundCapabilityTools: boundCapabilityTools,
+                 validatePeer: { _ in },
+-                onTerminalAccepted: {},
+-                acceptQueue: DispatchQueue.global(qos: .utility),
+-                handlerQueue: DispatchQueue.global(qos: .utility)
++                onTerminalAccepted: {}
+             )
+             Issue.record("078 invalid definitions unexpectedly initialized")
+             try server.stop()

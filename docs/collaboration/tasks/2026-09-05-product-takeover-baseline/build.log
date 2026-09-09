@@ -1,0 +1,1504 @@
+[0/1] Planning build
+Building for debugging...
+[0/4] Write swift-version--1AB21518FC5DEDBE.txt
+[2/123] Emitting module AgentLoopCore
+[3/136] Compiling AgentLoopCore JSONValue.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[4/136] Compiling AgentLoopCore KernelDefaults.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[5/136] Compiling AgentLoopCore Orchestrator.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[6/136] Compiling AgentLoopCore Planner.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[7/136] Compiling AgentLoopCore ScheduleMath.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[8/136] Compiling AgentLoopCore Distiller.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[9/136] Compiling AgentLoopCore ExpeditionReport.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[10/136] Compiling AgentLoopCore ManagedExpeditionReportStore.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[11/136] Compiling AgentLoopCore MemoryDistillService.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[12/136] Compiling AgentLoopCore NoteSnippet.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[13/136] Compiling AgentLoopCore AgentLoop.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[14/136] Compiling AgentLoopCore ArtifactOwnershipVerifier.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[15/136] Compiling AgentLoopCore ArtifactStager.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: error: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- error: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- error: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[16/136] Compiling AgentLoopCore FileTools.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[17/136] Compiling AgentLoopCore HandoffPayload.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[18/136] Compiling AgentLoopCore KnowledgeTools.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[19/136] Compiling AgentLoopCore ShellTool.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[20/136] Compiling AgentLoopCore ToolAccess.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[21/136] Compiling AgentLoopCore ToolDef.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[22/136] Compiling AgentLoopCore ToolExecutor.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[23/136] Compiling AgentLoopCore WebFetchTool.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[24/136] Compiling AgentLoopCore WebSearchTool.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[25/136] Compiling AgentLoopCore DurableWork.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[26/136] Compiling AgentLoopCore DurableWorkSupervisor.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[27/136] Compiling AgentLoopCore InputParsingWorker.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[28/136] Compiling AgentLoopCore PlanningProviderResolver.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: error: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- error: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+[29/136] Compiling AgentLoopCore OpenAIChatGPTAuth.swift
+[30/136] Compiling AgentLoopCore OpenAIOAuthSession.swift
+[31/136] Compiling AgentLoopCore OpenAIProvider.swift
+[32/136] Compiling AgentLoopCore OpenAIResponsesProvider.swift
+[33/136] Compiling AgentLoopCore ProfileScopedDefaults.swift
+[34/136] Compiling AgentLoopCore ProviderConfiguration.swift
+[35/136] Compiling AgentLoopCore SSEParser.swift
+[36/136] Compiling AgentLoopCore StopReason.swift
+[37/136] Compiling AgentLoopCore TurnAccumulator.swift
+[38/136] Compiling AgentLoopCore RuminationMaterializer.swift
+[39/136] Compiling AgentLoopCore RuminationParser.swift
+[40/136] Compiling AgentLoopCore RuminationResult.swift
+[41/136] Compiling AgentLoopCore RuminationService.swift
+[42/136] Compiling AgentLoopCore FailureRecord.swift
+[43/136] Compiling AgentLoopCore FailureReporter.swift
+[44/136] Compiling AgentLoopCore CompanionAnimState.swift
+[45/136] Compiling AgentLoopCore CowTemplate.swift
+[46/136] Compiling AgentLoopCore MissionDraftFactory.swift
+[47/136] Compiling AgentLoopCore NewcomerUnlockPolicy.swift
+[48/136] Compiling AgentLoopCore ProductBootstrapService.swift
+[49/136] Compiling AgentLoopCore RuntimeProfileBootstrap.swift
+[50/136] Compiling AgentLoopCore AnthropicProvider.swift
+[51/136] Compiling AgentLoopCore ContentBlock.swift
+[52/136] Compiling AgentLoopCore LLMProvider.swift
+[53/136] Compiling AgentLoopCore MockProvider.swift
+[54/136] Compiling AgentLoopCore ModelCatalogService.swift
+[55/136] Compiling AgentLoopCore DeltaCoalescer.swift
+[56/136] Compiling AgentLoopCore ExternalContent.swift
+[57/136] Compiling AgentLoopCore KeychainStore.swift
+[58/136] Compiling AgentLoopCore PosixSockets.swift
+[59/136] Compiling AgentLoopCore ShellProcessRegistry.swift
+[60/136] Compiling AgentLoopCore StateDirectoryLock.swift
+[61/136] Compiling AgentLoopCore StringError.swift
+[62/136] Compiling AgentLoopCore TextTruncation.swift
+[63/136] Compiling AgentLoopCore WorkspaceScopedAccess.swift
+[64/136] Compiling AgentLoopCore ApprovalGate.swift
+[65/136] Compiling AgentLoopCore ApprovalPolicy.swift
+[66/136] Compiling AgentLoopCore BoardTools.swift
+[67/136] Compiling AgentLoopCore ExternalOperationAdapter.swift
+[68/136] Compiling AgentLoopCore Records.swift
+[69/136] Compiling AgentLoopCore RuntimeProfileStore.swift
+[70/136] Compiling AgentLoopCore ScheduleStore.swift
+[71/136] Compiling AgentLoopCore Acceptance.swift
+[72/136] Compiling AgentLoopCore ApprovalGrant.swift
+[73/136] Compiling AgentLoopCore CampBridge.swift
+[74/136] Compiling AgentLoopCore CampResidency.swift
+[75/136] Compiling AgentLoopCore CanonicalContractCoding.swift
+[76/136] Compiling AgentLoopCore CoachContracts.swift
+[77/136] Compiling AgentLoopCore CommandEnvelope.swift
+[78/136] Compiling AgentLoopCore CowIdentity.swift
+[79/136] Compiling AgentLoopCore DomainEvent.swift
+[80/136] Compiling AgentLoopCore EngineExecutionReceipt.swift
+[81/136] Compiling AgentLoopCore BoardServerBridgeMain.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[82/136] Compiling AgentLoopCore BoardToolServer.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[83/136] Compiling AgentLoopCore CardRunner.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[84/136] Compiling AgentLoopCore CliEngineAdapter.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[85/136] Compiling AgentLoopCore CliProcessBackend.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[86/136] Compiling AgentLoopCore ContextPacket.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[87/136] Compiling AgentLoopCore ModelLoopEngineAdapter.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[88/136] Compiling AgentLoopCore McpServerManager.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[89/136] Compiling AgentLoopCore McpToolBridge.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[90/136] Compiling AgentLoopCore McpToolNaming.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[91/136] Compiling AgentLoopCore McpTransport.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[92/136] Compiling AgentLoopCore MiniMcpClient.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[93/136] Compiling AgentLoopCore ContextDependencyLoader.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- error: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[94/136] Compiling AgentLoopCore ChatService.swift
+[95/136] Compiling AgentLoopCore GuideChatService.swift
+[96/136] Compiling AgentLoopCore ActiveIngestionDeletionSQLPermit.swift
+[97/136] Compiling AgentLoopCore AppDatabase.swift
+[98/136] Compiling AgentLoopCore ApprovalGrantStore.swift
+[99/136] Compiling AgentLoopCore ArtifactBlobStore.swift
+[100/136] Compiling AgentLoopCore ArtifactStorageOriginStore.swift
+[101/136] Compiling AgentLoopCore BoardCardTransactions.swift
+[102/136] Compiling AgentLoopCore CampLifecycleStore.swift
+[103/136] Compiling AgentLoopCore CampProviderDispatchStore.swift
+[104/136] Compiling AgentLoopCore CoachUnderstandingStore.swift
+[105/136] Compiling AgentLoopCore CowResidencyStore.swift
+[106/136] Compiling AgentLoopCore DomainEventStore.swift
+[107/136] Compiling AgentLoopCore DurableWorkStore.swift
+[108/136] Compiling AgentLoopCore ExecutionEngine.swift
+[109/136] Compiling AgentLoopCore GoalController.swift
+[110/136] Compiling AgentLoopCore IngestionDeletion.swift
+[111/136] Compiling AgentLoopCore InputEnvelope.swift
+[112/136] Compiling AgentLoopCore MemoryRecord.swift
+[113/136] Compiling AgentLoopCore Outcome.swift
+[114/136] Compiling AgentLoopCore OutcomeContract.swift
+[115/136] Compiling AgentLoopCore UnderstandingCard.swift
+[116/136] Compiling AgentLoopCore Verification.swift
+[117/136] Compiling AgentLoopCore ActivityFeed.swift
+[118/136] Compiling AgentLoopCore FeedService.swift
+[119/136] Compiling AgentLoopCore IngestionRecords.swift
+[120/136] Compiling AgentLoopCore CanonicalJSON.swift
+[121/136] Compiling AgentLoopCore EngineExecutionStore.swift
+[122/136] Compiling AgentLoopCore EngineSessionStore.swift
+[123/136] Compiling AgentLoopCore EventKind.swift
+[124/136] Compiling AgentLoopCore HarvestDatabase.swift
+[125/136] Compiling AgentLoopCore IngestionDeletionStore.swift
+[126/136] Compiling AgentLoopCore InputGoalStore.swift
+[127/136] Compiling AgentLoopCore KernelControlStore.swift
+[128/136] Compiling AgentLoopCore KnowledgeStore.swift
+[129/136] Compiling AgentLoopCore LegacyContentScopeStore.swift
+[130/136] Compiling AgentLoopCore LegacyEventScopeResolver.swift
+[131/136] Compiling AgentLoopCore McpDatabase.swift
+[132/136] Compiling AgentLoopCore MemoryRecordStore.swift
+[133/136] Compiling AgentLoopCore OutcomeStore.swift
+
+command=swift build --product AgentLoopApp -Xswiftc -warnings-as-errors
+exit=1
+original_log=/tmp/agentloop-takeover-build.78pYQ7

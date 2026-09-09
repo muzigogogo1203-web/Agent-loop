@@ -1,0 +1,66 @@
+format=r20-targeted-tests-v1
+source_log=/Users/muzi/Agent-loop/docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a2-durable-rumination/r20-verify.log
+source_sha256=1aea8510917a6a3f72b9b2ab63cc2e90bc209481bf119f6de7c3a0ea74fea4e5
+authoritative_command=swift run RunTests
+authoritative_unfiltered=true
+authoritative_single_invocation=true
+authoritative_swift_rc=0
+authoritative_tee_rc=0
+captured_run_started_count=1
+full_test_discovery_count=652
+full_test_pass_count=652
+full_suite_start_count=7
+full_suite_pass_count=7
+full_failure_marker_count=
+full_summary=✔ Test run with 652 tests in 7 suites passed after 42.355 seconds.
+full_summary_is_last_nonempty_line=true
+required_name_count=46
+required_discovery_total=46
+required_pass_total=46
+name=ruminationStartAndWorkAreAtomic discovery=1 pass=1 failure_lines=
+name=ruminationCrashIsAdoptedAndCompletesOnce discovery=1 pass=1 failure_lines=
+name=ruminationFailurePersistenceFailureRemainsRecoverable discovery=1 pass=1 failure_lines=
+name=ruminationCancelRejectsStaleResponse discovery=1 pass=1 failure_lines=
+name=legacyRuminatingRowGetsOneRepairWork discovery=1 pass=1 failure_lines=
+name=repeatedRuminationCommandReturnsExistingWork discovery=1 pass=1 failure_lines=
+name=ruminationCancelAndQueuedProjectionRollbackTogether discovery=1 pass=1 failure_lines=
+name=ruminationAttemptClosesExactlyOnce discovery=1 pass=1 failure_lines=
+name=ruminationWorkInputUsesCanonicalCapturedIdentityAndFirstTrace discovery=1 pass=1 failure_lines=
+name=ruminationSameKeyDifferentCapturedIdentityConflictsWithoutResolution discovery=1 pass=1 failure_lines=
+name=ruminationTerminalRetryCreatesReplacementWhileActiveReplayReusesWork discovery=1 pass=1 failure_lines=
+name=ruminationCapturedProfileAndModelIgnoreDefaultDrift discovery=1 pass=1 failure_lines=
+name=ruminationClaimResolutionFailureMatrixIsStableSafeAndFailClosed discovery=1 pass=1 failure_lines=
+name=ruminationResolverNeverFallsBackToCurrentDefaultOrCompanion discovery=1 pass=1 failure_lines=
+name=ruminationTransientFailureRetriesAtFiveThirtyOneTwentyThenTerminates discovery=1 pass=1 failure_lines=
+name=ruminationDeterministicFailureDoesNotRetry discovery=1 pass=1 failure_lines=
+name=ruminationTerminalFailureAndProjectionCommitOrRollbackTogether discovery=1 pass=1 failure_lines=
+name=ruminationSuccessResultProjectionAndWorkCommitOrRollbackTogether discovery=1 pass=1 failure_lines=
+name=ruminationLeaseRenewalAllowsOnlyLatestClaimToCommit discovery=1 pass=1 failure_lines=
+name=ruminationTerminalCommitFailureRetainsProposalAndDoesNotRecallProvider discovery=1 pass=1 failure_lines=
+name=ruminationProcessRestartMayRecallProviderButCommitsOneResultAndTerminal discovery=1 pass=1 failure_lines=
+name=ruminationEmergencyHaltCancelsWorkAndQueuesProjectionAtomically discovery=1 pass=1 failure_lines=
+name=ruminationEmergencyHaltRejectsClaimResolveAndProviderDispatch discovery=1 pass=1 failure_lines=
+name=ruminationLateProviderResponseCannotOverrideEmergencyHalt discovery=1 pass=1 failure_lines=
+name=ruminationResumeDoesNotReviveCanceledWork discovery=1 pass=1 failure_lines=
+name=ruminationWaitUntilIdleIncludesDueRuminationAndIgnoresFutureRetry discovery=1 pass=1 failure_lines=
+name=ruminationLivePhaseEventsAreOwnedOrderedAndProcessLocal discovery=1 pass=1 failure_lines=
+name=legacyRuminationWithoutResolvableRuntimeFailsSafelyExactlyOnce discovery=1 pass=1 failure_lines=
+name=ruminationSanitizesPersistedAndVisibleDiagnostics discovery=1 pass=1 failure_lines=
+name=ruminationInvalidOutputIsDeterministicAndPreservesSource discovery=1 pass=1 failure_lines=
+name=ruminationProviderUsesNoToolsAndProducesOneCanonicalResult discovery=1 pass=1 failure_lines=
+name=singleOrchestratorSupervisorOwnsPlanningAndRuminationLifecycle discovery=1 pass=1 failure_lines=
+name=ruminationAdapterDelegatesStartRetryCancelWithoutUnownedTask discovery=1 pass=1 failure_lines=
+name=ruminationUnknownRestartRendersRecoveringWithoutInventingReading discovery=1 pass=1 failure_lines=
+name=ruminationPhaseProjectionUsesOnlyMatchingSupervisorEvents discovery=1 pass=1 failure_lines=
+name=genericDurableWorkAPIsSealRuminationWithExactPriority discovery=1 pass=1 failure_lines=
+name=supervisedWorkPumpIsGlobalFIFOWithoutPlanningRegression discovery=1 pass=1 failure_lines=
+name=ruminationStartupRemainsSuppressedUntilOrchestratorActivation discovery=1 pass=1 failure_lines=
+name=legacyRuminationRepairCoversValidHaltedAndEveryTerminalReason discovery=1 pass=1 failure_lines=
+name=ruminationUsageIsExactOrFailsBeforeAccounting discovery=1 pass=1 failure_lines=
+name=activeRuminationFencesDiscardDeleteAndArchiveRaces discovery=1 pass=1 failure_lines=
+name=slowActiveStreamDoesNotIdleTimeout discovery=1 pass=1 failure_lines=
+name=turnTimeoutRetriesOnceThenBlocks discovery=1 pass=1 failure_lines=
+name=timeoutThenSuccessDoesNotAccumulate discovery=1 pass=1 failure_lines=
+name=cancelWinsOverIdleTimeout discovery=1 pass=1 failure_lines=
+name=turnCompletesUnderTimeout discovery=1 pass=1 failure_lines=
+status=PASS

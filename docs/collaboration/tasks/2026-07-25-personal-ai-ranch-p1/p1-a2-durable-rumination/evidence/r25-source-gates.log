@@ -1,0 +1,51 @@
+section=R21_GUARD_SHAPE_AND_STRIP
+utc=2026-08-10T21:59:14Z
+core_guard_shape=1:1:0:0:1:1
+test_guard_shape=3:3:6:0:0:1
+test_stripped_sha=66c3b12ca56b1e42d2d4a591544531f2cf346150004603b5e8cf7b11a70daa26
+test_stripped_matches_r20=true
+status=PASS
+section=RELEASE_DEBUG_OBJECT_GATES
+utc=2026-08-10T22:00:44Z
+release_bin=/Users/muzi/Agent-loop/.build/arm64-apple-macosx/release
+debug_bin=/Users/muzi/Agent-loop/.build/arm64-apple-macosx/debug
+release_core_object=/Users/muzi/Agent-loop/.build/arm64-apple-macosx/release/AgentLoopCore.build/AgentLoop.swift.o
+release_test_object=/Users/muzi/Agent-loop/.build/arm64-apple-macosx/release/AgentLoopTestSuite.build/AgentLoopTests.swift.o
+debug_core_object=/Users/muzi/Agent-loop/.build/arm64-apple-macosx/debug/AgentLoopCore.build/AgentLoop.swift.o
+debug_test_object=/Users/muzi/Agent-loop/.build/arm64-apple-macosx/debug/AgentLoopTestSuite.build/AgentLoopTests.swift.o
+release_core_object_sha=f9d2a68db39662d67023ebef97f1fb32a5aee3c5c53c7bdcc67f0e394bbe9857
+release_core_idleClockForTesting_count=0
+debug_core_idleClockForTesting_count_gt_zero=true
+release_test_11_token_counts_zero=true
+debug_test_11_token_counts_gt_zero=true
+status=PASS
+section=R25_MATRIX_WINDOW
+utc=2026-08-10T22:02:35Z
+stage_sha=1144ba615251f55bfe4e19a75b51949fb40578f03061f3b3b85abe55d16fa6e7
+temporary_matrix_sha=19e0fcdcfe9ff3285bad0b3741173a888a7ab6e302196dceacc8a5731cf0b358
+window_manifest_partition=191_PASS_1_MATRIX_SCRIPT_MISMATCH
+restored_matrix_sha=75c12732327ec06a3b3a69d6ff928d7909c0e170fee37067210d16f575d91d5c
+matrix_mutated_after_restore=false
+status=PASS
+section=REMAINING_SOURCE_PRIVACY_FINAL_HASHES
+utc=2026-08-10T22:02:48Z
+source_contract_test=ruminationSanitizesPersistedAndVisibleDiagnostics discovery=1 pass=1 failure=0
+source_contract_test=ruminationProviderUsesNoToolsAndProducesOneCanonicalResult discovery=1 pass=1 failure=0
+source_contract_test=singleOrchestratorSupervisorOwnsPlanningAndRuminationLifecycle discovery=1 pass=1 failure=0
+source_contract_test=ruminationAdapterDelegatesStartRetryCancelWithoutUnownedTask discovery=1 pass=1 failure=0
+source_contract_test=ruminationUnknownRestartRendersRecoveringWithoutInventingReading discovery=1 pass=1 failure=0
+source_contract_test=ruminationPhaseProjectionUsesOnlyMatchingSupervisorEvents discovery=1 pass=1 failure=0
+source_contract_test=ruminationLivePhaseEventsAreOwnedOrderedAndProcessLocal discovery=1 pass=1 failure=0
+source_contract_test=ruminationUsageIsExactOrFailsBeforeAccounting discovery=1 pass=1 failure=0
+source_contract_test=activeRuminationFencesDiscardDeleteAndArchiveRaces discovery=1 pass=1 failure=0
+source_contract_test=stateDirectoryLockRejectsSecondFileDescriptionAndReleases discovery=1 pass=1 failure=0
+source_contract_test_count=10
+source_contract_tests_status=PASS
+a1b_sentinels=PASS
+a2_seam_source_guards=PASS
+planning_unique_function_a2_callers=20
+same_log_source_contract_tests=10_of_10_PASS
+literal_hashes=PASS
+pre_preview_privacy_scan=PASS
+git_diff_check=PASS
+status=PASS

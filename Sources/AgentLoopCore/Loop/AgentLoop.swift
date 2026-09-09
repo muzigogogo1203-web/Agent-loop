@@ -21,6 +21,11 @@ public enum AgentEvent: Sendable {
     case finished(LoopOutcome)
 }
 
+package struct AgentLoopRunHandleV1: Sendable {
+    package let events: AsyncThrowingStream<AgentEvent, Error>
+    package let completion: Task<Void, Error>
+}
+
 public struct AgentLoop: Sendable {
     let provider: any LLMProvider
     let executor: ToolExecutor
@@ -31,6 +36,7 @@ public struct AgentLoop: Sendable {
     let maxTokensPerTurn: Int
     let retryDelays: [Duration]
     let turnTimeout: Duration
+    private let idleWatchdogFactory: @Sendable (Duration) -> any IdleWatchdogProtocol
     private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "loop")
 
     public init(
@@ -53,21 +59,60 @@ public struct AgentLoop: Sendable {
         self.maxTokensPerTurn = maxTokensPerTurn
         self.retryDelays = retryDelays
         self.turnTimeout = turnTimeout
+        self.idleWatchdogFactory = Self.makeIdleWatchdogFactory { ContinuousClock() }
     }
 
+#if DEBUG
+    package init<C: Clock>(
+        provider: any LLMProvider,
+        executor: ToolExecutor,
+        packet: ContextPacket,
+        tools: [ToolDef],
+        maxTurns: Int,
+        tokenBudget: Int,
+        maxTokensPerTurn: Int,
+        retryDelays: [Duration] = [.seconds(2), .seconds(4)],
+        turnTimeout: Duration = KernelDefaults.turnTimeout,
+        idleClockForTesting clock: C
+    ) where C.Duration == Duration {
+        self.provider = provider
+        self.executor = executor
+        self.packet = packet
+        self.tools = tools
+        self.maxTurns = maxTurns
+        self.tokenBudget = tokenBudget
+        self.maxTokensPerTurn = maxTokensPerTurn
+        self.retryDelays = retryDelays
+        self.turnTimeout = turnTimeout
+        self.idleWatchdogFactory = Self.makeIdleWatchdogFactory { clock }
+    }
+#endif
+
     public func run() -> AsyncThrowingStream<AgentEvent, Error> {
-        AsyncThrowingStream { continuation in
-            let task = Task {
-                do {
-                    let outcome = try await loop(continuation: continuation)
-                    continuation.yield(.finished(outcome))
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
+        makeRunHandle().events
+    }
+
+    package func makeRunHandle() -> AgentLoopRunHandleV1 {
+        let (events, continuation) =
+            AsyncThrowingStream<AgentEvent, Error>.makeStream()
+        let completion: Task<Void, Error> = Task {
+            do {
+                let outcome = try await loop(continuation: continuation)
+                continuation.yield(.finished(outcome))
+                continuation.finish()
+            } catch {
+                continuation.finish(throwing: error)
+                throw error
             }
-            continuation.onTermination = { _ in task.cancel() }
         }
+        continuation.onTermination = { termination in
+            guard case .cancelled = termination else { return }
+            completion.cancel()
+        }
+        return AgentLoopRunHandleV1(
+            events: events,
+            completion: completion
+        )
     }
 
     private func loop(
@@ -189,6 +234,14 @@ public struct AgentLoop: Sendable {
         return (overflowA || overflowB) ? Int.max : total
     }
 
+    private static func makeIdleWatchdogFactory<C: Clock>(
+        _ makeClock: @escaping @Sendable () -> C
+    ) -> @Sendable (Duration) -> any IdleWatchdogProtocol where C.Duration == Duration {
+        { timeout in
+            IdleWatchdog(clock: makeClock(), timeout: timeout)
+        }
+    }
+
     private func providerTurnWithRetry(
         history: [APIMessage],
         turnNumber: Int,
@@ -233,24 +286,59 @@ public struct AgentLoop: Sendable {
         history: [APIMessage],
         continuation: AsyncThrowingStream<AgentEvent, Error>.Continuation
     ) async throws -> TurnResult {
-        let watchdog = IdleWatchdog(timeout: turnTimeout)
+        let watchdog = idleWatchdogFactory(turnTimeout)
         return try await withThrowingTaskGroup(of: TurnResult.self) { group in
             group.addTask {
                 var turn: TurnResult?
-                for try await event in provider.streamTurn(
+                let providerRun =
+                    (provider as? any LLMProviderRunDrivingV1)?.startTurn(
+                        system: packet.system,
+                        history: history,
+                        tools: tools,
+                        toolChoice: .auto,
+                        maxTokens: maxTokensPerTurn
+                    )
+                let events = providerRun?.events ?? provider.streamTurn(
                     system: packet.system,
                     history: history,
                     tools: tools,
                     toolChoice: .auto,
                     maxTokens: maxTokensPerTurn
-                ) {
-                    await watchdog.beat(timeout: turnTimeout)
-                    switch event {
-                    case .textDelta(let text):
-                        continuation.yield(.textDelta(text))
-                    case .turn(let result):
-                        turn = result
+                )
+                var streamFailure: (any Error)?
+                do {
+                    for try await event in events {
+                        await watchdog.beat(timeout: turnTimeout)
+                        switch event {
+                        case .textDelta(let text):
+                            continuation.yield(.textDelta(text))
+                        case .turn(let result):
+                            turn = result
+                        }
                     }
+                } catch {
+                    streamFailure = error
+                    providerRun?.completion.cancel()
+                }
+
+                if Task.isCancelled {
+                    providerRun?.completion.cancel()
+                }
+                if let providerRun {
+                    let completionResult = await providerRun.completion.result
+                    if case let .failure(completionFailure) = completionResult,
+                       !(completionFailure is CancellationError)
+                    {
+                        throw completionFailure
+                    }
+                    if let streamFailure {
+                        throw streamFailure
+                    }
+                    if case let .failure(completionFailure) = completionResult {
+                        throw completionFailure
+                    }
+                } else if let streamFailure {
+                    throw streamFailure
                 }
 
                 guard let result = turn else {
@@ -271,9 +359,23 @@ public struct AgentLoop: Sendable {
                 group.cancelAll()
                 return result
             } catch {
+                var retainedError: any Error = error
                 group.cancelAll()
-                try Task.checkCancellation()
-                throw error
+                while !group.isEmpty {
+                    do {
+                        _ = try await group.next()
+                    } catch {
+                        if retainedError is CancellationError,
+                           !(error is CancellationError)
+                        {
+                            retainedError = error
+                        }
+                    }
+                }
+                if retainedError is CancellationError {
+                    try Task.checkCancellation()
+                }
+                throw retainedError
             }
         }
     }
@@ -397,24 +499,29 @@ public struct AgentLoop: Sendable {
     }
 }
 
-private actor IdleWatchdog {
-    private let clock: ContinuousClock
-    private var deadline: ContinuousClock.Instant
+private protocol IdleWatchdogProtocol: Sendable {
+    func beat(timeout: Duration) async
+    func waitForTimeout() async throws
+}
 
-    init(timeout: Duration) {
-        let clock = ContinuousClock()
+private actor IdleWatchdog<C: Clock>: IdleWatchdogProtocol where C.Duration == Duration {
+    private let clock: C
+    private var deadline: C.Instant
+
+    init(clock: C, timeout: Duration) {
         self.clock = clock
         deadline = clock.now.advanced(by: timeout)
     }
 
-    func beat(timeout: Duration) {
+    func beat(timeout: Duration) async {
         deadline = clock.now.advanced(by: timeout)
     }
 
     func waitForTimeout() async throws {
-        while !Task.isCancelled {
+        while true {
+            try Task.checkCancellation()
             let target = deadline
-            try await clock.sleep(until: target)
+            try await clock.sleep(until: target, tolerance: nil)
             try Task.checkCancellation()
             if clock.now >= deadline {
                 throw TurnTimeoutError()

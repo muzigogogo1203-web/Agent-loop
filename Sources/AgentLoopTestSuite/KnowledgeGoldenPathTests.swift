@@ -64,10 +64,42 @@ private func firstUserText(_ histories: [[APIMessage]]) -> String {
         TurnResult(content: [.text(distillJSON)], stopReason: .endTurn),
     ])
     let plannerProvider = MockProvider(script: [planTurn(cardTitle: "再画一张图")])
-    let cardProvider = MockProvider(script: [completeTurn(summary: "完成")])
+    let cardProvider = MockProvider(script: [
+        TurnResult(content: [.text(#"{"skip":true}"#)], stopReason: .endTurn),
+        completeTurn(summary: "完成"),
+    ])
+    let planningIdentity = try testPlanningCommandIdentity(
+        db: db,
+        command: "knowledge-cross-mission-reuse",
+        model: "planner-model"
+    )
+    let stateRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "knowledge-cross-mission-state-\(UUID().uuidString)",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: stateRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
+    defer { try? FileManager.default.removeItem(at: stateRoot) }
+    let artifactRoot = stateRoot.appendingPathComponent(
+        "artifacts",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: artifactRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
 
     let orch = Orchestrator(
         db: db,
+        planningProviderResolver: TestPlanningProviderResolver(
+            profileId: planningIdentity.runtimeProfileId,
+            model: planningIdentity.plannerModel,
+            provider: plannerProvider
+        ),
         makeProvider: { model, _ in
             switch model {
             case "distill-model": distillProvider
@@ -75,9 +107,10 @@ private func firstUserText(_ histories: [[APIMessage]]) -> String {
             default: cardProvider
             }
         },
-        artifactStoreRoot: try knowledgeArtifactRoot(),
+        artifactStoreRoot: artifactRoot,
         tickInterval: nil
     )
+    await orch.recoverAndReconcile()
 
     // 行动 A：直接构造到 delivering，收营触发蒸馏
     let ids = try db.createSingleCardMission(
@@ -88,20 +121,45 @@ private func firstUserText(_ histories: [[APIMessage]]) -> String {
         outcome: "完成", summary: "地图画好了", artifacts: [], noArtifactReason: "无", verification: [], risks: []
     ), durableArtifacts: [])
     try await orch.closeout(ids.missionId, distillModel: "distill-model")
-    await orch.waitUntilIdle()
+    try await orch.waitUntilIdle()
     #expect(try db.campNotes(campId: camp.id).first?.title == "北岭探索复盘")
 
     // 行动 B：规划 + 执行都应带上 A 的笔记
-    _ = try await orch.startMission(
-        goal: "再探北岭", companionIds: [companion.id], workspacePath: nil, plannerModel: "planner-model")
-    await orch.waitUntilIdle()
+    let missionId = try await orch.startMission(
+        goal: "再探北岭",
+        companionIds: [companion.id],
+        workspacePath: nil,
+        plannerModel: planningIdentity.plannerModel,
+        runtimeProfileId: planningIdentity.runtimeProfileId,
+        budgetTokens: KernelDefaults.missionBudget,
+        campId: nil,
+        autonomy: .standard,
+        idempotencyKey: planningIdentity.idempotencyKey,
+        traceId: planningIdentity.traceId
+    )
+    let planningDeadline = ContinuousClock.now.advanced(by: .seconds(5))
+    while try db.mission(id: missionId)?.status == .planning,
+          ContinuousClock.now < planningDeadline
+    {
+        try await Task.sleep(for: .milliseconds(20))
+    }
+    let workspaceRoot = try attachP1F1DispatchContext(
+        db: db,
+        missionId: missionId,
+        companionId: companion.id
+    )
+    defer { try? FileManager.default.removeItem(at: workspaceRoot) }
+    try await orch.waitUntilIdle()
 
     let plannerPrompt = firstUserText(await plannerProvider.recordedHistories)
     #expect(plannerPrompt.contains("# 营地笔记（往期经验）"))
     #expect(plannerPrompt.contains("北岭探索复盘"))
     #expect(plannerPrompt.contains("先看等高线"))
 
-    let cardPrompt = firstUserText(await cardProvider.recordedHistories)
+    // 同一 provider 的首轮用于行动 A 共事记忆蒸馏；末轮才是行动 B 卡片执行。
+    let cardPrompt = firstUserText(
+        Array((await cardProvider.recordedHistories).suffix(1))
+    )
     #expect(cardPrompt.contains("# 营地笔记（往期经验）"))
     #expect(cardPrompt.contains("北岭探索复盘"))
     await orch.shutdown()
@@ -123,21 +181,51 @@ private func firstUserText(_ histories: [[APIMessage]]) -> String {
         db: db,
         provider: MockProvider(script: [TurnResult(content: [.text(memoryJSON)], stopReason: .endTurn)]))
     let memory = await distillService.distillDM(companionId: companion.id, minMessages: 1)
-    #expect(memory?.title == "交付物格式偏好")
+    guard case .created(let memoryRecord) = memory else {
+        Issue.record("expected created memory terminal")
+        return
+    }
+    #expect(memoryRecord.title == "交付物格式偏好")
 
     // 给该伙伴派下一张卡
     let cardProvider = MockProvider(script: [completeTurn(summary: "校对完成")])
+    let stateRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "knowledge-dm-memory-state-\(UUID().uuidString)",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: stateRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
+    defer { try? FileManager.default.removeItem(at: stateRoot) }
+    let artifactRoot = stateRoot.appendingPathComponent(
+        "artifacts",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: artifactRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
     let orch = Orchestrator(
         db: db,
+        planningProviderResolver: TestPlanningProviderResolver(provider: cardProvider),
         makeProvider: { _, _ in cardProvider },
-        artifactStoreRoot: try knowledgeArtifactRoot(),
+        artifactStoreRoot: artifactRoot,
         tickInterval: nil
     )
-    _ = try db.createSingleCardMission(
+    let ids = try db.createSingleCardMission(
         campName: "c", squadName: "s", goal: "校对文稿", cardTitle: "校对",
         cardDescription: "d", expectedOutput: "o", assigneeId: companion.id, maxTurns: 3)
-    await orch.reconcile()
-    await orch.waitUntilIdle()
+    let workspaceRoot = try attachP1F1DispatchContext(
+        db: db,
+        missionId: ids.missionId,
+        companionId: companion.id
+    )
+    defer { try? FileManager.default.removeItem(at: workspaceRoot) }
+    await orch.recoverAndReconcile()
+    try await orch.waitUntilIdle()
 
     let cardPrompt = firstUserText(await cardProvider.recordedHistories)
     #expect(cardPrompt.contains("# 你的记忆"))

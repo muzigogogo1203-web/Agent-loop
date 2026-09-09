@@ -1,0 +1,27 @@
+checkpoint=P1-F1-F1B-Review02-P1
+filter=p1f1_042RecoveryPrecedenceAndFourDispatchCrashWindows
+Building for debugging...
+[0/4] Write sources
+[1/4] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Compiling AgentLoopTestSuite CrashRecoveryTests.swift
+[4/6] Emitting module AgentLoopTestSuite
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (13.78s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test p1f1_042RecoveryPrecedenceAndFourDispatchCrashWindows() started.
+✘ Test p1f1_042RecoveryPrecedenceAndFourDispatchCrashWindows() recorded an issue at CrashRecoveryTests.swift:1931:9: Expectation failed: an error was expected but none was thrown
+✘ Test p1f1_042RecoveryPrecedenceAndFourDispatchCrashWindows() recorded an issue at CrashRecoveryTests.swift:1936:9: Expectation failed: try p1f1EngineProjectionSnapshot(
+            fixture: fixture,
+            executionID: request.executionId,
+            runID: request.runId
+        ) == stable
+✘ Test p1f1_042RecoveryPrecedenceAndFourDispatchCrashWindows() failed after 1.941 seconds with 2 issues.
+✘ Test run with 1 test in 0 suites failed after 1.941 seconds with 2 issues.
+review02_red_test_status=1
+review02_red_tee_status=0

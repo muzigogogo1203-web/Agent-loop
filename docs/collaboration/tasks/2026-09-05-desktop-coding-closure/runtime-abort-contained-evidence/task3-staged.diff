@@ -1,0 +1,1352 @@
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-abort-contained-20260909-20260909-69988-qgcu3f/ExecutionEngineConformanceTests.swift.before b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+index 9a7db46..8473aa2 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-abort-contained-20260909-20260909-69988-qgcu3f/ExecutionEngineConformanceTests.swift.before
++++ b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+@@ -182,24 +182,329 @@ private struct P1F1D065ColdIdentity: Sendable {
+     let executionId: String
+     let rootPath: String
+ }
+ 
+ private struct P1F1D065SignalObservation: Sendable {
+     let signal: Int32
+     let group: Int32
+     let target: Int32
+     let result: Int32
+     let errorNumber: Int32
+ }
+ 
++private struct P1F1D065AbortScope: Sendable {
++    let fixtureId: UUID
++    let executionId: String
++    let rootPath: String
++}
++
++private struct P1F1D065AbortProcessContext: Sendable {
++    let scope: P1F1D065AbortScope
++    let authority: CliExecutableAuthorityV1
++}
++
++private struct P1F1D065AbortProcessIdentity: Sendable, Equatable {
++    let pid: pid_t
++    let parentPID: pid_t
++    let processGroupID: pid_t
++    let uid: uid_t
++    let startSeconds: UInt64
++    let startMicroseconds: UInt32
++    let executablePath: String
++    let executableDevice: UInt64
++    let executableInode: UInt64
++    let executableHash: String
++}
++
++private enum P1F1D065AbortIdentityError: Error, Sendable {
++    case invalid(String)
++    case alreadyConfigured
++    case alreadyPublished
++    case notConfigured
++    case identityDrift
++}
++
++private func p1f1d065AbortLog(_ scope: P1F1D065AbortScope, _ message: String) throws {
++    // Checked direct output bypasses print's stdio buffer. The exact fresh
++    // identity remains available even if the later owned join never returns.
++    try FileHandle.standardOutput.write(contentsOf: Data(
++        "065-abort fixture=\(scope.fixtureId.uuidString) execution=\(scope.executionId) \(message)\n".utf8
++    ))
++}
++
++private func p1f1d065AbortCanonicalPath(_ path: String) throws -> String {
++    guard path.hasPrefix("/"), !path.utf8.contains(0) else {
++        throw P1F1D065AbortIdentityError.invalid("absolute-path")
++    }
++    var bytes = [CChar](repeating: 0, count: Int(PATH_MAX))
++    let resolved = path.withCString { Darwin.realpath($0, &bytes) }
++    guard resolved != nil else {
++        throw P1F1D065ColdObservationError(
++            operation: "abort-realpath", result: -1, errorNumber: errno
++        )
++    }
++    return String(decoding: bytes.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
++}
++
++private struct P1F1D065AbortBSDIdentity: Equatable {
++    let pid: pid_t
++    let parent: pid_t
++    let group: pid_t
++    let uid: uid_t
++    let seconds: UInt64
++    let microseconds: UInt32
++}
++
++private func p1f1d065ReadAbortBSDIdentity(
++    pid: pid_t, phase: String
++) throws -> P1F1D065AbortBSDIdentity {
++    guard pid > 1, let size = Int32(exactly: MemoryLayout<proc_bsdinfo>.size) else {
++        throw P1F1D065AbortIdentityError.invalid("pid-or-bsd-size")
++    }
++    var information = proc_bsdinfo()
++    let result = withUnsafeMutablePointer(to: &information) {
++        proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, $0, size)
++    }
++    let errorNumber = result == size ? 0 : errno
++    guard result == size else {
++        throw P1F1D065ColdObservationError(
++            operation: "abort-bsd-\(phase)", result: result, errorNumber: errorNumber
++        )
++    }
++    guard let observedPID = pid_t(exactly: information.pbi_pid),
++          let parent = pid_t(exactly: information.pbi_ppid),
++          let group = pid_t(exactly: information.pbi_pgid),
++          let uid = uid_t(exactly: information.pbi_uid),
++          let seconds = UInt64(exactly: information.pbi_start_tvsec),
++          let microseconds = UInt32(exactly: information.pbi_start_tvusec),
++          observedPID == pid, parent == getpid(), group == pid,
++          uid == getuid(), seconds != 0 || microseconds != 0,
++          microseconds < 1_000_000
++    else { throw P1F1D065AbortIdentityError.invalid("direct-child-kernel-tuple") }
++    return .init(pid: observedPID, parent: parent, group: group, uid: uid,
++                 seconds: seconds, microseconds: microseconds)
++}
++
++private func p1f1d065ValidateAbortFile(
++    _ information: stat, authority: CliExecutableAuthorityV1
++) throws {
++    guard information.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG),
++          let device = UInt64(exactly: information.st_dev),
++          let inode = UInt64(exactly: information.st_ino),
++          let uid = uid_t(exactly: information.st_uid),
++          device == authority.stagedDevice, inode == authority.stagedInode,
++          uid == getuid(), information.st_size >= 0
++    else { throw P1F1D065AbortIdentityError.invalid("staged-file-authority") }
++}
++
++private func p1f1d065ReadAbortExecutableHash(
++    path: String, authority: CliExecutableAuthorityV1
++) throws -> String {
++    var before = stat()
++    let inspected = path.withCString { Darwin.lstat($0, &before) }
++    guard inspected == 0 else {
++        throw P1F1D065ColdObservationError(
++            operation: "abort-staged-lstat", result: inspected, errorNumber: errno
++        )
++    }
++    try p1f1d065ValidateAbortFile(before, authority: authority)
++    let descriptor = path.withCString { Darwin.open($0, O_RDONLY | O_NOFOLLOW | O_CLOEXEC) }
++    guard descriptor >= 0 else {
++        throw P1F1D065ColdObservationError(
++            operation: "abort-staged-open", result: descriptor, errorNumber: errno
++        )
++    }
++    let body = Result { () throws -> String in
++        var opened = stat()
++        let openedResult = Darwin.fstat(descriptor, &opened)
++        guard openedResult == 0 else {
++            throw P1F1D065ColdObservationError(
++                operation: "abort-staged-fstat", result: openedResult, errorNumber: errno
++            )
++        }
++        try p1f1d065ValidateAbortFile(opened, authority: authority)
++        guard opened.st_dev == before.st_dev, opened.st_ino == before.st_ino,
++              opened.st_size == before.st_size,
++              opened.st_mtimespec.tv_sec == before.st_mtimespec.tv_sec,
++              opened.st_mtimespec.tv_nsec == before.st_mtimespec.tv_nsec
++        else { throw P1F1D065AbortIdentityError.identityDrift }
++        var data = Data()
++        var buffer = [UInt8](repeating: 0, count: 4096)
++        while true {
++            let count = buffer.withUnsafeMutableBytes { Darwin.read(descriptor, $0.baseAddress, $0.count) }
++            let errorNumber = count < 0 ? errno : 0
++            if count == 0 { break }
++            if count < 0 && errorNumber == EINTR { continue }
++            guard count > 0 else {
++                throw P1F1D065ColdObservationError(
++                    operation: "abort-staged-read", result: -1, errorNumber: errorNumber
++                )
++            }
++            data.append(contentsOf: buffer.prefix(count))
++        }
++        var after = stat()
++        let afterResult = Darwin.fstat(descriptor, &after)
++        guard afterResult == 0 else {
++            throw P1F1D065ColdObservationError(
++                operation: "abort-staged-fstat-after", result: afterResult, errorNumber: errno
++            )
++        }
++        try p1f1d065ValidateAbortFile(after, authority: authority)
++        guard after.st_size == opened.st_size,
++              after.st_mtimespec.tv_sec == opened.st_mtimespec.tv_sec,
++              after.st_mtimespec.tv_nsec == opened.st_mtimespec.tv_nsec,
++              let byteCount = Int64(exactly: data.count), byteCount == after.st_size
++        else { throw P1F1D065AbortIdentityError.identityDrift }
++        let hash = CanonicalJSONV1.sha256Hex(data)
++        guard hash == authority.executableHash else {
++            throw P1F1D065AbortIdentityError.invalid("staged-hash")
++        }
++        return hash
++    }
++    let closed = Darwin.close(descriptor)
++    let closeError = closed == 0 ? 0 : errno
++    guard closed == 0 else {
++        let primary: (any Error)?
++        if case .failure(let error) = body { primary = error } else { primary = nil }
++        throw P1F1D065ColdCleanupError(
++            primary: primary,
++            cleanupFailures: [.init(operation: "abort-staged-close", error:
++                P1F1D065ColdObservationError(operation: "close", result: closed, errorNumber: closeError))],
++            retainedFixturePath: nil
++        )
++    }
++    return try body.get()
++}
++
++private func p1f1d065CaptureAbortProcessIdentity(
++    pid: pid_t, authority: CliExecutableAuthorityV1
++) throws -> P1F1D065AbortProcessIdentity {
++    let first = try p1f1d065ReadAbortBSDIdentity(pid: pid, phase: "before")
++    var pathBytes = [CChar](repeating: 0, count: Int(PROC_PIDPATHINFO_MAXSIZE))
++    guard let pathSize = UInt32(exactly: pathBytes.count) else {
++        throw P1F1D065AbortIdentityError.invalid("process-path-size")
++    }
++    let pathResult = pathBytes.withUnsafeMutableBytes { proc_pidpath(pid, $0.baseAddress, pathSize) }
++    let pathError = pathResult > 0 ? 0 : errno
++    guard pathResult > 0, let pathCount = Int(exactly: pathResult), pathCount < pathBytes.count else {
++        throw P1F1D065ColdObservationError(
++            operation: "abort-proc-pidpath", result: pathResult, errorNumber: pathError
++        )
++    }
++    let processPath = String(decoding: pathBytes.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
++    let canonicalProcess = try p1f1d065AbortCanonicalPath(processPath)
++    let canonicalStaged = try p1f1d065AbortCanonicalPath(authority.stagedPath)
++    guard canonicalProcess == canonicalStaged else {
++        throw P1F1D065AbortIdentityError.invalid("process-executable-path")
++    }
++    let hash = try p1f1d065ReadAbortExecutableHash(path: canonicalStaged, authority: authority)
++    let second = try p1f1d065ReadAbortBSDIdentity(pid: pid, phase: "after")
++    guard first == second else { throw P1F1D065AbortIdentityError.identityDrift }
++    return .init(
++        pid: second.pid, parentPID: second.parent, processGroupID: second.group,
++        uid: second.uid, startSeconds: second.seconds, startMicroseconds: second.microseconds,
++        executablePath: canonicalStaged, executableDevice: authority.stagedDevice,
++        executableInode: authority.stagedInode, executableHash: hash
++    )
++}
++
++private struct P1F1D065AbortSyscallObservation: Sendable {
++    let operation: String
++    let target: Int32
++    let result: Int32
++    let errorNumber: Int32
++    let waitablePID: pid_t
++
++    var absent: Bool { result == -1 && errorNumber == ESRCH }
++    var noWaitableChild: Bool { result == -1 && errorNumber == ECHILD }
++}
++
++private func p1f1d065AbortObserveSignal(
++    target: Int32, signal: Int32, operation: String
++) -> P1F1D065AbortSyscallObservation {
++    let result = Darwin.kill(target, signal)
++    let errorNumber = result == 0 ? 0 : errno
++    return .init(operation: operation, target: target, result: result,
++                 errorNumber: errorNumber, waitablePID: 0)
++}
++
++private func p1f1d065AbortObserveWait(_ pid: pid_t) throws -> P1F1D065AbortSyscallObservation {
++    guard pid > 1, let identifier = id_t(exactly: pid) else {
++        throw P1F1D065AbortIdentityError.invalid("waitid-identity")
++    }
++    var information = siginfo_t()
++    let result = Darwin.waitid(P_PID, identifier, &information, WEXITED | WNOHANG | WNOWAIT)
++    let errorNumber = result == 0 ? 0 : errno
++    return .init(operation: "waitid-WEXITED-WNOHANG-WNOWAIT", target: pid,
++                 result: result, errorNumber: errorNumber, waitablePID: information.si_pid)
++}
++
++private func p1f1d065AbortLogObservation(
++    _ observation: P1F1D065AbortSyscallObservation, scope: P1F1D065AbortScope
++) throws {
++    try p1f1d065AbortLog(scope,
++        "operation=\(observation.operation) target=\(observation.target) result=\(observation.result) errno=\(observation.errorNumber) waitable-pid=\(observation.waitablePID)")
++}
++
++private struct P1F1D065AbortContainmentReport: Sendable {
++    let observations: [P1F1D065AbortSyscallObservation]
++    let result: Result<Void, any Error>
++    let diagnosticErrors: [any Error]
++}
++
++private func p1f1d065ContainFreshAbortIdentity(
++    _ identity: P1F1D065AbortProcessIdentity,
++    context: P1F1D065AbortProcessContext
++) -> P1F1D065AbortContainmentReport {
++    var observations: [P1F1D065AbortSyscallObservation] = []
++    var diagnosticErrors: [any Error] = []
++    let result = Result { () throws -> Void in
++        func observe(_ signal: Int32, operation: String) throws -> P1F1D065AbortSyscallObservation {
++            let observation = p1f1d065AbortObserveSignal(target: identity.pid, signal: signal, operation: operation)
++            observations.append(observation)
++            return observation
++        }
++        let before = try observe(0, operation: "containment-probe-before")
++        if before.absent { return }
++        guard before.result == 0 else {
++            throw P1F1D065ColdObservationError(operation: before.operation, result: before.result, errorNumber: before.errorNumber)
++        }
++        guard try p1f1d065CaptureAbortProcessIdentity(pid: identity.pid, authority: context.authority) == identity else {
++            throw P1F1D065AbortIdentityError.identityDrift
++        }
++        let killed = try observe(SIGKILL, operation: "containment-SIGKILL-positive-pid")
++        guard killed.result == 0 || killed.absent else {
++            throw P1F1D065ColdObservationError(operation: killed.operation, result: killed.result, errorNumber: killed.errorNumber)
++        }
++        let afterKill = try observe(0, operation: "containment-probe-after-kill")
++        if afterKill.absent { return }
++        guard afterKill.result == 0 else {
++            throw P1F1D065ColdObservationError(operation: afterKill.operation, result: afterKill.result, errorNumber: afterKill.errorNumber)
++        }
++        guard try p1f1d065CaptureAbortProcessIdentity(pid: identity.pid, authority: context.authority) == identity else {
++            throw P1F1D065AbortIdentityError.identityDrift
++        }
++        let continued = try observe(SIGCONT, operation: "containment-SIGCONT-positive-pid")
++        guard continued.result == 0 || continued.absent else {
++            throw P1F1D065ColdObservationError(operation: continued.operation, result: continued.result, errorNumber: continued.errorNumber)
++        }
++    }
++    // Diagnostic IO cannot stand between validation and an emergency signal.
++    for observation in observations {
++        do { try p1f1d065AbortLogObservation(observation, scope: context.scope) }
++        catch { diagnosticErrors.append(error) }
++    }
++    return .init(observations: observations, result: result, diagnosticErrors: diagnosticErrors)
++}
++
+ private func p1f1d065ColdErrorCategory(_ error: any Error) -> String {
+     if (error as? P1F1D065ColdForcedFailure) == .afterReady {
+         return "forcedFailure.afterReady"
+     }
+     if (error as? P1F1D065MechanicsFixtureError) == .coldGateReadinessTimedOut {
+         return "coldGateReadinessTimedOut"
+     }
+     return String(reflecting: type(of: error))
+ }
+ 
+ private func p1f1d065ColdLog(
+     _ identity: P1F1D065ColdIdentity,
+@@ -553,24 +858,27 @@ private final class P1F1D065ProcessInspector:
+ {
+     private let authority: CliExecutableAuthorityV1
+     private let bridgeAuthority: EngineBoardBridgeExecutableAuthorityV1
+     private let missingImageGate: P1F1D065SynchronousGate?
+     private let resumeReadyURL: URL?
+     private let lock = NSLock()
+     private var snapshotCalls = 0
+     private var signals: [(Int32, Int32)] = []
+     private var injectedResumeFailure = false
+     private var observedSignals: [P1F1D065SignalObservation] = []
+     private var resumeReadiness: P1F1D065ResumeReadinessObservation?
+     private var coldIdentity: P1F1D065ColdIdentity?
++    private var abortDiagnostics: (context: P1F1D065AbortProcessContext, control: P1F1D065AbortSafetyControl)?
++    private var abortCapture: Result<P1F1D065AbortProcessIdentity, any Error>?
++    private var abortIdentityBeforeWait = false
+ 
+     init(
+         authority: CliExecutableAuthorityV1,
+         bridgeAuthority: EngineBoardBridgeExecutableAuthorityV1,
+         missingImageGate: P1F1D065SynchronousGate? = nil,
+         resumeReadyURL: URL? = nil
+     ) {
+         self.authority = authority
+         self.bridgeAuthority = bridgeAuthority
+         self.missingImageGate = missingImageGate
+         self.resumeReadyURL = resumeReadyURL
+     }
+@@ -579,37 +887,79 @@ private final class P1F1D065ProcessInspector:
+         try lock.withLock {
+             guard coldIdentity == nil else {
+                 throw P1F1D065MechanicsFixtureError.coldDiagnosticsAlreadyConfigured
+             }
+             coldIdentity = identity
+         }
+     }
+ 
+     func signalObservations() -> [P1F1D065SignalObservation] {
+         lock.withLock { observedSignals }
+     }
+ 
++    func configureAbortDiagnostics(
++        fixtureId: UUID, executionId: String, rootPath: String,
++        control: P1F1D065AbortSafetyControl
++    ) throws {
++        let context = P1F1D065AbortProcessContext(
++            scope: .init(fixtureId: fixtureId, executionId: executionId, rootPath: rootPath),
++            authority: authority
++        )
++        try lock.withLock {
++            guard abortDiagnostics == nil else {
++                throw P1F1D065AbortIdentityError.alreadyConfigured
++            }
++            try control.configureProcessContext(context)
++            abortDiagnostics = (context, control)
++        }
++    }
++
++    var abortIdentitySnapshot: (capture: Result<P1F1D065AbortProcessIdentity, any Error>?, beforeWait: Bool) {
++        lock.withLock { (abortCapture, abortIdentityBeforeWait) }
++    }
++
++    private func captureAbortIdentityBeforeWait(_ pid: pid_t) throws {
++        guard let diagnostics = lock.withLock({ abortDiagnostics }) else { return }
++        let captured = Result { () throws -> P1F1D065AbortProcessIdentity in
++            let identity = try p1f1d065CaptureAbortProcessIdentity(pid: pid, authority: authority)
++            try diagnostics.control.publishIdentity(identity).get()
++            return identity
++        }
++        lock.withLock {
++            abortCapture = captured
++            if case .success = captured { abortIdentityBeforeWait = true }
++        }
++        _ = try captured.get()
++    }
++
++    private func logAbortObservation(_ message: String) {
++        guard let diagnostics = lock.withLock({ abortDiagnostics }) else { return }
++        do { try p1f1d065AbortLog(diagnostics.context.scope, message) }
++        catch { diagnostics.control.recordDiagnosticFailure(error) }
++    }
++
+     var resumeReadinessSnapshot: P1F1D065ResumeReadinessObservation? {
+         lock.withLock { resumeReadiness }
+     }
+ 
+     func logCold(_ message: String) {
+         if let identity = lock.withLock({ coldIdentity }) {
+             p1f1d065ColdLog(identity, message)
+         }
+     }
+ 
+     private func recordSignal(_ observation: P1F1D065SignalObservation) {
+         lock.withLock { observedSignals.append(observation) }
+         logCold("signal=\(observation.signal) group=\(observation.group) target=\(observation.target) result=\(observation.result) errno=\(observation.errorNumber)")
++        logAbortObservation("signal=\(observation.signal) group=\(observation.group) target=\(observation.target) result=\(observation.result) errno=\(observation.errorNumber)")
+     }
+ 
+     private func recordResumeReadiness(
+         _ observation: P1F1D065ResumeReadinessObservation
+     ) {
+         lock.withLock { resumeReadiness = observation }
+         print(
+             "065-resume-readiness outcome=\(observation.outcome.rawValue) "
+                 + "polls=\(observation.polls)/\(observation.pollBudget) "
+                 + "interval-us=\(observation.pollIntervalMicroseconds) "
+                 + "elapsed=\(observation.elapsed)"
+         )
+@@ -668,24 +1018,25 @@ private final class P1F1D065ProcessInspector:
+ 
+     func send(signal: Int32, processGroupId: Int32) throws {
+         let shouldInjectResumeFailure = lock.withLock {
+             signals.append((signal, processGroupId))
+             guard signal == SIGCONT,
+                   missingImageGate != nil,
+                   !injectedResumeFailure
+             else { return false }
+             injectedResumeFailure = true
+             return true
+         }
+         if shouldInjectResumeFailure {
++            try captureAbortIdentityBeforeWait(processGroupId)
+             if let missingImageGate, !missingImageGate.enterAndWait() {
+                 throw P1F1D065AbortSafetyError.gateAborted
+             }
+             let result = Darwin.kill(-processGroupId, signal)
+             let errorNumber = result == 0 ? 0 : errno
+             recordSignal(P1F1D065SignalObservation(
+                 signal: signal, group: processGroupId, target: -processGroupId,
+                 result: result, errorNumber: errorNumber
+             ))
+             guard result == 0 || errorNumber == ESRCH else {
+                 throw EngineContextValidationErrorV1()
+             }
+@@ -725,27 +1076,30 @@ private final class P1F1D065ProcessInspector:
+         let result = Darwin.kill(-processGroupId, signal)
+         let errorNumber = result == 0 ? 0 : errno
+         recordSignal(P1F1D065SignalObservation(
+             signal: signal, group: processGroupId, target: -processGroupId,
+             result: result, errorNumber: errorNumber
+         ))
+         guard result == 0 || errorNumber == ESRCH else {
+             throw EngineContextValidationErrorV1()
+         }
+     }
+ 
+     func processGroupExists(_ processGroupId: Int32) throws -> Bool {
+-        if Darwin.kill(-processGroupId, 0) == 0 { return true }
+-        if errno == ESRCH { return false }
+-        if errno == EPERM { return true }
++        let result = Darwin.kill(-processGroupId, 0)
++        let errorNumber = result == 0 ? 0 : errno
++        logAbortObservation("operation=backend-group-probe target=\(-processGroupId) result=\(result) errno=\(errorNumber)")
++        if result == 0 { return true }
++        if errorNumber == ESRCH { return false }
++        if errorNumber == EPERM { return true }
+         throw EngineContextValidationErrorV1()
+     }
+ 
+     var effectSnapshot: (snapshotCalls: Int, signalCount: Int) {
+         lock.withLock { (snapshotCalls, signals.count) }
+     }
+ 
+     var signalSnapshot: [Int32] {
+         lock.withLock { signals.map { $0.0 } }
+     }
+ }
+ 
+@@ -7948,61 +8302,159 @@ private struct P1F1D065AbortGuardReport: Sendable {
+     let expired: Bool
+     let missingImageAbort: P1F1D065GateAbortObservation?
+     let publicationAbort: P1F1D065GateAbortObservation?
+     let clientShutdown: Result<Void, any Error>?
+ }
+ 
+ private struct P1F1D065AbortSafetySnapshot: Sendable {
+     let guardStarted: Bool
+     let guardFinished: Bool
+     let expiryCount: Int
+     let clientInstalled: Bool
+     let lateClientShutdown: Result<Void, any Error>?
++    let identity: P1F1D065AbortProcessIdentity?
++    let containmentClaim: P1F1D065AbortContainmentReason?
++    let containmentReport: P1F1D065AbortContainmentReport?
++    let containmentRequests: [P1F1D065AbortContainmentRequest]
++    let diagnosticErrors: [any Error]
++}
++
++private enum P1F1D065AbortContainmentReason: String, Sendable {
++    case guardExpiry
++    case lateIdentity
++    case returnedUncertain
++}
++
++private enum P1F1D065AbortContainmentRequest: Sendable {
++    case notConfigured(P1F1D065AbortContainmentReason)
++    case awaitingIdentity(P1F1D065AbortContainmentReason)
++    case alreadyClaimed(P1F1D065AbortContainmentReason)
++    case completed(P1F1D065AbortContainmentReason, P1F1D065AbortContainmentReport)
++}
++
++private enum P1F1D065AbortContainmentSelection {
++    case skip(P1F1D065AbortContainmentRequest)
++    case claimed(P1F1D065AbortProcessContext, P1F1D065AbortProcessIdentity)
+ }
+ 
+-// Task 1 owns only test gates and a client. Process identity and containment
+-// are intentionally not implemented or admitted by this no-child unit.
+ private final class P1F1D065AbortSafetyControl: @unchecked Sendable {
+     let missingImageGate: P1F1D065SynchronousGate
+     let publicationGate: P1F1D065SynchronousGate
+     private let lock = NSLock()
+     private let disarmSignal = DispatchSemaphore(value: 0)
+     private var client: P1F1D065SocketClient?
+     private var lateClientShutdown: Result<Void, any Error>?
+     private var started = false
+     private var finished = false
+     private var disarmed = false
+     private var expiryCount = 0
+     private var startWaiters: [CheckedContinuation<Void, Never>] = []
++    private var processContext: P1F1D065AbortProcessContext?
++    private var identity: P1F1D065AbortProcessIdentity?
++    private var containmentClaim: P1F1D065AbortContainmentReason?
++    private var containmentReport: P1F1D065AbortContainmentReport?
++    private var containmentRequests: [P1F1D065AbortContainmentRequest] = []
++    private var diagnosticErrors: [any Error] = []
+ 
+     init(
+         missingImageGate: P1F1D065SynchronousGate,
+         publicationGate: P1F1D065SynchronousGate
+     ) {
+         self.missingImageGate = missingImageGate
+         self.publicationGate = publicationGate
+     }
+ 
+     var isAborted: Bool { lock.withLock { expiryCount != 0 } }
+ 
+     var snapshot: P1F1D065AbortSafetySnapshot {
+         lock.withLock {
+             .init(
+                 guardStarted: started, guardFinished: finished,
+                 expiryCount: expiryCount, clientInstalled: client != nil,
+-                lateClientShutdown: lateClientShutdown
++                lateClientShutdown: lateClientShutdown, identity: identity,
++                containmentClaim: containmentClaim, containmentReport: containmentReport,
++                containmentRequests: containmentRequests, diagnosticErrors: diagnosticErrors
+             )
+         }
+     }
+ 
++    func configureProcessContext(_ context: P1F1D065AbortProcessContext) throws {
++        try lock.withLock {
++            guard processContext == nil, !started else {
++                throw P1F1D065AbortIdentityError.alreadyConfigured
++            }
++            processContext = context
++        }
++    }
++
++    func publishIdentity(_ published: P1F1D065AbortProcessIdentity) -> Result<Void, any Error> {
++        let publication: Result<(P1F1D065AbortProcessContext, Bool), any Error> = lock.withLock {
++            guard let context = processContext else {
++                return .failure(P1F1D065AbortIdentityError.notConfigured)
++            }
++            guard identity == nil else {
++                return .failure(P1F1D065AbortIdentityError.alreadyPublished)
++            }
++            identity = published
++            return .success((context, expiryCount != 0))
++        }
++        switch publication {
++        case .failure(let error): return .failure(error)
++        case .success(let (context, expired)):
++            // The identity is already owned before a diagnostic can fail.
++            let diagnostic = Result {
++                try p1f1d065AbortLog(context.scope,
++                    "identity-before-gate root=\(context.scope.rootPath) pid=\(published.pid) ppid=\(published.parentPID) pgid=\(published.processGroupID) uid=\(published.uid) start-seconds=\(published.startSeconds) start-microseconds=\(published.startMicroseconds) path=\(published.executablePath) device=\(published.executableDevice) inode=\(published.executableInode) hash=\(published.executableHash)")
++            }
++            if case .failure(let error) = diagnostic { recordDiagnosticFailure(error) }
++            if expired { containIfNeeded(reason: .lateIdentity) }
++            if expired { return .failure(P1F1D065AbortSafetyError.gateAborted) }
++            return diagnostic
++        }
++    }
++
++    func recordDiagnosticFailure(_ error: any Error) {
++        lock.withLock { diagnosticErrors.append(error) }
++    }
++
++    @discardableResult
++    func containIfNeeded(reason: P1F1D065AbortContainmentReason) -> P1F1D065AbortContainmentRequest {
++        let selection: P1F1D065AbortContainmentSelection = lock.withLock {
++            guard let context = processContext else { return .skip(.notConfigured(reason)) }
++            guard containmentClaim == nil else { return .skip(.alreadyClaimed(reason)) }
++            guard let identity else { return .skip(.awaitingIdentity(reason)) }
++            containmentClaim = reason
++            return .claimed(context, identity)
++        }
++        let request: P1F1D065AbortContainmentRequest
++        switch selection {
++        case .skip(let skipped): request = skipped
++        case .claimed(let context, let identity):
++            let report = p1f1d065ContainFreshAbortIdentity(identity, context: context)
++            lock.withLock {
++                containmentReport = report
++                diagnosticErrors.append(contentsOf: report.diagnosticErrors)
++            }
++            request = .completed(reason, report)
++        }
++        lock.withLock { containmentRequests.append(request) }
++        if let context = lock.withLock({ processContext }) {
++            do {
++                try p1f1d065AbortLog(context.scope,
++                    "containment-request=\(String(reflecting: request))")
++            } catch { recordDiagnosticFailure(error) }
++        }
++        return request
++    }
++
+     func installClient(_ installed: P1F1D065SocketClient) -> Result<Void, any Error> {
+         let installedResult: Result<Bool, any Error> = lock.withLock {
+             guard client == nil else {
+                 return .failure(P1F1D065AbortSafetyError.clientAlreadyInstalled)
+             }
+             client = installed
+             return .success(expiryCount != 0)
+         }
+         switch installedResult {
+         case .failure(let error): return .failure(error)
+         case .success(false): return .success(())
+         case .success(true):
+@@ -8048,33 +8500,207 @@ private final class P1F1D065AbortSafetyControl: @unchecked Sendable {
+             // extend the guard, unlike an NSCondition Date-based wait.
+             _ = disarmSignal.wait(timeout: .now() + .milliseconds(25))
+         }
+         let expiry: (claimed: Bool, client: P1F1D065SocketClient?) = lock.withLock {
+             guard !disarmed else { return (false, nil) }
+             precondition(expiryCount == 0)
+             expiryCount = 1
+             return (true, client)
+         }
+         let missing = expiry.claimed ? missingImageGate.abortWake() : nil
+         let publication = expiry.claimed ? publicationGate.abortWake() : nil
+         let shutdown = expiry.client?.interruptReadChecked()
++        if expiry.claimed { containIfNeeded(reason: .guardExpiry) }
+         lock.withLock { finished = true }
+         return .init(
+             expired: expiry.claimed,
+             missingImageAbort: missing, publicationAbort: publication,
+             clientShutdown: shutdown
+         )
+     }
+ }
+ 
++private struct P1F1D065AbortFinalObservations: Sendable {
++    let process: Result<[P1F1D065AbortSyscallObservation], any Error>
++    let cleanup: P1F1D065AbortSyscallObservation
++    let socket: P1F1D065AbortSyscallObservation
++}
++
++private func p1f1d065AbortObservePath(_ path: String, operation: String) -> P1F1D065AbortSyscallObservation {
++    var information = stat()
++    let result = path.withCString { Darwin.lstat($0, &information) }
++    let errorNumber = result == 0 ? 0 : errno
++    return .init(operation: operation, target: 0, result: result,
++                 errorNumber: errorNumber, waitablePID: 0)
++}
++
++private func p1f1d065ObserveAbortFinalState(
++    control: P1F1D065AbortSafetyControl, scope: P1F1D065AbortScope,
++    cleanupURL: URL, socketURL: URL
++) -> P1F1D065AbortFinalObservations {
++    let process = Result { () throws -> [P1F1D065AbortSyscallObservation] in
++        guard let identity = control.snapshot.identity else {
++            throw P1F1D065AbortIdentityError.invalid("missing-final-identity")
++        }
++        return [
++            p1f1d065AbortObserveSignal(target: identity.pid, signal: 0, operation: "final-pid-probe"),
++            p1f1d065AbortObserveSignal(target: -identity.processGroupID, signal: 0, operation: "final-group-probe"),
++            try p1f1d065AbortObserveWait(identity.pid),
++        ]
++    }
++    let cleanup = p1f1d065AbortObservePath(cleanupURL.path, operation: "final-cleanup-lstat")
++    let socket = p1f1d065AbortObservePath(socketURL.path, operation: "final-socket-lstat")
++    var observations = [cleanup, socket]
++    if case .success(let probes) = process { observations += probes }
++    for observation in observations {
++        do { try p1f1d065AbortLogObservation(observation, scope: scope) }
++        catch { control.recordDiagnosticFailure(error) }
++    }
++    if case .failure(let error) = process {
++        do { try p1f1d065AbortLog(scope, "final-process-observation-error=\(String(reflecting: error))") }
++        catch { control.recordDiagnosticFailure(error) }
++    }
++    return .init(process: process, cleanup: cleanup, socket: socket)
++}
++
++private func p1f1d065AbortResultSucceeded<Value>(_ result: Result<Value, any Error>?) -> Bool {
++    if case .success? = result { return true }
++    return false
++}
++
++private struct P1F1D065AbortCleanupCertificate: Sendable {
++    let bodyCompleted: Bool
++    let publicationOrdered: Bool
++    let streamPrimaryExpected: Bool
++    let cancellationPrimaryExpected: Bool
++    let ownerEpilogue: Bool
++    let readerJoinedSuccessfully: Bool
++    let bothWaitersJoined: Bool
++    let clientShutdown: Bool
++    let clientClosed: Bool
++    let guardStarted: Bool
++    let guardJoined: Bool
++    let guardInactive: Bool
++    let gatesReleasedOnce: Bool
++    let identityCapturedBeforeWait: Bool
++    let identityMatchesControl: Bool
++    let readinessObserved: Bool
++    let readinessBudget: Bool
++    let signalContract: Bool
++    let cleanupRemoved: Bool
++    let socketRemoved: Bool
++    let registryEmpty: Bool
++    let directoryClosed: Bool
++    let pidAbsent: Bool
++    let groupAbsent: Bool
++    let noWaitableChild: Bool
++    let diagnosticsClean: Bool
++    let noContainment: Bool
++
++    var allowsRemoval: Bool {
++        bodyCompleted && publicationOrdered && streamPrimaryExpected
++            && cancellationPrimaryExpected && ownerEpilogue && readerJoinedSuccessfully
++            && bothWaitersJoined && clientShutdown && clientClosed && guardStarted
++            && guardJoined && guardInactive && gatesReleasedOnce && identityCapturedBeforeWait
++            && identityMatchesControl && readinessObserved && readinessBudget && signalContract
++            && cleanupRemoved && socketRemoved && registryEmpty && directoryClosed
++            && pidAbsent && groupAbsent && noWaitableChild && diagnosticsClean && noContainment
++    }
++}
++
++private func p1f1d065MakeAbortCertificate(
++    owner: P1F1D065AbortOwnerReport,
++    observations: P1F1D065AbortFinalObservations,
++    identityCapture: Result<P1F1D065AbortProcessIdentity, any Error>?,
++    identityBeforeWait: Bool,
++    readiness: P1F1D065ResumeReadinessObservation?,
++    signals: [P1F1D065SignalObservation], signalSnapshot: [Int32],
++    registryEmpty: Bool, expectedError: CliProcessBackendError
++) -> P1F1D065AbortCleanupCertificate {
++    let epilogue = owner.epilogue
++    let control = owner.lifetime.control
++    let snapshot = control.snapshot
++    var publicationOrdered = false
++    if case .success(let body) = owner.body { publicationOrdered = !body.publishedBeforeCleanup }
++    let captured: P1F1D065AbortProcessIdentity?
++    if case .success(let identity)? = identityCapture { captured = identity } else { captured = nil }
++    let probes: [P1F1D065AbortSyscallObservation]
++    if case .success(let values) = observations.process { probes = values } else { probes = [] }
++    let processProbesPresent = probes.count == 3
++    let signalIdentity = captured.map { identity in
++        signals.count == 3 && signals.first?.result == 0
++            && signals.allSatisfy {
++                $0.group == identity.processGroupID && $0.target == -identity.processGroupID
++                    && ($0.result == 0 || ($0.result == -1 && $0.errorNumber == ESRCH))
++            }
++    } ?? false
++    let missing = control.missingImageGate.controlledWaitCounts
++    let publication = control.publicationGate.controlledWaitCounts
++    let guardInactive = epilogue?.guardReport.map {
++        !$0.expired && $0.missingImageAbort == nil && $0.publicationAbort == nil && $0.clientShutdown == nil
++    } ?? false
++    return .init(
++        bodyCompleted: p1f1d065AbortResultSucceeded(owner.body),
++        publicationOrdered: publicationOrdered,
++        streamPrimaryExpected: (epilogue?.stream?.terminalError as? CliProcessBackendError) == expectedError,
++        cancellationPrimaryExpected: (epilogue?.cancellation?.terminalError as? CliProcessBackendError) == expectedError,
++        ownerEpilogue: epilogue?.claimAccepted == true && epilogue?.claimant == .owner,
++        readerJoinedSuccessfully: owner.lifetime.reader != nil && p1f1d065AbortResultSucceeded(epilogue?.reader),
++        bothWaitersJoined: epilogue?.stream != nil && epilogue?.cancellation != nil,
++        clientShutdown: p1f1d065AbortResultSucceeded(epilogue?.clientShutdown),
++        clientClosed: p1f1d065AbortResultSucceeded(epilogue?.clientClose),
++        guardStarted: snapshot.guardStarted,
++        guardJoined: epilogue?.guardDisarmed == true && epilogue?.guardReport != nil && snapshot.guardFinished,
++        guardInactive: guardInactive && snapshot.expiryCount == 0 && snapshot.lateClientShutdown == nil,
++        gatesReleasedOnce: missing.entries == 1 && missing.releases == 1 && publication.entries == 1 && publication.releases == 1,
++        identityCapturedBeforeWait: identityBeforeWait && p1f1d065AbortResultSucceeded(identityCapture),
++        identityMatchesControl: captured != nil && captured == snapshot.identity,
++        readinessObserved: readiness?.outcome == .observed,
++        readinessBudget: readiness.map { $0.pollBudget == 3_000 && $0.pollIntervalMicroseconds == 1_000 && $0.polls > 0 && $0.polls <= $0.pollBudget } ?? false,
++        signalContract: signalSnapshot == [SIGCONT, SIGKILL, SIGCONT]
++            && signals.map(\.signal) == [SIGCONT, SIGKILL, SIGCONT] && signalIdentity,
++        cleanupRemoved: epilogue?.cancellation?.resources.cleanupRemoved == true
++            && observations.cleanup.result == -1 && observations.cleanup.errorNumber == ENOENT,
++        socketRemoved: epilogue?.cancellation?.resources.socketRemoved == true
++            && observations.socket.result == -1 && observations.socket.errorNumber == ENOENT,
++        registryEmpty: registryEmpty && epilogue?.cancellation?.resources.registryEmpty == true,
++        directoryClosed: epilogue?.cancellation?.resources.directoryClose == .closed,
++        pidAbsent: processProbesPresent && probes[0].absent,
++        groupAbsent: processProbesPresent && probes[1].absent,
++        noWaitableChild: processProbesPresent && probes[2].noWaitableChild,
++        diagnosticsClean: snapshot.diagnosticErrors.isEmpty,
++        noContainment: snapshot.containmentClaim == nil && snapshot.containmentReport == nil && snapshot.containmentRequests.isEmpty
++    )
++}
++
++private func p1f1d065AbortErrorSummary(_ error: (any Error)?) -> String {
++    guard let error else { return "none" }
++    if let cleanup = error as? CliProcessCleanupFailureV1 { return cleanup.description }
++    if let observation = error as? P1F1D065ColdObservationError {
++        return "operation=\(observation.operation),result=\(observation.result),errno=\(observation.errorNumber)"
++    }
++    return String(reflecting: type(of: error))
++}
++
++private func p1f1d065LogAbortOwnerResults(
++    _ owner: P1F1D065AbortOwnerReport,
++    scope: P1F1D065AbortScope
++) {
++    var bodyError: (any Error)?
++    if case .failure(let error) = owner.body { bodyError = error }
++    let message = "owner-returned body=\(p1f1d065AbortErrorSummary(bodyError)) stream=\(p1f1d065AbortErrorSummary(owner.epilogue?.stream?.terminalError)) cancellation=\(p1f1d065AbortErrorSummary(owner.epilogue?.cancellation?.terminalError)) epilogue=\(String(describing: owner.epilogue?.claimant)) reader=\(String(describing: owner.epilogue?.reader)) client-shutdown=\(String(describing: owner.epilogue?.clientShutdown)) client-close=\(String(describing: owner.epilogue?.clientClose)) guard=\(String(describing: owner.epilogue?.guardReport))"
++    do { try p1f1d065AbortLog(scope, message) }
++    catch { owner.lifetime.control.recordDiagnosticFailure(error) }
++}
++
+ private func p1f1d065StartAbortGuard(
+     control: P1F1D065AbortSafetyControl, budget: Duration
+ ) -> Task<P1F1D065AbortGuardReport, Never> {
+     BlockingProcessOperation.start { control.waitAndExpire(after: budget) }
+ }
+ 
+ private enum P1F1D065AbortCleanupClaimant: Sendable, Equatable {
+     case owner
+     case testRescue
+ }
+ 
+ private enum P1F1D065AbortGateCleanup: Sendable {
+@@ -9631,24 +10257,246 @@ struct ExecutionEngineConformanceTests {
+         #expect(
+             (failure.primary as? P1F1D065SignatureFixtureError)
+                 == .injected(.cli)
+         )
+         try #require(failure.causes.count == 1)
+         #expect(failure.causes[0].phase == .cleanupAuthority)
+         #expect(
+             (failure.causes[0].underlying as? CliCleanupFileErrorV1)
+                 == .identityMismatch
+         )
+     }
+ 
++    @Test func p1f1_065AbortBeforeRegistrationOwnsAllLifetime() async throws {
++        let fixtureId = UUID()
++        let abortExecutionId = "00000000-0000-4000-8000-000000000465"
++        let missingImageGate = P1F1D065SynchronousGate()
++        let cleanupPublicationGate = P1F1D065SynchronousGate()
++        let control = P1F1D065AbortSafetyControl(
++            missingImageGate: missingImageGate, publicationGate: cleanupPublicationGate
++        )
++        let abortHarness = try P1F1D065MechanicsHarness(
++            label: "pre-registration-abort", missingImageGate: missingImageGate
++        )
++        let scope = P1F1D065AbortScope(
++            fixtureId: fixtureId, executionId: abortExecutionId, rootPath: abortHarness.root.path
++        )
++        var removalAllowed = false
++        defer {
++            if removalAllowed {
++                do { try abortHarness.removeChecked() }
++                catch { Issue.record(error) }
++            } else {
++                do { try p1f1d065AbortLog(scope, "uncertified-retained-root=\(abortHarness.root.path)") }
++                catch { Issue.record(error) }
++            }
++        }
++        try abortHarness.processInspector.configureAbortDiagnostics(
++            fixtureId: fixtureId, executionId: abortExecutionId,
++            rootPath: abortHarness.root.path, control: control
++        )
++        let abortCleanup = try abortHarness.makeCleanupAuthority("missing-image-config.json")
++        let abortRequest = try abortHarness.request(
++            executionId: abortExecutionId, mode: .readyFile,
++            readinessFileName: "resume-ready", token: "4",
++            cleanupAuthorities: [abortCleanup.authority],
++            progressSink: P1F1D065BlockingProgressSink(gate: cleanupPublicationGate)
++        )
++        let abortSocketURL = try abortHarness.socketURL(executionId: abortExecutionId)
++        let abortRegistry = ShellProcessRegistry()
++        let abortRevalidator = P1F1D065SignatureRevalidator(
++            expectedCLI: abortHarness.executableAuthority,
++            expectedBoardBridge: abortHarness.bridgeAuthority
++        )
++        let abortBackend = try p1f1d065GateBackend(
++            harness: abortHarness, registry: abortRegistry, revalidator: abortRevalidator
++        )
++        let expectedAbortError = CliProcessBackendError.processLaunchFailed(
++            "injected resume dispatch failure"
++        )
++        let publicationProbe = P1F1D065PublicationProbe()
++        let operations = P1F1D065AbortOwnerOperations(
++            startStreamWaiter: {
++                // launch starts execution immediately. Keep it inside this
++                // guard-acknowledged closure, before cancellation is started.
++                let abortStream = abortBackend.launch(abortRequest)
++                return Task {
++                    defer {
++                        missingImageGate.complete(.stream)
++                        cleanupPublicationGate.complete(.stream)
++                    }
++                    var frames: [CliProcessFrameV1] = []
++                    do {
++                        for try await frame in abortStream { frames.append(frame) }
++                        return P1F1D065ControlledStreamReport(frames: frames, terminalError: nil)
++                    } catch {
++                        return P1F1D065ControlledStreamReport(frames: frames, terminalError: error)
++                    }
++                }
++            },
++            startCancellationWaiter: {
++                Task {
++                    defer {
++                        missingImageGate.complete(.cancellation)
++                        cleanupPublicationGate.complete(.cancellation)
++                    }
++                    let failure: (any Error)?
++                    do {
++                        _ = try await abortBackend.cancel(executionId: abortExecutionId)
++                        failure = nil
++                    } catch { failure = error }
++                    let report = p1f1d065ObserveCleanupPublication(
++                        error: failure, harness: abortHarness, cleanupURL: abortCleanup.url,
++                        socketURL: abortSocketURL, registry: abortRegistry
++                    )
++                    publicationProbe.record(report)
++                    return report
++                }
++            },
++            makeClient: { try P1F1D065SocketClient.makeUnconnectedAbortClient() },
++            connect: { client in
++                try await p1f1d065AwaitSynchronousBoundary {
++                    try client.connectAbort(path: abortSocketURL.path, control: control)
++                }
++            },
++            performHello: { client in
++                try await p1f1d065AwaitSynchronousBoundary {
++                    try client.sendAbort([
++                        "cardId": .string(p1f1EngineCardID),
++                        "token": .string(String(repeating: "4", count: 64)), "type": "hello",
++                    ], control: control)
++                    guard let helloLine = try client.readLineAbort(control: control),
++                          try JSONValue.decoded(from: helloLine)["type"]?.stringValue == "hello_ok"
++                    else { throw EngineContextValidationErrorV1() }
++                }
++            },
++            sendToolCall: { client in
++                try await p1f1d065AwaitSynchronousBoundary {
++                    try client.sendAbort([
++                        "arguments": ["text": "hold cleanup publication"],
++                        "cardId": .string(p1f1EngineCardID),
++                        "id": "p1f1d-065-cleanup-publication",
++                        "name": "add_progress_note", "type": "tool_call",
++                    ], control: control)
++                }
++            },
++            startReader: { client in
++                Task {
++                    defer { cleanupPublicationGate.complete(.reader) }
++                    do {
++                        try await p1f1d065ReadResultLinesUntilEOF(client, abortControl: control)
++                        return .success(())
++                    } catch { return .failure(error) }
++                }
++            }
++        )
++        try await p1f1d065AwaitSynchronousBoundary {
++            try p1f1d065AbortLog(scope, "fixture-root=\(abortHarness.root.path) launch=guard-owned")
++        }
++        let owner = await p1f1d065RunAbortOwner(
++            control: control, budget: .seconds(30), operations: operations,
++            publicationObserved: { publicationProbe.snapshot != nil }
++        )
++        // No throwing observation or assertion can escape before certification
++        // and any required exact-identity containment have finished.
++        let observations = await BlockingProcessOperation.start {
++            p1f1d065LogAbortOwnerResults(owner, scope: scope)
++            return p1f1d065ObserveAbortFinalState(
++                control: control, scope: scope, cleanupURL: abortCleanup.url, socketURL: abortSocketURL
++            )
++        }.value
++        let identityObservation = abortHarness.processInspector.abortIdentitySnapshot
++        let readiness = abortHarness.processInspector.resumeReadinessSnapshot
++        let signals = abortHarness.processInspector.signalObservations()
++        let signalSnapshot = abortHarness.processInspector.signalSnapshot
++        func certificate() -> P1F1D065AbortCleanupCertificate {
++            p1f1d065MakeAbortCertificate(
++                owner: owner, observations: observations,
++                identityCapture: identityObservation.capture, identityBeforeWait: identityObservation.beforeWait,
++                readiness: readiness, signals: signals, signalSnapshot: signalSnapshot,
++                registryEmpty: abortRegistry.activeCount == 0, expectedError: expectedAbortError
++            )
++        }
++        let initialCertificate = certificate()
++        await BlockingProcessOperation.start {
++            do { try p1f1d065AbortLog(scope, "certificate=\(initialCertificate)") }
++            catch { control.recordDiagnosticFailure(error) }
++        }.value
++        let finalCertificate = certificate()
++        if !finalCertificate.allowsRemoval {
++            await BlockingProcessOperation.start {
++                let containment = control.containIfNeeded(reason: .returnedUncertain)
++                do { try p1f1d065AbortLog(scope, "returned-uncertain-containment=\(String(reflecting: containment))") }
++                catch { control.recordDiagnosticFailure(error) }
++            }.value
++        }
++        removalAllowed = finalCertificate.allowsRemoval
++        #expect(finalCertificate.allowsRemoval, "065 abort cleanup certificate failed; \(finalCertificate)")
++        let bodyObservation = try owner.body.get()
++        let publishedBeforeCleanup = bodyObservation.publishedBeforeCleanup
++        let epilogue = try #require(owner.epilogue)
++        let publicationReport = try #require(epilogue.cancellation)
++        let streamReport = try #require(epilogue.stream)
++        #expect(
++            !publishedBeforeCleanup,
++            "065 cleanup-publication became visible before cleanup completed"
++        )
++        #expect(
++            (streamReport.terminalError as? CliProcessBackendError)
++                == expectedAbortError,
++            "065 controlled stream terminal mismatch; actual=\(String(describing: streamReport.terminalError)) frames=\(streamReport.frames)"
++        )
++        #expect(
++            (publicationReport.terminalError as? CliProcessBackendError)
++                == expectedAbortError,
++            "065 cancellation terminal mismatch; actual=\(String(describing: publicationReport.terminalError))"
++        )
++        #expect(
++            publicationReport.resources.cleanupRemoved,
++            "065 cleanup authority file remained after joined failure"
++        )
++        #expect(
++            publicationReport.resources.socketRemoved,
++            "065 Board socket remained after joined failure"
++        )
++        #expect(
++            publicationReport.resources.registryEmpty,
++            "065 process registry retained an entry after joined failure"
++        )
++        #expect(
++            publicationReport.resources.directoryClose == .closed,
++            "065 socket directory authority did not close after joined failure"
++        )
++        let resumeReadiness = try #require(
++            abortHarness.processInspector.resumeReadinessSnapshot,
++            "065 resume readiness produced no observation"
++        )
++        #expect(
++            resumeReadiness.outcome == .observed,
++            "065 resume readiness outcome=\(resumeReadiness.outcome.rawValue) polls=\(resumeReadiness.polls)/\(resumeReadiness.pollBudget) elapsed=\(resumeReadiness.elapsed)"
++        )
++        #expect(
++            resumeReadiness.pollBudget == 3_000
++                && resumeReadiness.pollIntervalMicroseconds == 1_000
++                && resumeReadiness.polls > 0
++                && resumeReadiness.polls <= resumeReadiness.pollBudget,
++            "065 resume readiness polling contract drifted; polls=\(resumeReadiness.polls)/\(resumeReadiness.pollBudget) interval-us=\(resumeReadiness.pollIntervalMicroseconds) elapsed=\(resumeReadiness.elapsed)"
++        )
++        #expect(
++            abortHarness.processInspector.signalSnapshot
++                == [SIGCONT, SIGKILL, SIGCONT]
++        )
++
++    }
++
+     @Test func p1f1_065CancellationCleansProcessAndCommitsOnce() async throws {
+         let gateHarness = try P1F1D065MechanicsHarness(label: "gate")
+         var gateRemovalAllowed = true
+         defer {
+             if gateRemovalAllowed {
+                 do { try gateHarness.removeChecked() }
+                 catch { Issue.record(error) }
+             } else {
+                 Issue.record("retained 065 gate fixture: \(gateHarness.root.path)")
+             }
+         }
+ 
+@@ -9721,231 +10569,24 @@ struct ExecutionEngineConformanceTests {
+         )
+         #expect(
+             !FileManager.default.fileExists(
+                 atPath: try gateHarness.socketURL(
+                     executionId: rejectedExecutionId
+                 ).path
+             )
+         )
+         #expect(rejectedRegistry.activeCount == 0)
+         #expect(gateHarness.processInspector.effectSnapshot.snapshotCalls == 0)
+         #expect(gateHarness.processInspector.effectSnapshot.signalCount == 0)
+ 
+-        let missingImageGate = P1F1D065SynchronousGate()
+-        let cleanupPublicationGate = P1F1D065SynchronousGate()
+-        let abortHarness = try P1F1D065MechanicsHarness(
+-            label: "pre-registration-abort",
+-            missingImageGate: missingImageGate
+-        )
+-        defer { abortHarness.remove() }
+-        let abortCleanup = try abortHarness.makeCleanupAuthority(
+-            "missing-image-config.json"
+-        )
+-        let abortExecutionId =
+-            "00000000-0000-4000-8000-000000000465"
+-        let abortRequest = try abortHarness.request(
+-            executionId: abortExecutionId,
+-            mode: .readyFile,
+-            readinessFileName: "resume-ready",
+-            token: "4",
+-            cleanupAuthorities: [abortCleanup.authority],
+-            progressSink: P1F1D065BlockingProgressSink(
+-                gate: cleanupPublicationGate
+-            )
+-        )
+-        let abortSocketURL = try abortHarness.socketURL(
+-            executionId: abortExecutionId
+-        )
+-        let abortRegistry = ShellProcessRegistry()
+-        let abortRevalidator = P1F1D065SignatureRevalidator(
+-            expectedCLI: abortHarness.executableAuthority,
+-            expectedBoardBridge: abortHarness.bridgeAuthority
+-        )
+-        let abortBackend = try p1f1d065GateBackend(
+-            harness: abortHarness,
+-            registry: abortRegistry,
+-            revalidator: abortRevalidator
+-        )
+-        let expectedAbortError = CliProcessBackendError.processLaunchFailed(
+-            "injected resume dispatch failure"
+-        )
+-        let abortStream = abortBackend.launch(abortRequest)
+-        let streamWaiter = Task { () -> P1F1D065ControlledStreamReport in
+-            defer {
+-                missingImageGate.complete(.stream)
+-                cleanupPublicationGate.complete(.stream)
+-            }
+-            var frames: [CliProcessFrameV1] = []
+-            do {
+-                for try await frame in abortStream {
+-                    frames.append(frame)
+-                }
+-                return P1F1D065ControlledStreamReport(
+-                    frames: frames, terminalError: nil
+-                )
+-            } catch {
+-                return P1F1D065ControlledStreamReport(
+-                    frames: frames, terminalError: error
+-                )
+-            }
+-        }
+-        let publicationProbe = P1F1D065PublicationProbe()
+-        let cancellationWaiter = Task {
+-            defer {
+-                missingImageGate.complete(.cancellation)
+-                cleanupPublicationGate.complete(.cancellation)
+-            }
+-            let failure: (any Error)?
+-            do {
+-                _ = try await abortBackend.cancel(
+-                    executionId: abortExecutionId
+-                )
+-                failure = nil
+-            } catch {
+-                failure = error
+-            }
+-            let report = p1f1d065ObserveCleanupPublication(
+-                error: failure,
+-                harness: abortHarness,
+-                cleanupURL: abortCleanup.url,
+-                socketURL: abortSocketURL,
+-                registry: abortRegistry
+-            )
+-            publicationProbe.record(report)
+-            return report
+-        }
+-
+-        switch await missingImageGate.waitUntilEnteredOrCompleted() {
+-        case .aborted:
+-            throw P1F1D065AbortSafetyError.gateAborted
+-        case .entered:
+-            break
+-        case .completed(.stream):
+-            let report = await streamWaiter.value
+-            if let error = report.terminalError { throw error }
+-            throw EngineContextValidationErrorV1()
+-        case .completed(.cancellation):
+-            let report = await cancellationWaiter.value
+-            if let error = report.terminalError { throw error }
+-            throw EngineContextValidationErrorV1()
+-        case .completed(.reader):
+-            throw EngineContextValidationErrorV1()
+-        }
+-        let abortClient = try P1F1D065SocketClient(
+-            path: abortSocketURL.path
+-        )
+-        defer {
+-            abortClient.close()
+-            missingImageGate.release()
+-            cleanupPublicationGate.release()
+-        }
+-        try abortClient.send([
+-            "cardId": .string(p1f1EngineCardID),
+-            "token": .string(String(repeating: "4", count: 64)),
+-            "type": "hello",
+-        ])
+-        guard let helloLine = try abortClient.readLine(),
+-              try JSONValue.decoded(from: helloLine)["type"]?.stringValue
+-                == "hello_ok"
+-        else { throw EngineContextValidationErrorV1() }
+-        try abortClient.send([
+-            "arguments": ["text": "hold cleanup publication"],
+-            "cardId": .string(p1f1EngineCardID),
+-            "id": "p1f1d-065-cleanup-publication",
+-            "name": "add_progress_note",
+-            "type": "tool_call",
+-        ])
+-        let resultReader = Task { () throws -> Void in
+-            defer { cleanupPublicationGate.complete(.reader) }
+-            try await p1f1d065ReadResultLinesUntilEOF(abortClient)
+-        }
+-        switch await cleanupPublicationGate.waitUntilEnteredOrCompleted() {
+-        case .aborted:
+-            throw P1F1D065AbortSafetyError.gateAborted
+-        case .entered:
+-            break
+-        case .completed(.stream):
+-            abortClient.interruptRead()
+-            try await resultReader.value
+-            let report = await streamWaiter.value
+-            if let error = report.terminalError { throw error }
+-            throw EngineContextValidationErrorV1()
+-        case .completed(.cancellation):
+-            abortClient.interruptRead()
+-            try await resultReader.value
+-            let report = await cancellationWaiter.value
+-            if let error = report.terminalError { throw error }
+-            throw EngineContextValidationErrorV1()
+-        case .completed(.reader):
+-            try await resultReader.value
+-            throw EngineContextValidationErrorV1()
+-        }
+-        missingImageGate.release()
+-        let publishedBeforeCleanup = publicationProbe.snapshot != nil
+-        cleanupPublicationGate.release()
+-        try await resultReader.value
+-        let publicationReport = await cancellationWaiter.value
+-        let streamReport = await streamWaiter.value
+-        abortClient.close()
+-
+-        #expect(
+-            !publishedBeforeCleanup,
+-            "065 cleanup-publication became visible before cleanup completed"
+-        )
+-        #expect(
+-            (streamReport.terminalError as? CliProcessBackendError)
+-                == expectedAbortError,
+-            "065 controlled stream terminal mismatch; actual=\(String(describing: streamReport.terminalError)) frames=\(streamReport.frames)"
+-        )
+-        #expect(
+-            (publicationReport.terminalError as? CliProcessBackendError)
+-                == expectedAbortError,
+-            "065 cancellation terminal mismatch; actual=\(String(describing: publicationReport.terminalError))"
+-        )
+-        #expect(
+-            publicationReport.resources.cleanupRemoved,
+-            "065 cleanup authority file remained after joined failure"
+-        )
+-        #expect(
+-            publicationReport.resources.socketRemoved,
+-            "065 Board socket remained after joined failure"
+-        )
+-        #expect(
+-            publicationReport.resources.registryEmpty,
+-            "065 process registry retained an entry after joined failure"
+-        )
+-        #expect(
+-            publicationReport.resources.directoryClose == .closed,
+-            "065 socket directory authority did not close after joined failure"
+-        )
+-        let resumeReadiness = try #require(
+-            abortHarness.processInspector.resumeReadinessSnapshot,
+-            "065 resume readiness produced no observation"
+-        )
+-        #expect(
+-            resumeReadiness.outcome == .observed,
+-            "065 resume readiness outcome=\(resumeReadiness.outcome.rawValue) polls=\(resumeReadiness.polls)/\(resumeReadiness.pollBudget) elapsed=\(resumeReadiness.elapsed)"
+-        )
+-        #expect(
+-            resumeReadiness.pollBudget == 3_000
+-                && resumeReadiness.pollIntervalMicroseconds == 1_000
+-                && resumeReadiness.polls > 0
+-                && resumeReadiness.polls <= resumeReadiness.pollBudget,
+-            "065 resume readiness polling contract drifted; polls=\(resumeReadiness.polls)/\(resumeReadiness.pollBudget) interval-us=\(resumeReadiness.pollIntervalMicroseconds) elapsed=\(resumeReadiness.elapsed)"
+-        )
+-        #expect(
+-            abortHarness.processInspector.signalSnapshot
+-                == [SIGCONT, SIGKILL, SIGCONT]
+-        )
+-
+         let gateRevalidator = P1F1D065SignatureRevalidator(
+             expectedCLI: gateHarness.executableAuthority,
+             expectedBoardBridge: gateHarness.bridgeAuthority
+         )
+         let gateRegistry = ShellProcessRegistry()
+         let gateBackend = try p1f1d065GateBackend(
+             harness: gateHarness,
+             registry: gateRegistry,
+             revalidator: gateRevalidator
+         )
+         let gateRequest = try gateHarness.request(
+             executionId: "00000000-0000-4000-8000-000000000065",

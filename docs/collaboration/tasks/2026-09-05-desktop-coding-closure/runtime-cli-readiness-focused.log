@@ -1,0 +1,34 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+[3/7] Emitting module AgentLoopCore
+[4/7] Compiling AgentLoopCore CliProcessBackend.swift
+[5/7] Compiling AgentLoopCore RuntimeLifecycleDiagnostics.swift
+[6/9] Compiling AgentLoopCore BoardToolServer.swift
+[7/9] Compiling AgentLoopCore Orchestrator.swift
+[8/10] Emitting module AgentLoopApplication
+[8/12] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[10/14] Compiling AgentLoopTestSuite CliBackendTests.swift
+[11/14] Emitting module AgentLoopTestSuite
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[11/14] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[12/14] Linking RunTests
+[13/14] Applying RunTests
+Build of product 'RunTests' complete! (69.84s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test cliProcessBackendCancellationEscalatesAfterGrace() started.
+◇ Test cliProcessBackendCancellationReturnsCheckedEvidence() started.
+CLI readiness identity recorder=5E901A44-BC3A-4E89-8F78-A6EC38E6A188 execution=00000000-0000-4000-8000-000000000346
+CLI readiness identity recorder=6DC5316B-819B-4C8E-813C-A29FCC79F3CE execution=00000000-0000-4000-8000-000000000372
+CLI fixture cleanup execution=00000000-0000-4000-8000-000000000346 continuedPIDs=[21998] fixture=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/c-346-D8F4
+CLI fixture resource observations execution=00000000-0000-4000-8000-000000000346 failures=0
+✔ Test cliProcessBackendCancellationEscalatesAfterGrace() passed after 0.899 seconds.
+CLI fixture cleanup execution=00000000-0000-4000-8000-000000000372 continuedPIDs=[21999] fixture=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/c-372-52D2
+CLI fixture resource observations execution=00000000-0000-4000-8000-000000000372 failures=0
+✔ Test cliProcessBackendCancellationReturnsCheckedEvidence() passed after 1.259 seconds.
+✔ Test run with 2 tests in 0 suites passed after 1.260 seconds.

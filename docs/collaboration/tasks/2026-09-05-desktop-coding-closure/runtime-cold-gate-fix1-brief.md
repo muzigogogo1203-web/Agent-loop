@@ -1,0 +1,11 @@
+# Cold cleanup Fix 1 — publication ordering
+
+Parent verified the independent P2 in `runtime-cold-gate-cleanup-review.md` against actual inspector syscall/record order and the new forced regression. This correction is authorized after the current halt source writer releases. Sole source remains ExecutionEngineConformanceTests.swift; no runtime in the worker.
+
+Before editing, capture the reviewed postimage (SHA 404db276fd96e1a69ba30763dccbc09ae8ee42b62f1744a3d5b3916584d11716) in fresh `runtime-cold-gate-fix1-before/ExecutionEngineConformanceTests.swift`. Preserve original full scoped diff and review; create separate fix-only diff `runtime-cold-gate-fix1.diff` and report. Do not overwrite old preimages or widen source scope.
+
+Fix only the new `p1f1_065ColdGateForcedFailureStillJoinsCleanup` readiness observation. Its existing three-second deadline starts after synchronous launch. Within that same deadline and existing throwing ten-millisecond polling, wait until both the child-created ready file exists and the inspector has published a successful SIGCONT observation. Do not make a new deadline, add a second independent timeout, alter the original 065 method, or consume/cancel the stream during this wait. A duplicate successful observation must still fail the exact-count requirement, not be accepted.
+
+Retain the post-loop ready-file guard, exact one-successful-continuation assertion, positive PID, real group/live PID checks and the deliberate `.afterReady` throw. Missing publication at the original deadline must produce a real failure, never the expected marker. Log ready-file and successful-continuation observation state so a deadline failure is distinguishable. Cleanup ownership/certification, backend defaults and all other source remain unchanged.
+
+No fresh unowned RED, test weakening, signals, source/production refactor or new synchronization primitive. Static source ordering establishes this race; the parent will run the original plus new forced test once after scoped re-review and the diagnostic supplement review. Append the fix and preserved limits to both original implementation reports, record source/diff hashes, and release source ownership. Root owns all Swift/OSLog/process actions.

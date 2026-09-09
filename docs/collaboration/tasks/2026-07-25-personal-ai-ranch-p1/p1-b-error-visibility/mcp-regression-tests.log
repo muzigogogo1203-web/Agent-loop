@@ -1,0 +1,71 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Emitting module AgentLoopTestSuite
+[4/6] Compiling AgentLoopTestSuite McpTests.swift
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (8.96s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test mcpServerInitiatedRequestGetsMethodNotFound() started.
+◇ Test mcpServerDeletePreimageAndReverseRollbackAreAtomic() started.
+◇ Test managerProcessDeathMarksDown() started.
+◇ Test mcpBridgeDownEmitsEventAndGuidesBlockCard() started.
+◇ Test managerRestartRevivesDownServer() started.
+◇ Test mcpCallFlattensNonTextContentToPlaceholders() started.
+◇ Test toolBridgeEventWriteFailureRemainsVisibleWithTrace() started.
+◇ Test mcpRpcErrorResponseThrows() started.
+◇ Test managerEnvMergePrecedenceBaseJsonSecret() started.
+◇ Test mcpRequestTimesOutWhenNoResponse() started.
+◇ Test mcpHandshakeSendsInitializeThenInitializedNotification() started.
+◇ Test requiredSelectedToolMissingIsTypedFailure() started.
+◇ Test mcpBridgeWrapsSuccessInExternalContentEnvelope() started.
+◇ Test assembledToolsRegistryFailureThrows() started.
+◇ Test mcpCallPropagatesIsErrorFlag() started.
+◇ Test mcpToolRequiresExplicitAllowNotInheritedByLegacyFull() started.
+◇ Test mcpIgnoresNonJsonNoiseLines() started.
+◇ Test mcpNamingSanitizesComposesAndParses() started.
+◇ Test mcpServerCRUDAndCampEnableToggle() started.
+◇ Test managerStartFailureIsDownAndNeverAutoRetries() started.
+◇ Test managerStartsCachesToolsAndAssembles() started.
+◇ Test mcpToolInjectedWithExplicitV2Allow() started.
+◇ Test mcpListToolsFollowsPaginationCursor() started.
+◇ Test mcpExplicitCloseDoesNotFireUnexpectedClose() started.
+◇ Test mcpDeathFailsPendingAndFiresUnexpectedClose() started.
+◇ Test managerToolNameCollisionKeepsFirstDeterministically() started.
+◇ Test malformedToolAccessSkipsMcpStartupAndRecordsKernelDiagnostic() started.
+◇ Test secretProviderAbsentAndThrowsAreDistinct() started.
+✔ Test mcpNamingSanitizesComposesAndParses() passed after 0.184 seconds.
+✔ Test mcpServerCRUDAndCampEnableToggle() passed after 0.185 seconds.
+✔ Test mcpHandshakeSendsInitializeThenInitializedNotification() passed after 0.190 seconds.
+✔ Test mcpRpcErrorResponseThrows() passed after 0.193 seconds.
+✔ Test mcpCallFlattensNonTextContentToPlaceholders() passed after 0.193 seconds.
+✔ Test mcpCallPropagatesIsErrorFlag() passed after 0.193 seconds.
+✔ Test mcpIgnoresNonJsonNoiseLines() passed after 0.207 seconds.
+✔ Test managerStartsCachesToolsAndAssembles() passed after 0.207 seconds.
+✔ Test managerEnvMergePrecedenceBaseJsonSecret() passed after 0.207 seconds.
+✔ Test requiredSelectedToolMissingIsTypedFailure() passed after 0.212 seconds.
+✔ Test mcpListToolsFollowsPaginationCursor() passed after 0.214 seconds.
+✔ Test mcpBridgeDownEmitsEventAndGuidesBlockCard() passed after 0.237 seconds.
+✔ Test mcpServerInitiatedRequestGetsMethodNotFound() passed after 0.237 seconds.
+✔ Test managerStartFailureIsDownAndNeverAutoRetries() passed after 0.237 seconds.
+✔ Test managerRestartRevivesDownServer() passed after 0.237 seconds.
+✔ Test mcpDeathFailsPendingAndFiresUnexpectedClose() passed after 0.241 seconds.
+✔ Test mcpToolRequiresExplicitAllowNotInheritedByLegacyFull() passed after 0.241 seconds.
+✔ Test managerProcessDeathMarksDown() passed after 0.246 seconds.
+✔ Test managerToolNameCollisionKeepsFirstDeterministically() passed after 0.246 seconds.
+✔ Test mcpBridgeWrapsSuccessInExternalContentEnvelope() passed after 0.249 seconds.
+✔ Test mcpToolInjectedWithExplicitV2Allow() passed after 0.249 seconds.
+✔ Test malformedToolAccessSkipsMcpStartupAndRecordsKernelDiagnostic() passed after 0.258 seconds.
+✔ Test mcpServerDeletePreimageAndReverseRollbackAreAtomic() passed after 0.267 seconds.
+✔ Test toolBridgeEventWriteFailureRemainsVisibleWithTrace() passed after 0.270 seconds.
+✔ Test mcpRequestTimesOutWhenNoResponse() passed after 0.280 seconds.
+✔ Test mcpExplicitCloseDoesNotFireUnexpectedClose() passed after 0.290 seconds.
+✔ Test assembledToolsRegistryFailureThrows() passed after 0.341 seconds.
+✔ Test secretProviderAbsentAndThrowsAreDistinct() passed after 0.383 seconds.
+✔ Test run with 28 tests in 0 suites passed after 0.384 seconds.

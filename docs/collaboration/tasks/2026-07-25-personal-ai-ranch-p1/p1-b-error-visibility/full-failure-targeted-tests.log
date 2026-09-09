@@ -1,0 +1,43 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test failureRecordTraceConflictDoesNotOverwrite() started.
+◇ Test contextDegradationKernelEventOccursOnlyAfterCommit() started.
+◇ Test optionalDegradationPersistenceFailureDoesNotContinue() started.
+◇ Test invalidProjectionCasesAreTraceableAndNeverDefault() started.
+◇ Test operationTraceGeneratesAndAdoptsSafeDurableIdentity() started.
+◇ Test mcpSecretAbsentAndReadFailureHaveDifferentCodes() started.
+◇ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() started.
+◇ Test failureRecordSameIdentityUpsertIncrementsOccurrence() started.
+◇ Test mcpConnectAndToolListFailuresHaveDifferentCodes() started.
+◇ Test userVisibleFailureContainsExactFullTrace() started.
+◇ Test failureReporterDatabaseUnwritableLogsAndReturnsSameTrace() started.
+◇ Test observabilityMigrationExactDDLAndConstraints() started.
+◇ Test failureReporterScrubsSecretsAndRawExternalResponses() started.
+◇ Test failureRecordInsertUsesTraceAsPrimaryKey() started.
+◇ Test failureRecordResolveReopenAndOverflowAreChecked() started.
+◇ Test requiredMcpRegistryFailureBlocksCard() started.
+◇ Test optionalKnowledgeFailureRecordsBeforeContinuingWithMarker() started.
+◇ Test requiredKnowledgeFailureAtomicallyBlocksAndRecordsDegradation() started.
+✔ Test operationTraceGeneratesAndAdoptsSafeDurableIdentity() passed after 0.120 seconds.
+✔ Test failureReporterDatabaseUnwritableLogsAndReturnsSameTrace() passed after 0.120 seconds.
+✔ Test mcpSecretAbsentAndReadFailureHaveDifferentCodes() passed after 0.121 seconds.
+✔ Test mcpConnectAndToolListFailuresHaveDifferentCodes() passed after 0.121 seconds.
+✔ Test failureRecordSameIdentityUpsertIncrementsOccurrence() passed after 0.121 seconds.
+✔ Test failureRecordTraceConflictDoesNotOverwrite() passed after 0.121 seconds.
+✔ Test userVisibleFailureContainsExactFullTrace() passed after 0.121 seconds.
+✔ Test contextDegradationKernelEventOccursOnlyAfterCommit() passed after 0.125 seconds.
+✔ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() passed after 0.128 seconds.
+✔ Test invalidProjectionCasesAreTraceableAndNeverDefault() passed after 0.147 seconds.
+✔ Test failureReporterScrubsSecretsAndRawExternalResponses() passed after 0.152 seconds.
+✔ Test failureRecordInsertUsesTraceAsPrimaryKey() passed after 0.152 seconds.
+✔ Test requiredMcpRegistryFailureBlocksCard() passed after 0.155 seconds.
+✔ Test optionalKnowledgeFailureRecordsBeforeContinuingWithMarker() passed after 0.159 seconds.
+✔ Test failureRecordResolveReopenAndOverflowAreChecked() passed after 0.160 seconds.
+✔ Test requiredKnowledgeFailureAtomicallyBlocksAndRecordsDegradation() passed after 0.189 seconds.
+✔ Test optionalDegradationPersistenceFailureDoesNotContinue() passed after 0.213 seconds.
+✔ Test observabilityMigrationExactDDLAndConstraints() passed after 0.476 seconds.
+✔ Test run with 18 tests in 0 suites passed after 0.476 seconds.

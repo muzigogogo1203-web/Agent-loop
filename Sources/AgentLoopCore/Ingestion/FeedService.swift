@@ -41,6 +41,10 @@ public struct FeedService: Sendable {
         guard !content.isEmpty else { throw FeedServiceError.emptyContent }
         let hash = FeedContentHasher.hash(content)
         return try db.pool.write { database in
+            _ = try Self.requireActiveLifecycle(
+                database,
+                campId: campId
+            )
             if !allowDuplicate,
                let existing = try IngestionItemRecord
                 .filter(Column("campId") == campId && Column("contentHash") == hash && Column("status") != IngestionStatus.discarded.rawValue)
@@ -90,14 +94,102 @@ public struct FeedService: Sendable {
 
     public func discard(id: String) throws {
         try db.pool.write { database in
-            guard var item = try IngestionItemRecord.fetchOne(database, key: id) else {
+            guard let item = try IngestionItemRecord.fetchOne(database, key: id) else {
                 throw FeedServiceError.ingestionNotFound(id)
             }
+            _ = try Self.requireActiveLifecycle(
+                database,
+                campId: item.campId
+            )
+            guard let fence = try Row.fetchOne(
+                database,
+                sql: "SELECT version,terminalReason,redactedAt FROM ingestion_item WHERE id=?",
+                arguments: [id]
+            ) else {
+                throw FeedServiceError.ingestionNotFound(id)
+            }
+            let version: Int = fence["version"]
+            let terminalReason: String? = fence["terminalReason"]
+            let redactedAt: Date? = fence["redactedAt"]
+            guard terminalReason == nil, redactedAt == nil else {
+                throw FeedServiceError.invalidState(item.status)
+            }
             guard item.status != .materialized else { throw FeedServiceError.invalidState(item.status) }
-            item.status = .discarded
-            item.updatedAt = Date()
-            try item.update(database)
+            let activeRuminationCount = try Int.fetchOne(
+                database,
+                sql: """
+                    SELECT COUNT(*)
+                    FROM durable_work
+                    WHERE kind = 'rumination'
+                      AND aggregateType = 'ingestion'
+                      AND aggregateId = ?
+                      AND state IN (
+                        'queued','running','retryScheduled'
+                      )
+                    """,
+                arguments: [id]
+            ) ?? 0
+            guard item.status != .ruminating,
+                  activeRuminationCount == 0
+            else {
+                throw FeedServiceError.invalidState(.ruminating)
+            }
+            let (nextVersion, overflow) = version.addingReportingOverflow(1)
+            guard !overflow else { throw InvalidDurableWorkStateError() }
+            let now = Date()
+            try database.execute(
+                sql: """
+                    UPDATE ingestion_item
+                    SET status='discarded',updatedAt=?,version=?
+                    WHERE id=? AND campId=? AND version=? AND status=?
+                      AND terminalReason IS NULL AND redactedAt IS NULL
+                    """,
+                arguments: [
+                    now,
+                    nextVersion,
+                    item.id,
+                    item.campId,
+                    version,
+                    item.status.rawValue,
+                ]
+            )
+            guard database.changesCount == 1 else {
+                throw StaleDurableWorkClaimError()
+            }
         }
+    }
+
+    @discardableResult
+    private static func requireActiveLifecycle(
+        _ database: Database,
+        campId: String
+    ) throws -> Int {
+        guard let row = try Row.fetchOne(
+            database,
+            sql: """
+                SELECT lifecycle.state,lifecycle.version,camp.archived
+                FROM camp_lifecycle AS lifecycle
+                JOIN camp ON camp.id=lifecycle.campId
+                WHERE lifecycle.campId=?
+                """,
+            arguments: [campId]
+        ) else {
+            throw CampLifecycleWriteAuthorizationError.missing
+        }
+        let version: Int = row["version"]
+        guard let state = CampLifecycleStateV1(
+            rawValue: row["state"] as String
+        ), state == .active else {
+            throw CampLifecycleWriteAuthorizationError.inactive(
+                CampLifecycleStateV1(
+                    rawValue: row["state"] as String
+                ) ?? .deletedTombstone
+            )
+        }
+        guard (row["archived"] as Int) == 0 else {
+            throw CampLifecycleWriteAuthorizationError.legacyArchived
+        }
+        return version
     }
 
     private static func nilIfBlank(_ value: String?) -> String? {

@@ -1,0 +1,2260 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1DAcceptanceWorkflowTests started.
+◇ Test firstOnboardingRequiresUserBeforePolicyLookup() started.
+✔ Test firstOnboardingRequiresUserBeforePolicyLookup() passed after 0.150 seconds.
+◇ Test firstOutcomeTypeRequiresUserBeforePolicyLookup() started.
+✔ Test firstOutcomeTypeRequiresUserBeforePolicyLookup() passed after 0.200 seconds.
+◇ Test eachContractHardGuardRequiresUserBeforePolicyLookup() started.
+✔ Test eachContractHardGuardRequiresUserBeforePolicyLookup() passed after 0.714 seconds.
+◇ Test highIrreversibleAndUnverifiedRequireUserBeforePolicyLookup() started.
+✔ Test highIrreversibleAndUnverifiedRequireUserBeforePolicyLookup() passed after 0.400 seconds.
+◇ Test eligiblePolicyRequiresExactActiveVersionHashActorRiskAgeAndTime() started.
+✔ Test eligiblePolicyRequiresExactActiveVersionHashActorRiskAgeAndTime() passed after 1.078 seconds.
+◇ Test acceptanceCommitAtomicallyUpdatesRecordOutcomeGoalMissionMetricEvents() started.
+✔ Test acceptanceCommitAtomicallyUpdatesRecordOutcomeGoalMissionMetricEvents() passed after 0.147 seconds.
+◇ Test acceptanceFailureLeavesProjectionAndNavigationUnchangedWithTrace() started.
+✔ Test acceptanceFailureLeavesProjectionAndNavigationUnchangedWithTrace() passed after 0.146 seconds.
+◇ Test duplicateAcceptanceCountsOneCreditAndReplaysOneGraph() started.
+✔ Test duplicateAcceptanceCountsOneCreditAndReplaysOneGraph() passed after 0.137 seconds.
+◇ Test returnFromDeliveredOrAcceptedReopensGoalMissionAndReversesCredit() started.
+✔ Test returnFromDeliveredOrAcceptedReopensGoalMissionAndReversesCredit() passed after 0.278 seconds.
+◇ Test revokeAcceptanceReopensGoalMissionAndReversesCredit() started.
+✔ Test revokeAcceptanceReopensGoalMissionAndReversesCredit() passed after 0.140 seconds.
+◇ Test invalidationReopensAcceptedAndReversesCredit() started.
+✔ Test invalidationReopensAcceptedAndReversesCredit() passed after 0.140 seconds.
+◇ Test newVersionReacceptRestoresSameCreditWithoutDuplicate() started.
+✔ Test newVersionReacceptRestoresSameCreditWithoutDuplicate() passed after 0.171 seconds.
+◇ Test downstreamTransitionRollbackIsTotalForEverySection19Command() started.
+✔ Test downstreamTransitionRollbackIsTotalForEverySection19Command() passed after 0.605 seconds.
+◇ Test legacyAcceptanceNeverCreatesOutcomeMetricAndKnowledgeTruthStaysUnknown() started.
+✔ Test legacyAcceptanceNeverCreatesOutcomeMetricAndKnowledgeTruthStaysUnknown() passed after 0.087 seconds.
+◇ Test artifactViewedIsExplicitSessionEventAndLiveHostNavigatesOnlyAfterCommit() started.
+✔ Test artifactViewedIsExplicitSessionEventAndLiveHostNavigatesOnlyAfterCommit() passed after 0.143 seconds.
+✔ Suite P1DAcceptanceWorkflowTests passed after 4.545 seconds.
+◇ Test happyPathToolThenComplete() started.
+✔ Test happyPathToolThenComplete() passed after 0.001 seconds.
+◇ Test endTurnWithoutTerminatorRemindsOnceThenBlocks() started.
+✔ Test endTurnWithoutTerminatorRemindsOnceThenBlocks() passed after 0.001 seconds.
+◇ Test toolErrorSelfHealsButThreeStrikesBlocks() started.
+✔ Test toolErrorSelfHealsButThreeStrikesBlocks() passed after 0.001 seconds.
+◇ Test maxTurnsExhaustionBlocks() started.
+✔ Test maxTurnsExhaustionBlocks() passed after 0.001 seconds.
+◇ Test tokenBudgetExhaustionBlocks() started.
+✔ Test tokenBudgetExhaustionBlocks() passed after 0.001 seconds.
+◇ Test refusalBlocksImmediately() started.
+✔ Test refusalBlocksImmediately() passed after 0.001 seconds.
+◇ Test toolUseStopWithZeroBlocksThrowsMalformed() started.
+✔ Test toolUseStopWithZeroBlocksThrowsMalformed() passed after 0.001 seconds.
+◇ Test pauseTurnCappedAtFiveContinuations() started.
+✔ Test pauseTurnCappedAtFiveContinuations() passed after 0.001 seconds.
+◇ Test multiToolUseOrderPreservedInHistory() started.
+✔ Test multiToolUseOrderPreservedInHistory() passed after 0.001 seconds.
+◇ Test unknownBlocksPreservedInHistory() started.
+✔ Test unknownBlocksPreservedInHistory() passed after 0.001 seconds.
+◇ Test turnRetriesTransientErrorThenCompletes() started.
+✔ Test turnRetriesTransientErrorThenCompletes() passed after 0.009 seconds.
+◇ Test appTransportSecurityErrorDoesNotRetry() started.
+✔ Test appTransportSecurityErrorDoesNotRetry() passed after 0.001 seconds.
+◇ Test turnTimeoutRetriesOnceThenBlocks() started.
+✔ Test turnTimeoutRetriesOnceThenBlocks() passed after 0.001 seconds.
+◇ Test cancelWinsOverIdleTimeout() started.
+✔ Test cancelWinsOverIdleTimeout() passed after 0.001 seconds.
+◇ Test timeoutThenSuccessDoesNotAccumulate() started.
+✔ Test timeoutThenSuccessDoesNotAccumulate() passed after 0.001 seconds.
+◇ Test slowActiveStreamDoesNotIdleTimeout() started.
+✔ Test slowActiveStreamDoesNotIdleTimeout() passed after 0.001 seconds.
+◇ Test turnCompletesUnderTimeout() started.
+✔ Test turnCompletesUnderTimeout() passed after 0.001 seconds.
+◇ Test turnRetryExhaustionSurfacesLastError() started.
+✔ Test turnRetryExhaustionSurfacesLastError() passed after 0.004 seconds.
+◇ Test unauthorizedNotRetried() started.
+✔ Test unauthorizedNotRetried() passed after 0.001 seconds.
+◇ Test turnStartedPrecedesEachTurn() started.
+✔ Test turnStartedPrecedesEachTurn() passed after 0.001 seconds.
+◇ Test providerErrorDescriptionsAreHuman() started.
+✔ Test providerErrorDescriptionsAreHuman() passed after 0.001 seconds.
+◇ Test deriveMatrixCoversAllPriorities() started.
+✔ Test deriveMatrixCoversAllPriorities() passed after 0.001 seconds.
+◇ Test humanAnswerRendering() started.
+✔ Test humanAnswerRendering() passed after 0.001 seconds.
+◇ Test requestBodyShape() started.
+✔ Test requestBodyShape() passed after 0.001 seconds.
+◇ Test requestBodyEncodesDeterministically() started.
+✔ Test requestBodyEncodesDeterministically() passed after 0.001 seconds.
+◇ Test requestBodyToolChoiceForcesNamedTool() started.
+✔ Test requestBodyToolChoiceForcesNamedTool() passed after 0.001 seconds.
+◇ Test requestBodyAutoOmitsToolChoice() started.
+✔ Test requestBodyAutoOmitsToolChoice() passed after 0.001 seconds.
+◇ Test openAIRequestBodyShape() started.
+✔ Test openAIRequestBodyShape() passed after 0.001 seconds.
+◇ Test automaticAuthSchemeResolvesByFormat() started.
+✔ Test automaticAuthSchemeResolvesByFormat() passed after 0.001 seconds.
+◇ Test streamingSessionTimeoutDefaultsSupportSlowRelays() started.
+✔ Test streamingSessionTimeoutDefaultsSupportSlowRelays() passed after 0.002 seconds.
+◇ Suite AnthropicProviderStubTests started.
+◇ Test streamsTextTurnEndToEnd() started.
+✔ Test streamsTextTurnEndToEnd() passed after 0.003 seconds.
+◇ Test unauthorizedFailsFastNoRetry() started.
+✔ Test unauthorizedFailsFastNoRetry() passed after 0.001 seconds.
+◇ Test overloadedRetriesThenSucceeds() started.
+✔ Test overloadedRetriesThenSucceeds() passed after 0.005 seconds.
+◇ Test honorsRetryAfterHeader() started.
+✔ Test honorsRetryAfterHeader() passed after 0.001 seconds.
+◇ Test malformedRetryAfterFallsBackAndCaps() started.
+✔ Test malformedRetryAfterFallsBackAndCaps() passed after 0.002 seconds.
+◇ Test fallsBackToNonStreamingAfterMalformedStream() started.
+✔ Test fallsBackToNonStreamingAfterMalformedStream() passed after 0.001 seconds.
+◇ Test fallbackEmitsMergedTextWhenNothingStreamedYet() started.
+✔ Test fallbackEmitsMergedTextWhenNothingStreamedYet() passed after 0.001 seconds.
+◇ Test nonStreamingParsesToolUse() started.
+✔ Test nonStreamingParsesToolUse() passed after 0.001 seconds.
+◇ Test retriesExhaustedThrows() started.
+✔ Test retriesExhaustedThrows() passed after 0.006 seconds.
+◇ Test openAIStreamsToolCall() started.
+✔ Test openAIStreamsToolCall() passed after 0.001 seconds.
+✔ Suite AnthropicProviderStubTests passed after 0.024 seconds.
+◇ Test normalizesBaseURL() started.
+✔ Test normalizesBaseURL() passed after 0.001 seconds.
+◇ Test databaseReadFailureIsFailedNotLoadedEmpty() started.
+✔ Test databaseReadFailureIsFailedNotLoadedEmpty() passed after 0.102 seconds.
+◇ Test workflowProjectionPreservesPriorValueOnRefreshFailure() started.
+✔ Test workflowProjectionPreservesPriorValueOnRefreshFailure() passed after 0.177 seconds.
+◇ Test workflowGenerationRejectsStaleTerminalCompletion() started.
+✔ Test workflowGenerationRejectsStaleTerminalCompletion() passed after 0.001 seconds.
+◇ Test workflowCancellationCannotMasqueradeAsLoaded() started.
+✔ Test workflowCancellationCannotMasqueradeAsLoaded() passed after 0.018 seconds.
+◇ Test missionStartPreservesCallerDurableTrace() started.
+✔ Test missionStartPreservesCallerDurableTrace() passed after 0.104 seconds.
+◇ Test runtimeProfileWriteFailureNeverProjectsSuccess() started.
+✔ Test runtimeProfileWriteFailureNeverProjectsSuccess() passed after 0.084 seconds.
+◇ Test runtimeProfileDeleteFailureNeverProjectsSuccess() started.
+✔ Test runtimeProfileDeleteFailureNeverProjectsSuccess() passed after 0.095 seconds.
+◇ Test runtimeReconcileFailureNeverChangesDefault() started.
+✔ Test runtimeReconcileFailureNeverChangesDefault() passed after 0.090 seconds.
+◇ Test keychainReadDistinguishesNotFoundFromFailure() started.
+✔ Test keychainReadDistinguishesNotFoundFromFailure() passed after 0.001 seconds.
+◇ Test keychainMutationFailureNeverProjectsSuccess() started.
+✔ Test keychainMutationFailureNeverProjectsSuccess() passed after 0.076 seconds.
+◇ Test mcpRegistryRefreshFailurePreservesPriorRegistry() started.
+✔ Test mcpRegistryRefreshFailurePreservesPriorRegistry() passed after 0.087 seconds.
+◇ Test inputRefreshFailurePreservesDashboardAndInbox() started.
+✔ Test inputRefreshFailurePreservesDashboardAndInbox() passed after 0.613 seconds.
+◇ Test committedVisibilityFailureCannotRepeatMutation() started.
+✔ Test committedVisibilityFailureCannotRepeatMutation() passed after 0.794 seconds.
+◇ Test codingRanchBootstrapIsAtomicAcrossEveryWriteBoundary() started.
+✔ Test codingRanchBootstrapIsAtomicAcrossEveryWriteBoundary() passed after 0.480 seconds.
+◇ Test carefulAutonomySuspendsWriteFileForApproval() started.
+✔ Test carefulAutonomySuspendsWriteFileForApproval() passed after 0.109 seconds.
+◇ Test approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() started.
+✔ Test approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() passed after 0.133 seconds.
+◇ Test deniedActionRoutesToErrorAndCardContinues() started.
+✔ Test deniedActionRoutesToErrorAndCardContinues() passed after 0.099 seconds.
+◇ Test standardAutonomyStillRequiresExplicitGrant() started.
+✔ Test standardAutonomyStillRequiresExplicitGrant() passed after 0.095 seconds.
+◇ Test approvedGrantFailsClosedWhenWorkflowPortIsMissing() started.
+✔ Test approvedGrantFailsClosedWhenWorkflowPortIsMissing() passed after 0.098 seconds.
+◇ Test malformedApprovalOptionsAbortAnswerWithoutGrantOrResume() started.
+✔ Test malformedApprovalOptionsAbortAnswerWithoutGrantOrResume() passed after 0.192 seconds.
+◇ Test approvalHashIsKeyOrderInsensitiveAndInputSensitive() started.
+✔ Test approvalHashIsKeyOrderInsensitiveAndInputSensitive() passed after 0.001 seconds.
+◇ Test toolHandlerAdapterTreatsOnlyErrorAsFailedFinal() started.
+✔ Test toolHandlerAdapterTreatsOnlyErrorAsFailedFinal() passed after 0.001 seconds.
+◇ Suite P1DApprovalGrantContractTests started.
+◇ Test approvalInputHashIsCanonicalInputOnlyAndToolRemainsSeparateScope() started.
+✔ Test approvalInputHashIsCanonicalInputOnlyAndToolRemainsSeparateScope() passed after 0.087 seconds.
+◇ Test approvalAnswerCreatesTypedSingleUseGrantWithRecomputedCamp() started.
+✔ Test approvalAnswerCreatesTypedSingleUseGrantWithRecomputedCamp() passed after 0.109 seconds.
+◇ Test rejectionCreatesNoGrantAndExpiredRevokedMismatchFailClosed() started.
+✔ Test rejectionCreatesNoGrantAndExpiredRevokedMismatchFailClosed() passed after 0.289 seconds.
+◇ Test policyGrantRequiresExactImmutableRegistryTuple() started.
+✔ Test policyGrantRequiresExactImmutableRegistryTuple() passed after 0.176 seconds.
+◇ Test nonReplayableGrantRequiresUserAndOneUseInSwiftAndRawSQL() started.
+✔ Test nonReplayableGrantRequiresUserAndOneUseInSwiftAndRawSQL() passed after 0.285 seconds.
+◇ Test reserveValidatesCapabilityScopeTimeCampAndWholePayloadReplay() started.
+✔ Test reserveValidatesCapabilityScopeTimeCampAndWholePayloadReplay() passed after 0.184 seconds.
+◇ Test concurrentSingleUseReservationHasOneWinner() started.
+✔ Test concurrentSingleUseReservationHasOneWinner() passed after 0.092 seconds.
+◇ Test reservedWithoutDispatchIntentReleasesWithoutConsuming() started.
+✔ Test reservedWithoutDispatchIntentReleasesWithoutConsuming() passed after 0.097 seconds.
+◇ Test dispatchIntentAtomicallyConsumesAndWritesFirstReceipt() started.
+✔ Test dispatchIntentAtomicallyConsumesAndWritesFirstReceipt() passed after 0.103 seconds.
+◇ Test adapterAcceptedCannotBeRecordedBeforeAdapterReturnAttestation() started.
+✔ Test adapterAcceptedCannotBeRecordedBeforeAdapterReturnAttestation() passed after 0.115 seconds.
+◇ Test effectSuccessAndFailureReachConsumedTerminalsExactly() started.
+✔ Test effectSuccessAndFailureReachConsumedTerminalsExactly() passed after 0.235 seconds.
+◇ Test receiptCanonicalHashKeyOrdinalReplayAndConflictAreExact() started.
+✔ Test receiptCanonicalHashKeyOrdinalReplayAndConflictAreExact() passed after 0.103 seconds.
+◇ Test receiptPhaseResultAuthorityRawMatrixRejectsInvalidTuples() started.
+✔ Test receiptPhaseResultAuthorityRawMatrixRejectsInvalidTuples() passed after 0.099 seconds.
+◇ Test dispatchAcceptanceAndTerminalPartialUniqueGuardsAreExact() started.
+✔ Test dispatchAcceptanceAndTerminalPartialUniqueGuardsAreExact() passed after 0.132 seconds.
+◇ Test reconciliationFailureMayRepeatOnlyWithNextOrdinalAndNewKey() started.
+✔ Test reconciliationFailureMayRepeatOnlyWithNextOrdinalAndNewKey() passed after 0.117 seconds.
+◇ Test adapterNoEffectAttestationRefundsExactlyOnce() started.
+✔ Test adapterNoEffectAttestationRefundsExactlyOnce() passed after 0.103 seconds.
+◇ Test userCannotAttestNoEffectReleaseOrRefund() started.
+✔ Test userCannotAttestNoEffectReleaseOrRefund() passed after 0.103 seconds.
+◇ Test userResolutionAllowsOnlySucceededOrAbandonedUnknownAndKeepsConsumed() started.
+✔ Test userResolutionAllowsOnlySucceededOrAbandonedUnknownAndKeepsConsumed() passed after 0.222 seconds.
+◇ Test noEffectAndUserResolutionCASHaveOneWinner() started.
+✔ Test noEffectAndUserResolutionCASHaveOneWinner() passed after 0.113 seconds.
+◇ Test refundReducerPreservesRevokedExpiredAndUnderusedRules() started.
+✔ Test refundReducerPreservesRevokedExpiredAndUnderusedRules() passed after 0.330 seconds.
+◇ Test refundVersusRevokeAndExpiryRacesNeverResurrectOrDoubleDecrement() started.
+✔ Test refundVersusRevokeAndExpiryRacesNeverResurrectOrDoubleDecrement() passed after 0.219 seconds.
+◇ Test lateReconcileCannotChangeSucceededOrAbandonedUnknown() started.
+✔ Test lateReconcileCannotChangeSucceededOrAbandonedUnknown() passed after 0.225 seconds.
+◇ Test nonReplayableCrashAtEveryAmbiguousWindowStopsCrashUnknown() started.
+✔ Test nonReplayableCrashAtEveryAmbiguousWindowStopsCrashUnknown() passed after 0.446 seconds.
+◇ Test replaySafeAndIdempotencyKeyedRecoveryReuseExactKeyAndOperation() started.
+✔ Test replaySafeAndIdempotencyKeyedRecoveryReuseExactKeyAndOperation() passed after 0.252 seconds.
+◇ Test coordinatorOwnsReserveDispatchAdapterReceiptOrderAndConvergesExternalSuccessCrash() started.
+✔ Test coordinatorOwnsReserveDispatchAdapterReceiptOrderAndConvergesExternalSuccessCrash() passed after 0.122 seconds.
+✔ Suite P1DApprovalGrantContractTests passed after 4.371 seconds.
+◇ Test toolRiskMappingSingleSource() started.
+✔ Test toolRiskMappingSingleSource() passed after 0.001 seconds.
+◇ Test autonomyApprovalMatrix() started.
+✔ Test autonomyApprovalMatrix() passed after 0.001 seconds.
+◇ Test migrationV5AutonomyDefaultsToStandard() started.
+✔ Test migrationV5AutonomyDefaultsToStandard() passed after 0.087 seconds.
+◇ Test setMissionAutonomyPersistsAndAppendsEvent() started.
+✔ Test setMissionAutonomyPersistsAndAppendsEvent() passed after 0.086 seconds.
+◇ Suite P1F1ArtifactBlobStoreTests started.
+◇ Test p1f1_043ExistingBlobVerifiedBeforeWorkspaceRead() started.
+✔ Test p1f1_043ExistingBlobVerifiedBeforeWorkspaceRead() passed after 0.129 seconds.
+◇ Test p1f1_044WorkspaceSourceScopeSizeHashValidated() started.
+✔ Test p1f1_044WorkspaceSourceScopeSizeHashValidated() passed after 0.625 seconds.
+◇ Test p1f1_045StagingFsyncRenameThenReferenceCommit() started.
+✔ Test p1f1_045StagingFsyncRenameThenReferenceCommit() passed after 0.121 seconds.
+◇ Test p1f1_046RenameBeforeRowCrashRecovers() started.
+✔ Test p1f1_046RenameBeforeRowCrashRecovers() passed after 0.292 seconds.
+◇ Test p1f1_047PrepareCrashWindowsNeverReferenceMissingBlob() started.
+✔ Test p1f1_047PrepareCrashWindowsNeverReferenceMissingBlob() passed after 0.891 seconds.
+◇ Test p1f1_048MissingOrCorruptBlobInvalidatesProposal() started.
+✔ Test p1f1_048MissingOrCorruptBlobInvalidatesProposal() passed after 0.284 seconds.
+◇ Test p1f1_049GCUsesExactThreeContentHashRootSets() started.
+✔ Test p1f1_049GCUsesExactThreeContentHashRootSets() passed after 0.199 seconds.
+◇ Test p1f1_050ProposalHashNeverKeepsBlobAlive() started.
+✔ Test p1f1_050ProposalHashNeverKeepsBlobAlive() passed after 0.124 seconds.
+◇ Test p1f1_051SharedBlobAndAgeBoundaryRetained() started.
+✔ Test p1f1_051SharedBlobAndAgeBoundaryRetained() passed after 0.158 seconds.
+◇ Test p1f1_052DeletedTombstoneRestagesBytesWithCAS() started.
+✔ Test p1f1_052DeletedTombstoneRestagesBytesWithCAS() passed after 0.128 seconds.
+✔ Suite P1F1ArtifactBlobStoreTests passed after 2.957 seconds.
+◇ Test p1f1_057VerifierNoFollowClassificationMatrix() started.
+✔ Test p1f1_057VerifierNoFollowClassificationMatrix() passed after 0.111 seconds.
+◇ Test p1f1_058VerifierHardlinkCrossCampConcurrentSnapshotMatrix() started.
+✔ Test p1f1_058VerifierHardlinkCrossCampConcurrentSnapshotMatrix() passed after 1.510 seconds.
+◇ Suite P1F1ArtifactStorageOriginTests started.
+◇ Test p1f1_053TypedManagedOriginCreatesAtomically() started.
+✔ Test p1f1_053TypedManagedOriginCreatesAtomically() passed after 0.293 seconds.
+◇ Test p1f1_054TypedExternalOriginCreatesAtomically() started.
+✔ Test p1f1_054TypedExternalOriginCreatesAtomically() passed after 0.083 seconds.
+◇ Test p1f1_055LegacyUpgradeRequiresVerifierEvidence() started.
+✔ Test p1f1_055LegacyUpgradeRequiresVerifierEvidence() passed after 0.282 seconds.
+◇ Test p1f1_056OriginRedactionTerminalDispositionLocks() started.
+✔ Test p1f1_056OriginRedactionTerminalDispositionLocks() passed after 0.091 seconds.
+✔ Suite P1F1ArtifactStorageOriginTests passed after 0.750 seconds.
+◇ Test askUserSubmitsNeedsHumanInputThroughBoardSink() started.
+✔ Test askUserSubmitsNeedsHumanInputThroughBoardSink() passed after 0.001 seconds.
+◇ Test askUserValidationErrorsSelfHeal() started.
+✔ Test askUserValidationErrorsSelfHeal() passed after 0.001 seconds.
+◇ Test answerResumesWithQAInContext() started.
+✔ Test answerResumesWithQAInContext() passed after 0.253 seconds.
+◇ Test answerStaleRequestThrows() started.
+✔ Test answerStaleRequestThrows() passed after 0.188 seconds.
+◇ Test answerGuardRejectsMismatchedRequest() started.
+✔ Test answerGuardRejectsMismatchedRequest() passed after 0.116 seconds.
+◇ Test currentReadyCauseUsesOnlyTheFinalCanonicalReadyEvent() started.
+✔ Test currentReadyCauseUsesOnlyTheFinalCanonicalReadyEvent() passed after 0.121 seconds.
+◇ Test approvalAnswerReadyPayloadIsEmptyAndReplayDoesNotAppendEvent() started.
+✔ Test approvalAnswerReadyPayloadIsEmptyAndReplayDoesNotAppendEvent() passed after 0.098 seconds.
+◇ Test readyCauseRejectsNoncanonicalMatchingRequestCreation() started.
+✔ Test readyCauseRejectsNoncanonicalMatchingRequestCreation() passed after 0.103 seconds.
+◇ Test readyCauseIsStablePerEventAndChangesForNextReadyCycle() started.
+✔ Test readyCauseIsStablePerEventAndChangesForNextReadyCycle() passed after 0.093 seconds.
+◇ Test readyCauseUsesExactOlderEngineNeedsHumanPredecessorDespiteNewerUnrelatedSession() started.
+✔ Test readyCauseUsesExactOlderEngineNeedsHumanPredecessorDespiteNewerUnrelatedSession() passed after 0.162 seconds.
+◇ Test readyCauseInvalidGraphVariantsPerformZeroWrites() started.
+✔ Test readyCauseInvalidGraphVariantsPerformZeroWrites() passed after 0.382 seconds.
+◇ Test readyCauseSuppressionRetriesForNewObservationAndFreshOrchestrator() started.
+✔ Test readyCauseSuppressionRetriesForNewObservationAndFreshOrchestrator() passed after 0.077 seconds.
+◇ Test askingCompanionDoesNotBlockOthers() started.
+✔ Test askingCompanionDoesNotBlockOthers() passed after 0.223 seconds.
+◇ Test multipleQARoundsAccumulate() started.
+✔ Test multipleQARoundsAccumulate() passed after 0.322 seconds.
+◇ Suite BoardServerTests started.
+◇ Test boardServerForwardsProgressAndCompleteTools() started.
+✔ Test boardServerForwardsProgressAndCompleteTools() passed after 0.001 seconds.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.004 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.003 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.001 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.002 seconds.
+◇ Test boardServerRejectsSecondConcurrentConnection() started.
+✔ Test boardServerRejectsSecondConcurrentConnection() passed after 0.003 seconds.
+◇ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() started.
+✔ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() passed after 0.002 seconds.
+◇ Test boardServerStopWaitsForBlockedHandlerThenCloses() started.
+✔ Test boardServerStopWaitsForBlockedHandlerThenCloses() passed after 2.179 seconds.
+◇ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() started.
+✔ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() passed after 0.301 seconds.
+◇ Test boardServerDefinitionsExposeExactlyFourBoardTools() started.
+✔ Test boardServerDefinitionsExposeExactlyFourBoardTools() passed after 0.001 seconds.
+◇ Test p1f1_078BoardServerForwardsProposalWithoutDatabaseAuthority() started.
+✔ Test p1f1_078BoardServerForwardsProposalWithoutDatabaseAuthority() passed after 0.156 seconds.
+✔ Suite BoardServerTests passed after 7.656 seconds.
+◇ Test completeEmitsTypedHandoffWithoutFilesystemAuthority() started.
+✔ Test completeEmitsTypedHandoffWithoutFilesystemAuthority() passed after 0.001 seconds.
+◇ Test repeatedCompletionForwardsTypedIntentsWithoutVersionAuthority() started.
+✔ Test repeatedCompletionForwardsTypedIntentsWithoutVersionAuthority() passed after 0.001 seconds.
+◇ Test invalidArtifactDeclarationDoesNotReachSink() started.
+✔ Test invalidArtifactDeclarationDoesNotReachSink() passed after 0.001 seconds.
+◇ Test invalidHandoffDoesNotReachSink() started.
+✔ Test invalidHandoffDoesNotReachSink() passed after 0.001 seconds.
+◇ Test blockEmitsTypedReason() started.
+✔ Test blockEmitsTypedReason() passed after 0.001 seconds.
+◇ Test progressNoteEmitsTypedPayload() started.
+✔ Test progressNoteEmitsTypedPayload() passed after 0.001 seconds.
+◇ Test p1f1_059RawStringDurablePathCompletionAPIRemoved() started.
+✔ Test p1f1_059RawStringDurablePathCompletionAPIRemoved() passed after 0.001 seconds.
+◇ Test p1f1_077BoardToolsOnlyEmitTerminalProposal() started.
+✔ Test p1f1_077BoardToolsOnlyEmitTerminalProposal() passed after 0.001 seconds.
+◇ Test exhaustedBudgetStopsDispatchAndNotifiesOnce() started.
+✔ Test exhaustedBudgetStopsDispatchAndNotifiesOnce() passed after 0.083 seconds.
+◇ Test addBudgetResumesDispatchToDone() started.
+✔ Test addBudgetResumesDispatchToDone() passed after 0.191 seconds.
+◇ Test harvestKeepsDoneAndCancelsRest() started.
+✔ Test harvestKeepsDoneAndCancelsRest() passed after 0.101 seconds.
+◇ Test harvestWithNothingDoneFails() started.
+✔ Test harvestWithNothingDoneFails() passed after 0.087 seconds.
+◇ Test globalThrottleCapsConcurrentRuns() started.
+✔ Test globalThrottleCapsConcurrentRuns() passed after 0.645 seconds.
+◇ Suite P1ECampIsolationTests started.
+◇ Test p1e20SameCowTwoCampsMemoryIsolation() started.
+✔ Test p1e20SameCowTwoCampsMemoryIsolation() passed after 0.096 seconds.
+◇ Test p1e21InactiveResidencyBlocksReadWrite() started.
+✔ Test p1e21InactiveResidencyBlocksReadWrite() passed after 0.086 seconds.
+✔ Suite P1ECampIsolationTests passed after 0.183 seconds.
+◇ Suite P1ECampLifecycleMigrationTests started.
+◇ Test p1e01V16MigrationIsImmediateSuccessor() started.
+✔ Test p1e01V16MigrationIsImmediateSuccessor() passed after 0.001 seconds.
+◇ Test p1e02V16SchemaObjectCountsAndDDL() started.
+✔ Test p1e02V16SchemaObjectCountsAndDDL() passed after 0.065 seconds.
+◇ Test p1e03CompanionCowResidencyBackfillReplay() started.
+✔ Test p1e03CompanionCowResidencyBackfillReplay() passed after 0.067 seconds.
+◇ Test p1e04NilAndCorruptCampBackfillMatrix() started.
+✔ Test p1e04NilAndCorruptCampBackfillMatrix() passed after 0.147 seconds.
+◇ Test p1e05ArchivedWorkClosureAndLifecycleBinding() started.
+✔ Test p1e05ArchivedWorkClosureAndLifecycleBinding() passed after 0.079 seconds.
+◇ Test p1e06LegacyPoisonDiagnosticsRollback() started.
+✔ Test p1e06LegacyPoisonDiagnosticsRollback() passed after 0.020 seconds.
+◇ Test p1e07DurableChildFKRebuildUsesFinalNames() started.
+✔ Test p1e07DurableChildFKRebuildUsesFinalNames() passed after 0.074 seconds.
+◇ Test p1e08LegacyChatNoteScopeBackfill() started.
+✔ Test p1e08LegacyChatNoteScopeBackfill() passed after 0.069 seconds.
+◇ Test p1e09LegacyEventScopeExhaustiveBackfill() started.
+✔ Test p1e09LegacyEventScopeExhaustiveBackfill() passed after 0.070 seconds.
+◇ Test p1e10LegacyScopeMalformedRollback() started.
+✔ Test p1e10LegacyScopeMalformedRollback() passed after 0.077 seconds.
+◇ Test p1e11V16GuardDropOrdering() started.
+✔ Test p1e11V16GuardDropOrdering() passed after 0.017 seconds.
+◇ Test p1e12V16FailureBoundaryRestoresV15() started.
+✔ Test p1e12V16FailureBoundaryRestoresV15() passed after 0.334 seconds.
+◇ Test p1e13V16RedactionAndAppendOnlyGuards() started.
+✔ Test p1e13V16RedactionAndAppendOnlyGuards() passed after 0.069 seconds.
+✔ Suite P1ECampLifecycleMigrationTests passed after 1.095 seconds.
+◇ Suite P1ECampProviderDispatchTests started.
+◇ Test p1e37ProviderMessageAndWorkCommitAtomically() started.
+✔ Test p1e37ProviderMessageAndWorkCommitAtomically() passed after 0.105 seconds.
+◇ Test p1e38ProviderPrepareStartReturnConsumeSuccess() started.
+✔ Test p1e38ProviderPrepareStartReturnConsumeSuccess() passed after 0.099 seconds.
+◇ Test p1e39ReturnedCheckpointNeverRecallsProvider() started.
+✔ Test p1e39ReturnedCheckpointNeverRecallsProvider() passed after 0.094 seconds.
+◇ Test p1e40StartedDispatchAbandonAndExactReplay() started.
+✔ Test p1e40StartedDispatchAbandonAndExactReplay() passed after 0.095 seconds.
+◇ Test p1e41ProviderLifecycleFenceRace() started.
+✔ Test p1e41ProviderLifecycleFenceRace() passed after 0.093 seconds.
+◇ Test p1e42GuideAndCampDistillReplayClass() started.
+✔ Test p1e42GuideAndCampDistillReplayClass() passed after 0.001 seconds.
+◇ Test p1e43GlobalProviderRoutesAvoidCampDispatch() started.
+✔ Test p1e43GlobalProviderRoutesAvoidCampDispatch() passed after 0.096 seconds.
+◇ Test p1e44UnknownExternalWriteRouteRejects() started.
+✔ Test p1e44UnknownExternalWriteRouteRejects() passed after 0.083 seconds.
+◇ Test p1e45GuideToolAllowlistAndReceiptDedupe() started.
+✔ Test p1e45GuideToolAllowlistAndReceiptDedupe() passed after 0.106 seconds.
+◇ Test p1e46HistoricUnsafeStartedFailsObservably() started.
+✔ Test p1e46HistoricUnsafeStartedFailsObservably() passed after 0.104 seconds.
+◇ Test p1e47ServicesHaveNoUnregisteredProviderAuthority() started.
+✔ Test p1e47ServicesHaveNoUnregisteredProviderAuthority() passed after 0.010 seconds.
+◇ Test p1e48P1EProviderScopeIntegrationFailsClosed() started.
+✔ Test p1e48P1EProviderScopeIntegrationFailsClosed() passed after 0.116 seconds.
+✔ Suite P1ECampProviderDispatchTests passed after 1.009 seconds.
+◇ Test canonicalTypedAndRawPathsProduceIdenticalBytes() started.
+✔ Test canonicalTypedAndRawPathsProduceIdenticalBytes() passed after 0.001 seconds.
+◇ Test canonicalSlashAndUnicodeGoldenBytes() started.
+✔ Test canonicalSlashAndUnicodeGoldenBytes() passed after 0.001 seconds.
+◇ Test canonicalNumberGoldenBytes() started.
+✔ Test canonicalNumberGoldenBytes() passed after 0.001 seconds.
+◇ Test canonicalRejectsDuplicateDecodedKeysAndInvalidUnicode() started.
+✔ Test canonicalRejectsDuplicateDecodedKeysAndInvalidUnicode() passed after 0.001 seconds.
+◇ Test canonicalPreservesIntegerBeyondTwoToThe53() started.
+✔ Test canonicalPreservesIntegerBeyondTwoToThe53() passed after 0.001 seconds.
+◇ Test canonicalKeepsCanonicallyEquivalentButByteDistinctKeys() started.
+✔ Test canonicalKeepsCanonicallyEquivalentButByteDistinctKeys() passed after 0.001 seconds.
+◇ Test canonicalObjectRootInspectionDoesNotUseJSONValueOrRawJSONDecoder() started.
+✔ Test canonicalObjectRootInspectionDoesNotUseJSONValueOrRawJSONDecoder() passed after 0.002 seconds.
+◇ Test canonicalRejectsInvalidOrOutOfBoundsNumbers() started.
+✔ Test canonicalRejectsInvalidOrOutOfBoundsNumbers() passed after 0.001 seconds.
+◇ Test canonicalTypedNonConformingFloatThrows() started.
+✔ Test canonicalTypedNonConformingFloatThrows() passed after 0.001 seconds.
+◇ Test validateCanonicalRejectsAlternateRepresentations() started.
+✔ Test validateCanonicalRejectsAlternateRepresentations() passed after 0.001 seconds.
+◇ Test runnerDrivesCompletionThroughBoardSinkAndReportsUsage() started.
+✔ Test runnerDrivesCompletionThroughBoardSinkAndReportsUsage() passed after 0.003 seconds.
+◇ Test runnerConsumerCancellationSubmitsCanceledIntent() started.
+✔ Test runnerConsumerCancellationSubmitsCanceledIntent() passed after 0.003 seconds.
+◇ Test cancelDuringArmedTimeoutSubmitsCanceledIntent() started.
+✔ Test cancelDuringArmedTimeoutSubmitsCanceledIntent() passed after 0.004 seconds.
+◇ Test runnerTransportErrorSubmitsSafeFailedIntent() started.
+✔ Test runnerTransportErrorSubmitsSafeFailedIntent() passed after 0.005 seconds.
+◇ Test runnerRoutesLoopSelfBlockThroughTerminalSink() started.
+✔ Test runnerRoutesLoopSelfBlockThroughTerminalSink() passed after 0.002 seconds.
+◇ Test whitelistStripsDisallowedToolFromRunner() started.
+✔ Test whitelistStripsDisallowedToolFromRunner() passed after 0.002 seconds.
+◇ Test malformedWhitelistExposesOnlyBoardToolsFromRunner() started.
+✔ Test malformedWhitelistExposesOnlyBoardToolsFromRunner() passed after 0.001 seconds.
+◇ Test p1f1_071ModelLoopAdapterCannotMutateRunCard() started.
+✔ Test p1f1_071ModelLoopAdapterCannotMutateRunCard() passed after 0.112 seconds.
+◇ Test p1f1_079CardRunnerAndCLIBackendCannotStartOrFinishRun() started.
+✔ Test p1f1_079CardRunnerAndCLIBackendCannotStartOrFinishRun() passed after 2.705 seconds.
+◇ Test dmPersistsBothSidesAndFindsThread() started.
+✔ Test dmPersistsBothSidesAndFindsThread() passed after 0.101 seconds.
+◇ Test secondSendIncludesFirstExchangeInHistory() started.
+✔ Test secondSendIncludesFirstExchangeInHistory() passed after 0.088 seconds.
+◇ Test dmSystemCarriesCompanionMemory() started.
+✔ Test dmSystemCarriesCompanionMemory() passed after 0.089 seconds.
+◇ Test dmSystemOmitsMemoryWhenNone() started.
+✔ Test dmSystemOmitsMemoryWhenNone() passed after 0.098 seconds.
+◇ Test cliEngineCommandBuilderPinsSafeFlags() started.
+✔ Test cliEngineCommandBuilderPinsSafeFlags() passed after 0.002 seconds.
+◇ Test cliEngineCommandBuilderMapsSandboxWithoutEscalation() started.
+✔ Test cliEngineCommandBuilderMapsSandboxWithoutEscalation() passed after 0.002 seconds.
+◇ Test cliRuntimeRejectsUnsafeSandboxValues() started.
+✔ Test cliRuntimeRejectsUnsafeSandboxValues() passed after 0.001 seconds.
+◇ Test cliProviderParserExtractsProgressAndUsageFromJSONL() started.
+✔ Test cliProviderParserExtractsProgressAndUsageFromJSONL() passed after 0.001 seconds.
+◇ Test cliAdapterBlocksWhenProcessExitsWithoutBoardTerminator() started.
+✔ Test cliAdapterBlocksWhenProcessExitsWithoutBoardTerminator() passed after 0.003 seconds.
+◇ Test cliProcessBackendFinishesWithinGraceWhenGrandchildHoldsPipe() started.
+✔ Test cliProcessBackendFinishesWithinGraceWhenGrandchildHoldsPipe() passed after 0.589 seconds.
+◇ Test cliProcessBackendCapturesFinalLineWithoutNewline() started.
+✔ Test cliProcessBackendCapturesFinalLineWithoutNewline() passed after 0.271 seconds.
+◇ Test cliPipeDrainRereadsAfterExitObserved() started.
+✔ Test cliPipeDrainRereadsAfterExitObserved() passed after 0.001 seconds.
+◇ Test cliPipeDrainBacksOffPollingWhileSilent() started.
+✔ Test cliPipeDrainBacksOffPollingWhileSilent() passed after 0.001 seconds.
+◇ Test cliPipeDrainStopsAtGraceDeadlineWhileDataFlows() started.
+✔ Test cliPipeDrainStopsAtGraceDeadlineWhileDataFlows() passed after 0.001 seconds.
+◇ Test cliProcessBackendCancellationEscalatesAfterGrace() started.
+✔ Test cliProcessBackendCancellationEscalatesAfterGrace() passed after 0.437 seconds.
+◇ Test cliProcessBackendCancellationReturnsCheckedEvidence() started.
+✔ Test cliProcessBackendCancellationReturnsCheckedEvidence() passed after 0.372 seconds.
+◇ Test cliBackendLiveSpikeRunsMechanicsOnlyWhenEnabled() started.
+✔ Test cliBackendLiveSpikeRunsMechanicsOnlyWhenEnabled() passed after 0.001 seconds.
+◇ Test p1f1_072CodexFakeCLIExactSessionBindAndResume() started.
+✔ Test p1f1_072CodexFakeCLIExactSessionBindAndResume() passed after 0.007 seconds.
+◇ Test p1f1_073ClaudeFakeCLIExactSessionBindAndResume() started.
+✔ Test p1f1_073ClaudeFakeCLIExactSessionBindAndResume() passed after 0.011 seconds.
+◇ Test p1f1_074CLINeverUsesLastContinueAndReinjectsFlags() started.
+✔ Test p1f1_074CLINeverUsesLastContinueAndReinjectsFlags() passed after 0.018 seconds.
+◇ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() started.
+✔ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() passed after 34.128 seconds.
+◇ Test codingRanchMigrationAndBootstrapAreIdempotent() started.
+✔ Test codingRanchMigrationAndBootstrapAreIdempotent() passed after 0.108 seconds.
+◇ Test codingRanchMigrationReplaysFromV7() started.
+✔ Test codingRanchMigrationReplaysFromV7() passed after 0.078 seconds.
+◇ Test codingRanchBootstrapPreservesExistingExpertRoster() started.
+✔ Test codingRanchBootstrapPreservesExistingExpertRoster() passed after 0.084 seconds.
+◇ Test feedDetectsDuplicatesButCanSaveAgain() started.
+✔ Test feedDetectsDuplicatesButCanSaveAgain() passed after 0.081 seconds.
+◇ Test ruminationUsesNoToolsAndRetryUpdatesOneResult() started.
+✔ Test ruminationUsesNoToolsAndRetryUpdatesOneResult() passed after 0.079 seconds.
+◇ Test ruminationCanExposeProgressBeforeBackgroundProcessing() started.
+✔ Test ruminationCanExposeProgressBeforeBackgroundProcessing() passed after 0.080 seconds.
+◇ Test ruminationFailureKeepsSourceAndCanRetry() started.
+✔ Test ruminationFailureKeepsSourceAndCanRetry() passed after 0.081 seconds.
+◇ Test materializationAndMissionConversionAreIdempotent() started.
+✔ Test materializationAndMissionConversionAreIdempotent() passed after 0.104 seconds.
+◇ Test testCowRequiresAcceptedMissionWithRealArtifactAndUnlocksOnce() started.
+✔ Test testCowRequiresAcceptedMissionWithRealArtifactAndUnlocksOnce() passed after 0.108 seconds.
+◇ Suite A2CodingRanchTests started.
+◇ Test ruminationSanitizesPersistedAndVisibleDiagnostics() started.
+✔ Test ruminationSanitizesPersistedAndVisibleDiagnostics() passed after 0.204 seconds.
+◇ Test ruminationInvalidOutputIsDeterministicAndPreservesSource() started.
+✔ Test ruminationInvalidOutputIsDeterministicAndPreservesSource() passed after 0.087 seconds.
+◇ Test ruminationProviderUsesNoToolsAndProducesOneCanonicalResult() started.
+✔ Test ruminationProviderUsesNoToolsAndProducesOneCanonicalResult() passed after 0.806 seconds.
+◇ Test singleOrchestratorSupervisorOwnsPlanningAndRuminationLifecycle() started.
+✔ Test singleOrchestratorSupervisorOwnsPlanningAndRuminationLifecycle() passed after 0.165 seconds.
+◇ Test ruminationAdapterDelegatesStartRetryCancelWithoutUnownedTask() started.
+✔ Test ruminationAdapterDelegatesStartRetryCancelWithoutUnownedTask() passed after 0.229 seconds.
+◇ Test ruminationUnknownRestartRendersRecoveringWithoutInventingReading() started.
+✔ Test ruminationUnknownRestartRendersRecoveringWithoutInventingReading() passed after 0.381 seconds.
+◇ Test ruminationPhaseProjectionUsesOnlyMatchingSupervisorEvents() started.
+✔ Test ruminationPhaseProjectionUsesOnlyMatchingSupervisorEvents() passed after 8.664 seconds.
+✔ Suite A2CodingRanchTests passed after 10.540 seconds.
+◇ Test downstreamPacketCarriesUpstreamHandoffAndPaths() started.
+✔ Test downstreamPacketCarriesUpstreamHandoffAndPaths() passed after 0.001 seconds.
+◇ Test packetRenderingIsDeterministic() started.
+✔ Test packetRenderingIsDeterministic() passed after 0.001 seconds.
+◇ Test decodeKnownBlocks() started.
+✔ Test decodeKnownBlocks() passed after 0.001 seconds.
+◇ Test unknownBlockRoundTripsVerbatim() started.
+✔ Test unknownBlockRoundTripsVerbatim() passed after 0.001 seconds.
+◇ Test toolResultEncoding() started.
+✔ Test toolResultEncoding() passed after 0.001 seconds.
+◇ Test toolResultArrayContentFallsBackToUnknown() started.
+✔ Test toolResultArrayContentFallsBackToUnknown() passed after 0.001 seconds.
+◇ Test cutIndexLandsOnAssistantBoundary() started.
+✔ Test cutIndexLandsOnAssistantBoundary() passed after 0.001 seconds.
+◇ Test cutIndexNilWhenHistoryShort() started.
+✔ Test cutIndexNilWhenHistoryShort() passed after 0.001 seconds.
+◇ Test compactKeepsFirstMessageAndSuffixPairs() started.
+✔ Test compactKeepsFirstMessageAndSuffixPairs() passed after 0.001 seconds.
+◇ Test compactSkipsWhenSummaryFailsOrEmpty() started.
+✔ Test compactSkipsWhenSummaryFailsOrEmpty() passed after 0.001 seconds.
+◇ Test loopCompactsAfterThresholdAndContinues() started.
+✔ Test loopCompactsAfterThresholdAndContinues() passed after 0.001 seconds.
+◇ Test packetContainsContractAndCard() started.
+✔ Test packetContainsContractAndCard() passed after 0.001 seconds.
+◇ Test packetRendersCampNotesAndMemorySections() started.
+✔ Test packetRendersCampNotesAndMemorySections() passed after 0.001 seconds.
+◇ Test packetOmitsEmptyKnowledgeSections() started.
+✔ Test packetOmitsEmptyKnowledgeSections() passed after 0.001 seconds.
+◇ Test knowledgeSectionsRenderBeforeUpstreamHandoffs() started.
+✔ Test knowledgeSectionsRenderBeforeUpstreamHandoffs() passed after 0.001 seconds.
+◇ Test noteSnippetTruncationLimits() started.
+✔ Test noteSnippetTruncationLimits() passed after 0.001 seconds.
+◇ Test renderSectionDeterministicAndNilWhenEmpty() started.
+✔ Test renderSectionDeterministicAndNilWhenEmpty() passed after 0.001 seconds.
+◇ Test contractMentionsChunkedWrites() started.
+✔ Test contractMentionsChunkedWrites() passed after 0.001 seconds.
+◇ Test contractOmitsChunkedWritesWithoutWriteFile() started.
+✔ Test contractOmitsChunkedWritesWithoutWriteFile() passed after 0.001 seconds.
+◇ Test contractHardensAgainstExternalContentWhenWebToolsPresent() started.
+✔ Test contractHardensAgainstExternalContentWhenWebToolsPresent() passed after 0.001 seconds.
+◇ Test fileToolWordingUnifiedWhenFileToolsStripped() started.
+✔ Test fileToolWordingUnifiedWhenFileToolsStripped() passed after 0.001 seconds.
+◇ Test systemIsStableAcrossCards() started.
+✔ Test systemIsStableAcrossCards() passed after 0.001 seconds.
+◇ Test p1f1_080AnsweredRequestChangesContextNotSessionScope() started.
+✔ Test p1f1_080AnsweredRequestChangesContextNotSessionScope() passed after 1.018 seconds.
+◇ Suite P1CControlContractMigrationTests started.
+◇ Test controlContractMigrationExactDDLAndConstraints() started.
+✔ Test controlContractMigrationExactDDLAndConstraints() passed after 0.078 seconds.
+◇ Test controlContractMigrationReplaysFromFreshAndV11Twice() started.
+✔ Test controlContractMigrationReplaysFromFreshAndV11Twice() passed after 0.085 seconds.
+◇ Test controlContractMigrationRollbackLeavesV13Untouched() started.
+✔ Test controlContractMigrationRollbackLeavesV13Untouched() passed after 0.031 seconds.
+◇ Test controlContractAppendOnlyTablesRejectNoopUpdateAndDelete() started.
+✔ Test controlContractAppendOnlyTablesRejectNoopUpdateAndDelete() passed after 0.034 seconds.
+◇ Test controlContractSchemaHasExactInboxRedactionShape() started.
+✔ Test controlContractSchemaHasExactInboxRedactionShape() passed after 0.025 seconds.
+◇ Test inputSchemaHasNoParseAttemptColumn() started.
+✔ Test inputSchemaHasNoParseAttemptColumn() passed after 0.024 seconds.
+◇ Test inputSchemaRejectsDeletedStatusWithActiveRetention() started.
+✔ Test inputSchemaRejectsDeletedStatusWithActiveRetention() passed after 0.032 seconds.
+◇ Test activeInputRequiresExactlyOneInlineOrPayloadRef() started.
+✔ Test activeInputRequiresExactlyOneInlineOrPayloadRef() passed after 0.033 seconds.
+◇ Test inputSchemaRejectsTombstoneRetentionWithLiveStatus() started.
+✔ Test inputSchemaRejectsTombstoneRetentionWithLiveStatus() passed after 0.035 seconds.
+✔ Suite P1CControlContractMigrationTests passed after 0.382 seconds.
+◇ Suite P1ECowResidencyContractTests started.
+◇ Test p1e17CowIdentityContractValidation() started.
+✔ Test p1e17CowIdentityContractValidation() passed after 0.090 seconds.
+◇ Test p1e18ResidencyTransitionsReplayAndRejoin() started.
+✔ Test p1e18ResidencyTransitionsReplayAndRejoin() passed after 0.098 seconds.
+◇ Test p1e19RequireActiveResidencyAuthorization() started.
+✔ Test p1e19RequireActiveResidencyAuthorization() passed after 0.095 seconds.
+◇ Test p1e22BridgeDirectionScopeAndRevocation() started.
+✔ Test p1e22BridgeDirectionScopeAndRevocation() passed after 0.108 seconds.
+◇ Test p1e23RequireActiveCampWriteFence() started.
+✔ Test p1e23RequireActiveCampWriteFence() passed after 0.094 seconds.
+◇ Test p1e24P1ERetirementAPIsRemainClosed() started.
+✔ Test p1e24P1ERetirementAPIsRemainClosed() passed after 0.025 seconds.
+✔ Suite P1ECowResidencyContractTests passed after 0.513 seconds.
+◇ Test killRestartAdoptsOrphanAndResumesToDone() started.
+✔ Test killRestartAdoptsOrphanAndResumesToDone() passed after 0.181 seconds.
+◇ Test adoptionSkipsCardsWithActiveRunners() started.
+✔ Test adoptionSkipsCardsWithActiveRunners() passed after 0.208 seconds.
+◇ Test startupHealsConfirmedProposalWithoutMission() started.
+✔ Test startupHealsConfirmedProposalWithoutMission() passed after 0.122 seconds.
+◇ Test workspaceBookmarkCaptureAndResolveRoundtrip() started.
+✔ Test workspaceBookmarkCaptureAndResolveRoundtrip() passed after 0.105 seconds.
+◇ Test leaseRenewalCompletionUsesLatestClaim() started.
+✔ Test leaseRenewalCompletionUsesLatestClaim() passed after 0.114 seconds.
+◇ Test staleRenewCancelsOnlyMatchingOwnedTask() started.
+✔ Test staleRenewCancelsOnlyMatchingOwnedTask() passed after 0.126 seconds.
+◇ Test supervisorNextDueTimerWakesRetryWithoutPolling() started.
+✔ Test supervisorNextDueTimerWakesRetryWithoutPolling() passed after 0.109 seconds.
+◇ Test waitUntilIdleIgnoresFutureRetryButWaitUntilTerminalDoesNot() started.
+✔ Test waitUntilIdleIgnoresFutureRetryButWaitUntilTerminalDoesNot() passed after 0.111 seconds.
+◇ Test suppressedWaitUntilIdleDistinguishesDueFutureRetryAndHaltedCleanup() started.
+✔ Test suppressedWaitUntilIdleDistinguishesDueFutureRetryAndHaltedCleanup() passed after 0.291 seconds.
+◇ Test terminalCommitStoreFailureRetainsOwnershipAndPendingProposal() started.
+✔ Test terminalCommitStoreFailureRetainsOwnershipAndPendingProposal() passed after 0.102 seconds.
+◇ Test terminalPendingProposalRetriesOnlyAfterRenewOrExplicitKick() started.
+✔ Test terminalPendingProposalRetriesOnlyAfterRenewOrExplicitKick() passed after 0.105 seconds.
+◇ Test claimOrNextDueStoreFailureLatchesFatalAndWakesWaiters() started.
+✔ Test claimOrNextDueStoreFailureLatchesFatalAndWakesWaiters() passed after 0.212 seconds.
+◇ Test renewNonStaleFailureLatchesFatalWithoutDroppingLedgerOwnership() started.
+✔ Test renewNonStaleFailureLatchesFatalWithoutDroppingLedgerOwnership() passed after 0.114 seconds.
+◇ Test staleClaimAndGenerationLosersDoNotLatchFatal() started.
+✔ Test staleClaimAndGenerationLosersDoNotLatchFatal() passed after 0.231 seconds.
+◇ Test terminalWaiterReturnsAfterDurableCancelWhileIdleWaitsForProviderExit() started.
+✔ Test terminalWaiterReturnsAfterDurableCancelWhileIdleWaitsForProviderExit() passed after 0.107 seconds.
+◇ Test p1f1_042RecoveryPrecedenceAndFourDispatchCrashWindows() started.
+✔ Test p1f1_042RecoveryPrecedenceAndFourDispatchCrashWindows() passed after 2.003 seconds.
+◇ Test databaseUsesFiveSecondBusyTimeoutAndWAL() started.
+✔ Test databaseUsesFiveSecondBusyTimeoutAndWAL() passed after 0.087 seconds.
+◇ Test durableHaltMigrationCreatesOneRunningSingletonAndReplays() started.
+✔ Test durableHaltMigrationCreatesOneRunningSingletonAndReplays() passed after 0.086 seconds.
+◇ Test durableHaltCASIsAtomicIdempotentAndGloballyAudited() started.
+✔ Test durableHaltCASIsAtomicIdempotentAndGloballyAudited() passed after 0.090 seconds.
+◇ Test durableHaltCASRejectsStaleExpectedMode() started.
+✔ Test durableHaltCASRejectsStaleExpectedMode() passed after 0.088 seconds.
+◇ Test haltEventFailureRollsBackKernelControlProjection() started.
+✔ Test haltEventFailureRollsBackKernelControlProjection() passed after 0.086 seconds.
+◇ Test resumeEventFailureRollsBackKernelControlProjection() started.
+✔ Test resumeEventFailureRollsBackKernelControlProjection() passed after 0.105 seconds.
+◇ Test missingKernelControlSingletonFailsExplicitly() started.
+✔ Test missingKernelControlSingletonFailsExplicitly() passed after 0.106 seconds.
+◇ Test invalidKernelControlModeNeverDefaultsToRunning() started.
+✔ Test invalidKernelControlModeNeverDefaultsToRunning() passed after 0.093 seconds.
+◇ Test migratesAndBootstraps() started.
+✔ Test migratesAndBootstraps() passed after 0.095 seconds.
+◇ Test companionCRUD() started.
+✔ Test companionCRUD() passed after 0.095 seconds.
+◇ Test companionsMissingIdThrows() started.
+✔ Test companionsMissingIdThrows() passed after 0.088 seconds.
+◇ Test companionsDedupesDuplicateIds() started.
+✔ Test companionsDedupesDuplicateIds() passed after 0.097 seconds.
+◇ Test eventAppendAndProjectionSameTransaction() started.
+✔ Test eventAppendAndProjectionSameTransaction() passed after 0.102 seconds.
+◇ Test illegalTransitionThrows() started.
+✔ Test illegalTransitionThrows() passed after 0.086 seconds.
+◇ Test cardStatusTransitionMatrixKeepsReturnForReworkConservative() started.
+✔ Test cardStatusTransitionMatrixKeepsReturnForReworkConservative() passed after 0.001 seconds.
+◇ Test transitionUnknownCardThrows() started.
+✔ Test transitionUnknownCardThrows() passed after 0.090 seconds.
+◇ Test finishUnknownRunThrows() started.
+✔ Test finishUnknownRunThrows() passed after 0.086 seconds.
+◇ Test migrationV2AddsColumnsAndNormalizes() started.
+✔ Test migrationV2AddsColumnsAndNormalizes() passed after 0.091 seconds.
+◇ Test completeCardWritesHandoffProjection() started.
+✔ Test completeCardWritesHandoffProjection() passed after 0.096 seconds.
+◇ Test eventsByMissionOrdered() started.
+✔ Test eventsByMissionOrdered() passed after 0.090 seconds.
+◇ Test missionsListOrderedDesc() started.
+✔ Test missionsListOrderedDesc() passed after 0.086 seconds.
+◇ Test suspendAndAnswerRoundTrip() started.
+✔ Test suspendAndAnswerRoundTrip() passed after 0.098 seconds.
+◇ Test pendingRequestsAcrossCards() started.
+✔ Test pendingRequestsAcrossCards() passed after 0.113 seconds.
+◇ Test durableWorkMigrationMatrixThroughV12() started.
+✔ Test durableWorkMigrationMatrixThroughV12() passed after 0.159 seconds.
+◇ Test durableWorkMigrationHasExactTablesIndexesChecksAndTriggers() started.
+✔ Test durableWorkMigrationHasExactTablesIndexesChecksAndTriggers() passed after 0.024 seconds.
+◇ Test scheduleFireMigrationMatrixAndExactDDL() started.
+✔ Test scheduleFireMigrationMatrixAndExactDDL() passed after 0.225 seconds.
+◇ Test scheduleFireSchemaReservesRedactionWithoutAllowingOrdinaryMutation() started.
+✔ Test scheduleFireSchemaReservesRedactionWithoutAllowingOrdinaryMutation() passed after 0.580 seconds.
+◇ Test durableWorkAttemptEventIsAppendOnlyFromIntroducingMigration() started.
+✔ Test durableWorkAttemptEventIsAppendOnlyFromIntroducingMigration() passed after 0.026 seconds.
+◇ Test parseNoteJSONHappyPath() started.
+✔ Test parseNoteJSONHappyPath() passed after 0.001 seconds.
+◇ Test parseNoteJSONStripsCodeFence() started.
+✔ Test parseNoteJSONStripsCodeFence() passed after 0.001 seconds.
+◇ Test parseNoteJSONTruncatesLongTitle() started.
+✔ Test parseNoteJSONTruncatesLongTitle() passed after 0.001 seconds.
+◇ Test parseNoteJSONMalformedFallsBackToFirstLine() started.
+✔ Test parseNoteJSONMalformedFallsBackToFirstLine() passed after 0.001 seconds.
+◇ Test parseNoteJSONSkipConvention() started.
+✔ Test parseNoteJSONSkipConvention() passed after 0.001 seconds.
+◇ Test promptsAreDeterministic() started.
+✔ Test promptsAreDeterministic() passed after 0.001 seconds.
+◇ Test distillCloseoutParsesLLMNote() started.
+✔ Test distillCloseoutParsesLLMNote() passed after 0.001 seconds.
+◇ Test distillCloseoutFallsBackOnProviderFailure() started.
+✔ Test distillCloseoutFallsBackOnProviderFailure() passed after 0.001 seconds.
+◇ Test distillCloseoutFallsBackOnUnparseableEmptyText() started.
+✔ Test distillCloseoutFallsBackOnUnparseableEmptyText() passed after 0.001 seconds.
+◇ Test distillMemoryReturnsNilOnSkip() started.
+✔ Test distillMemoryReturnsNilOnSkip() passed after 0.001 seconds.
+◇ Test distillMemoryReturnsNote() started.
+✔ Test distillMemoryReturnsNote() passed after 0.001 seconds.
+◇ Test distillMemoryThrowsOnProviderFailure() started.
+✔ Test distillMemoryThrowsOnProviderFailure() passed after 0.001 seconds.
+◇ Test distillGuideChatNoteAndSkip() started.
+✔ Test distillGuideChatNoteAndSkip() passed after 0.001 seconds.
+◇ Suite P1CDomainEventContractTests started.
+◇ Test persistedControlContractConstantsAndWorkKeyDerivationsAreExact() started.
+✔ Test persistedControlContractConstantsAndWorkKeyDerivationsAreExact() passed after 0.001 seconds.
+◇ Test workerCommandEnvelopeFactoriesAreExactAttemptScopedAndReplayStable() started.
+✔ Test workerCommandEnvelopeFactoriesAreExactAttemptScopedAndReplayStable() passed after 0.082 seconds.
+◇ Test preparedCommandIsPreReceiptAuthorityAndNewResultIsPostMutationOnly() started.
+✔ Test preparedCommandIsPreReceiptAuthorityAndNewResultIsPostMutationOnly() passed after 0.001 seconds.
+◇ Test commandEnvelopeWholeHashCoversEveryFieldAndNullability() started.
+✔ Test commandEnvelopeWholeHashCoversEveryFieldAndNullability() passed after 0.001 seconds.
+◇ Test canonicalContractCodingReusesCanonicalJSONV1GoldenBytes() started.
+✔ Test canonicalContractCodingReusesCanonicalJSONV1GoldenBytes() passed after 0.001 seconds.
+◇ Test campSafeJSONRejectsUnknownForbiddenIdentityAndNoncanonicalBytes() started.
+✔ Test campSafeJSONRejectsUnknownForbiddenIdentityAndNoncanonicalBytes() passed after 0.002 seconds.
+◇ Test campSafeJSONRejectsSemanticallyForbiddenReferenceValues() started.
+✔ Test campSafeJSONRejectsSemanticallyForbiddenReferenceValues() passed after 0.001 seconds.
+◇ Test everyCommandResultAndAuditShapeIsExactAndOrdered() started.
+✔ Test everyCommandResultAndAuditShapeIsExactAndOrdered() passed after 0.001 seconds.
+◇ Test executeCommandCommitsReceiptProjectionEventsAndOutboxAtomically() started.
+✔ Test executeCommandCommitsReceiptProjectionEventsAndOutboxAtomically() passed after 0.091 seconds.
+◇ Test executeCommandReplayReturnsOldResultWithoutMutation() started.
+✔ Test executeCommandReplayReturnsOldResultWithoutMutation() passed after 0.093 seconds.
+◇ Test creationReplayUsesPersistedResultBeforeIDFactoryOrProjectionBranch() started.
+✔ Test creationReplayUsesPersistedResultBeforeIDFactoryOrProjectionBranch() passed after 0.089 seconds.
+◇ Test replayValidatesCompleteStoredEventAndOutboxGraph() started.
+✔ Test replayValidatesCompleteStoredEventAndOutboxGraph() passed after 0.265 seconds.
+◇ Test executeCommandRejectsTypeHashOrEventCountDriftTotally() started.
+✔ Test executeCommandRejectsTypeHashOrEventCountDriftTotally() passed after 0.085 seconds.
+◇ Test multiAggregateCommandUsesStableOrdinalsAndVersionChains() started.
+✔ Test multiAggregateCommandUsesStableOrdinalsAndVersionChains() passed after 0.094 seconds.
+◇ Test eventCountOrdinalOrProjectionFailureRollsBackEverything() started.
+✔ Test eventCountOrdinalOrProjectionFailureRollsBackEverything() passed after 0.078 seconds.
+◇ Test domainEventCopiesEnvelopeAndOwnsRecordedAt() started.
+✔ Test domainEventCopiesEnvelopeAndOwnsRecordedAt() passed after 0.100 seconds.
+◇ Test domainEventRejectsMissingCampBadTimeAndVersionPreSQL() started.
+✔ Test domainEventRejectsMissingCampBadTimeAndVersionPreSQL() passed after 0.090 seconds.
+◇ Test outboxClaimReleaseSentCASAndReplayAreDeterministic() started.
+✔ Test outboxClaimReleaseSentCASAndReplayAreDeterministic() passed after 0.095 seconds.
+◇ Test inboxApplyReplayConflictAndTypedRejectionAreDurable() started.
+✔ Test inboxApplyReplayConflictAndTypedRejectionAreDurable() passed after 0.087 seconds.
+◇ Test inboxTypedRejectionRollsBackHandlerSavepointBeforeDurableEvidence() started.
+✔ Test inboxTypedRejectionRollsBackHandlerSavepointBeforeDurableEvidence() passed after 0.089 seconds.
+◇ Test inboxSameKeyAndStoredHashButDifferentBytesFailsClosedWithoutHandler() started.
+✔ Test inboxSameKeyAndStoredHashButDifferentBytesFailsClosedWithoutHandler() passed after 0.088 seconds.
+◇ Test inboxConflictCASPersistsExactRejectedShapeAndThrowsAfterCommit() started.
+✔ Test inboxConflictCASPersistsExactRejectedShapeAndThrowsAfterCommit() passed after 0.084 seconds.
+◇ Test inboxOrdinaryRedactionIsRejectedWithoutCASOrHandler() started.
+✔ Test inboxOrdinaryRedactionIsRejectedWithoutCASOrHandler() passed after 0.086 seconds.
+◇ Test inboxOrdinaryRedactionFencePreservesEveryOrigin() started.
+✔ Test inboxOrdinaryRedactionFencePreservesEveryOrigin() passed after 0.262 seconds.
+◇ Test domainEventsReadInValidatedAggregateOrder() started.
+✔ Test domainEventsReadInValidatedAggregateOrder() passed after 0.100 seconds.
+✔ Suite P1CDomainEventContractTests passed after 1.975 seconds.
+◇ Test missionAndPlanningWorkCommitAtomically() started.
+✔ Test missionAndPlanningWorkCommitAtomically() passed after 0.108 seconds.
+◇ Test sameMissionStartReplayRequiresExplicitIdentity() started.
+✔ Test sameMissionStartReplayRequiresExplicitIdentity() passed after 0.004 seconds.
+◇ Test manualMissionStartCapturesProfileModelKeyAndTraceBeforeTask() started.
+✔ Test manualMissionStartCapturesProfileModelKeyAndTraceBeforeTask() passed after 0.102 seconds.
+◇ Test manualMissionStartReusesPendingCommandAfterPostEnqueueFailure() started.
+✔ Test manualMissionStartReusesPendingCommandAfterPostEnqueueFailure() passed after 0.100 seconds.
+◇ Test manualMissionStartInputChangeCreatesNewCommandAndSuccessClearsPending() started.
+✔ Test manualMissionStartInputChangeCreatesNewCommandAndSuccessClearsPending() passed after 0.094 seconds.
+◇ Test lateManualMissionSuccessDoesNotClearNewPendingCommand() started.
+✔ Test lateManualMissionSuccessDoesNotClearNewPendingCommand() passed after 0.080 seconds.
+◇ Test candidateConversionRollsBackWhenWorkInsertFails() started.
+✔ Test candidateConversionRollsBackWhenWorkInsertFails() passed after 1.427 seconds.
+◇ Test candidateConversionReplayReturnsOneMission() started.
+✔ Test candidateConversionReplayReturnsOneMission() passed after 2.175 seconds.
+◇ Test candidateConversionNeverLeavesUnlinkedMission() started.
+✔ Test candidateConversionNeverLeavesUnlinkedMission() passed after 0.333 seconds.
+◇ Test candidateWithWrongCampCowFailsBeforeWrites() started.
+✔ Test candidateWithWrongCampCowFailsBeforeWrites() passed after 0.379 seconds.
+◇ Test confirmedProposalMissionStartUsesProposalKeyAndPreservesFirstTrace() started.
+✔ Test confirmedProposalMissionStartUsesProposalKeyAndPreservesFirstTrace() passed after 0.113 seconds.
+◇ Test scheduleStartedTransactionSurvivesRestartBeforePlannerKick() started.
+✔ Test scheduleStartedTransactionSurvivesRestartBeforePlannerKick() passed after 0.242 seconds.
+◇ Test sameSlotReplayReturnsSameMission() started.
+✔ Test sameSlotReplayReturnsSameMission() passed after 0.220 seconds.
+◇ Test broadcastFailureDoesNotRewriteStartedFire() started.
+✔ Test broadcastFailureDoesNotRewriteStartedFire() passed after 1.029 seconds.
+◇ Test scheduleMissionStartUsesCheckedUTCMillisecondsKey() started.
+✔ Test scheduleMissionStartUsesCheckedUTCMillisecondsKey() passed after 0.106 seconds.
+◇ Test scheduleMillisecondsOverflowClaimsSlotThenRecordsMissedWithoutMission() started.
+✔ Test scheduleMillisecondsOverflowClaimsSlotThenRecordsMissedWithoutMission() passed after 0.094 seconds.
+◇ Test schedulePlannerSelectionFailureClaimsSlotThenRecordsMissedOnce() started.
+✔ Test schedulePlannerSelectionFailureClaimsSlotThenRecordsMissedOnce() passed after 0.092 seconds.
+◇ Test nonFiniteScheduleFireFailsBeforeClaimWithoutWrites() started.
+✔ Test nonFiniteScheduleFireFailsBeforeClaimWithoutWrites() passed after 0.089 seconds.
+◇ Test a1bSchedulePathDoesNotCreateScheduleFireOrChangeClaimCAS() started.
+✔ Test a1bSchedulePathDoesNotCreateScheduleFireOrChangeClaimCAS() passed after 0.107 seconds.
+◇ Test manualAppCallsiteCapturesCoordinatorCommandBeforeTask() started.
+✔ Test manualAppCallsiteCapturesCoordinatorCommandBeforeTask() passed after 0.165 seconds.
+◇ Test candidateAppCallsiteCapturesCoordinatorCommandBeforeFirstAwait() started.
+✔ Test candidateAppCallsiteCapturesCoordinatorCommandBeforeFirstAwait() passed after 0.374 seconds.
+◇ Test a3Revision02EntryBoundaryRemainsByteExact() started.
+✔ Test a3Revision02EntryBoundaryRemainsByteExact() passed after 0.025 seconds.
+◇ Test a3Revision02DebugObservationIsGuardedAndAdjacent() started.
+✔ Test a3Revision02DebugObservationIsGuardedAndAdjacent() passed after 4.808 seconds.
+◇ Test proposalAppCallsiteCapturesCoordinatorCommandBeforeTask() started.
+✔ Test proposalAppCallsiteCapturesCoordinatorCommandBeforeTask() passed after 0.169 seconds.
+◇ Test scheduleAppCallsiteDelegatesClaimAndStartExclusively() started.
+✔ Test scheduleAppCallsiteDelegatesClaimAndStartExclusively() passed after 0.666 seconds.
+◇ Test appPlanningCallsitesContainNoDirectOrchestratorStart() started.
+✔ Test appPlanningCallsitesContainNoDirectOrchestratorStart() passed after 0.221 seconds.
+◇ Test uiPreviewUsesProcessLocalDefaultsBeforeBootstrapAndReload() started.
+✔ Test uiPreviewUsesProcessLocalDefaultsBeforeBootstrapAndReload() passed after 0.833 seconds.
+◇ Test inputOutputUsageOverflowTerminalizesWithExactEvidence() started.
+✔ Test inputOutputUsageOverflowTerminalizesWithExactEvidence() passed after 0.106 seconds.
+◇ Test haltedPlanningCannotClaimThroughGenericStore() started.
+✔ Test haltedPlanningCannotClaimThroughGenericStore() passed after 0.091 seconds.
+◇ Test sameMissionStartReplayRunsBeforeCredentialAndCatalogPreflight() started.
+✔ Test sameMissionStartReplayRunsBeforeCredentialAndCatalogPreflight() passed after 0.091 seconds.
+◇ Test sameMissionStartReplayAfterProfileDeletionReturnsOriginalIdsAndTrace() started.
+✔ Test sameMissionStartReplayAfterProfileDeletionReturnsOriginalIdsAndTrace() passed after 0.094 seconds.
+◇ Test sameMissionStartReplayDoesNotConstructProvider() started.
+✔ Test sameMissionStartReplayDoesNotConstructProvider() passed after 0.094 seconds.
+◇ Test sameMissionStartConflictWinsOverCurrentProviderFailure() started.
+✔ Test sameMissionStartConflictWinsOverCurrentProviderFailure() passed after 0.091 seconds.
+◇ Test sameMissionStartPayloadOrGraphConflictFailsWithoutWrites() started.
+✔ Test sameMissionStartPayloadOrGraphConflictFailsWithoutWrites() passed after 0.094 seconds.
+◇ Test planningReplayPreservesFirstTrace() started.
+✔ Test planningReplayPreservesFirstTrace() passed after 0.098 seconds.
+◇ Test planningProfileKindDriftBetweenPreflightAndTransactionWritesNothing() started.
+✔ Test planningProfileKindDriftBetweenPreflightAndTransactionWritesNothing() passed after 0.092 seconds.
+◇ Test planningSpecificProviderLifecycleUsesSealedLedgerOwner() started.
+✔ Test planningSpecificProviderLifecycleUsesSealedLedgerOwner() passed after 0.099 seconds.
+◇ Test planningClaimAndRenewReturnPersistedSubmillisecondLeaseAndTerminalize() started.
+✔ Test planningClaimAndRenewReturnPersistedSubmillisecondLeaseAndTerminalize() passed after 0.103 seconds.
+◇ Test planningSpecificRecoveryAdoptsInterruptedWithoutGenericAPI() started.
+✔ Test planningSpecificRecoveryAdoptsInterruptedWithoutGenericAPI() passed after 0.101 seconds.
+◇ Test planningSuccessWithFallbackIsRejectedWithoutWrites() started.
+✔ Test planningSuccessWithFallbackIsRejectedWithoutWrites() passed after 0.103 seconds.
+◇ Test planningSuccessWithNilFallbackWritesNoFallbackEvent() started.
+✔ Test planningSuccessWithNilFallbackWritesNoFallbackEvent() passed after 0.106 seconds.
+◇ Test planningSuccessCommitsTokensCardsRollupAndWorkOnce() started.
+✔ Test planningSuccessCommitsTokensCardsRollupAndWorkOnce() passed after 0.096 seconds.
+◇ Test planningSuccessOverBudgetCreatesCardsButDispatchesNone() started.
+✔ Test planningSuccessOverBudgetCreatesCardsButDispatchesNone() passed after 0.095 seconds.
+◇ Test planningUsageNilWritesNoTokenEvent() started.
+✔ Test planningUsageNilWritesNoTokenEvent() passed after 0.099 seconds.
+◇ Test negativePlanningUsageFailsBeforeSQL() started.
+✔ Test negativePlanningUsageFailsBeforeSQL() passed after 0.097 seconds.
+◇ Test planningUsageZeroWritesExactTokenEvent() started.
+✔ Test planningUsageZeroWritesExactTokenEvent() passed after 0.095 seconds.
+◇ Test transientFailureRecordsUsageAndUsesDurableBackoffOnly() started.
+✔ Test transientFailureRecordsUsageAndUsesDurableBackoffOnly() passed after 0.098 seconds.
+◇ Test planningIdentityAndTokenEventsPreserveIntegersAboveTwoTo53() started.
+✔ Test planningIdentityAndTokenEventsPreserveIntegersAboveTwoTo53() passed after 0.095 seconds.
+◇ Test existingSpentUsageOverflowTerminalizesWithExactEvidence() started.
+✔ Test existingSpentUsageOverflowTerminalizesWithExactEvidence() passed after 0.104 seconds.
+◇ Test turnAggregateUsageOverflowTerminalizesWithExactEvidence() started.
+✔ Test turnAggregateUsageOverflowTerminalizesWithExactEvidence() passed after 0.102 seconds.
+◇ Test planningUsageOverflowMutationRollbackIsTotal() started.
+✔ Test planningUsageOverflowMutationRollbackIsTotal() passed after 0.102 seconds.
+◇ Test planningTerminalMutationRollbackIsTotal() started.
+✔ Test planningTerminalMutationRollbackIsTotal() passed after 0.104 seconds.
+◇ Test planningCancelIsProjectionAtomicAndIdempotent() started.
+✔ Test planningCancelIsProjectionAtomicAndIdempotent() passed after 0.109 seconds.
+◇ Test haltBulkPlanningCancelIsAllOrNothing() started.
+✔ Test haltBulkPlanningCancelIsAllOrNothing() passed after 0.101 seconds.
+◇ Test planningSpecificSingleAndBulkCancelRemainAvailableWhileHalted() started.
+✔ Test planningSpecificSingleAndBulkCancelRemainAvailableWhileHalted() passed after 0.093 seconds.
+◇ Test legacyPlanningRepairCreatesOneReplayableWork() started.
+✔ Test legacyPlanningRepairCreatesOneReplayableWork() passed after 0.090 seconds.
+◇ Test legacyPlanningRepairUsesUniformMemberProfile() started.
+✔ Test legacyPlanningRepairUsesUniformMemberProfile() passed after 0.094 seconds.
+◇ Test legacyPlanningRepairUsesExactlyOneDefaultOnly() started.
+✔ Test legacyPlanningRepairUsesExactlyOneDefaultOnly() passed after 0.104 seconds.
+◇ Test legacyPlanningRepairConflictOrCliFailsMissionOnce() started.
+✔ Test legacyPlanningRepairConflictOrCliFailsMissionOnce() passed after 0.107 seconds.
+◇ Test legacyPlanningFailureCreatesAttemptZeroWithoutAttemptRows() started.
+✔ Test legacyPlanningFailureCreatesAttemptZeroWithoutAttemptRows() passed after 0.096 seconds.
+◇ Test runningUnresolvedLegacyMissionKeepsExactLegacyTerminalCode() started.
+✔ Test runningUnresolvedLegacyMissionKeepsExactLegacyTerminalCode() passed after 0.105 seconds.
+◇ Test legacyRepairRunningModeLinearizesBeforeConcurrentHalt() started.
+✔ Test legacyRepairRunningModeLinearizesBeforeConcurrentHalt() passed after 0.107 seconds.
+◇ Test legacyRepairHaltedModeCreatesAndCancelsAttemptZeroAtomically() started.
+✔ Test legacyRepairHaltedModeCreatesAndCancelsAttemptZeroAtomically() passed after 0.110 seconds.
+◇ Test engineFirstStartupAdoptsLegacyCardBeforePlanningRepair() started.
+✔ Test engineFirstStartupAdoptsLegacyCardBeforePlanningRepair() passed after 0.085 seconds.
+◇ Test haltedWorklessUnresolvedLegacyMissionUsesEmergencyHaltAttemptZero() started.
+✔ Test haltedWorklessUnresolvedLegacyMissionUsesEmergencyHaltAttemptZero() passed after 0.111 seconds.
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+✔ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() passed after 0.096 seconds.
+◇ Test legacyPlanningWithCardsFailsClosedWithExactTypedErrorAndZeroWrites() started.
+✔ Test legacyPlanningWithCardsFailsClosedWithExactTypedErrorAndZeroWrites() passed after 0.119 seconds.
+◇ Test unexpectedPlanningFallbackTerminalizesThroughFailureOwner() started.
+✔ Test unexpectedPlanningFallbackTerminalizesThroughFailureOwner() passed after 0.126 seconds.
+◇ Test claimRevalidatesExactCapturedProfileModelAndCredentials() started.
+✔ Test claimRevalidatesExactCapturedProfileModelAndCredentials() passed after 0.555 seconds.
+◇ Test deletedOrUnsupportedCapturedProfileTerminalizesExistingWork() started.
+✔ Test deletedOrUnsupportedCapturedProfileTerminalizesExistingWork() passed after 0.211 seconds.
+◇ Test negativeFirstTurnPlanningUsageTerminalizesWithoutTokenEvent() started.
+✔ Test negativeFirstTurnPlanningUsageTerminalizesWithoutTokenEvent() passed after 0.108 seconds.
+◇ Test negativeCorrectionUsagePreservesPriorValidUsage() started.
+✔ Test negativeCorrectionUsagePreservesPriorValidUsage() passed after 0.104 seconds.
+◇ Test planningUsageOverflowEvidencePreservesIntegersAboveTwoTo53() started.
+✔ Test planningUsageOverflowEvidencePreservesIntegersAboveTwoTo53() passed after 0.100 seconds.
+◇ Test planningUsageOverflowEvidenceSortsDeduplicatesAndRejectsInvalidShape() started.
+✔ Test planningUsageOverflowEvidenceSortsDeduplicatesAndRejectsInvalidShape() passed after 0.001 seconds.
+◇ Test legacyPlanningModelUnavailableFailsMissionOnceWithExactCode() started.
+✔ Test legacyPlanningModelUnavailableFailsMissionOnceWithExactCode() passed after 0.101 seconds.
+◇ Test sameIdempotencyAndPayloadReplaysButDifferentPayloadConflicts() started.
+✔ Test sameIdempotencyAndPayloadReplaysButDifferentPayloadConflicts() passed after 0.095 seconds.
+◇ Test enqueueMissingCampThrowsRecordNotFoundAndWritesNothing() started.
+✔ Test enqueueMissingCampThrowsRecordNotFoundAndWritesNothing() passed after 0.086 seconds.
+◇ Test enqueueArchivedCampThrowsCampArchivedAndWritesNothing() started.
+✔ Test enqueueArchivedCampThrowsCampArchivedAndWritesNothing() passed after 0.085 seconds.
+◇ Test enqueueReplayAfterArchiveIsRejected() started.
+✔ Test enqueueReplayAfterArchiveIsRejected() passed after 0.097 seconds.
+◇ Test genericPlanningKindAPIsRejectBeforeSQL() started.
+✔ Test genericPlanningKindAPIsRejectBeforeSQL() passed after 0.088 seconds.
+◇ Test genericReservedKindOrderingUsesCallerOrderBeforeDeduplication() started.
+✔ Test genericReservedKindOrderingUsesCallerOrderBeforeDeduplication() passed after 0.089 seconds.
+◇ Test genericPlanningTargetAPIsRejectBeforeMutationAndClosures() started.
+✔ Test genericPlanningTargetAPIsRejectBeforeMutationAndClosures() passed after 0.104 seconds.
+◇ Test genericPlanningReadSeamsRemainAvailable() started.
+✔ Test genericPlanningReadSeamsRemainAvailable() passed after 0.092 seconds.
+◇ Test genericEnqueueClaimScheduleAndAdoptRejectCampDeletionBeforeSQL() started.
+✔ Test genericEnqueueClaimScheduleAndAdoptRejectCampDeletionBeforeSQL() passed after 0.092 seconds.
+◇ Test genericClaimScopedAndCancelCommandsRejectExistingCampDeletionBeforeMutation() started.
+✔ Test genericClaimScopedAndCancelCommandsRejectExistingCampDeletionBeforeMutation() passed after 0.104 seconds.
+◇ Test enqueueRejectsUppercaseOrNonHexClaimedInputHash() started.
+✔ Test enqueueRejectsUppercaseOrNonHexClaimedInputHash() passed after 0.094 seconds.
+◇ Test enqueueRejectsNonCanonicalJSONBeforeDatabaseWrite() started.
+✔ Test enqueueRejectsNonCanonicalJSONBeforeDatabaseWrite() passed after 0.083 seconds.
+◇ Test sameClaimedHashWithDifferentPayloadIsRecomputedAndRejected() started.
+✔ Test sameClaimedHashWithDifferentPayloadIsRecomputedAndRejected() passed after 0.088 seconds.
+◇ Test completeAcceptsNilOrCanonicalObjectOutput() started.
+✔ Test completeAcceptsNilOrCanonicalObjectOutput() passed after 0.093 seconds.
+◇ Test completeRejectsInvalidNonObjectOrAlternateOutputBeforeWrite() started.
+✔ Test completeRejectsInvalidNonObjectOrAlternateOutputBeforeWrite() passed after 0.097 seconds.
+◇ Test invalidCompleteOutputSkipsBusinessMutationAndLeavesAttemptRunning() started.
+✔ Test invalidCompleteOutputSkipsBusinessMutationAndLeavesAttemptRunning() passed after 0.111 seconds.
+◇ Test completeBusinessMutationFailureRollsBackValidatedOutputAndTerminalRows() started.
+✔ Test completeBusinessMutationFailureRollsBackValidatedOutputAndTerminalRows() passed after 0.095 seconds.
+◇ Test failureDispositionRawValuesAndCodableRoundTripAreStable() started.
+✔ Test failureDispositionRawValuesAndCodableRoundTripAreStable() passed after 0.001 seconds.
+◇ Test failureInitializerAcceptsNilOrExactCanonicalUsage() started.
+✔ Test failureInitializerAcceptsNilOrExactCanonicalUsage() passed after 0.001 seconds.
+◇ Test failureInitializerRejectsInvalidCodeMessageAndUsageSchema() started.
+✔ Test failureInitializerRejectsInvalidCodeMessageAndUsageSchema() passed after 0.001 seconds.
+◇ Test failureDecoderRevalidatesAndCannotBypassInitializer() started.
+✔ Test failureDecoderRevalidatesAndCannotBypassInitializer() passed after 0.001 seconds.
+◇ Test retryOrFailUsesDispositionOnlyEvenWhenCodeIsIdentical() started.
+✔ Test retryOrFailUsesDispositionOnlyEvenWhenCodeIsIdentical() passed after 0.098 seconds.
+◇ Test oneAggregateKindHasOneActiveWorkButKeepsTerminalHistory() started.
+✔ Test oneAggregateKindHasOneActiveWorkButKeepsTerminalHistory() passed after 0.101 seconds.
+◇ Test claimQueuedAndDueRetryAreSingleOwner() started.
+✔ Test claimQueuedAndDueRetryAreSingleOwner() passed after 0.095 seconds.
+◇ Test queuedAndRetryCancellationDoNotRequireLeaseOwner() started.
+✔ Test queuedAndRetryCancellationDoNotRequireLeaseOwner() passed after 0.102 seconds.
+◇ Test runningCancellationCommitsProjectionAndAttemptAtomically() started.
+✔ Test runningCancellationCommitsProjectionAndAttemptAtomically() passed after 0.088 seconds.
+◇ Test cancelActiveNoRowIsIdempotentAndSkipsMutation() started.
+✔ Test cancelActiveNoRowIsIdempotentAndSkipsMutation() passed after 0.090 seconds.
+◇ Test concurrentTerminalAndCancelHaveExactlyOneWinner() started.
+✔ Test concurrentTerminalAndCancelHaveExactlyOneWinner() passed after 0.103 seconds.
+◇ Test adoptionClosesExactlyOneInterruptedAttemptWithoutLeaseExpiry() started.
+✔ Test adoptionClosesExactlyOneInterruptedAttemptWithoutLeaseExpiry() passed after 0.102 seconds.
+◇ Test leaseRenewalReturnsNewVersionAndOldClaimCannotComplete() started.
+✔ Test leaseRenewalReturnsNewVersionAndOldClaimCannotComplete() passed after 0.107 seconds.
+◇ Test genericClaimAndRenewReturnPersistedSubmillisecondLease() started.
+✔ Test genericClaimAndRenewReturnPersistedSubmillisecondLease() passed after 0.090 seconds.
+◇ Test nextClaimableDateEmptyKindsReturnsNil() started.
+✔ Test nextClaimableDateEmptyKindsReturnsNil() passed after 0.087 seconds.
+◇ Test nextClaimableDateRejectsNonFiniteNowBeforeRead() started.
+✔ Test nextClaimableDateRejectsNonFiniteNowBeforeRead() passed after 0.083 seconds.
+◇ Test nextClaimableDateReturnsNowForQueued() started.
+✔ Test nextClaimableDateReturnsNowForQueued() passed after 0.090 seconds.
+◇ Test nextClaimableDateReturnsNowForDueRetryIncludingEquality() started.
+✔ Test nextClaimableDateReturnsNowForDueRetryIncludingEquality() passed after 0.089 seconds.
+◇ Test nextClaimableDateReturnsEarliestFutureRetry() started.
+✔ Test nextClaimableDateReturnsEarliestFutureRetry() passed after 0.101 seconds.
+◇ Test nextClaimableDateIgnoresRunningTerminalAndArchivedCampRows() started.
+✔ Test nextClaimableDateIgnoresRunningTerminalAndArchivedCampRows() passed after 0.093 seconds.
+◇ Test claimNextUsesExactlyTheSameEligibilityPredicate() started.
+✔ Test claimNextUsesExactlyTheSameEligibilityPredicate() passed after 0.093 seconds.
+◇ Test claimAndRenewRejectNaNInfinityZeroAndNegativeLeaseBeforeWrite() started.
+✔ Test claimAndRenewRejectNaNInfinityZeroAndNegativeLeaseBeforeWrite() passed after 0.088 seconds.
+◇ Test claimAndRenewRejectNonFiniteOrNonAdvancingExpirationBeforeWrite() started.
+✔ Test claimAndRenewRejectNonFiniteOrNonAdvancingExpirationBeforeWrite() passed after 0.084 seconds.
+◇ Test invalidLeaseLeavesVersionLeaseAttemptsAndEventsUnchanged() started.
+✔ Test invalidLeaseLeavesVersionLeaseAttemptsAndEventsUnchanged() passed after 0.098 seconds.
+◇ Test oneTerminalAttemptOutcomePerClaim() started.
+✔ Test oneTerminalAttemptOutcomePerClaim() passed after 0.092 seconds.
+◇ Test businessMutationFailureRollsBackTerminalAndAttemptClose() started.
+✔ Test businessMutationFailureRollsBackTerminalAndAttemptClose() passed after 0.090 seconds.
+◇ Test transientRetryUsesFiveThirtyOneTwentySecondBackoff() started.
+✔ Test transientRetryUsesFiveThirtyOneTwentySecondBackoff() passed after 0.096 seconds.
+◇ Test deterministicFailureIsImmediatelyTerminal() started.
+✔ Test deterministicFailureIsImmediatelyTerminal() passed after 0.089 seconds.
+◇ Test retryExhaustionStopsAtMaxAttempts() started.
+✔ Test retryExhaustionStopsAtMaxAttempts() passed after 0.095 seconds.
+◇ Test retryDateOverflowThrowsAndRollsBack() started.
+✔ Test retryDateOverflowThrowsAndRollsBack() passed after 0.085 seconds.
+◇ Test claimClearsRetryAndInterruptedDiagnostics() started.
+✔ Test claimClearsRetryAndInterruptedDiagnostics() passed after 0.092 seconds.
+◇ Test retryFailureCopiesDiagnosticsToWorkAttemptAndEvent() started.
+✔ Test retryFailureCopiesDiagnosticsToWorkAttemptAndEvent() passed after 0.091 seconds.
+◇ Test terminalFailureCopiesDiagnosticsToWorkAttemptAndEvent() started.
+✔ Test terminalFailureCopiesDiagnosticsToWorkAttemptAndEvent() passed after 0.083 seconds.
+◇ Test queuedAndRetryCancelWriteOnlyWorkCancellationDiagnostics() started.
+✔ Test queuedAndRetryCancelWriteOnlyWorkCancellationDiagnostics() passed after 0.097 seconds.
+◇ Test runningCancelCopiesCancellationDiagnosticsAtomically() started.
+✔ Test runningCancelCopiesCancellationDiagnosticsAtomically() passed after 0.088 seconds.
+◇ Test adoptionCopiesInterruptedDiagnosticsAndNextClaimClearsWorkError() started.
+✔ Test adoptionCopiesInterruptedDiagnosticsAndNextClaimClearsWorkError() passed after 0.102 seconds.
+◇ Test successStoresOnlyOptionalCanonicalOutputAndNoErrors() started.
+✔ Test successStoresOnlyOptionalCanonicalOutputAndNoErrors() passed after 0.101 seconds.
+◇ Test invalidOutputBackoffOverflowAndClosureFailureLeaveAllThreeLayersUnchanged() started.
+✔ Test invalidOutputBackoffOverflowAndClosureFailureLeaveAllThreeLayersUnchanged() passed after 0.100 seconds.
+◇ Test ddlRejectsOutputOutsideSucceeded() started.
+✔ Test ddlRejectsOutputOutsideSucceeded() passed after 0.104 seconds.
+◇ Test ddlRejectsEveryInvalidWorkAttemptEventErrorStatePair() started.
+✔ Test ddlRejectsEveryInvalidWorkAttemptEventErrorStatePair() passed after 0.158 seconds.
+◇ Test ddlRequiresClaimedSequenceZeroAndExactEventResultingState() started.
+✔ Test ddlRequiresClaimedSequenceZeroAndExactEventResultingState() passed after 0.109 seconds.
+◇ Test invalidCancellationReasonIsPreSQLAndSkipsBusinessMutation() started.
+✔ Test invalidCancellationReasonIsPreSQLAndSkipsBusinessMutation() passed after 0.104 seconds.
+◇ Test attemptEventsRejectUpdateAndDelete() started.
+✔ Test attemptEventsRejectUpdateAndDelete() passed after 0.115 seconds.
+◇ Test nextClaimableDateSelectsEarliestRetry() started.
+✔ Test nextClaimableDateSelectsEarliestRetry() passed after 0.132 seconds.
+◇ Suite A2DurableRuminationTests started.
+◇ Test ruminationStartAndWorkAreAtomic() started.
+✔ Test ruminationStartAndWorkAreAtomic() passed after 0.097 seconds.
+◇ Test legacyRuminatingRowGetsOneRepairWork() started.
+✔ Test legacyRuminatingRowGetsOneRepairWork() passed after 0.092 seconds.
+◇ Test ruminationCancelAndQueuedProjectionRollbackTogether() started.
+✔ Test ruminationCancelAndQueuedProjectionRollbackTogether() passed after 0.101 seconds.
+◇ Test ruminationCrashIsAdoptedAndCompletesOnce() started.
+✔ Test ruminationCrashIsAdoptedAndCompletesOnce() passed after 0.103 seconds.
+◇ Test ruminationFailurePersistenceFailureRemainsRecoverable() started.
+✔ Test ruminationFailurePersistenceFailureRemainsRecoverable() passed after 0.109 seconds.
+◇ Test ruminationCancelRejectsStaleResponse() started.
+✔ Test ruminationCancelRejectsStaleResponse() passed after 0.100 seconds.
+◇ Test repeatedRuminationCommandReturnsExistingWork() started.
+✔ Test repeatedRuminationCommandReturnsExistingWork() passed after 0.100 seconds.
+◇ Test ruminationAttemptClosesExactlyOnce() started.
+✔ Test ruminationAttemptClosesExactlyOnce() passed after 0.096 seconds.
+◇ Test ruminationWorkInputUsesCanonicalCapturedIdentityAndFirstTrace() started.
+✔ Test ruminationWorkInputUsesCanonicalCapturedIdentityAndFirstTrace() passed after 0.093 seconds.
+◇ Test ruminationSameKeyDifferentCapturedIdentityConflictsWithoutResolution() started.
+✔ Test ruminationSameKeyDifferentCapturedIdentityConflictsWithoutResolution() passed after 0.093 seconds.
+◇ Test ruminationTerminalRetryCreatesReplacementWhileActiveReplayReusesWork() started.
+✔ Test ruminationTerminalRetryCreatesReplacementWhileActiveReplayReusesWork() passed after 0.100 seconds.
+◇ Test ruminationCapturedProfileAndModelIgnoreDefaultDrift() started.
+✔ Test ruminationCapturedProfileAndModelIgnoreDefaultDrift() passed after 0.103 seconds.
+◇ Test ruminationClaimResolutionFailureMatrixIsStableSafeAndFailClosed() started.
+✔ Test ruminationClaimResolutionFailureMatrixIsStableSafeAndFailClosed() passed after 1.282 seconds.
+◇ Test ruminationResolverNeverFallsBackToCurrentDefaultOrCompanion() started.
+✔ Test ruminationResolverNeverFallsBackToCurrentDefaultOrCompanion() passed after 0.113 seconds.
+◇ Test ruminationTransientFailureRetriesAtFiveThirtyOneTwentyThenTerminates() started.
+✔ Test ruminationTransientFailureRetriesAtFiveThirtyOneTwentyThenTerminates() passed after 0.128 seconds.
+◇ Test ruminationDeterministicFailureDoesNotRetry() started.
+✔ Test ruminationDeterministicFailureDoesNotRetry() passed after 0.100 seconds.
+◇ Test ruminationTerminalFailureAndProjectionCommitOrRollbackTogether() started.
+✔ Test ruminationTerminalFailureAndProjectionCommitOrRollbackTogether() passed after 0.108 seconds.
+◇ Test ruminationSuccessResultProjectionAndWorkCommitOrRollbackTogether() started.
+✔ Test ruminationSuccessResultProjectionAndWorkCommitOrRollbackTogether() passed after 0.119 seconds.
+◇ Test ruminationLeaseRenewalAllowsOnlyLatestClaimToCommit() started.
+✔ Test ruminationLeaseRenewalAllowsOnlyLatestClaimToCommit() passed after 0.107 seconds.
+◇ Test ruminationTerminalCommitFailureRetainsProposalAndDoesNotRecallProvider() started.
+✔ Test ruminationTerminalCommitFailureRetainsProposalAndDoesNotRecallProvider() passed after 0.128 seconds.
+◇ Test ruminationProcessRestartMayRecallProviderButCommitsOneResultAndTerminal() started.
+✔ Test ruminationProcessRestartMayRecallProviderButCommitsOneResultAndTerminal() passed after 0.154 seconds.
+◇ Test ruminationEmergencyHaltCancelsWorkAndQueuesProjectionAtomically() started.
+✔ Test ruminationEmergencyHaltCancelsWorkAndQueuesProjectionAtomically() passed after 0.110 seconds.
+◇ Test ruminationEmergencyHaltRejectsClaimResolveAndProviderDispatch() started.
+✔ Test ruminationEmergencyHaltRejectsClaimResolveAndProviderDispatch() passed after 0.099 seconds.
+◇ Test ruminationLateProviderResponseCannotOverrideEmergencyHalt() started.
+✔ Test ruminationLateProviderResponseCannotOverrideEmergencyHalt() passed after 0.113 seconds.
+◇ Test ruminationResumeDoesNotReviveCanceledWork() started.
+✔ Test ruminationResumeDoesNotReviveCanceledWork() passed after 0.103 seconds.
+◇ Test ruminationWaitUntilIdleIncludesDueRuminationAndIgnoresFutureRetry() started.
+✔ Test ruminationWaitUntilIdleIncludesDueRuminationAndIgnoresFutureRetry() passed after 0.115 seconds.
+◇ Test ruminationLivePhaseEventsAreOwnedOrderedAndProcessLocal() started.
+✔ Test ruminationLivePhaseEventsAreOwnedOrderedAndProcessLocal() passed after 5.607 seconds.
+◇ Test legacyRuminationWithoutResolvableRuntimeFailsSafelyExactlyOnce() started.
+✔ Test legacyRuminationWithoutResolvableRuntimeFailsSafelyExactlyOnce() passed after 0.092 seconds.
+◇ Test genericDurableWorkAPIsSealRuminationWithExactPriority() started.
+✔ Test genericDurableWorkAPIsSealRuminationWithExactPriority() passed after 0.104 seconds.
+◇ Test supervisedWorkPumpIsGlobalFIFOWithoutPlanningRegression() started.
+✔ Test supervisedWorkPumpIsGlobalFIFOWithoutPlanningRegression() passed after 0.144 seconds.
+◇ Test ruminationStartupRemainsSuppressedUntilOrchestratorActivation() started.
+✔ Test ruminationStartupRemainsSuppressedUntilOrchestratorActivation() passed after 0.114 seconds.
+◇ Test legacyRuminationRepairCoversValidHaltedAndEveryTerminalReason() started.
+✔ Test legacyRuminationRepairCoversValidHaltedAndEveryTerminalReason() passed after 0.797 seconds.
+◇ Test ruminationUsageIsExactOrFailsBeforeAccounting() started.
+✔ Test ruminationUsageIsExactOrFailsBeforeAccounting() passed after 0.476 seconds.
+◇ Test activeRuminationFencesDiscardDeleteAndArchiveRaces() started.
+✔ Test activeRuminationFencesDiscardDeleteAndArchiveRaces() passed after 0.534 seconds.
+✔ Suite A2DurableRuminationTests passed after 11.855 seconds.
+◇ Suite P1F1EngineExecutionStoreTests started.
+◇ Test p1f1_017ContextEnvelopeCanonicalGoldenBytes() started.
+✔ Test p1f1_017ContextEnvelopeCanonicalGoldenBytes() passed after 0.001 seconds.
+◇ Test p1f1_018ContextEnvelopeRejectsInvalidBeforeWrite() started.
+✔ Test p1f1_018ContextEnvelopeRejectsInvalidBeforeWrite() passed after 0.090 seconds.
+◇ Test p1f1_019ContextEnvelopePromptRenderingDoesNotChangeIdentity() started.
+✔ Test p1f1_019ContextEnvelopePromptRenderingDoesNotChangeIdentity() passed after 0.001 seconds.
+◇ Test p1f1_020SessionScopeDerivedCanonicalGoldenBytes() started.
+✔ Test p1f1_020SessionScopeDerivedCanonicalGoldenBytes() passed after 0.096 seconds.
+◇ Test p1f1_021SessionScopeSpoofAndDriftZeroWrite() started.
+✔ Test p1f1_021SessionScopeSpoofAndDriftZeroWrite() passed after 0.382 seconds.
+◇ Test p1f1_022BeginAllocatesExecutionRunCardAndLifecycleAtomically() started.
+✔ Test p1f1_022BeginAllocatesExecutionRunCardAndLifecycleAtomically() passed after 0.773 seconds.
+◇ Test p1f1_023BeginReplaySameHashAndConflictMatrix() started.
+✔ Test p1f1_023BeginReplaySameHashAndConflictMatrix() passed after 1.134 seconds.
+◇ Test p1f1_024DescriptorReplayClassIsDerivedAndPersisted() started.
+✔ Test p1f1_024DescriptorReplayClassIsDerivedAndPersisted() passed after 0.098 seconds.
+◇ Test p1f1_025DispatchCASStartsAdapterExactlyOnce() started.
+✔ Test p1f1_025DispatchCASStartsAdapterExactlyOnce() passed after 0.352 seconds.
+◇ Test p1f1_026PreDispatchFailureTerminalizesWithoutDispatch() started.
+✔ Test p1f1_026PreDispatchFailureTerminalizesWithoutDispatch() passed after 0.237 seconds.
+◇ Test p1f1_027AcceptEventMonotonicSequenceMatrix() started.
+✔ Test p1f1_027AcceptEventMonotonicSequenceMatrix() passed after 0.299 seconds.
+◇ Test p1f1_028UsageOverflowFailsWithoutPartialProjection() started.
+✔ Test p1f1_028UsageOverflowFailsWithoutPartialProjection() passed after 0.138 seconds.
+◇ Test p1f1_029TerminalReceiptLinksDomainResultHashNotProposalHash() started.
+✔ Test p1f1_029TerminalReceiptLinksDomainResultHashNotProposalHash() passed after 0.133 seconds.
+✔ Suite P1F1EngineExecutionStoreTests passed after 3.739 seconds.
+◇ Suite P1F1EngineSessionTests started.
+◇ Test p1f1_039BindResumeRequiresExactScopeAndWorkspace() started.
+✔ Test p1f1_039BindResumeRequiresExactScopeAndWorkspace() passed after 0.251 seconds.
+◇ Test p1f1_040UserAnswerNewContextSameScopeResumes() started.
+✔ Test p1f1_040UserAnswerNewContextSameScopeResumes() passed after 0.189 seconds.
+◇ Test p1f1_041ScopeDriftStartsNewSessionAndMismatchZeroWrite() started.
+✔ Test p1f1_041ScopeDriftStartsNewSessionAndMismatchZeroWrite() passed after 0.171 seconds.
+✔ Suite P1F1EngineSessionTests passed after 0.612 seconds.
+◇ Suite P1F1EngineTerminalProposalTests started.
+◇ Test p1f1_030WholeProposalCanonicalIdentityIncludesArtifacts() started.
+✔ Test p1f1_030WholeProposalCanonicalIdentityIncludesArtifacts() passed after 0.120 seconds.
+◇ Test p1f1_031ProposalReplayReturnsGeneratedArtifactIds() started.
+✔ Test p1f1_031ProposalReplayReturnsGeneratedArtifactIds() passed after 0.249 seconds.
+◇ Test p1f1_032TerminalKeyManifestAndOrdinalConflictMatrix() started.
+✔ Test p1f1_032TerminalKeyManifestAndOrdinalConflictMatrix() passed after 0.126 seconds.
+◇ Test p1f1_033CompletedTerminalCommitsAllProjectionsAtomically() started.
+✔ Test p1f1_033CompletedTerminalCommitsAllProjectionsAtomically() passed after 0.252 seconds.
+◇ Test p1f1_034BlockedFailedCanceledTerminalTaxonomy() started.
+✔ Test p1f1_034BlockedFailedCanceledTerminalTaxonomy() passed after 0.495 seconds.
+◇ Test p1f1_035AskUserCommitsBlockedNeedsHumanInputAtomically() started.
+✔ Test p1f1_035AskUserCommitsBlockedNeedsHumanInputAtomically() passed after 0.253 seconds.
+◇ Test p1f1_036InvalidPreparationCommitsOneProtocolErrorReceipt() started.
+✔ Test p1f1_036InvalidPreparationCommitsOneProtocolErrorReceipt() passed after 0.144 seconds.
+◇ Test p1f1_037TerminalMutationFailureRollsBackEveryProjection() started.
+✔ Test p1f1_037TerminalMutationFailureRollsBackEveryProjection() passed after 1.174 seconds.
+◇ Test p1f1_038DuplicateTerminalReplaysAndSecondTerminalRejects() started.
+✔ Test p1f1_038DuplicateTerminalReplaysAndSecondTerminalRejects() passed after 0.280 seconds.
+✔ Suite P1F1EngineTerminalProposalTests passed after 3.097 seconds.
+◇ Suite ExecutionEngineConformanceTests started.
+◇ Test p1f1_062DescriptorsTellCapabilitiesAndReplayTruth() started.
+✔ Test p1f1_062DescriptorsTellCapabilitiesAndReplayTruth() passed after 0.004 seconds.
+◇ Test p1f1_063CompletedBlockedFailedCanceledMatrix() started.
+✔ Test p1f1_063CompletedBlockedFailedCanceledMatrix() passed after 0.001 seconds.
+◇ Test p1f1_064EOFParserAndMissingTerminatorFailClosed() started.
+✔ Test p1f1_064EOFParserAndMissingTerminatorFailClosed() passed after 0.003 seconds.
+◇ Test p1f1_065CancellationCleansProcessAndCommitsOnce() started.
+✔ Test p1f1_065CancellationCleansProcessAndCommitsOnce() passed after 10.942 seconds.
+◇ Test p1f1_066UsageCostAndOverflowMatrix() started.
+✔ Test p1f1_066UsageCostAndOverflowMatrix() passed after 0.001 seconds.
+◇ Test p1f1_067SessionBindResumeMatrix() started.
+✔ Test p1f1_067SessionBindResumeMatrix() passed after 0.018 seconds.
+◇ Test p1f1_068ResumeMismatchAndUnsupportedMatrix() started.
+✔ Test p1f1_068ResumeMismatchAndUnsupportedMatrix() passed after 1.336 seconds.
+◇ Test p1f1_069BoardTerminalExactlyOnceMatrix() started.
+P1F1D069_STAGE=terminal-winner
+P1F1D069_STAGE=exact-live-cli-cancellation
+P1F1D069_CASE=exact-live-cli-false
+P1F1D069_CASE=exact-live-cli-true
+P1F1D069_STAGE=exact-live-model-cancellation
+P1F1D069_STAGE=exact-recovery-owner
+P1F1D069_CASE=exact-owner-cli-false
+P1F1D069_CASE=exact-owner-cli-true
+P1F1D069_CASE=exact-owner-modelLoop-false
+P1F1D069_CASE=exact-owner-modelLoop-true
+P1F1D069_STAGE=mission-cli-recovery
+P1F1D069_CASE=mission-cli-false
+P1F1D069_CASE=mission-cli-true
+P1F1D069_STAGE=mission-model-recovery
+P1F1D069_CASE=mission-model-false
+P1F1D069_CASE=mission-model-true
+P1F1D069_STAGE=shared-recovery-owner
+P1F1D069_STAGE=recovery-failure-retry
+P1F1D069_CASE=recovery-retry-transport
+P1F1D069_CASE=recovery-retry-evidence
+P1F1D069_CASE=recovery-retry-store
+P1F1D069_STAGE=shared-recovery-action-matrix
+P1F1D069_CASE=shared-action-prepareAndCommitProposal
+P1F1D069_CASE=shared-action-startPrepared
+P1F1D069_CASE=shared-action-replayExecution
+P1F1D069_CASE=shared-action-resumeSession
+P1F1D069_STAGE=nonreplayable-unknown-outcome
+✔ Test p1f1_069BoardTerminalExactlyOnceMatrix() passed after 6.485 seconds.
+◇ Test p1f1_070ErrorsAreSecretFree() started.
+✔ Test p1f1_070ErrorsAreSecretFree() passed after 0.134 seconds.
+✔ Suite ExecutionEngineConformanceTests passed after 18.925 seconds.
+◇ Test observabilityMigrationExactDDLAndConstraints() started.
+✔ Test observabilityMigrationExactDDLAndConstraints() passed after 0.385 seconds.
+◇ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() started.
+✔ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() passed after 0.041 seconds.
+◇ Test failureRecordInsertUsesTraceAsPrimaryKey() started.
+✔ Test failureRecordInsertUsesTraceAsPrimaryKey() passed after 0.077 seconds.
+◇ Test failureRecordSameIdentityUpsertIncrementsOccurrence() started.
+✔ Test failureRecordSameIdentityUpsertIncrementsOccurrence() passed after 0.078 seconds.
+◇ Test failureRecordTraceConflictDoesNotOverwrite() started.
+✔ Test failureRecordTraceConflictDoesNotOverwrite() passed after 0.081 seconds.
+◇ Test failureRecordResolveReopenAndOverflowAreChecked() started.
+✔ Test failureRecordResolveReopenAndOverflowAreChecked() passed after 0.085 seconds.
+◇ Test failureReporterScrubsSecretsAndRawExternalResponses() started.
+✔ Test failureReporterScrubsSecretsAndRawExternalResponses() passed after 0.082 seconds.
+◇ Test failureReporterDatabaseUnwritableLogsAndReturnsSameTrace() started.
+✔ Test failureReporterDatabaseUnwritableLogsAndReturnsSameTrace() passed after 0.001 seconds.
+◇ Test userVisibleFailureContainsExactFullTrace() started.
+✔ Test userVisibleFailureContainsExactFullTrace() passed after 0.080 seconds.
+◇ Test operationTraceGeneratesAndAdoptsSafeDurableIdentity() started.
+✔ Test operationTraceGeneratesAndAdoptsSafeDurableIdentity() passed after 0.001 seconds.
+◇ Test requiredKnowledgeFailureAtomicallyBlocksAndRecordsDegradation() started.
+✔ Test requiredKnowledgeFailureAtomicallyBlocksAndRecordsDegradation() passed after 0.182 seconds.
+◇ Test optionalKnowledgeFailureRecordsBeforeContinuingWithMarker() started.
+✔ Test optionalKnowledgeFailureRecordsBeforeContinuingWithMarker() passed after 0.086 seconds.
+◇ Test optionalDegradationPersistenceFailureDoesNotContinue() started.
+✔ Test optionalDegradationPersistenceFailureDoesNotContinue() passed after 0.233 seconds.
+◇ Test malformedRequiredMcpSelectionBlocksCard() started.
+✔ Test malformedRequiredMcpSelectionBlocksCard() passed after 0.094 seconds.
+◇ Test mcpSecretAbsentAndReadFailureHaveDifferentCodes() started.
+✔ Test mcpSecretAbsentAndReadFailureHaveDifferentCodes() passed after 0.079 seconds.
+◇ Test mcpConnectAndToolListFailuresHaveDifferentCodes() started.
+✔ Test mcpConnectAndToolListFailuresHaveDifferentCodes() passed after 0.084 seconds.
+◇ Test contextDegradationKernelEventOccursOnlyAfterCommit() started.
+✔ Test contextDegradationKernelEventOccursOnlyAfterCommit() passed after 0.092 seconds.
+◇ Test invalidProjectionCasesAreTraceableAndNeverDefault() started.
+✔ Test invalidProjectionCasesAreTraceableAndNeverDefault() passed after 0.170 seconds.
+◇ Test feedMapsEventKindsToEntries() started.
+✔ Test feedMapsEventKindsToEntries() passed after 0.001 seconds.
+◇ Test feedQuestionCarriesRequestId() started.
+✔ Test feedQuestionCarriesRequestId() passed after 0.001 seconds.
+◇ Test feedHandlesDuplicateCardIds() started.
+✔ Test feedHandlesDuplicateCardIds() passed after 0.001 seconds.
+◇ Test pendingRequestForCanceledCardIsHidden() started.
+✔ Test pendingRequestForCanceledCardIsHidden() passed after 0.001 seconds.
+◇ Test feedCapsAtLimit() started.
+✔ Test feedCapsAtLimit() passed after 0.090 seconds.
+◇ Test writeReadListRoundTrip() started.
+✔ Test writeReadListRoundTrip() passed after 0.001 seconds.
+◇ Test appendModeAppends() started.
+✔ Test appendModeAppends() passed after 0.002 seconds.
+◇ Test escapeAttemptsRejected() started.
+✔ Test escapeAttemptsRejected() passed after 0.001 seconds.
+◇ Test symlinkEscapeRejected() started.
+✔ Test symlinkEscapeRejected() passed after 0.001 seconds.
+◇ Test missingWorkspaceExplains() started.
+✔ Test missingWorkspaceExplains() passed after 0.001 seconds.
+◇ Suite P1CGoalCoachContractTests started.
+◇ Test crossCampAmbiguityBlocksGoalCreationWithoutWrites() started.
+✔ Test crossCampAmbiguityBlocksGoalCreationWithoutWrites() passed after 0.102 seconds.
+◇ Test convertToGoalCommitsInputGoalEventsAndOutboxesAtomically() started.
+✔ Test convertToGoalCommitsInputGoalEventsAndOutboxesAtomically() passed after 0.115 seconds.
+◇ Test convertToGoalReplayUsesCallerOwnedGoalIDAfterProjectionAdvances() started.
+✔ Test convertToGoalReplayUsesCallerOwnedGoalIDAfterProjectionAdvances() passed after 0.123 seconds.
+◇ Test goalP1CTransitionsOnlyClarifyingReadyAbandonedAndFailed() started.
+✔ Test goalP1CTransitionsOnlyClarifyingReadyAbandonedAndFailed() passed after 0.001 seconds.
+◇ Test openCoachSessionEnqueuesDurableCoachWorkAtomically() started.
+✔ Test openCoachSessionEnqueuesDurableCoachWorkAtomically() passed after 0.119 seconds.
+◇ Test openCoachReplayUsesCallerOwnedSessionAndQuestionIDs() started.
+✔ Test openCoachReplayUsesCallerOwnedSessionAndQuestionIDs() passed after 0.119 seconds.
+◇ Test oneCoachSessionPerGoalControlsConcurrentOpenResumeAndTerminalBranches() started.
+✔ Test oneCoachSessionPerGoalControlsConcurrentOpenResumeAndTerminalBranches() passed after 0.123 seconds.
+◇ Test coachSessionAllowsExactlyOneOpenQuestion() started.
+✔ Test coachSessionAllowsExactlyOneOpenQuestion() passed after 0.147 seconds.
+◇ Test coachQuestionAndAnswerEnforceCoachAndUserActors() started.
+✔ Test coachQuestionAndAnswerEnforceCoachAndUserActors() passed after 0.001 seconds.
+◇ Test everyGoalCoachCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() started.
+✔ Test everyGoalCoachCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() passed after 0.001 seconds.
+◇ Test coachSealedDecisionKeyNeverComesFromProvider() started.
+✔ Test coachSealedDecisionKeyNeverComesFromProvider() passed after 0.135 seconds.
+◇ Test coachProviderInterfaceOrdersPersistedHistoryBeforeAwait() started.
+✔ Test coachProviderInterfaceOrdersPersistedHistoryBeforeAwait() passed after 0.154 seconds.
+◇ Test coachProviderInvalidOutputFailsDeterministicallyExactlyOnce() started.
+✔ Test coachProviderInvalidOutputFailsDeterministicallyExactlyOnce() passed after 0.142 seconds.
+◇ Test coachAnswerEnqueuesNextDurableTurnAtomically() started.
+✔ Test coachAnswerEnqueuesNextDurableTurnAtomically() passed after 0.135 seconds.
+◇ Test coachAnswerReplayDoesNotEnqueueSecondTurn() started.
+✔ Test coachAnswerReplayDoesNotEnqueueSecondTurn() passed after 0.144 seconds.
+◇ Test coachProposalReplayUsesGoalIDAsUnderstandingID() started.
+✔ Test coachProposalReplayUsesGoalIDAsUnderstandingID() passed after 0.145 seconds.
+◇ Test coachFailureRetriesAtomicallyAndKeepsSessionInterviewing() started.
+✔ Test coachFailureRetriesAtomicallyAndKeepsSessionInterviewing() passed after 0.142 seconds.
+◇ Test coachFailureExhaustionFailsSessionAndGoalAtomically() started.
+✔ Test coachFailureExhaustionFailsSessionAndGoalAtomically() passed after 0.172 seconds.
+◇ Test coachReopenedTerminalFailuresAndReplayPreserveReadyGoalAndConfirmedHead() started.
+✔ Test coachReopenedTerminalFailuresAndReplayPreserveReadyGoalAndConfirmedHead() passed after 0.196 seconds.
+◇ Test readyRevisionWorkSealsAndValidatesJoinedConfirmedUnderstandingHash() started.
+✔ Test readyRevisionWorkSealsAndValidatesJoinedConfirmedUnderstandingHash() passed after 0.163 seconds.
+◇ Test coachWorkerRestartAdoptsInterruptedTurn() started.
+✔ Test coachWorkerRestartAdoptsInterruptedTurn() passed after 0.134 seconds.
+◇ Test coachRenewalHandsLatestClaimToTerminalCommit() started.
+✔ Test coachRenewalHandsLatestClaimToTerminalCommit() passed after 0.135 seconds.
+◇ Test coachTerminalTimeIsMonotonicAfterRenewalAndBackoffStartsAtFailure() started.
+✔ Test coachTerminalTimeIsMonotonicAfterRenewalAndBackoffStartsAtFailure() passed after 0.133 seconds.
+◇ Test coachWorkerCancellationLeavesRecoverableRunningWork() started.
+✔ Test coachWorkerCancellationLeavesRecoverableRunningWork() passed after 0.121 seconds.
+◇ Test coachTerminalMutationRollbackRestoresWorkSessionGoal() started.
+✔ Test coachTerminalMutationRollbackRestoresWorkSessionGoal() passed after 0.129 seconds.
+◇ Test understandingEditAlwaysCreatesNewVersion() started.
+✔ Test understandingEditAlwaysCreatesNewVersion() passed after 0.181 seconds.
+◇ Test requestConfirmationDoesNotRewriteUnderstandingBody() started.
+✔ Test requestConfirmationDoesNotRewriteUnderstandingBody() passed after 0.161 seconds.
+◇ Test requestUnderstandingRevisionWithdrawsOrReopensAndEnqueuesTurn() started.
+✔ Test requestUnderstandingRevisionWithdrawsOrReopensAndEnqueuesTurn() passed after 0.465 seconds.
+◇ Test coachCannotConfirmUnderstanding() started.
+✔ Test coachCannotConfirmUnderstanding() passed after 0.001 seconds.
+◇ Test confirmUnderstandingSupersedesPriorVersionAndMakesGoalReady() started.
+✔ Test confirmUnderstandingSupersedesPriorVersionAndMakesGoalReady() passed after 0.210 seconds.
+◇ Test coachRestartRestoresExactlyOneOpenQuestionWithoutChatMemory() started.
+✔ Test coachRestartRestoresExactlyOneOpenQuestionWithoutChatMemory() passed after 0.128 seconds.
+◇ Test goalAbandonAndFailCancelActiveControlWorkAtomically() started.
+✔ Test goalAbandonAndFailCancelActiveControlWorkAtomically() passed after 0.263 seconds.
+◇ Test goalAbandonReplayUsesSealedSessionBranchAfterProjectionChanges() started.
+✔ Test goalAbandonReplayUsesSealedSessionBranchAfterProjectionChanges() passed after 0.133 seconds.
+◇ Test goalFailReplayUsesSealedSessionBranchAfterProjectionChanges() started.
+✔ Test goalFailReplayUsesSealedSessionBranchAfterProjectionChanges() passed after 0.134 seconds.
+◇ Test goalReadyRemainsContractFreeBeforeExplicitActivation() started.
+✔ Test goalReadyRemainsContractFreeBeforeExplicitActivation() passed after 0.151 seconds.
+✔ Suite P1CGoalCoachContractTests passed after 4.871 seconds.
+◇ Test twoCardMissionEndToEndColdStart() started.
+✔ Test twoCardMissionEndToEndColdStart() passed after 0.330 seconds.
+◇ Test twoCardMissionWithMidwayAskUser() started.
+✔ Test twoCardMissionWithMidwayAskUser() passed after 0.383 seconds.
+◇ Test guideToolLoopExecutesCampStatusThenReplies() started.
+✔ Test guideToolLoopExecutesCampStatusThenReplies() passed after 0.110 seconds.
+◇ Test guideSystemMentionsProposalDiscipline() started.
+✔ Test guideSystemMentionsProposalDiscipline() passed after 0.095 seconds.
+◇ Test proposeSquadCreatesPendingBlockAndToolResult() started.
+✔ Test proposeSquadCreatesPendingBlockAndToolResult() passed after 0.110 seconds.
+◇ Test proposeSquadValidationSelfHeals() started.
+✔ Test proposeSquadValidationSelfHeals() passed after 0.104 seconds.
+◇ Test guideRejectsGuideAsSquadMember() started.
+✔ Test guideRejectsGuideAsSquadMember() passed after 0.105 seconds.
+◇ Test guideToolLoopCapsAtSixRoundsThenForcesText() started.
+✔ Test guideToolLoopCapsAtSixRoundsThenForcesText() passed after 0.156 seconds.
+◇ Test confirmSquadProposalStartsMissionWithBudgetAndIsIdempotent() started.
+✔ Test confirmSquadProposalStartsMissionWithBudgetAndIsIdempotent() passed after 0.099 seconds.
+◇ Test campNotesSearchToolRendersHitsAndEmptyState() started.
+✔ Test campNotesSearchToolRendersHitsAndEmptyState() passed after 0.086 seconds.
+◇ Test campStatusToolReportsMissionsAndDeliverables() started.
+✔ Test campStatusToolReportsMissionsAndDeliverables() passed after 0.095 seconds.
+◇ Test emergencyStopHaltsDispatchAndResumeContinues() started.
+✔ Test emergencyStopHaltsDispatchAndResumeContinues() passed after 0.358 seconds.
+◇ Test haltedStartupRunsCleanupWithoutPumpTimerOrProvider() started.
+✔ Test haltedStartupRunsCleanupWithoutPumpTimerOrProvider() passed after 0.083 seconds.
+◇ Test startupBootstrapGateBlocksDispatchUntilRecoveryCompletes() started.
+✔ Test startupBootstrapGateBlocksDispatchUntilRecoveryCompletes() passed after 0.186 seconds.
+◇ Test runningStartupDoesNotDispatchPlanningBeforeCardOrphanAdoptionCompletes() started.
+✔ Test runningStartupDoesNotDispatchPlanningBeforeCardOrphanAdoptionCompletes() passed after 0.107 seconds.
+◇ Test startupCardOrphanAdoptionFailureKeepsPlanningSuppressedWithoutDurableTransition() started.
+✔ Test startupCardOrphanAdoptionFailureKeepsPlanningSuppressedWithoutDurableTransition() passed after 0.091 seconds.
+◇ Test explicitRetryAfterStartupCardRecoveryFailureActivatesSupervisorExactlyOnce() started.
+✔ Test explicitRetryAfterStartupCardRecoveryFailureActivatesSupervisorExactlyOnce() passed after 0.134 seconds.
+◇ Test startupRecoveryRetryWritesNoCampHaltedOrCampResumedEvent() started.
+✔ Test startupRecoveryRetryWritesNoCampHaltedOrCampResumedEvent() passed after 0.252 seconds.
+◇ Test staleStartupRecoveryCannotActivateAfterConcurrentControlTransition() started.
+✔ Test staleStartupRecoveryCannotActivateAfterConcurrentControlTransition() passed after 0.184 seconds.
+◇ Test haltedStartupWithWorklessLegacyMissionLeavesNoActivePlanning() started.
+✔ Test haltedStartupWithWorklessLegacyMissionLeavesNoActivePlanning() passed after 0.087 seconds.
+◇ Test oldBootRuntimeAuthorityRetryAndDriftBehaviorIsFailClosed() started.
+✔ Test oldBootRuntimeAuthorityRetryAndDriftBehaviorIsFailClosed() passed after 0.008 seconds.
+◇ Test haltedStartupCleanupFailureRetriesRecoveryBeforeDurableRunning() started.
+✔ Test haltedStartupCleanupFailureRetriesRecoveryBeforeDurableRunning() passed after 0.118 seconds.
+◇ Test haltRacingSameKeyReplayOrAbsentPreflightWritesNothing() started.
+✔ Test haltRacingSameKeyReplayOrAbsentPreflightWritesNothing() passed after 0.105 seconds.
+◇ Test haltRacingEnqueueClaimOrRenewHasControlWinnerOnly() started.
+✔ Test haltRacingEnqueueClaimOrRenewHasControlWinnerOnly() passed after 0.108 seconds.
+◇ Test haltRacingFailureOrOverflowTerminalHasSingleOwner() started.
+✔ Test haltRacingFailureOrOverflowTerminalHasSingleOwner() passed after 0.108 seconds.
+◇ Test resumeOpensSupervisorOnlyAfterDurableRunningAndKicksOnce() started.
+✔ Test resumeOpensSupervisorOnlyAfterDurableRunningAndKicksOnce() passed after 0.113 seconds.
+◇ Test delayedStartupRecoveryCannotClearFailedEmergencyStop() started.
+✔ Test delayedStartupRecoveryCannotClearFailedEmergencyStop() passed after 0.094 seconds.
+◇ Test delayedStartupRecoveryCannotReviveShutdownKernel() started.
+✔ Test delayedStartupRecoveryCannotReviveShutdownKernel() passed after 0.078 seconds.
+◇ Test missingDurableControlRowKeepsStartupFailClosed() started.
+✔ Test missingDurableControlRowKeepsStartupFailClosed() passed after 0.077 seconds.
+◇ Test haltedStartupRepairsAndAdoptsBeforeAtomicCleanupWithoutDispatch() started.
+✔ Test haltedStartupRepairsAndAdoptsBeforeAtomicCleanupWithoutDispatch() passed after 0.196 seconds.
+◇ Test haltDuringReconcileDatabaseWindowDropsStaleCandidate() started.
+✔ Test haltDuringReconcileDatabaseWindowDropsStaleCandidate() passed after 0.092 seconds.
+◇ Test haltedPendingReconcileDoesNotRunAnotherDatabasePass() started.
+✔ Test haltedPendingReconcileDoesNotRunAnotherDatabasePass() passed after 0.089 seconds.
+◇ Test haltDuringRunningCardLeavesReadyCardAndNoOpenRun() started.
+✔ Test haltDuringRunningCardLeavesReadyCardAndNoOpenRun() passed after 0.198 seconds.
+◇ Test haltAfterProviderResponseCannotWriteTokensOrCards() started.
+✔ Test haltAfterProviderResponseCannotWriteTokensOrCards() passed after 0.097 seconds.
+◇ Test emergencyStopCancelsRunningBeforeWaitingForPlanner() started.
+✔ Test emergencyStopCancelsRunningBeforeWaitingForPlanner() passed after 0.211 seconds.
+◇ Test haltCleanupFailureKeepsSupervisorSuppressedAndBlocksResume() started.
+✔ Test haltCleanupFailureKeepsSupervisorSuppressedAndBlocksResume() passed after 0.219 seconds.
+◇ Test haltPersistenceFailureKeepsSupervisorSuppressed() started.
+✔ Test haltPersistenceFailureKeepsSupervisorSuppressed() passed after 0.205 seconds.
+◇ Test resumePersistenceFailureStaysHaltedAndDispatchesNothing() started.
+✔ Test resumePersistenceFailureStaysHaltedAndDispatchesNothing() passed after 0.090 seconds.
+◇ Test orphanRecoveryFailureKeepsResumeClosedUntilRetried() started.
+✔ Test orphanRecoveryFailureKeepsResumeClosedUntilRetried() passed after 0.204 seconds.
+◇ Test startupOrphanRecoveryFailureFailsClosedUntilExplicitRetry() started.
+✔ Test startupOrphanRecoveryFailureFailsClosedUntilExplicitRetry() passed after 0.189 seconds.
+◇ Test staleStartupRecoveryCannotStealNewResumePhase() started.
+✔ Test staleStartupRecoveryCannotStealNewResumePhase() passed after 0.197 seconds.
+◇ Test directMissionAndProposalStartsAreRejectedWhileHalted() started.
+✔ Test directMissionAndProposalStartsAreRejectedWhileHalted() passed after 0.079 seconds.
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+✔ Test rateLimitTriggersGlobalCooldownThenRecovers() passed after 0.297 seconds.
+◇ Test handoffParsesFromToolInput() started.
+✔ Test handoffParsesFromToolInput() passed after 0.001 seconds.
+◇ Test handoffRequiresArtifactsOrReason() started.
+✔ Test handoffRequiresArtifactsOrReason() passed after 0.001 seconds.
+◇ Test handoffParsesWithoutArtifactsKey() started.
+✔ Test handoffParsesWithoutArtifactsKey() passed after 0.001 seconds.
+◇ Test handoffRequiresNonEmptyCoreFields() started.
+✔ Test handoffRequiresNonEmptyCoreFields() passed after 0.001 seconds.
+◇ Test artifactLedgerFiltersArchivedCampsAndBuildsStableReport() started.
+✔ Test artifactLedgerFiltersArchivedCampsAndBuildsStableReport() passed after 0.110 seconds.
+◇ Test archivedCampRejectsNewMissionShell() started.
+✔ Test archivedCampRejectsNewMissionShell() passed after 0.091 seconds.
+◇ Test returningCompletedCardReopensMissionAndMarksDoneDependentsForReview() started.
+✔ Test returningCompletedCardReopensMissionAndMarksDoneDependentsForReview() passed after 0.108 seconds.
+◇ Test readyProducingMissionAndReworkWritesEndWithCanonicalReadyEvent() started.
+✔ Test readyProducingMissionAndReworkWritesEndWithCanonicalReadyEvent() passed after 0.102 seconds.
+◇ Test orphanRecoveryWritesCanonicalReadyOnlyForGenuineLegacyRuns() started.
+✔ Test orphanRecoveryWritesCanonicalReadyOnlyForGenuineLegacyRuns() passed after 6.896 seconds.
+◇ Test returnCardForReworkRejectsAcceptedAndFailedMissions() started.
+✔ Test returnCardForReworkRejectsAcceptedAndFailedMissions() passed after 0.199 seconds.
+◇ Test p1f1_060ManagedExpeditionReportIsOnlyWriterAndRegistryOwner() started.
+✔ Test p1f1_060ManagedExpeditionReportIsOnlyWriterAndRegistryOwner() passed after 0.096 seconds.
+◇ Test p1f1_061ManagedReportCursorRecoversWithoutLostFile() started.
+✔ Test p1f1_061ManagedReportCursorRecoversWithoutLostFile() passed after 1.045 seconds.
+◇ Suite P1EIngestionDeletionContractTests started.
+◇ Test p1e49DeletionPrepareRequestSurface() started.
+✔ Test p1e49DeletionPrepareRequestSurface() passed after 0.084 seconds.
+◇ Test p1e50DeletionCommandFactoryAuthority() started.
+✔ Test p1e50DeletionCommandFactoryAuthority() passed after 0.003 seconds.
+◇ Test p1e51DeletionPrepareSnapshotZeroWritePrivacy() started.
+✔ Test p1e51DeletionPrepareSnapshotZeroWritePrivacy() passed after 0.093 seconds.
+◇ Test p1e52DeletionCommandCanonicalHashAndCounts() started.
+✔ Test p1e52DeletionCommandCanonicalHashAndCounts() passed after 0.092 seconds.
+◇ Test p1e53ResultOnlyNeedsReviewSuccess() started.
+✔ Test p1e53ResultOnlyNeedsReviewSuccess() passed after 0.102 seconds.
+◇ Test p1e54ResultOnlyFailedWithResultSuccess() started.
+✔ Test p1e54ResultOnlyFailedWithResultSuccess() passed after 0.106 seconds.
+◇ Test p1e55ResultOnlyRejectionMatrix() started.
+✔ Test p1e55ResultOnlyRejectionMatrix() passed after 0.451 seconds.
+◇ Test p1e56SourceAndResultWithoutResultSuccess() started.
+✔ Test p1e56SourceAndResultWithoutResultSuccess() passed after 0.095 seconds.
+◇ Test p1e57SourceAndResultWithResultSuccess() started.
+✔ Test p1e57SourceAndResultWithResultSuccess() passed after 0.100 seconds.
+◇ Test p1e58SourceAndResultRejectionMatrix() started.
+✔ Test p1e58SourceAndResultRejectionMatrix() passed after 0.267 seconds.
+◇ Test p1e59ProjectionScopeAndPermanentProjectionGuards() started.
+✔ Test p1e59ProjectionScopeAndPermanentProjectionGuards() passed after 0.090 seconds.
+◇ Test p1e60KnowledgeLinkBlockerRejects() started.
+✔ Test p1e60KnowledgeLinkBlockerRejects() passed after 0.091 seconds.
+◇ Test p1e61CandidateBlockerRejects() started.
+✔ Test p1e61CandidateBlockerRejects() passed after 0.091 seconds.
+◇ Test p1e62RuminationWorkBlockerRejects() started.
+✔ Test p1e62RuminationWorkBlockerRejects() passed after 0.087 seconds.
+◇ Test p1e63OpenAttemptBlockerRejects() started.
+✔ Test p1e63OpenAttemptBlockerRejects() passed after 0.087 seconds.
+◇ Test p1e64ProviderDispatchBlockerRejects() started.
+✔ Test p1e64ProviderDispatchBlockerRejects() passed after 0.091 seconds.
+◇ Test p1e65DeletionLifecycleTOCTOURejects() started.
+✔ Test p1e65DeletionLifecycleTOCTOURejects() passed after 0.086 seconds.
+◇ Test p1e66DeletionRowAndResultTOCTOURejects() started.
+✔ Test p1e66DeletionRowAndResultTOCTOURejects() passed after 0.181 seconds.
+◇ Test p1e67DeletionBlockerTOCTOURejects() started.
+✔ Test p1e67DeletionBlockerTOCTOURejects() passed after 0.090 seconds.
+◇ Test p1e68DeletionEnvelopeAndPersistedGraph() started.
+✔ Test p1e68DeletionEnvelopeAndPersistedGraph() passed after 0.100 seconds.
+◇ Test p1e69DeletionExactJSONAndOutboxContract() started.
+✔ Test p1e69DeletionExactJSONAndOutboxContract() passed after 0.115 seconds.
+◇ Test p1e70DeletionReplayAfterLifecycleAndSourceLoss() started.
+✔ Test p1e70DeletionReplayAfterLifecycleAndSourceLoss() passed after 0.103 seconds.
+◇ Test p1e71DeletionConflictIntegrityAndNewKeyMatrix() started.
+✔ Test p1e71DeletionConflictIntegrityAndNewKeyMatrix() passed after 0.101 seconds.
+◇ Test p1e72DeletionRawEvidenceAndUDFRejectMatrix() started.
+✔ Test p1e72DeletionRawEvidenceAndUDFRejectMatrix() passed after 0.096 seconds.
+◇ Test p1e73DeletionOriginalFourP0Counterexamples() started.
+✔ Test p1e73DeletionOriginalFourP0Counterexamples() passed after 0.094 seconds.
+◇ Test p1e74PermitRegistryInstallAndIsolationContract() started.
+✔ Test p1e74PermitRegistryInstallAndIsolationContract() passed after 0.001 seconds.
+◇ Test p1e75PermitLifecycleScenarioMatrix() started.
+✔ Test p1e75PermitLifecycleScenarioMatrix() passed after 0.006 seconds.
+◇ Test p1e76PermitCleanupMismatchStickyFaultMatrix() started.
+✔ Test p1e76PermitCleanupMismatchStickyFaultMatrix() passed after 0.002 seconds.
+◇ Test p1e77PermitGenerationArityCursorAndReuseMatrix() started.
+✔ Test p1e77PermitGenerationArityCursorAndReuseMatrix() passed after 0.102 seconds.
+◇ Test p1e78DeletionExecutionResolutionMatrix() started.
+✔ Test p1e78DeletionExecutionResolutionMatrix() passed after 0.178 seconds.
+◇ Test p1e79DeletionSharedValidatorForgeryAndRelaunch() started.
+✔ Test p1e79DeletionSharedValidatorForgeryAndRelaunch() passed after 0.099 seconds.
+◇ Test p1e80DeletionWorkerAndMaterializerRaceMatrix() started.
+✔ Test p1e80DeletionWorkerAndMaterializerRaceMatrix() passed after 0.857 seconds.
+◇ Test p1e81DeletionControllerSingleFlight() started.
+✔ Test p1e81DeletionControllerSingleFlight() passed after 0.098 seconds.
+◇ Test p1e82DeletionPreparedCancelAndNotCommittedRetry() started.
+✔ Test p1e82DeletionPreparedCancelAndNotCommittedRetry() passed after 0.106 seconds.
+◇ Test p1e83DeletionExecutingCancelCommitRace() started.
+✔ Test p1e83DeletionExecutingCancelCommitRace() passed after 0.106 seconds.
+◇ Test p1e84DeletionRefreshFailureSameKeyReplay() started.
+✔ Test p1e84DeletionRefreshFailureSameKeyReplay() passed after 0.110 seconds.
+◇ Test p1e85DeletionCommitOutcomeUnknownActions() started.
+✔ Test p1e85DeletionCommitOutcomeUnknownActions() passed after 0.105 seconds.
+◇ Test p1e86DeletionIntegrityBlockedActions() started.
+✔ Test p1e86DeletionIntegrityBlockedActions() passed after 0.089 seconds.
+◇ Test p1e87DeletionTerminalConflictAbandonFlow() started.
+✔ Test p1e87DeletionTerminalConflictAbandonFlow() passed after 0.090 seconds.
+◇ Test p1e88DeletionCommittedDismissAndReload() started.
+✔ Test p1e88DeletionCommittedDismissAndReload() passed after 0.095 seconds.
+◇ Test p1e89DeletionProcessDeathPersistenceMatrix() started.
+✔ Test p1e89DeletionProcessDeathPersistenceMatrix() passed after 0.111 seconds.
+◇ Test p1e90DeletionUISourcePrivacyAndScopeSentinels() started.
+✔ Test p1e90DeletionUISourcePrivacyAndScopeSentinels() passed after 0.244 seconds.
+✔ Suite P1EIngestionDeletionContractTests passed after 5.320 seconds.
+◇ Suite P1CInputEnvelopeContractTests started.
+◇ Test captureAndInputParsingWorkCommitAtomically() started.
+✔ Test captureAndInputParsingWorkCommitAtomically() passed after 0.099 seconds.
+◇ Test inputCaptureReplayAndPayloadDriftConflict() started.
+✔ Test inputCaptureReplayAndPayloadDriftConflict() passed after 0.109 seconds.
+◇ Test inputCaptureReplayUsesCallerOwnedIDAndExistingWorkResult() started.
+✔ Test inputCaptureReplayUsesCallerOwnedIDAndExistingWorkResult() passed after 0.103 seconds.
+◇ Test inputParsingCrashIsAdopted() started.
+✔ Test inputParsingCrashIsAdopted() passed after 0.101 seconds.
+◇ Test controlWorkAdoptionRequiresExpiredLeaseAndRecoversSameOwnerAcrossKinds() started.
+✔ Test controlWorkAdoptionRequiresExpiredLeaseAndRecoversSameOwnerAcrossKinds() passed after 0.184 seconds.
+◇ Test inputParsingRenewalHandsLatestClaimToTerminalCommit() started.
+✔ Test inputParsingRenewalHandsLatestClaimToTerminalCommit() passed after 0.110 seconds.
+◇ Test inputParsingTerminalTimeIsMonotonicAndRetryBackoffStartsAtFailure() started.
+✔ Test inputParsingTerminalTimeIsMonotonicAndRetryBackoffStartsAtFailure() passed after 0.107 seconds.
+◇ Test inputParsingRenewalFailureCancelsParserWithoutProjectionCommit() started.
+✔ Test inputParsingRenewalFailureCancelsParserWithoutProjectionCommit() passed after 0.095 seconds.
+◇ Test inputParsingRetriesBoundedlyThenParseFailed() started.
+✔ Test inputParsingRetriesBoundedlyThenParseFailed() passed after 0.133 seconds.
+◇ Test inputParsingCancelRejectsStaleResult() started.
+✔ Test inputParsingCancelRejectsStaleResult() passed after 0.098 seconds.
+◇ Test cancelParsingAndDeleteRejectsNoActiveBranchBeforeMutation() started.
+✔ Test cancelParsingAndDeleteRejectsNoActiveBranchBeforeMutation() passed after 0.001 seconds.
+◇ Test inputParsingTerminalMutationRollbackIsTotal() started.
+✔ Test inputParsingTerminalMutationRollbackIsTotal() passed after 0.099 seconds.
+◇ Test inputTransitionMatrixAcceptsOnlyStageSpecEdges() started.
+✔ Test inputTransitionMatrixAcceptsOnlyStageSpecEdges() passed after 0.001 seconds.
+◇ Test ordinaryInputTransitionsRejectEveryActiveParsingStateWithoutWrites() started.
+✔ Test ordinaryInputTransitionsRejectEveryActiveParsingStateWithoutWrites() passed after 0.318 seconds.
+◇ Test everyInputCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() started.
+✔ Test everyInputCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() passed after 0.081 seconds.
+◇ Test inputParserInterfaceUsesOnePersistedPreAwaitSnapshotAndClosedOutcome() started.
+✔ Test inputParserInterfaceUsesOnePersistedPreAwaitSnapshotAndClosedOutcome() passed after 0.099 seconds.
+◇ Test inputParserInvalidOutputFailsDeterministicallyExactlyOnce() started.
+✔ Test inputParserInvalidOutputFailsDeterministicallyExactlyOnce() passed after 0.111 seconds.
+◇ Test crossCampAmbiguityNeverSelectsDefaultCamp() started.
+✔ Test crossCampAmbiguityNeverSelectsDefaultCamp() passed after 0.102 seconds.
+◇ Test inputCampScopeIsStableFromCaptureThroughAssignment() started.
+✔ Test inputCampScopeIsStableFromCaptureThroughAssignment() passed after 0.107 seconds.
+◇ Test inputRejectsInitialOrAssignedCampDifferentFromAuditCamp() started.
+✔ Test inputRejectsInitialOrAssignedCampDifferentFromAuditCamp() passed after 0.105 seconds.
+◇ Test inputParsingWorkAlwaysUsesAuditCampAndArchivedCampFailsClosed() started.
+✔ Test inputParsingWorkAlwaysUsesAuditCampAndArchivedCampFailsClosed() passed after 0.103 seconds.
+◇ Test inputTombstoneRetainsOnlyExactIdentityHashAndTimes() started.
+✔ Test inputTombstoneRetainsOnlyExactIdentityHashAndTimes() passed after 0.101 seconds.
+◇ Test inputTombstoneNullsDeviceConnectorAuthorBodyRefErrorAndParent() started.
+✔ Test inputTombstoneNullsDeviceConnectorAuthorBodyRefErrorAndParent() passed after 0.105 seconds.
+◇ Test inputTombstoneForcesEmptyCandidatesUnspecifiedIntentLocalOnlyAndEqualDeleteTime() started.
+✔ Test inputTombstoneForcesEmptyCandidatesUnspecifiedIntentLocalOnlyAndEqualDeleteTime() passed after 0.114 seconds.
+◇ Test localCaptureIdentityPersistsOnceAndFailsOnCorruption() started.
+✔ Test localCaptureIdentityPersistsOnceAndFailsOnCorruption() passed after 0.001 seconds.
+◇ Test localCaptureIdentityConcurrentFirstUseAcrossCopiesIsAtomic() started.
+✔ Test localCaptureIdentityConcurrentFirstUseAcrossCopiesIsAtomic() passed after 0.001 seconds.
+◇ Test localCaptureIdentityConcurrentFirstUseAcrossIndependentAdaptersIsAtomic() started.
+✔ Test localCaptureIdentityConcurrentFirstUseAcrossIndependentAdaptersIsAtomic() passed after 0.003 seconds.
+◇ Test localCaptureUsesLocalOwnerAndInstallationDeviceWithoutAccountIdentity() started.
+✔ Test localCaptureUsesLocalOwnerAndInstallationDeviceWithoutAccountIdentity() passed after 0.092 seconds.
+◇ Test localCapturePortAndInitializerRemainSourceCompatible() started.
+✔ Test localCapturePortAndInitializerRemainSourceCompatible() passed after 0.080 seconds.
+◇ Test localCaptureTraceCorrelationAndRequestIDsAreExact() started.
+✔ Test localCaptureTraceCorrelationAndRequestIDsAreExact() passed after 0.086 seconds.
+◇ Test loadInputUsesReadPortAndMapsMissingRecordToFailure() started.
+✔ Test loadInputUsesReadPortAndMapsMissingRecordToFailure() passed after 0.082 seconds.
+◇ Test legacyIngestionAdapterIsDisplayOnlyAndCreatesNoInputOrGoal() started.
+✔ Test legacyIngestionAdapterIsDisplayOnlyAndCreatesNoInputOrGoal() passed after 0.085 seconds.
+◇ Test nilInputCampNeverInfersAuthority() started.
+✔ Test nilInputCampNeverInfersAuthority() passed after 0.113 seconds.
+✔ Suite P1CInputEnvelopeContractTests passed after 3.143 seconds.
+◇ Test jsonRoundTrip() started.
+✔ Test jsonRoundTrip() passed after 0.001 seconds.
+◇ Test jsonLiterals() started.
+✔ Test jsonLiterals() passed after 0.001 seconds.
+◇ Test jsonWireSafety() started.
+✔ Test jsonWireSafety() passed after 0.001 seconds.
+◇ Test crossMissionExperienceReuseGoldenPath() started.
+✔ Test crossMissionExperienceReuseGoldenPath() passed after 0.242 seconds.
+◇ Test dmMemoryReachesNextCardContextGoldenPath() started.
+✔ Test dmMemoryReachesNextCardContextGoldenPath() passed after 0.186 seconds.
+◇ Test campNoteCRUDAndOrdering() started.
+✔ Test campNoteCRUDAndOrdering() passed after 0.093 seconds.
+◇ Test companionNoteCRUDIsolatedPerCompanion() started.
+✔ Test companionNoteCRUDIsolatedPerCompanion() passed after 0.098 seconds.
+◇ Test searchCampNotesLikeSemantics() started.
+✔ Test searchCampNotesLikeSemantics() passed after 0.090 seconds.
+◇ Test searchCampNotesPinnedFirstAndCapped() started.
+✔ Test searchCampNotesPinnedFirstAndCapped() passed after 0.096 seconds.
+◇ Test pinnedAndRecentSplitAndOrder() started.
+✔ Test pinnedAndRecentSplitAndOrder() passed after 0.089 seconds.
+◇ Test pinnedAndRecentCompanionNotes() started.
+✔ Test pinnedAndRecentCompanionNotes() passed after 0.086 seconds.
+◇ Test undistilledWatermarkAndMark() started.
+✔ Test undistilledWatermarkAndMark() passed after 0.106 seconds.
+◇ Test guideThreadFindOrCreateIdempotent() started.
+✔ Test guideThreadFindOrCreateIdempotent() passed after 0.081 seconds.
+◇ Test proposalBlockRoundTripAndAccessor() started.
+✔ Test proposalBlockRoundTripAndAccessor() passed after 0.099 seconds.
+◇ Test proposalConfirmIsIdempotentCAS() started.
+✔ Test proposalConfirmIsIdempotentCAS() passed after 0.089 seconds.
+◇ Test proposalDismissAndRevert() started.
+✔ Test proposalDismissAndRevert() passed after 0.090 seconds.
+◇ Test updateChatMessageContentRoundTrip() started.
+✔ Test updateChatMessageContentRoundTrip() passed after 0.091 seconds.
+◇ Suite P1ELegacyScopeMigrationTests started.
+◇ Test p1e33LegacyContentWritesScopeFirst() started.
+✔ Test p1e33LegacyContentWritesScopeFirst() passed after 0.097 seconds.
+◇ Test p1e34LegacyContentRawWriteRejected() started.
+✔ Test p1e34LegacyContentRawWriteRejected() passed after 0.087 seconds.
+◇ Test p1e35LegacyEventAppendScopeFirst() started.
+✔ Test p1e35LegacyEventAppendScopeFirst() passed after 0.086 seconds.
+◇ Test p1e36LegacyEventMissingMismatchRejected() started.
+✔ Test p1e36LegacyEventMissingMismatchRejected() passed after 0.090 seconds.
+✔ Suite P1ELegacyScopeMigrationTests passed after 0.362 seconds.
+◇ Test mcpManagerSpikeAgainstRealPlaywright() started.
+✔ Test mcpManagerSpikeAgainstRealPlaywright() passed after 0.001 seconds.
+◇ Test mcpSpikeAgainstRealFilesystemServer() started.
+✔ Test mcpSpikeAgainstRealFilesystemServer() passed after 0.001 seconds.
+◇ Test mcpHandshakeSendsInitializeThenInitializedNotification() started.
+✔ Test mcpHandshakeSendsInitializeThenInitializedNotification() passed after 0.001 seconds.
+◇ Test mcpListToolsFollowsPaginationCursor() started.
+✔ Test mcpListToolsFollowsPaginationCursor() passed after 0.001 seconds.
+◇ Test mcpCallFlattensNonTextContentToPlaceholders() started.
+✔ Test mcpCallFlattensNonTextContentToPlaceholders() passed after 0.001 seconds.
+◇ Test mcpCallPropagatesIsErrorFlag() started.
+✔ Test mcpCallPropagatesIsErrorFlag() passed after 0.001 seconds.
+◇ Test mcpRpcErrorResponseThrows() started.
+✔ Test mcpRpcErrorResponseThrows() passed after 0.001 seconds.
+◇ Test mcpRequestTimesOutWhenNoResponse() started.
+✔ Test mcpRequestTimesOutWhenNoResponse() passed after 0.085 seconds.
+◇ Test mcpDeathFailsPendingAndFiresUnexpectedClose() started.
+✔ Test mcpDeathFailsPendingAndFiresUnexpectedClose() passed after 0.055 seconds.
+◇ Test mcpExplicitCloseDoesNotFireUnexpectedClose() started.
+✔ Test mcpExplicitCloseDoesNotFireUnexpectedClose() passed after 0.102 seconds.
+◇ Test mcpServerInitiatedRequestGetsMethodNotFound() started.
+✔ Test mcpServerInitiatedRequestGetsMethodNotFound() passed after 0.030 seconds.
+◇ Test mcpIgnoresNonJsonNoiseLines() started.
+✔ Test mcpIgnoresNonJsonNoiseLines() passed after 0.002 seconds.
+◇ Test mcpNamingSanitizesComposesAndParses() started.
+✔ Test mcpNamingSanitizesComposesAndParses() passed after 0.006 seconds.
+◇ Test mcpServerCRUDAndCampEnableToggle() started.
+✔ Test mcpServerCRUDAndCampEnableToggle() passed after 0.096 seconds.
+◇ Test managerStartsCachesToolsAndAssembles() started.
+✔ Test managerStartsCachesToolsAndAssembles() passed after 0.094 seconds.
+◇ Test managerStartFailureIsDownAndNeverAutoRetries() started.
+✔ Test managerStartFailureIsDownAndNeverAutoRetries() passed after 0.104 seconds.
+◇ Test managerRestartRevivesDownServer() started.
+✔ Test managerRestartRevivesDownServer() passed after 0.087 seconds.
+◇ Test managerProcessDeathMarksDown() started.
+✔ Test managerProcessDeathMarksDown() passed after 0.119 seconds.
+◇ Test managerEnvMergePrecedenceBaseJsonSecret() started.
+✔ Test managerEnvMergePrecedenceBaseJsonSecret() passed after 0.098 seconds.
+◇ Test managerToolNameCollisionKeepsFirstDeterministically() started.
+✔ Test managerToolNameCollisionKeepsFirstDeterministically() passed after 0.094 seconds.
+◇ Test mcpToolRequiresExplicitAllowNotInheritedByLegacyFull() started.
+✔ Test mcpToolRequiresExplicitAllowNotInheritedByLegacyFull() passed after 0.095 seconds.
+◇ Test mcpToolInjectedWithExplicitV2Allow() started.
+✔ Test mcpToolInjectedWithExplicitV2Allow() passed after 0.104 seconds.
+◇ Test malformedToolAccessSkipsMcpStartupAndRecordsKernelDiagnostic() started.
+✔ Test malformedToolAccessSkipsMcpStartupAndRecordsKernelDiagnostic() passed after 0.121 seconds.
+◇ Test mcpBridgeWrapsSuccessInExternalContentEnvelope() started.
+✔ Test mcpBridgeWrapsSuccessInExternalContentEnvelope() passed after 0.183 seconds.
+◇ Test mcpBridgeDownEmitsEventAndGuidesBlockCard() started.
+✔ Test mcpBridgeDownEmitsEventAndGuidesBlockCard() passed after 0.175 seconds.
+◇ Test secretProviderAbsentAndThrowsAreDistinct() started.
+✔ Test secretProviderAbsentAndThrowsAreDistinct() passed after 0.540 seconds.
+◇ Test assembledToolsRegistryFailureThrows() started.
+✔ Test assembledToolsRegistryFailureThrows() passed after 0.528 seconds.
+◇ Test selectedMcpToolIsLocalUnavailableWithoutManagerEffects() started.
+✔ Test selectedMcpToolIsLocalUnavailableWithoutManagerEffects() passed after 0.090 seconds.
+◇ Test mcpServerDeletePreimageAndReverseRollbackAreAtomic() started.
+✔ Test mcpServerDeletePreimageAndReverseRollbackAreAtomic() passed after 0.261 seconds.
+◇ Test toolBridgeEventWriteFailureRemainsVisibleWithTrace() started.
+✔ Test toolBridgeEventWriteFailureRemainsVisibleWithTrace() passed after 0.197 seconds.
+◇ Test manualDistillCreatesMemoryAndAdvancesWatermark() started.
+✔ Test manualDistillCreatesMemoryAndAdvancesWatermark() passed after 0.097 seconds.
+◇ Test autoDistillRespectsMinMessagesThreshold() started.
+✔ Test autoDistillRespectsMinMessagesThreshold() passed after 0.101 seconds.
+◇ Test skipStillAdvancesWatermarkButNoNote() started.
+✔ Test skipStillAdvancesWatermarkButNoNote() passed after 0.096 seconds.
+◇ Test failureKeepsWatermarkForRetry() started.
+✔ Test failureKeepsWatermarkForRetry() passed after 0.098 seconds.
+◇ Test dmNoteInsertFailureRollsBackWatermarkAndEvent() started.
+✔ Test dmNoteInsertFailureRollsBackWatermarkAndEvent() passed after 0.103 seconds.
+◇ Test distillationEventInsertFailureRollsBackNoteAndWatermark() started.
+✔ Test distillationEventInsertFailureRollsBackNoteAndWatermark() passed after 0.107 seconds.
+◇ Test staleDistillationCASRollsBackWithoutDuplicateNote() started.
+✔ Test staleDistillationCASRollsBackWithoutDuplicateNote() passed after 0.093 seconds.
+◇ Test messageArrivingDuringModelWorkRemainsUndistilled() started.
+✔ Test messageArrivingDuringModelWorkRemainsUndistilled() passed after 0.101 seconds.
+◇ Test guideChatDistillCreatesCampNote() started.
+✔ Test guideChatDistillCreatesCampNote() passed after 0.117 seconds.
+◇ Test guideChatDistillNoopWhenNoBacklog() started.
+✔ Test guideChatDistillNoopWhenNoBacklog() passed after 0.094 seconds.
+◇ Test guideNoteInsertFailureRollsBackWatermarkAndEvent() started.
+✔ Test guideNoteInsertFailureRollsBackWatermarkAndEvent() passed after 0.110 seconds.
+◇ Test memoryDistillNoEligibleInputIsDistinct() started.
+✔ Test memoryDistillNoEligibleInputIsDistinct() passed after 0.182 seconds.
+◇ Test memoryDistillProviderSkipAdvancesWatermarkAndReturnsSkipped() started.
+✔ Test memoryDistillProviderSkipAdvancesWatermarkAndReturnsSkipped() passed after 0.272 seconds.
+◇ Test memoryDistillCreatedReturnsRecord() started.
+✔ Test memoryDistillCreatedReturnsRecord() passed after 0.364 seconds.
+◇ Test memoryDistillProviderFailureReturnsFailedWithTrace() started.
+✔ Test memoryDistillProviderFailureReturnsFailedWithTrace() passed after 0.546 seconds.
+◇ Test memoryDistillReadFailureReturnsFailedWithTrace() started.
+✔ Test memoryDistillReadFailureReturnsFailedWithTrace() passed after 0.472 seconds.
+◇ Test memoryDistillPersistenceFailureReturnsFailedWithTrace() started.
+✔ Test memoryDistillPersistenceFailureReturnsFailedWithTrace() passed after 0.287 seconds.
+◇ Test memoryDistillWatermarkRaceReturnsFailedWithTrace() started.
+✔ Test memoryDistillWatermarkRaceReturnsFailedWithTrace() passed after 0.407 seconds.
+◇ Suite P1EMemoryProvenanceTests started.
+◇ Test p1e25MemoryRawWorkingPromotionFlow() started.
+✔ Test p1e25MemoryRawWorkingPromotionFlow() passed after 0.090 seconds.
+◇ Test p1e26MemoryLayerOwnerAndCarrierInvariants() started.
+✔ Test p1e26MemoryLayerOwnerAndCarrierInvariants() passed after 0.001 seconds.
+◇ Test p1e27AcceptedOutcomeSkillPromotion() started.
+✔ Test p1e27AcceptedOutcomeSkillPromotion() passed after 0.158 seconds.
+◇ Test p1e28UnacceptedOrInvalidSkillPromotionRejects() started.
+✔ Test p1e28UnacceptedOrInvalidSkillPromotionRejects() passed after 0.277 seconds.
+◇ Test p1e29MemoryDependencyAppendOnlyGraph() started.
+✔ Test p1e29MemoryDependencyAppendOnlyGraph() passed after 0.097 seconds.
+◇ Test p1e30DependencyInvalidationStateMatrix() started.
+✔ Test p1e30DependencyInvalidationStateMatrix() passed after 0.099 seconds.
+◇ Test p1e31MemoryTombstoneErasesPrivateCarrier() started.
+✔ Test p1e31MemoryTombstoneErasesPrivateCarrier() passed after 0.090 seconds.
+✔ Suite P1EMemoryProvenanceTests passed after 0.816 seconds.
+◇ Test rollupEmptyCardsIsPlanning() started.
+✔ Test rollupEmptyCardsIsPlanning() passed after 0.001 seconds.
+◇ Test rollupMixedIsExecuting() started.
+✔ Test rollupMixedIsExecuting() passed after 0.001 seconds.
+◇ Test rollupAllTerminalWithDoneIsDelivering() started.
+✔ Test rollupAllTerminalWithDoneIsDelivering() passed after 0.001 seconds.
+◇ Test rollupAllTerminalZeroDoneIsFailed() started.
+✔ Test rollupAllTerminalZeroDoneIsFailed() passed after 0.001 seconds.
+◇ Test rollupAcceptedReworkResumesExecutingAndFailedRemainsSticky() started.
+✔ Test rollupAcceptedReworkResumesExecutingAndFailedRemainsSticky() passed after 0.001 seconds.
+◇ Test mockReplaysScriptInOrder() started.
+✔ Test mockReplaysScriptInOrder() passed after 0.001 seconds.
+◇ Test modelCatalogManualEntryPolicyMatrix() started.
+✔ Test modelCatalogManualEntryPolicyMatrix() passed after 0.001 seconds.
+◇ Test resolvedCatalogUsesTheCorrectSourceWithoutWrites() started.
+✔ Test resolvedCatalogUsesTheCorrectSourceWithoutWrites() passed after 0.007 seconds.
+◇ Test clampModelSelectionsHasUnifiedRules() started.
+✔ Test clampModelSelectionsHasUnifiedRules() passed after 0.002 seconds.
+◇ Test applyReconciliationFlipsOnlyListedCompanionsAndResetsScopes() started.
+✔ Test applyReconciliationFlipsOnlyListedCompanionsAndResetsScopes() passed after 0.102 seconds.
+◇ Test applyReconciliationToleratesEmptyItemsAndMissingProfile() started.
+✔ Test applyReconciliationToleratesEmptyItemsAndMissingProfile() passed after 0.164 seconds.
+◇ Test bootstrapReconcileRunsOnceAndRespectsUserChoices() started.
+✔ Test bootstrapReconcileRunsOnceAndRespectsUserChoices() passed after 0.113 seconds.
+◇ Suite GatewayRefreshTests started.
+◇ Test refreshGatewayReplacesScopedListWithoutCacheWrites() started.
+✔ Test refreshGatewayReplacesScopedListWithoutCacheWrites() passed after 0.003 seconds.
+✔ Suite GatewayRefreshTests passed after 0.003 seconds.
+◇ Test guideModelUsesKernelDefault() started.
+✔ Test guideModelUsesKernelDefault() passed after 0.102 seconds.
+◇ Test createCampProvisionsGuideAndIsListable() started.
+✔ Test createCampProvisionsGuideAndIsListable() passed after 0.104 seconds.
+◇ Test renameCampSemantics() started.
+✔ Test renameCampSemantics() passed after 0.092 seconds.
+◇ Test missionCreationHonorsCampIdWithDefaultFallback() started.
+✔ Test missionCreationHonorsCampIdWithDefaultFallback() passed after 0.096 seconds.
+◇ Test campNotesNeverLeakAcrossCamps() started.
+✔ Test campNotesNeverLeakAcrossCamps() passed after 0.103 seconds.
+◇ Test searchAndStatusToolsAreCampScoped() started.
+✔ Test searchAndStatusToolsAreCampScoped() passed after 0.097 seconds.
+◇ Test confirmedProposalLandsInGuidesCamp() started.
+✔ Test confirmedProposalLandsInGuidesCamp() passed after 0.102 seconds.
+◇ Test openAIChatGPTAuthorizationURLMatchesCodexFlow() started.
+✔ Test openAIChatGPTAuthorizationURLMatchesCodexFlow() passed after 0.001 seconds.
+◇ Test openAIChatGPTTokenRequestUsesPKCE() started.
+✔ Test openAIChatGPTTokenRequestUsesPKCE() passed after 0.001 seconds.
+◇ Test openAIChatGPTRefreshTokenRequestUsesCodexScope() started.
+✔ Test openAIChatGPTRefreshTokenRequestUsesCodexScope() passed after 0.001 seconds.
+◇ Test openAIChatGPTAccountIDComesFromIDTokenClaims() started.
+✔ Test openAIChatGPTAccountIDComesFromIDTokenClaims() passed after 0.001 seconds.
+◇ Test openAIResponsesRequestPreservesConversationAndTools() started.
+✔ Test openAIResponsesRequestPreservesConversationAndTools() passed after 0.001 seconds.
+◇ Test openAIResponsesRequestMarksToolResultErrors() started.
+✔ Test openAIResponsesRequestMarksToolResultErrors() passed after 0.001 seconds.
+◇ Suite OpenAIResponsesProviderRefreshTests started.
+◇ Test openAIResponsesRefreshesOnceAfterUnauthorizedAndRetriesWithNewToken() started.
+✔ Test openAIResponsesRefreshesOnceAfterUnauthorizedAndRetriesWithNewToken() passed after 0.001 seconds.
+◇ Test openAIResponsesThrowsUnauthorizedWhenRefreshRetryIsStillUnauthorized() started.
+✔ Test openAIResponsesThrowsUnauthorizedWhenRefreshRetryIsStillUnauthorized() passed after 0.001 seconds.
+✔ Suite OpenAIResponsesProviderRefreshTests passed after 0.002 seconds.
+◇ Test openAIOAuthSessionRefreshSuccessUpdatesStoredTokensAndAccountID() started.
+✔ Test openAIOAuthSessionRefreshSuccessUpdatesStoredTokensAndAccountID() passed after 0.001 seconds.
+◇ Test openAIOAuthSessionWritesRotatedRefreshToken() started.
+✔ Test openAIOAuthSessionWritesRotatedRefreshToken() passed after 0.001 seconds.
+◇ Test openAIOAuthSessionInvalidGrantIsPermanentFailure() started.
+✔ Test openAIOAuthSessionInvalidGrantIsPermanentFailure() passed after 0.001 seconds.
+◇ Test openAIOAuthSessionNetworkErrorIsTransient() started.
+✔ Test openAIOAuthSessionNetworkErrorIsTransient() passed after 0.001 seconds.
+◇ Test openAIOAuthSessionSingleFlightsConcurrentRefreshes() started.
+✔ Test openAIOAuthSessionSingleFlightsConcurrentRefreshes() passed after 0.055 seconds.
+◇ Test openAIOAuthSessionWithoutRefreshTokenIsPermanentFailure() started.
+✔ Test openAIOAuthSessionWithoutRefreshTokenIsPermanentFailure() passed after 0.001 seconds.
+◇ Test oauthCredentialCommitFailureRollsBackEarlierWrites() started.
+✔ Test oauthCredentialCommitFailureRollsBackEarlierWrites() passed after 0.001 seconds.
+◇ Test oauthCredentialRollbackFailureIsExplicitAndCritical() started.
+✔ Test oauthCredentialRollbackFailureIsExplicitAndCritical() passed after 0.006 seconds.
+◇ Test oauthPermanentUnauthorizedDeleteFailureNeverReportsCleanRelogin() started.
+✔ Test oauthPermanentUnauthorizedDeleteFailureNeverReportsCleanRelogin() passed after 0.004 seconds.
+◇ Test dependentCardStaysTodoUntilUpstreamDone() started.
+✔ Test dependentCardStaysTodoUntilUpstreamDone() passed after 0.086 seconds.
+◇ Test upstreamDoneUnlocksAndDispatchesDownstream() started.
+✔ Test upstreamDoneUnlocksAndDispatchesDownstream() passed after 0.256 seconds.
+◇ Test sameCompanionCardsStaySerial() started.
+✔ Test sameCompanionCardsStaySerial() passed after 0.265 seconds.
+◇ Test distinctCompanionsRunConcurrently() started.
+✔ Test distinctCompanionsRunConcurrently() passed after 0.312 seconds.
+◇ Test mixedGatingDispatchesEagerly() started.
+✔ Test mixedGatingDispatchesEagerly() passed after 0.344 seconds.
+◇ Test busyCompanionSkippedNotStarved() started.
+✔ Test busyCompanionSkippedNotStarved() passed after 0.340 seconds.
+◇ Test cancelDuringConcurrentRunsTerminalizesAll() started.
+✔ Test cancelDuringConcurrentRunsTerminalizesAll() passed after 0.378 seconds.
+◇ Test reconcileIsIdempotent() started.
+✔ Test reconcileIsIdempotent() passed after 0.179 seconds.
+◇ Test cancelMissionTerminalizesAndFails() started.
+✔ Test cancelMissionTerminalizesAndFails() passed after 0.093 seconds.
+◇ Test cancelMissionDoesNotDispatchReadyCardDuringRunnerShutdown() started.
+✔ Test cancelMissionDoesNotDispatchReadyCardDuringRunnerShutdown() passed after 0.295 seconds.
+◇ Test cancelIsNoopWhenTerminal() started.
+✔ Test cancelIsNoopWhenTerminal() passed after 0.079 seconds.
+◇ Test missingAssigneeBlocksReadyCard() started.
+✔ Test missingAssigneeBlocksReadyCard() passed after 0.077 seconds.
+◇ Test startupProposalHealingFailureIsPersistedAndEmitted() started.
+✔ Test startupProposalHealingFailureIsPersistedAndEmitted() passed after 0.072 seconds.
+◇ Test approvalAnswerCreatesGrantAndStartupWithoutWorkflowFailsClosed() started.
+✔ Test approvalAnswerCreatesGrantAndStartupWithoutWorkflowFailsClosed() passed after 0.098 seconds.
+◇ Test retryBlockedCardRedispatches() started.
+✔ Test retryBlockedCardRedispatches() passed after 0.184 seconds.
+◇ Test closeoutAcceptsFromDelivering() started.
+✔ Test closeoutAcceptsFromDelivering() passed after 0.093 seconds.
+◇ Test closeoutThrowsWhenNotDelivering() started.
+✔ Test closeoutThrowsWhenNotDelivering() passed after 0.085 seconds.
+◇ Test closeoutDistillsFallbackNoteOnProviderFailure() started.
+✔ Test closeoutDistillsFallbackNoteOnProviderFailure() passed after 0.104 seconds.
+◇ Test closeoutDistillsLLMNoteWhenParseable() started.
+✔ Test closeoutDistillsLLMNoteWhenParseable() passed after 0.113 seconds.
+◇ Test closeoutDistillsCoworkNoteWithMissionGoalPrefix() started.
+✔ Test closeoutDistillsCoworkNoteWithMissionGoalPrefix() passed after 0.113 seconds.
+◇ Test stalePlannerAfterCancelCannotWriteTokensOrCards() started.
+✔ Test stalePlannerAfterCancelCannotWriteTokensOrCards() passed after 0.111 seconds.
+◇ Test missingOrCorruptKernelControlFailsPlanningClosed() started.
+✔ Test missingOrCorruptKernelControlFailsPlanningClosed() passed after 0.220 seconds.
+◇ Test shutdownReportSortsUniqueUncooperativeWorkIds() started.
+✔ Test shutdownReportSortsUniqueUncooperativeWorkIds() passed after 0.136 seconds.
+◇ Test providerReturningAfterShutdownCannotCommit() started.
+✔ Test providerReturningAfterShutdownCannotCommit() passed after 0.135 seconds.
+◇ Test shutdownRacingTerminalProposalHasOneActorSerializedWinner() started.
+✔ Test shutdownRacingTerminalProposalHasOneActorSerializedWinner() passed after 0.109 seconds.
+◇ Test nextProcessAdoptsShutdownRowAndCompletesExactlyOnce() started.
+✔ Test nextProcessAdoptsShutdownRowAndCompletesExactlyOnce() passed after 0.152 seconds.
+◇ Test restartAdoptsPlanningWorkAndCreatesCardsOnce() started.
+✔ Test restartAdoptsPlanningWorkAndCreatesCardsOnce() passed after 0.119 seconds.
+◇ Test p1f1_076OrchestratorSelectsByRequiredCapabilitiesNotProfileKind() started.
+✔ Test p1f1_076OrchestratorSelectsByRequiredCapabilitiesNotProfileKind() passed after 1.944 seconds.
+◇ Suite P1DOutcomeContractTests started.
+◇ Test outcomeContractMigrationRemainsPresentUnderV17Head() started.
+✔ Test outcomeContractMigrationRemainsPresentUnderV17Head() passed after 0.088 seconds.
+◇ Test outcomeContractMigrationReplaysFreshAndEveryPredecessorTwice() started.
+✔ Test outcomeContractMigrationReplaysFreshAndEveryPredecessorTwice() passed after 0.377 seconds.
+◇ Test outcomeContractMigrationRollbackRestoresV14Snapshot() started.
+✔ Test outcomeContractMigrationRollbackRestoresV14Snapshot() passed after 0.034 seconds.
+◇ Test v15AppendOnlyCarriersRejectNoopUpdateAndDelete() started.
+✔ Test v15AppendOnlyCarriersRejectNoopUpdateAndDelete() passed after 0.115 seconds.
+◇ Test v15RedactionShapesAndPolicySchemaAreExact() started.
+✔ Test v15RedactionShapesAndPolicySchemaAreExact() passed after 0.092 seconds.
+◇ Test v15RawGrantAndReceiptConstraintMatricesFailClosed() started.
+✔ Test v15RawGrantAndReceiptConstraintMatricesFailClosed() passed after 0.087 seconds.
+◇ Test contractContentAndRequirementHashesUseCanonicalJSONV1() started.
+✔ Test contractContentAndRequirementHashesUseCanonicalJSONV1() passed after 0.001 seconds.
+◇ Test draftCreationIsImmutableIdempotentAndConflictDetecting() started.
+✔ Test draftCreationIsImmutableIdempotentAndConflictDetecting() passed after 0.104 seconds.
+◇ Test draftRevisionCreatesNextVersionAndCancelsOnlyPriorDraft() started.
+✔ Test draftRevisionCreatesNextVersionAndCancelsOnlyPriorDraft() passed after 0.113 seconds.
+◇ Test activationRequiresExactConfirmedUnderstandingAndSnapshotRows() started.
+✔ Test activationRequiresExactConfirmedUnderstandingAndSnapshotRows() passed after 0.104 seconds.
+◇ Test codingActivationRequiresDeterministicRequirement() started.
+✔ Test codingActivationRequiresDeterministicRequirement() passed after 0.094 seconds.
+◇ Test activationSupersedesPriorActiveOnlyAfterNewVersionValidates() started.
+✔ Test activationSupersedesPriorActiveOnlyAfterNewVersionValidates() passed after 0.124 seconds.
+◇ Test contractFulfillAndCancelAllowOnlyFrozenTransitions() started.
+✔ Test contractFulfillAndCancelAllowOnlyFrozenTransitions() passed after 0.125 seconds.
+◇ Test goalReadyActivationRequiresActiveExactContractAndSameGoal() started.
+✔ Test goalReadyActivationRequiresActiveExactContractAndSameGoal() passed after 0.103 seconds.
+◇ Test goalPauseResumeAchieveAndSystemReopenAreExhaustive() started.
+✔ Test goalPauseResumeAchieveAndSystemReopenAreExhaustive() passed after 0.119 seconds.
+◇ Test goalMissionLinkIsCampExactCASAndCarriesContractRef() started.
+✔ Test goalMissionLinkIsCampExactCASAndCarriesContractRef() passed after 0.119 seconds.
+◇ Test p1CReadyBehaviorRemainsValidWithoutOutcomeContract() started.
+✔ Test p1CReadyBehaviorRemainsValidWithoutOutcomeContract() passed after 0.083 seconds.
+◇ Test everyP1DContractAndGoalCommandRejectsWrongActorBeforeSQL() started.
+✔ Test everyP1DContractAndGoalCommandRejectsWrongActorBeforeSQL() passed after 0.099 seconds.
+✔ Suite P1DOutcomeContractTests passed after 1.990 seconds.
+◇ Suite P1EContractIntegrationTests started.
+◇ Test p1e32P1DInvalidationAndMemoryRollbackAtomically() started.
+✔ Test p1e32P1DInvalidationAndMemoryRollbackAtomically() passed after 0.159 seconds.
+✔ Suite P1EContractIntegrationTests passed after 0.159 seconds.
+◇ Test validProposalPersistsCardsWithKernelIds() started.
+✔ Test validProposalPersistsCardsWithKernelIds() passed after 0.101 seconds.
+◇ Test plannerForcesToolChoice() started.
+✔ Test plannerForcesToolChoice() passed after 0.001 seconds.
+◇ Test invalidProposalRetriesOnceThenFallsBack() started.
+✔ Test invalidProposalRetriesOnceThenFallsBack() passed after 0.094 seconds.
+◇ Test noToolCallFallsBack() started.
+✔ Test noToolCallFallsBack() passed after 0.001 seconds.
+◇ Test doublePlanIsNoopWithAuditEvent() started.
+✔ Test doublePlanIsNoopWithAuditEvent() passed after 0.103 seconds.
+◇ Test planAfterCancelIsNoop() started.
+✔ Test planAfterCancelIsNoop() passed after 0.094 seconds.
+◇ Test validateRejectsBadShapes() started.
+✔ Test validateRejectsBadShapes() passed after 0.001 seconds.
+◇ Test plannerUserPromptCarriesCampNotes() started.
+✔ Test plannerUserPromptCarriesCampNotes() passed after 0.001 seconds.
+◇ Test plannerUserPromptOmitsEmptyCampNotes() started.
+✔ Test plannerUserPromptOmitsEmptyCampNotes() passed after 0.001 seconds.
+◇ Test providerFailureIsNotConvertedToFallbackCard() started.
+✔ Test providerFailureIsNotConvertedToFallbackCard() passed after 0.001 seconds.
+◇ Test planningContractInvalidDoesNotFallback() started.
+✔ Test planningContractInvalidDoesNotFallback() passed after 0.001 seconds.
+◇ Test plannerRetriesOnlySchemaCorrectionAndPreservesFirstTurnUsage() started.
+✔ Test plannerRetriesOnlySchemaCorrectionAndPreservesFirstTurnUsage() passed after 0.001 seconds.
+◇ Test durablePlannerMapsProviderFailuresToStableTypedFailures() started.
+✔ Test durablePlannerMapsProviderFailuresToStableTypedFailures() passed after 0.001 seconds.
+◇ Test durablePlannerPreservesCancellationError() started.
+✔ Test durablePlannerPreservesCancellationError() passed after 0.001 seconds.
+◇ Test plannerAccumulatesUsageAcrossTurns() started.
+✔ Test plannerAccumulatesUsageAcrossTurns() passed after 0.001 seconds.
+◇ Test plannerFallbackStillCarriesSpentUsage() started.
+✔ Test plannerFallbackStillCarriesSpentUsage() passed after 0.001 seconds.
+◇ Test recordPlanningTokensUpdatesSpentAndAppendsEvent() started.
+✔ Test recordPlanningTokensUpdatesSpentAndAppendsEvent() passed after 0.095 seconds.
+◇ Test recordPlanningTokensSaturatesInsteadOfOverflowing() started.
+✔ Test recordPlanningTokensSaturatesInsteadOfOverflowing() passed after 0.096 seconds.
+◇ Test runtimeProfileMigrationV10ReplaysFromV9AndPreservesCompanions() started.
+✔ Test runtimeProfileMigrationV10ReplaysFromV9AndPreservesCompanions() passed after 0.094 seconds.
+◇ Test runtimeProfileMigrationV11AllowsCliKindsAndPreservesExistingRows() started.
+✔ Test runtimeProfileMigrationV11AllowsCliKindsAndPreservesExistingRows() passed after 0.093 seconds.
+◇ Test runtimeProfileBootstrapSeedsAPIOnly() started.
+✔ Test runtimeProfileBootstrapSeedsAPIOnly() passed after 0.096 seconds.
+◇ Test runtimeProfileBootstrapSeedsOAuthOnly() started.
+✔ Test runtimeProfileBootstrapSeedsOAuthOnly() passed after 0.094 seconds.
+◇ Test runtimeProfileBootstrapSeedsBothAndHonorsPreferredSource() started.
+✔ Test runtimeProfileBootstrapSeedsBothAndHonorsPreferredSource() passed after 0.094 seconds.
+◇ Test runtimeProfileBootstrapOAuthDefaultReconcilesLegacyModels() started.
+✔ Test runtimeProfileBootstrapOAuthDefaultReconcilesLegacyModels() passed after 0.088 seconds.
+◇ Test runtimeProfileBootstrapSeedsEmptyAnthropicProfileWhenNoCredentials() started.
+✔ Test runtimeProfileBootstrapSeedsEmptyAnthropicProfileWhenNoCredentials() passed after 0.090 seconds.
+◇ Test runtimeProfileBootstrapIsIdempotentAndCopiesLegacyDefaultsOnce() started.
+✔ Test runtimeProfileBootstrapIsIdempotentAndCopiesLegacyDefaultsOnce() passed after 0.096 seconds.
+◇ Test runtimeProfileStoreSetDefaultMaintainsSingleDefault() started.
+✔ Test runtimeProfileStoreSetDefaultMaintainsSingleDefault() passed after 0.091 seconds.
+◇ Test runtimeProfileStoreDeleteGuardsDefaultAndReferencedProfiles() started.
+✔ Test runtimeProfileStoreDeleteGuardsDefaultAndReferencedProfiles() passed after 0.088 seconds.
+◇ Test reconciliationReportsPinnedModelsOutsideTrustedCatalog() started.
+✔ Test reconciliationReportsPinnedModelsOutsideTrustedCatalog() passed after 0.103 seconds.
+◇ Test reconciliationReturnsEmptyForGatewayProfiles() started.
+✔ Test reconciliationReturnsEmptyForGatewayProfiles() passed after 0.091 seconds.
+◇ Test reconciliationSkipsModelJudgementForCliProfiles() started.
+✔ Test reconciliationSkipsModelJudgementForCliProfiles() passed after 0.094 seconds.
+◇ Suite RuntimeProfileCatalogTests started.
+◇ Test catalogRefreshParsesModelsAndCachesForOfficialProfiles() started.
+✔ Test catalogRefreshParsesModelsAndCachesForOfficialProfiles() passed after 0.002 seconds.
+◇ Test catalogRefreshFailureKeepsPreviousCache() started.
+✔ Test catalogRefreshFailureKeepsPreviousCache() passed after 0.003 seconds.
+◇ Test cliProfilesUseStaticPlaceholderCatalog() started.
+✔ Test cliProfilesUseStaticPlaceholderCatalog() passed after 0.001 seconds.
+◇ Test oauthCatalogIgnoresManualModels() started.
+✔ Test oauthCatalogIgnoresManualModels() passed after 0.001 seconds.
+✔ Suite RuntimeProfileCatalogTests passed after 0.008 seconds.
+◇ Test orchestratorPassesCompanionIdToProviderFactory() started.
+✔ Test orchestratorPassesCompanionIdToProviderFactory() passed after 1.255 seconds.
+◇ Test capturedProfileAndModelDoNotDriftAfterDefaultChanges() started.
+✔ Test capturedProfileAndModelDoNotDriftAfterDefaultChanges() passed after 0.001 seconds.
+◇ Test cliPlanningProfileFailsPreflightWithoutMissionWrites() started.
+✔ Test cliPlanningProfileFailsPreflightWithoutMissionWrites() passed after 0.001 seconds.
+◇ Test oauthPlanningUsesStaticCatalogAndBothCredentialAccounts() started.
+✔ Test oauthPlanningUsesStaticCatalogAndBothCredentialAccounts() passed after 0.001 seconds.
+◇ Test officialAPIPlanningUsesCachedPlusManualCatalog() started.
+✔ Test officialAPIPlanningUsesCachedPlusManualCatalog() passed after 0.001 seconds.
+◇ Test customAPIPlanningAcceptsProfileScopedManualModel() started.
+✔ Test customAPIPlanningAcceptsProfileScopedManualModel() passed after 0.001 seconds.
+◇ Test planningPreflightRejectsMissingCatalogWithoutWrites() started.
+✔ Test planningPreflightRejectsMissingCatalogWithoutWrites() passed after 0.001 seconds.
+◇ Test planningPreflightRejectsMissingPrimaryCredentialWithoutWrites() started.
+✔ Test planningPreflightRejectsMissingPrimaryCredentialWithoutWrites() passed after 0.001 seconds.
+◇ Test oauthPlanningRejectsMissingAccountIdWithoutWrites() started.
+✔ Test oauthPlanningRejectsMissingAccountIdWithoutWrites() passed after 0.001 seconds.
+◇ Test planningCredentialReadFailureIsTypedAndDoesNotWrite() started.
+✔ Test planningCredentialReadFailureIsTypedAndDoesNotWrite() passed after 0.001 seconds.
+◇ Test planningInvalidEndpointIsTypedAndDoesNotWrite() started.
+✔ Test planningInvalidEndpointIsTypedAndDoesNotWrite() passed after 0.001 seconds.
+◇ Suite P1ESQLiteMigrationCompatibilityTests started.
+◇ Test p1e14LiteralSQLite351V16Fence() started.
+✔ Test p1e14LiteralSQLite351V16Fence() passed after 0.100 seconds.
+◇ Test p1e15LiteralSQLite352V16Fence() started.
+✔ Test p1e15LiteralSQLite352V16Fence() passed after 0.090 seconds.
+◇ Test p1e16RealSQLiteDualLaneV16Contract() started.
+✔ Test p1e16RealSQLiteDualLaneV16Contract() passed after 0.007 seconds.
+✔ Suite P1ESQLiteMigrationCompatibilityTests passed after 0.199 seconds.
+◇ Suite P1F1SQLiteMigrationCompatibilityTests started.
+◇ Test p1f1_001V17CanonicalLiteralMatchesStageAuthority() started.
+✔ Test p1f1_001V17CanonicalLiteralMatchesStageAuthority() passed after 0.013 seconds.
+◇ Test p1f1_002V17FreshAndEveryPredecessorReplayToExactCheckpoint() started.
+✔ Test p1f1_002V17FreshAndEveryPredecessorReplayToExactCheckpoint() passed after 1.529 seconds.
+◇ Test p1f1_003V17LegacyArtifactsBackfillUnresolvedWithoutFilesystem() started.
+✔ Test p1f1_003V17LegacyArtifactsBackfillUnresolvedWithoutFilesystem() passed after 0.082 seconds.
+◇ Test p1f1_004V17LegacyOriginCountCampAndAttestationHashes() started.
+✔ Test p1f1_004V17LegacyOriginCountCampAndAttestationHashes() passed after 0.079 seconds.
+◇ Test p1f1_005V17BackfillPhaseBarrierFailureRollsBack() started.
+✔ Test p1f1_005V17BackfillPhaseBarrierFailureRollsBack() passed after 0.096 seconds.
+◇ Test p1f1_006V17EngineExecutionConstraintMatrix() started.
+✔ Test p1f1_006V17EngineExecutionConstraintMatrix() passed after 0.092 seconds.
+◇ Test p1f1_007V17EngineSessionProposalAndArtifactConstraintMatrix() started.
+✔ Test p1f1_007V17EngineSessionProposalAndArtifactConstraintMatrix() passed after 0.081 seconds.
+◇ Test p1f1_008V17OriginConstraintAndRedactionMatrix() started.
+✔ Test p1f1_008V17OriginConstraintAndRedactionMatrix() passed after 0.087 seconds.
+◇ Test p1f1_009V17DiscussionAttentionGrowthConstraintMatrix() started.
+✔ Test p1f1_009V17DiscussionAttentionGrowthConstraintMatrix() passed after 0.278 seconds.
+◇ Test p1f1_010V17ProposalArtifactRedactionGuardMatrix() started.
+✔ Test p1f1_010V17ProposalArtifactRedactionGuardMatrix() passed after 0.095 seconds.
+◇ Test p1f1_011V17DiscussionTurnRedactionGuardMatrix() started.
+✔ Test p1f1_011V17DiscussionTurnRedactionGuardMatrix() passed after 0.096 seconds.
+◇ Test p1f1_012V17RejectDeleteAndAppendOnlyGuardMatrix() started.
+✔ Test p1f1_012V17RejectDeleteAndAppendOnlyGuardMatrix() passed after 0.097 seconds.
+◇ Test p1f1_013V17ProposalBlobCleanupGraphForeignKeys() started.
+✔ Test p1f1_013V17ProposalBlobCleanupGraphForeignKeys() passed after 0.092 seconds.
+◇ Test p1f1_014V17TriggerOrdinalFailureRollsBackV16Snapshot() started.
+✔ Test p1f1_014V17TriggerOrdinalFailureRollsBackV16Snapshot() passed after 1.751 seconds.
+◇ Test p1f1_015V17RepeatedMigrateIsByteStable() started.
+✔ Test p1f1_015V17RepeatedMigrateIsByteStable() passed after 0.124 seconds.
+◇ Test p1f1_016V17DualSQLiteCarrierSentinels() started.
+✔ Test p1f1_016V17DualSQLiteCarrierSentinels() passed after 0.176 seconds.
+✔ Suite P1F1SQLiteMigrationCompatibilityTests passed after 4.778 seconds.
+◇ Test parsesEventDataPairs() started.
+✔ Test parsesEventDataPairs() passed after 0.001 seconds.
+◇ Test ignoresCommentsAndPings() started.
+✔ Test ignoresCommentsAndPings() passed after 0.001 seconds.
+◇ Test scheduleMathDailyNextFireSameDay() started.
+✔ Test scheduleMathDailyNextFireSameDay() passed after 0.001 seconds.
+◇ Test scheduleMathDailyNextFireMovesToTomorrowAfterSlot() started.
+✔ Test scheduleMathDailyNextFireMovesToTomorrowAfterSlot() passed after 0.001 seconds.
+◇ Test scheduleMathWeeklyNextFireSameWeek() started.
+✔ Test scheduleMathWeeklyNextFireSameWeek() passed after 0.001 seconds.
+◇ Test scheduleMathWeeklyNextFireWrapsAcrossWeek() started.
+✔ Test scheduleMathWeeklyNextFireWrapsAcrossWeek() passed after 0.001 seconds.
+◇ Test scheduleMathSpringForwardUsesNextValidLocalTime() started.
+✔ Test scheduleMathSpringForwardUsesNextValidLocalTime() passed after 0.001 seconds.
+◇ Test scheduleMathFallBackChoosesFirstRepeatedLocalTime() started.
+✔ Test scheduleMathFallBackChoosesFirstRepeatedLocalTime() passed after 0.001 seconds.
+◇ Test scheduleMathPreviousFireIsInclusive() started.
+✔ Test scheduleMathPreviousFireIsInclusive() passed after 0.001 seconds.
+◇ Test scheduleMathMisfireDetectsPreviousUnfiredSlot() started.
+✔ Test scheduleMathMisfireDetectsPreviousUnfiredSlot() passed after 0.001 seconds.
+◇ Test scheduleMathMisfireIgnoresScheduleCreatedAfterSlot() started.
+✔ Test scheduleMathMisfireIgnoresScheduleCreatedAfterSlot() passed after 0.001 seconds.
+◇ Test scheduleMathSameSlotDedupeCoversDailyAndWeekly() started.
+✔ Test scheduleMathSameSlotDedupeCoversDailyAndWeekly() passed after 0.001 seconds.
+◇ Test scheduleFireDSTSlotKeysAreStable() started.
+✔ Test scheduleFireDSTSlotKeysAreStable() passed after 0.001 seconds.
+◇ Test scheduleValidationFailureAdvancesEvaluationCursorButNotLastFiredAt() started.
+✔ Test scheduleValidationFailureAdvancesEvaluationCursorButNotLastFiredAt() passed after 2.947 seconds.
+◇ Test failedSlotDoesNotSpinOrAutoRetryAfterConfigurationFix() started.
+✔ Test failedSlotDoesNotSpinOrAutoRetryAfterConfigurationFix() passed after 0.553 seconds.
+◇ Test explicitReplayUsesNewIdempotencyKeyAndDoesNotMoveCursor() started.
+✔ Test explicitReplayUsesNewIdempotencyKeyAndDoesNotMoveCursor() passed after 0.217 seconds.
+◇ Test replaySamePayloadReturnsSameFireButConflictFails() started.
+✔ Test replaySamePayloadReturnsSameFireButConflictFails() passed after 1.638 seconds.
+◇ Test scheduledTemplateValidationRejectsMissingBudgetAtSave() started.
+✔ Test scheduledTemplateValidationRejectsMissingBudgetAtSave() passed after 0.080 seconds.
+◇ Test scheduledTemplateValidationRejectsFreeAutonomyAtSaveAndFireTime() started.
+✔ Test scheduledTemplateValidationRejectsFreeAutonomyAtSaveAndFireTime() passed after 0.082 seconds.
+◇ Test evercampMigrationV9ReplaysFromV8() started.
+✔ Test evercampMigrationV9ReplaysFromV8() passed after 0.085 seconds.
+◇ Test evercampMigrationV9AdoptsValidatedLegacyV8Tables() started.
+✔ Test evercampMigrationV9AdoptsValidatedLegacyV8Tables() passed after 0.097 seconds.
+◇ Test scheduleCRUDAndClaimDedupe() started.
+✔ Test scheduleCRUDAndClaimDedupe() passed after 0.099 seconds.
+◇ Test scheduleExtremeFiniteLastFiredAtPersistsNumericallyReloadsAndDedupes() started.
+✔ Test scheduleExtremeFiniteLastFiredAtPersistsNumericallyReloadsAndDedupes() passed after 0.092 seconds.
+◇ Test scheduleLegacyTextLastFiredAtRemainsReadable() started.
+✔ Test scheduleLegacyTextLastFiredAtRemainsReadable() passed after 0.093 seconds.
+◇ Test scheduleDateEncodingChangesOnlyLastFiredAt() started.
+✔ Test scheduleDateEncodingChangesOnlyLastFiredAt() passed after 0.090 seconds.
+◇ Test guideBroadcastLandsInGuideThread() started.
+✔ Test guideBroadcastLandsInGuideThread() passed after 0.090 seconds.
+◇ Test scheduleFiredEventMarksScheduledOrigin() started.
+✔ Test scheduleFiredEventMarksScheduledOrigin() passed after 0.105 seconds.
+◇ Test shellRunsCommandInWorkspaceAndReportsExitCode() started.
+✔ Test shellRunsCommandInWorkspaceAndReportsExitCode() passed after 0.052 seconds.
+◇ Test shellNonzeroExitIsResultNotError() started.
+✔ Test shellNonzeroExitIsResultNotError() passed after 0.054 seconds.
+◇ Test shellTimeoutTerminatesProcess() started.
+✔ Test shellTimeoutTerminatesProcess() passed after 0.624 seconds.
+◇ Test shellOutputTruncatedByteSafe() started.
+✔ Test shellOutputTruncatedByteSafe() passed after 0.055 seconds.
+◇ Test shellRejectsEmptyCommand() started.
+✔ Test shellRejectsEmptyCommand() passed after 0.001 seconds.
+◇ Test shellRegistryTerminateAllKillsRunning() started.
+✔ Test shellRegistryTerminateAllKillsRunning() passed after 0.053 seconds.
+◇ Test loginShellEnvironmentCapturesPath() started.
+✔ Test loginShellEnvironmentCapturesPath() passed after 0.001 seconds.
+◇ Test dangerousShellSuspendsUnderStandardAutonomy() started.
+✔ Test dangerousShellSuspendsUnderStandardAutonomy() passed after 0.111 seconds.
+◇ Test packageBuilds() started.
+✔ Test packageBuilds() passed after 0.001 seconds.
+◇ Test keychainRoundTrip() started.
+✔ Test keychainRoundTrip() passed after 0.058 seconds.
+◇ Test stateDirectoryLockRejectsSecondFileDescriptionAndReleases() started.
+✔ Test stateDirectoryLockRejectsSecondFileDescriptionAndReleases() passed after 0.001 seconds.
+◇ Test coalescerBatchesDeltas() started.
+✔ Test coalescerBatchesDeltas() passed after 0.124 seconds.
+◇ Test coalescerPreservesOrderUnderReentrancy() started.
+✔ Test coalescerPreservesOrderUnderReentrancy() passed after 0.261 seconds.
+◇ Test coalescerDiscardDropsPendingDeltas() started.
+✔ Test coalescerDiscardDropsPendingDeltas() passed after 0.121 seconds.
+◇ Test legacyEmptyArrayMeansFullBuiltins() started.
+✔ Test legacyEmptyArrayMeansFullBuiltins() passed after 0.001 seconds.
+◇ Test legacyExplicitArrayIntersectsBuiltins() started.
+✔ Test legacyExplicitArrayIntersectsBuiltins() passed after 0.001 seconds.
+◇ Test explicitV2AllowListIsLiteral() started.
+✔ Test explicitV2AllowListIsLiteral() passed after 0.001 seconds.
+◇ Test explicitV2EmptyAllowMeansNoCapabilities() started.
+✔ Test explicitV2EmptyAllowMeansNoCapabilities() passed after 0.001 seconds.
+◇ Test garbageJsonFailsClosedWithFlag() started.
+✔ Test garbageJsonFailsClosedWithFlag() passed after 0.001 seconds.
+◇ Test unsupportedObjectVersionFailsClosedWithFlag() started.
+✔ Test unsupportedObjectVersionFailsClosedWithFlag() passed after 0.001 seconds.
+◇ Test malformedV2ObjectFailsClosedWithFlag() started.
+✔ Test malformedV2ObjectFailsClosedWithFlag() passed after 0.001 seconds.
+◇ Test boardToolsAreNeverDeniable() started.
+✔ Test boardToolsAreNeverDeniable() passed after 0.001 seconds.
+◇ Test parseFailureRetainsOnlyBoardTools() started.
+✔ Test parseFailureRetainsOnlyBoardTools() passed after 0.001 seconds.
+◇ Test explicitJsonRoundTripsAndIsDeterministic() started.
+✔ Test explicitJsonRoundTripsAndIsDeterministic() passed after 0.001 seconds.
+◇ Test agentToolDefsComplete() started.
+✔ Test agentToolDefsComplete() passed after 0.001 seconds.
+◇ Test guideToolDefsFixedTrio() started.
+✔ Test guideToolDefsFixedTrio() passed after 0.001 seconds.
+◇ Test writeFileSchemaHasOptionalAppend() started.
+✔ Test writeFileSchemaHasOptionalAppend() passed after 0.001 seconds.
+◇ Test unknownToolReturnsError() started.
+✔ Test unknownToolReturnsError() passed after 0.001 seconds.
+◇ Test closureToolHandlerDispatchesThroughExecutor() started.
+✔ Test closureToolHandlerDispatchesThroughExecutor() passed after 0.001 seconds.
+◇ Test accumulatesTextAndToolUse() started.
+✔ Test accumulatesTextAndToolUse() passed after 0.001 seconds.
+◇ Test emptyToolInputBecomesEmptyObject() started.
+✔ Test emptyToolInputBecomesEmptyObject() passed after 0.001 seconds.
+◇ Test apiErrorEventThrows() started.
+✔ Test apiErrorEventThrows() passed after 0.001 seconds.
+◇ Test malformedToolInputThrows() started.
+✔ Test malformedToolInputThrows() passed after 0.001 seconds.
+◇ Test unknownBlockDeltaThrows() started.
+✔ Test unknownBlockDeltaThrows() passed after 0.001 seconds.
+◇ Test messageStopWithUnfinishedBlocksThrows() started.
+✔ Test messageStopWithUnfinishedBlocksThrows() passed after 0.001 seconds.
+◇ Suite P1DOutcomeVerificationTests started.
+◇ Test initialOutcomeCreatesOnlyV1FromLinkedExecutingOrDeliveringMission() started.
+✔ Test initialOutcomeCreatesOnlyV1FromLinkedExecutingOrDeliveringMission() passed after 0.563 seconds.
+◇ Test newOutcomeVersionAcceptsOnlyFiveFrozenSourcesAndIncrementsOnce() started.
+✔ Test newOutcomeVersionAcceptsOnlyFiveFrozenSourcesAndIncrementsOnce() passed after 1.207 seconds.
+◇ Test initialAndSubsequentOutcomeKeysCannotAlias() started.
+✔ Test initialAndSubsequentOutcomeKeysCannotAlias() passed after 0.116 seconds.
+◇ Test everyOutcomeTransitionPairMatchesCanonicalStateTable() started.
+✔ Test everyOutcomeTransitionPairMatchesCanonicalStateTable() passed after 0.001 seconds.
+◇ Test outcomeManifestOrContractDriftRequiresNewVersionAndInvalidatesOldHeads() started.
+✔ Test outcomeManifestOrContractDriftRequiresNewVersionAndInvalidatesOldHeads() passed after 0.138 seconds.
+◇ Test recordVerificationRequiresExactContractRequirementOutcomeHashes() started.
+✔ Test recordVerificationRequiresExactContractRequirementOutcomeHashes() passed after 0.118 seconds.
+◇ Test duplicateVerificationReplaysAndSupersedeCASRejectsStaleHead() started.
+✔ Test duplicateVerificationReplaysAndSupersedeCASRejectsStaleHead() passed after 0.142 seconds.
+◇ Test allGroupRequiresEveryCurrentPass() started.
+✔ Test allGroupRequiresEveryCurrentPass() passed after 0.153 seconds.
+◇ Test anyGroupAllowsOneAlternativeButEveryGroupRemainsRequired() started.
+✔ Test anyGroupAllowsOneAlternativeButEveryGroupRemainsRequired() passed after 0.153 seconds.
+◇ Test failedBlockedMissingAndInvalidHeadsReduceExactly() started.
+✔ Test failedBlockedMissingAndInvalidHeadsReduceExactly() passed after 0.502 seconds.
+◇ Test currentInvalidationReopensVerifiedDeliveredAndAcceptedExactly() started.
+✔ Test currentInvalidationReopensVerifiedDeliveredAndAcceptedExactly() passed after 0.412 seconds.
+◇ Test cowVerifierCannotEqualProducerAndModelOnlyCodingNeverPasses() started.
+✔ Test cowVerifierCannotEqualProducerAndModelOnlyCodingNeverPasses() passed after 0.137 seconds.
+◇ Test commandExitVerifierPassesOnlyZeroExitWithCompleteEvidence() started.
+✔ Test commandExitVerifierPassesOnlyZeroExitWithCompleteEvidence() passed after 0.001 seconds.
+◇ Test commandExitVerifierTimeoutNonzeroMissingEnvironmentAndParseFailClosed() started.
+✔ Test commandExitVerifierTimeoutNonzeroMissingEnvironmentAndParseFailClosed() passed after 0.001 seconds.
+◇ Test artifactHashVerifierRejectsMissingUnreadableSymlinkAndHashDrift() started.
+✔ Test artifactHashVerifierRejectsMissingUnreadableSymlinkAndHashDrift() passed after 0.001 seconds.
+◇ Test deterministicVerifiersExposeNoWorkspaceWriteCapability() started.
+✔ Test deterministicVerifiersExposeNoWorkspaceWriteCapability() passed after 0.001 seconds.
+◇ Test deliveryOnlySystemDeliveryV1CanMarkDelivered() started.
+✔ Test deliveryOnlySystemDeliveryV1CanMarkDelivered() passed after 0.138 seconds.
+◇ Test deliveryRerunsReducerAndManifestReadabilityInSameTransaction() started.
+✔ Test deliveryRerunsReducerAndManifestReadabilityInSameTransaction() passed after 0.135 seconds.
+◇ Test recordNewVersionAppendsSupersededInvalidationsForEveryOldHead() started.
+✔ Test recordNewVersionAppendsSupersededInvalidationsForEveryOldHead() passed after 0.153 seconds.
+◇ Test dependencyInvalidationWritesOneEventAndAllAffectedRowsAtomically() started.
+✔ Test dependencyInvalidationWritesOneEventAndAllAffectedRowsAtomically() passed after 0.177 seconds.
+◇ Test verificationReceiptEventAndOutboxReplayGraphDetectsTampering() started.
+✔ Test verificationReceiptEventAndOutboxReplayGraphDetectsTampering() passed after 0.125 seconds.
+◇ Test concurrentVerificationHeadsHaveOneCASWinner() started.
+✔ Test concurrentVerificationHeadsHaveOneCASWinner() passed after 0.120 seconds.
+✔ Suite P1DOutcomeVerificationTests passed after 4.502 seconds.
+◇ Test fetchesAndStripsHTML() started.
+✔ Test fetchesAndStripsHTML() passed after 0.003 seconds.
+◇ Test rejectsNonHTTPS() started.
+✔ Test rejectsNonHTTPS() passed after 0.001 seconds.
+◇ Test truncatesOnUTF8ByteBoundary() started.
+✔ Test truncatesOnUTF8ByteBoundary() passed after 0.002 seconds.
+◇ Test rejectsRedirectDowngradeToHTTP() started.
+✔ Test rejectsRedirectDowngradeToHTTP() passed after 0.001 seconds.
+◇ Test fetchTimeoutReturnsError() started.
+✔ Test fetchTimeoutReturnsError() passed after 0.001 seconds.
+◇ Test prefersArticleContentOverChrome() started.
+✔ Test prefersArticleContentOverChrome() passed after 0.001 seconds.
+◇ Test fetchResultWrappedAsExternalContent() started.
+✔ Test fetchResultWrappedAsExternalContent() passed after 0.001 seconds.
+◇ Test webSearchRendersResultsWithSourceMarker() started.
+✔ Test webSearchRendersResultsWithSourceMarker() passed after 0.001 seconds.
+◇ Test webSearchNon200ReturnsError() started.
+✔ Test webSearchNon200ReturnsError() passed after 0.001 seconds.
+◇ Test webSearchTimeoutReturnsError() started.
+✔ Test webSearchTimeoutReturnsError() passed after 0.001 seconds.
+◇ Test webSearchRejectsEmptyQuery() started.
+✔ Test webSearchRejectsEmptyQuery() passed after 0.001 seconds.
+◇ Test selectedWebSearchRequiresCredentialDuringPreparation() started.
+✔ Test selectedWebSearchRequiresCredentialDuringPreparation() passed after 0.215 seconds.
+✔ Test run with 1082 tests in 31 suites passed after 226.512 seconds.

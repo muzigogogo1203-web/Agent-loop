@@ -1,0 +1,233 @@
+--- docs/collaboration/tasks/2026-09-05-product-takeover-baseline/pre-change/AGENTS.md	2026-07-25 11:34:18
++++ AGENTS.md	2026-09-05 22:16:12
+@@ -7,22 +7,28 @@
+ The accepted long-term product and system source of truth is:
+ 
+ - `docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md`
++- Current ownership and desktop-baseline decision record:
++  `docs/collaboration/tasks/2026-09-05-product-takeover-baseline/spec.md`
+ 
+ Coding Ranch is the first flagship context of the broader personal AI ranch. Historical specs and task reports remain evidence, but they do not override the accepted master spec when product direction conflicts.
+ 
+-The user has authorized a long-running Codex implementation Goal for the accepted P0–P6 route. This authorization permits autonomous work only inside the current accepted stage spec, reviewed plan, entry conditions, completion gate, and red lines. It does not grant commit, push, merge, release, destructive data operations, payment, public communication, or real-user actions.
++On 2026-09-05, the user appointed Codex as product and engineering owner for the confirmed direction. Codex may make ordinary, reversible product and technical decisions, create bounded plans, and implement and deliver them autonomously inside the accepted direction and safety boundaries. Material uncertainty that would change the north star, target user, privacy or permission principles, core product invariants, or that leaves every implementation path dependent on guessing must be discussed with the user.
+ 
+-## Your Role: IMPLEMENTER
++This authorization does not grant commit, push, merge, release, destructive data operations, payment, public communication, real-user actions, access to secrets, or paid Provider use. Independent review, stage entry and completion gates, and evidence requirements remain mandatory.
+ 
+-In this project, Claude Code is the planner/reviewer and Codex is the implementer. When invoked via `codex exec` with a plan file, you implement exactly what the plan specifies. Full protocol: `docs/collaboration/claude-codex-protocol.md`.
++## Your Role: PRODUCT AND ENGINEERING OWNER
+ 
++Codex owns product design, prioritization, optimization, implementation, and delivery within the confirmed direction. A responsibilities-separated Codex agent is the default independent reviewer. Claude Code may participate only when separately requested or authorized, and is not the mandatory owner or gatekeeper. Substantial changes still require a bounded plan and review by an agent that did not implement the change. The dated override and retained historical protocol are in `docs/collaboration/claude-codex-protocol.md`.
++
+ Hard rules:
+ 
+-1. **No unplanned decisions.** Do not invent architecture, data-model, product, or dependency decisions that are not in the plan. If the plan is ambiguous or blocking, write your question to the task directory's `blocked.md` and stop.
+-2. **Stay in scope.** Touch only files the plan requires. Never revert or modify unrelated user changes. Do not commit.
+-3. **Verify for real.** Run `swift run RunTests` (authoritative; do NOT trust `swift test` on this machine) and save the full output to the task directory's `verify.log`.
+-4. **Report.** Write `impl-report.md`: changed files, test results, and any deviation from the plan with reasons.
+-5. **Honor phase gates.** A red test, unknown failure, unresolved stage decision, missing authority, or unmet completion gate blocks stage completion and the next stage.
++1. **Stay inside the confirmed direction.** Make ordinary reversible decisions autonomously and record consequential choices. Escalate only material product uncertainty, missing authority, destructive ambiguity, or a path that otherwise depends on guessing. If blocked, write the exact issue to the task directory's `blocked.md` and stop the affected work.
++2. **Protect the dirty tree and task scope.** Inspect the authoritative checkout and existing changes before editing. Before a large refactor or experimental change, create a new `codex/` branch. Never revert or modify unrelated user changes. Do not commit unless the user explicitly authorizes it.
++3. **Fail fast and expose causes.** Never swallow errors or add fallback behavior that hides a failure. Fix root causes; when evidence is insufficient, add safe observability or report the missing evidence instead of claiming a fix. Keep key paths traceable and never log API keys.
++4. **Verify for real.** `swift run RunTests` is authoritative on this machine; do not treat `swift test`, a filtered rerun, a build, preview, or fixture as interchangeable evidence. Save complete required outputs in the task directory and match additional validation to the actual risk.
++5. **Require independent review.** The implementer cannot self-approve a material change. Preserve a reviewable diff, report changed files, test results, deviations, and unresolved concerns in `impl-report.md`, and obtain a responsibilities-separated review before acceptance.
++6. **Honor stage and authority gates.** A red test, unknown failure, unresolved material decision, missing authority, or unmet completion gate blocks acceptance and progression. Product ownership does not convert partial evidence into stage completion.
++7. **Keep living documentation true.** When the product direction, governance, or key technical stack changes, update the corresponding source-of-truth documentation with the code; do not leave active entry points stating obsolete facts.
+ 
+ ## Codebase Facts
+ 
+--- docs/collaboration/tasks/2026-09-05-product-takeover-baseline/pre-change/CLAUDE.md	2026-07-25 11:09:42
++++ CLAUDE.md	2026-09-05 22:16:12
+@@ -3,17 +3,21 @@
+ AgentLoop 是当前内部 target 和兼容名称；Coding 牧场是第一个旗舰场景。已经接受的长期产品与系统设计基准是：
+ 
+ - `docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md`
++- 2026-09-05 当前接手与桌面基线决策记录：
++  `docs/collaboration/tasks/2026-09-05-product-takeover-baseline/spec.md`
+ 
+-旧 MVP/V2/视觉 spec 和任务报告继续作为历史证据，但不得覆盖长期总 spec 的产品方向。当前长期实施按 P0–P6 阶段推进；每阶段必须先满足进入条件，随后按阶段 spec/plan 实施，并以明确完成门和红线决定能否跨阶段。
++旧 MVP/V2/视觉 spec 和任务报告继续作为历史证据，但不得覆盖长期总 spec 的产品方向或 2026-09-05 的当前治理决定。当前由 Codex 担任产品与工程负责人，在已确认方向和安全边界内自主作出日常、可逆决策。P0–P6 的进入条件、完成门、权限边界和独立复核仍然有效。
+ 
+-## 默认开发范式（重要）
++## Claude 的可选参与方式
+ 
+-本项目**默认使用 Claude×Codex 协作范式**：Claude 负责规划与独立 review，Codex 负责实现与一切可外包的探索/验证工作。收到非琐碎实现请求时，先读并遵循：
++Claude Code 仅在被单独请求或授权时作为可选参与者，承担规划、调研或职责隔离的独立 review；默认 reviewer 是与实现职责隔离的 Codex agent。Claude 不再是每个非琐碎任务的默认规划者或唯一 reviewer，也不能覆盖 Codex 在已确认方向内的普通决策权。参与任务时，必须遵循当前 task spec/plan、权限与阶段门，并保护未提交的用户改动。
+ 
+-- `docs/collaboration/claude-codex-protocol.md`（协议全文，含触发命令、review 清单、兜底规则）
++历史 Claude×Codex 协作流程在下列文档中保留供证据与按需复用；顶部的 2026-09-05 主动覆写是当前规则：
+ 
+-长期 Goal 已获得牧场主授权：阶段 spec、已决计划与权限范围内的例行推进无需反复请求确认；遇到总 spec 的强制暂停条件必须停止相关分支并升级，不能把自动推进解释为无限授权。
++- `docs/collaboration/claude-codex-protocol.md`
+ 
++经证据可以决定的日常可逆事项不必上升用户。修改北极星、目标用户、隐私/权限原则、核心产品不变量，或证据不足且所有路径都依赖猜测时，仍必须与用户深入交流。
++
+ ## 项目速查
+ 
+ - 权威测试跑法：`swift run RunTests`（本机 CLT-only，`swift test` 输出不可靠）
+--- docs/collaboration/tasks/2026-09-05-product-takeover-baseline/pre-change/README.md	2026-07-25 11:41:11
++++ README.md	2026-09-05 22:12:34
+@@ -8,16 +8,27 @@
+ 
+ - [`docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md`](docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md)
+ 
+-当前阶段：**P0 — 总 spec 与可执行基线**。P0 完成门通过前不修改产品代码。
++当前状态（2026-09-05）：**P1 实施与桌面 Coding 收口正在进行**。P1-F1 尚未正式验收，P1 和 P2 也未 Accepted。当前接手决策见 [`spec.md`](docs/collaboration/tasks/2026-09-05-product-takeover-baseline/spec.md)；本轮证据与结论以 [`impl-report.md`](docs/collaboration/tasks/2026-09-05-product-takeover-baseline/impl-report.md) 实际记录为准，不预先宣布验证结果。
+ 
+-## Current Implemented Ranch Loop
++## Current Feed-led UI (Implemented Behavior)
+ 
++下列 Feed 驱动流程是现有界面行为，不是桌面 Coding 收口后的最终默认旅程：
++
+ 1. **喂牛 (Feed)** — paste articles, notes, or ideas; raw text is stored locally with SHA-256 dedupe.
+ 2. **反刍 (Ruminate)** — a background LLM pass distills the material into camp notes, requirements, and action candidates (strict JSON, no tools, source treated as untrusted).
+ 3. **放牛 (Graze)** — confirm a candidate into an editable mission draft with acceptance checklists, executed by the existing orchestration kernel.
+ 4. **回营 (Return)** — accept results against real artifacts; trophies, expedition reports, and cowork records accumulate.
+ 5. **领牛 (Unlock)** — the current prototype projects selected events and artifacts into an initial test-cow unlock; this is not yet the verified capability-growth contract targeted by P1/P2.
+ 
++## Target Desktop Journey
++
++```text
++目标输入 → 教练与共同理解 → 确认成果契约 → 持续执行
++→ 独立验证 → 用户验收 → 项目记忆
++```
++
++当前方向是将喂牛/反刍作为知识输入能力并入这条统一流程，而不是整体重写现有可靠内核。
++
+ ## Under the Hood
+ 
+ - Multi-step missions with planner-generated cards and per-companion dispatch.
+@@ -59,6 +70,6 @@
+ 
+ ## Status
+ 
+-**Current implementation baseline (`main@02334ec8`)**: the ranch product layer, orchestration kernel, approvals, MCP, harvest/trophy center, scheduled missions, runtime profiles, Codex/Claude CLI backends, pixel world, and packaging chain are in place.
++**Historical base identity**: `02334ec8d21533be81d93d39191bc7d9b9c24f7f` was the base HEAD before the current P1 work. The active implementation is that historical base plus substantial tracked and untracked dirty-workspace changes on `codex/product-takeover-baseline-20260905`; it must not be described as the state of `main` or as an accepted baseline.
+ 
+-**Accepted target direction**: Coding Coach → shared understanding → outcome contract → bounded multi-agent execution → independent verification → delivery → user/policy acceptance → evidence-backed memory and growth. P0–P6 progress and completion gates are tracked in the master spec.
++**Accepted target direction**: Coding Coach → shared understanding → outcome contract → bounded multi-agent execution → independent verification → delivery → user/policy acceptance → evidence-backed memory and growth. P0–P6 progress and completion gates are tracked in the master spec; current baseline-audit evidence does not itself accept P1-F1, P1, or P2.
+--- docs/collaboration/tasks/2026-09-05-product-takeover-baseline/pre-change/docs/collaboration/claude-codex-protocol.md	2026-07-25 11:09:42
++++ docs/collaboration/claude-codex-protocol.md	2026-09-05 22:16:12
+@@ -1,5 +1,11 @@
+ # AgentLoop 开发范式：Claude 规划/审查 × Codex 实现
+ 
++> **2026-09-05 主动覆写（当前生效）**：牧场主已确认由 Codex 担任产品与工程负责人，自主负责产品设计、优先级、优化、实现和交付。在已确认方向和安全边界内，日常、可逆决策由 Codex 自行处理；实质性不确定、核心不变量变更或新权限需求仍向用户升级。默认 reviewer 是与实现职责隔离的 Codex agent；Claude Code 仅在被单独请求或授权时作为可选规划者、调研者或职责隔离 reviewer，不再是默认规划/验收入口。独立 Review、阶段门、证据门和 Git/发布/数据/外部操作权限边界仍然有效。当前决策记录为 `docs/collaboration/tasks/2026-09-05-product-takeover-baseline/spec.md`。
++>
++> 下文作为历史协作协议保留，用于追溯旧任务与按需复用。其中的旧角色固定、触发流程、CLI 命令、模型与 reasoning effort 选择不再是当前强制指令；冲突时以本覆写、`AGENTS.md` 和当前 task spec/plan 为准。
++
++## 历史协议正文（保留）
++
+ 本文档是 AgentLoop 项目的**默认开发协议**。除非用户明确说"这次不用协作流程"，所有非琐碎实现工作都按此执行。
+ 
+ 长期产品与系统方向以已接受的 `docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md` 为准。历史 plan/spec 只对其原任务保留证据价值。
+--- docs/collaboration/tasks/2026-09-05-product-takeover-baseline/pre-change/docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md	2026-08-25 10:17:26
++++ docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md	2026-09-05 22:16:12
+@@ -1,4 +1,10 @@
+ # 个人 AI 牧场长期产品与系统总 Spec
++
++> **当前状态通知（2026-09-05）**：牧场主已确认由 Codex 接手产品与工程一号位，在本文已确认方向与安全边界内自主负责产品设计、优先级、优化、实现和交付，并自行处理有证据的日常、可逆决策。当前治理与桌面收口记录见 `docs/collaboration/tasks/2026-09-05-product-takeover-baseline/spec.md`。
++>
++> 当前工程事实是 P1 实施与桌面 Coding 收口正在进行；P1-F1、P1 与 P2 均尚未正式 Accepted。独立 Review、阶段进入/完成门和权限/安全边界继续有效。本通知仅覆盖与之冲突的旧角色分工、日常决策升级和路线状态描述，不改变本文的长期产品/系统要求、历史哈希或证据。
++>
++> 下方带日期的旧“文档状态”、“当前实现基线”、“当前路线事实”与各轮 Review/授权记录均为历史证据，不再作为 2026-09-05 之后的当前状态或治理入口。
+ 
+ > 文档状态：**Accepted 1.0 — P1-B Accepted；P1-C Planning Entry Open**
+ >
+@@ -1162,7 +1168,7 @@
+ 
+ ### P1 — 可靠性与新契约地基
+ 
+-当前状态（2026-08-25）：**P1-B Accepted；P1-C Planning Entry Open**。
++历史状态记录（2026-08-25；已由页首 2026-09-05 当前状态通知覆盖）：**P1-B Accepted；P1-C Planning Entry Open**。
+ Review21、Review22 与 Acceptance23 均为零 P0/P1，最终权威证据为
+ `p1-b-error-visibility/verify.log` SHA-256
+ `6eb521225e14d3de84595c0cd9bb2318ac3acbb072a3806f5543478fbabf2a87`。
+@@ -1350,25 +1356,25 @@
+ 
+ ### 27.1 角色
+ 
+-- 牧场主：确认总 spec、提供新产品决策和最终方向。
+-- Claude Code：默认负责阶段规划与独立 Review。
+-- Codex：按 plan 实现、验证、报告和持续推进。
++- 牧场主：确认北极星、目标用户、隐私/权限原则、核心产品不变量和最终方向；对超出现有授权的重大变更做决定。
++- Codex：作为产品与工程负责人，在已确认方向和安全边界内负责产品设计、优先级、优化、计划、实现、验证、报告和交付，并自主决定普通、可逆的产品与技术取舍。
++- Claude Code：仅在被单独请求或授权时作为可选的规划、调研或职责隔离 Review 参与者，不是当前默认规划者或 reviewer。
+ 
+-独立 Review 是硬门，Claude Code 是默认承担者，不是不可替换的单点依赖。如果 Claude Code 不可用，只能按当时协作协议使用职责隔离、证据可追踪的替代 reviewer；若没有已授权替代方案，必须持久记录阻塞并向牧场主请求决定，不能由实现者静默自批。
++独立 Review 是硬门，reviewer 必须与该变更的实现职责隔离且证据可追踪；不得由实现者静默自批。默认由职责隔离的 Codex agent 承担；Claude Code 仅在被单独请求或授权时可承担。若没有可用且已授权的 reviewer，必须持久记录阻塞并向牧场主请求决定。
+ 
+ ### 27.2 阶段实施
+ 
+-1. 从本文提取阶段目标与非目标。
+-2. 编写阶段 spec / plan。
+-3. 对架构、数据、依赖和风险做 Review。
++1. Codex 从本文提取阶段目标与非目标，并在已确认方向内自主关闭日常、可逆的产品与技术取舍。
++2. Codex 编写有界阶段 spec / plan，明确用户可感知目标、范围、完成门、证据与红线。
++3. 由职责隔离的 reviewer 对架构、数据、依赖、产品一致性和风险做独立 Review。
+ 4. 大规模或实验性改动前创建 `codex/` 分支。
+-5. Codex 严格按 plan 实现，不发明计划外决策。
++5. Codex 在 plan 和已确认方向内实现；普通、可逆的实现决策自行处理并在报告中留痕，不得借此扩大阶段范围或越过权限边界。
+ 6. 运行权威测试与匹配风险的真实验收。
+-7. Claude Review，Codex 修复。
++7. 独立 reviewer 审查，Codex 修复；重大变更在独立 Review 通过前不得验收。
+ 8. 保存报告、证据和偏差。
+ 9. 更新本文路线状态。
+ 
+-Codex 长期实施 Goal 不自动授予 Git 或外部系统权限。创建本地分支可以按仓库规则进行；commit、merge、push、PR、release、真实用户邀请、付款和公开发布，必须分别服从当时 `AGENTS.md`、协作协议及用户明确授权。本文不能覆盖当前“Codex 不 commit”等执行约束。
++2026-09-05 的用户确认显式取代本节历史上的“Claude 规划/Review、Codex 只按 plan 实现”治理限制，但不取代独立 Review、阶段门、证据门或权限边界。Codex 长期实施 Goal 不自动授予 Git 或外部系统权限。创建本地分支可以按仓库规则进行；commit、merge、push、PR、release、真实用户邀请、付款和公开发布，必须分别服从当时 `AGENTS.md`、协作协议及用户明确授权。
+ 
+ ### 27.3 Codex 长期实施 Goal 运行
+ 
+@@ -1377,13 +1383,14 @@
+ Codex 长期实施 Goal：
+ 
+ - 自动跨阶段继续；
++- 对已确认方向内的普通、可逆决策自主取证并处理，不因旧协议中的例行上升规则暂停；
+ - 不因例行汇报、普通 Bug 或需要继续诊断修复的测试失败而终止；
+ - 阶段内部持续实现、验证和修复，但红测、未知失败和未满足的完成门会阻止阶段验收与跨阶段；
+ - 只有 P0–P6 的有限完成门全部满足，且没有要求中的外部操作仍未执行，才标记 complete。
+ 
+ 强制暂停条件：
+ 
+-1. 本文缺失或矛盾，需要新产品决策；
++1. 需要修改北极星、目标用户、隐私/权限原则或核心产品不变量，或证据不足且所有合理实现路径都依赖猜测；仅属日常、可逆取舍不构成暂停条件；
+ 2. 对应阶段的开放决策未清空、未按 §29 的限制被明确延期，或阶段进入门未满足；
+ 3. 需要改变北极星、架构不变量或阶段范围；
+ 4. 需要新的权限或当前授权已经撤销、过期或不覆盖目标；
+@@ -1582,7 +1589,7 @@
+ | 当前代码 | 是继续演进的基础；按新契约决定保留、重构或重做 |
+ | 当前数据 | 只有测试数据，内容不要求延续；重置需精确确认，但正式 schema 仍使用可回放迁移 |
+ | 文档结构 | 长期总 spec + 阶段 spec + 实施 plan |
+-| Agent 分工 | 本任务建总 spec；Claude 规划/Review；Codex 实现/验证 |
++| Agent 分工 | 2026-09-05 牧场主确认 Codex 为产品与工程负责人，在已确认方向和安全边界内自主负责设计、优先级、规划、实现、验证和交付；默认 reviewer 是职责隔离的 Codex agent，Claude Code 仅在被单独请求或授权时可选参与；重大变更仍需职责隔离独立 Review |
+ | Codex 实施 Goal | 总 spec 确认并明确授权后创建；自动跨阶段推进 |
+ | 实施 Goal 停机 | 为未决阶段决定、新授权、未授权破坏、未满足阶段门或重大不可行性暂停 |
+ | P1 额外复审 | 第三轮 Review 未通过后，牧场主于 2026-07-25 明确授权增加一轮计划修订与职责隔离独立复审；通过前仍禁止 P1 产品代码实施 |
+--- docs/collaboration/tasks/2026-09-05-product-takeover-baseline/pre-change/docs/collaboration/tasks/2026-09-01-active-ingestion-deletion-timestamp-roundtrip/impl-report.md	2026-09-01 09:41:03
++++ docs/collaboration/tasks/2026-09-01-active-ingestion-deletion-timestamp-roundtrip/impl-report.md	2026-09-05 22:13:37
+@@ -52,3 +52,24 @@
+   destructive confirmation action in the relaunched app.
+ - No commit, push, merge, release, or destructive database operation was
+   performed.
++
++## 2026-09-05 correction to historical verification reporting
++
++The original text above is retained as historical reporting, but its full-run
++failure accounting and cause attribution are superseded by this correction.
++`verify.log` records **six failing tests and six issues**, not five affected
++tests:
++
++1. `p1f1_075CLIHelpCapabilityMismatchIsUnsupported` — `processGroupSurvived`
++2. `boardServerStopWaitsForBlockedHandlerThenCloses`
++3. `boardServerStopWakesBlockedAcceptLoopAndReleasesListener`
++4. `shellTimeoutTerminatesProcess`
++5. `cliProcessBackendCancellationEscalatesAfterGrace`
++6. `cliProcessBackendCancellationReturnsCheckedEvidence`
++
++`serial-reruns.log` contains separate reruns for only the final five tests in
++that list. It does not contain a separate rerun of
++`p1f1_075CLIHelpCapabilityMismatchIsUnsupported`. Therefore the historical
++full-run failures cannot be described, on those logs alone, as all separately
++passing, unrelated to the change, timing-only, or solely environmental. The
++original `verify.log` and `serial-reruns.log` remain unchanged.

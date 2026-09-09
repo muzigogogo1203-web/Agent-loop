@@ -1,0 +1,71 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.12s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test memoryDistillProviderSkipAdvancesWatermarkAndReturnsSkipped() started.
+◇ Test parseNoteJSONTruncatesLongTitle() started.
+◇ Test distillCloseoutFallsBackOnProviderFailure() started.
+◇ Test distillGuideChatNoteAndSkip() started.
+◇ Test distillationEventInsertFailureRollsBackNoteAndWatermark() started.
+◇ Test dmMemoryReachesNextCardContextGoldenPath() started.
+◇ Test dmNoteInsertFailureRollsBackWatermarkAndEvent() started.
+◇ Test autoDistillRespectsMinMessagesThreshold() started.
+◇ Test memoryDistillPersistenceFailureReturnsFailedWithTrace() started.
+◇ Test guideNoteInsertFailureRollsBackWatermarkAndEvent() started.
+◇ Test manualDistillCreatesMemoryAndAdvancesWatermark() started.
+◇ Test distillCloseoutFallsBackOnUnparseableEmptyText() started.
+◇ Test memoryDistillNoEligibleInputIsDistinct() started.
+◇ Test guideChatDistillCreatesCampNote() started.
+◇ Test staleDistillationCASRollsBackWithoutDuplicateNote() started.
+◇ Test distillMemoryThrowsOnProviderFailure() started.
+◇ Test memoryDistillCreatedReturnsRecord() started.
+◇ Test parseNoteJSONMalformedFallsBackToFirstLine() started.
+◇ Test distillMemoryReturnsNote() started.
+◇ Test skipStillAdvancesWatermarkButNoNote() started.
+◇ Test parseNoteJSONSkipConvention() started.
+◇ Test parseNoteJSONHappyPath() started.
+◇ Test parseNoteJSONStripsCodeFence() started.
+◇ Test distillMemoryReturnsNilOnSkip() started.
+◇ Test memoryDistillProviderFailureReturnsFailedWithTrace() started.
+◇ Test distillCloseoutParsesLLMNote() started.
+◇ Test messageArrivingDuringModelWorkRemainsUndistilled() started.
+◇ Test failureKeepsWatermarkForRetry() started.
+◇ Test promptsAreDeterministic() started.
+◇ Test memoryDistillWatermarkRaceReturnsFailedWithTrace() started.
+◇ Test memoryDistillReadFailureReturnsFailedWithTrace() started.
+◇ Test guideChatDistillNoopWhenNoBacklog() started.
+✔ Test parseNoteJSONTruncatesLongTitle() passed after 0.099 seconds.
+✔ Test parseNoteJSONMalformedFallsBackToFirstLine() passed after 0.102 seconds.
+✔ Test parseNoteJSONHappyPath() passed after 0.102 seconds.
+✔ Test parseNoteJSONSkipConvention() passed after 0.102 seconds.
+✔ Test parseNoteJSONStripsCodeFence() passed after 0.102 seconds.
+✔ Test autoDistillRespectsMinMessagesThreshold() passed after 0.103 seconds.
+✔ Test promptsAreDeterministic() passed after 0.103 seconds.
+✔ Test distillCloseoutFallsBackOnProviderFailure() passed after 0.112 seconds.
+✔ Test distillCloseoutFallsBackOnUnparseableEmptyText() passed after 0.112 seconds.
+✔ Test distillMemoryThrowsOnProviderFailure() passed after 0.112 seconds.
+✔ Test distillMemoryReturnsNote() passed after 0.112 seconds.
+✔ Test distillMemoryReturnsNilOnSkip() passed after 0.112 seconds.
+✔ Test distillCloseoutParsesLLMNote() passed after 0.112 seconds.
+✔ Test distillGuideChatNoteAndSkip() passed after 0.123 seconds.
+✔ Test staleDistillationCASRollsBackWithoutDuplicateNote() passed after 0.129 seconds.
+✔ Test skipStillAdvancesWatermarkButNoNote() passed after 0.148 seconds.
+✔ Test guideChatDistillNoopWhenNoBacklog() passed after 0.148 seconds.
+✔ Test guideChatDistillCreatesCampNote() passed after 0.155 seconds.
+✔ Test failureKeepsWatermarkForRetry() passed after 0.155 seconds.
+✔ Test memoryDistillNoEligibleInputIsDistinct() passed after 0.155 seconds.
+✔ Test guideNoteInsertFailureRollsBackWatermarkAndEvent() passed after 0.156 seconds.
+✔ Test manualDistillCreatesMemoryAndAdvancesWatermark() passed after 0.157 seconds.
+✔ Test messageArrivingDuringModelWorkRemainsUndistilled() passed after 0.158 seconds.
+✔ Test distillationEventInsertFailureRollsBackNoteAndWatermark() passed after 0.159 seconds.
+✔ Test dmNoteInsertFailureRollsBackWatermarkAndEvent() passed after 0.161 seconds.
+✔ Test dmMemoryReachesNextCardContextGoldenPath() passed after 0.187 seconds.
+✔ Test memoryDistillProviderSkipAdvancesWatermarkAndReturnsSkipped() passed after 0.217 seconds.
+✔ Test memoryDistillPersistenceFailureReturnsFailedWithTrace() passed after 0.238 seconds.
+✔ Test memoryDistillCreatedReturnsRecord() passed after 0.260 seconds.
+✔ Test memoryDistillReadFailureReturnsFailedWithTrace() passed after 0.288 seconds.
+✔ Test memoryDistillWatermarkRaceReturnsFailedWithTrace() passed after 0.289 seconds.
+✔ Test memoryDistillProviderFailureReturnsFailedWithTrace() passed after 0.321 seconds.
+✔ Test run with 32 tests in 0 suites passed after 0.322 seconds.

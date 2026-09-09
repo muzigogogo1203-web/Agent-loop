@@ -1,0 +1,330 @@
+*** Begin Patch
+*** Update File: /Users/muzi/Agent-loop/Sources/AgentLoopCore/Database/DesktopGoalWorkflowStore.swift
+@@
+     package func list(campId: String) throws -> [DesktopGoalFoundationReadV1] {
+         throw DesktopGoalReadNotImplemented.integrationCheckpoint
+     }
++
++    package static func redact(inputId: String, at: Date, in database: Database) throws {
++        throw DesktopGoalReadNotImplemented.integrationCheckpoint
++    }
+*** Update File: /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DesktopGoalFoundationTests.swift
+@@
+     @Test func archivedOrInactiveCampCannotCaptureButExistingRecordsRemainReadable() throws {
+@@
+             #expect(after == before)
+         }
+     }
+ }
++
++private func desktopRetentionIntent() throws -> DesktopGoalCaptureIntentV1 {
++    let context = try DesktopGoalContextV1(
++        inputId: desktopGoalInputID, goalId: desktopGoalGoalID, sessionId: desktopGoalSessionID,
++        coachRuntime: .selected(profileId: desktopGoalProfileID, model: "private-model-marker"),
++        coachPolicy: DesktopCoachPolicyV1(), workspacePath: "/private/desktop-retention-marker",
++        workspaceBookmark: Data("private-bookmark-marker".utf8), budgetTokens: 100_000
++    )
++    return try desktopGoalIntent(text: "private-body-marker\n  second\tline", context: context, envelope: desktopGoalEnvelope())
++}
++
++private func desktopRetentionCancel(
++    _ database: AppDatabase, intent: DesktopGoalCaptureIntentV1, at: TimeInterval = 130
++) throws -> CancelInputParsingAndDeleteCommandV1 {
++    let inputValue = try InputGoalStore(database: database).input(id: intent.context.inputId)
++    let input = try #require(inputValue)
++    let workValue = try DurableWorkStore(database: database).activeWork(kind: .inputParsing, aggregateType: "input", aggregateId: input.id)
++    let work = try #require(workValue)
++    return try CancelInputParsingAndDeleteCommandV1(
++        envelope: desktopTextUserEnvelope("desktop-retention-cancel", at: at),
++        input: InputHeadV1(inputId: input.id, auditCampId: intent.campId, expectedInputVersion: input.aggregateVersion),
++        activeParsingBranch: .expected(workId: work.id, expectedVersion: work.version)
++    )
++}
++
++private func desktopRetentionCompleteCommand(
++    _ database: AppDatabase, intent: DesktopGoalCaptureIntentV1
++) throws -> CompleteInputDeletionCommandV1 {
++    try desktopCaptureParseActual(database, intent: intent)
++    let store = InputGoalStore(database: database)
++    let parsedValue = try store.input(id: intent.context.inputId)
++    let parsed = try #require(parsedValue)
++    _ = try store.requestDeletion(RequestInputDeletionCommandV1(
++        envelope: desktopTextUserEnvelope("desktop-retention-request", at: 130),
++        input: InputHeadV1(inputId: parsed.id, auditCampId: intent.campId, expectedInputVersion: parsed.aggregateVersion),
++        activeParsingBranch: .none
++    ))
++    let requestedValue = try store.input(id: intent.context.inputId)
++    let requested = try #require(requestedValue)
++    #expect(requested.retentionState == .deletionRequested)
++    return try CompleteInputDeletionCommandV1(
++        envelope: desktopTextUserEnvelope("desktop-retention-complete", at: 140),
++        input: InputHeadV1(inputId: requested.id, auditCampId: intent.campId, expectedInputVersion: requested.aggregateVersion),
++        activeParsingBranch: .none
++    )
++}
++
++private func desktopRetentionAssertCarriers(
++    _ database: AppDatabase, intent: DesktopGoalCaptureIntentV1, capture: DesktopGoalCaptureReceiptV1
++) throws {
++    let expectedContextHash = try CanonicalContractCodingV1.hash(intent.context)
++    let expectedRequestHash = try CanonicalContractCodingV1.hash(intent)
++    let expectedSafeBytes = try CanonicalContractCodingV1.encode(capture)
++    try database.pool.read { db in
++        let contextValue = try Row.fetchOne(db, sql: "SELECT * FROM desktop_goal_context WHERE inputId=?", arguments: [intent.context.inputId])
++        let context = try #require(contextValue)
++        let state: String = context["retentionState"]
++        let contextJSON: String? = context["contextJson"]
++        let contextHash: String = context["contextHash"]
++        let contextVersion: Int = context["version"]
++        #expect(state == "redacted")
++        #expect(contextJSON == nil)
++        #expect(contextHash == expectedContextHash)
++        #expect(contextVersion == 2)
++        let rows = try Row.fetchAll(db, sql: "SELECT * FROM desktop_goal_operation WHERE inputId=? ORDER BY id", arguments: [intent.context.inputId])
++        #expect(rows.count == 1)
++        let operation = try #require(rows.first)
++        let phase: String = operation["phase"]
++        let request: String? = operation["requestJson"]
++        let result: String? = operation["resultJson"]
++        let requestHash: String = operation["requestHash"]
++        let operationVersion: Int = operation["version"]
++        let safeJSONValue: String? = operation["safeReceiptJson"]
++        let safeJSON = try #require(safeJSONValue)
++        #expect(phase == "redacted")
++        #expect(request == nil)
++        #expect(result == nil)
++        #expect(requestHash == expectedRequestHash)
++        #expect(operationVersion == 4)
++        #expect(Data(safeJSON.utf8) == expectedSafeBytes)
++        let safe = try CanonicalContractCodingV1.decode(DesktopGoalCaptureReceiptV1.self, from: Data(safeJSON.utf8))
++        #expect(safe == capture)
++        for marker in ["private-body-marker", "private-model-marker", "/private/desktop-retention-marker", Data("private-bookmark-marker".utf8).base64EncodedString()] {
++            #expect(!safeJSON.contains(marker))
++        }
++    }
++}
++
++private enum DesktopRetentionOriginalDelete {
++    case cancel(CancelInputParsingAndDeleteCommandV1)
++    case complete(CompleteInputDeletionCommandV1)
++
++    func replay(in database: AppDatabase) throws -> InputCaptureReceiptV1 {
++        let store = InputGoalStore(database: database)
++        switch self {
++        case let .cancel(command): return try store.cancelParsingAndDelete(command)
++        case let .complete(command): return try store.completeDeletion(command)
++        }
++    }
++}
++
++extension DesktopGoalFoundationTests {
++    @Test func cancelParsingDeleteRedactsWithinSameTransaction() throws {
++        let (database, path) = try desktopTextDatabase()
++        let intent = try desktopRetentionIntent()
++        let capture = try DesktopGoalWorkflowStore(database: database).prepareSubmission(intent)
++        let command = try desktopRetentionCancel(database, intent: intent)
++        let originalCommandBytes = try CanonicalContractCodingV1.wholeCommandBytes(envelope: command.envelope, payload: command)
++        let before = try desktopCaptureSQLSnapshot(database)
++        // DurableWorkStore.cancel updates work before businessMutation, which updates input before redaction.
++        try database.pool.write { db in
++            try db.execute(sql: """
++                CREATE TRIGGER desktop_retention_cancel_abort
++                AFTER UPDATE OF retentionState ON desktop_goal_context
++                WHEN NEW.inputId='10000000-0000-4000-8000-000000000001' AND NEW.retentionState='redacted'
++                BEGIN
++                  SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM input_envelope WHERE id=NEW.inputId AND status='deletedTombstone')
++                    OR NOT EXISTS(SELECT 1 FROM durable_work WHERE aggregateId=NEW.inputId AND kind='inputParsing' AND state='canceled')
++                    THEN RAISE(ABORT,'retention_before_actual_mutations') END;
++                  SELECT RAISE(ABORT,'desktop_retention_cancel_abort');
++                END;
++                """)
++        }
++        let failed = Result { try InputGoalStore(database: database).cancelParsingAndDelete(command) }
++        switch failed {
++        case .success: Issue.record("Expected injected carrier redaction failure")
++        case let .failure(error):
++            let databaseError = try #require(error as? DatabaseError)
++            #expect(databaseError.message == "desktop_retention_cancel_abort")
++        }
++        let rolledBack = try desktopCaptureSQLSnapshot(database)
++        #expect(rolledBack.counts == before.counts)
++        #expect(rolledBack.rows == before.rows)
++        #expect(rolledBack.rowHashes == before.rowHashes)
++        try database.pool.write { db in try db.execute(sql: "DROP TRIGGER desktop_retention_cancel_abort") }
++        let deletionReceipt = try InputGoalStore(database: database).cancelParsingAndDelete(command)
++        try desktopRetentionAssertCarriers(database, intent: intent, capture: capture)
++        let inputValue = try InputGoalStore(database: database).input(id: intent.context.inputId)
++        let input = try #require(inputValue)
++        #expect(input.status == .deletedTombstone)
++        #expect(input.retentionState == .deletedTombstone)
++        #expect(input.inlineText == nil)
++        #expect(input.sourceDeviceId == nil)
++        let workId = try #require(capture.captureReceipt.refs.first(where: { $0.kind == .durableWork })?.id)
++        let workValue = try DurableWorkStore(database: database).work(id: workId)
++        let work = try #require(workValue)
++        #expect(work.state == .canceled)
++        let deletedRows = try desktopCaptureSQLSnapshot(database)
++        try database.pool.close()
++        let reopened = try AppDatabase(path: path)
++        // Exact original old-head command, not a new deletion identity constructed from the tombstone.
++        let replay = try InputGoalStore(database: reopened).cancelParsingAndDelete(command)
++        #expect(replay == deletionReceipt)
++        let replayBytes = try CanonicalContractCodingV1.wholeCommandBytes(envelope: command.envelope, payload: command)
++        #expect(replayBytes == originalCommandBytes)
++        #expect(command.input.expectedInputVersion == 1)
++        #expect(throws: Never.self) {
++            let read = try DesktopGoalWorkflowStore(database: reopened).snapshot(inputId: intent.context.inputId, campId: intent.campId)
++            #expect(read == .deleted(inputId: intent.context.inputId, goalId: intent.context.goalId))
++            let listed = try DesktopGoalWorkflowStore(database: reopened).list(campId: intent.campId)
++            #expect(listed == [.deleted(inputId: intent.context.inputId, goalId: intent.context.goalId)])
++            try reopened.pool.write { db in try DesktopGoalWorkflowStore.redact(inputId: intent.context.inputId, at: command.envelope.occurredAt, in: db) }
++        }
++        #expect(throws: DesktopGoalFoundationErrorV1.inputDeleted) {
++            _ = try DesktopGoalWorkflowStore(database: reopened).prepareSubmission(intent)
++        }
++        let afterReplays = try desktopCaptureSQLSnapshot(reopened)
++        #expect(afterReplays == deletedRows)
++    }
++
++    @Test func completedParsingDeleteRedactsAndReplayCannotRecoverRawRequest() throws {
++        let (database, path) = try desktopTextDatabase()
++        let intent = try desktopRetentionIntent()
++        let capture = try DesktopGoalWorkflowStore(database: database).prepareSubmission(intent)
++        let command = try desktopRetentionCompleteCommand(database, intent: intent)
++        let originalCommandBytes = try CanonicalContractCodingV1.wholeCommandBytes(envelope: command.envelope, payload: command)
++        let before = try desktopCaptureSQLSnapshot(database)
++        try database.pool.write { db in
++            try db.execute(sql: """
++                CREATE TRIGGER desktop_retention_complete_abort
++                AFTER UPDATE OF status ON input_envelope
++                WHEN NEW.id='10000000-0000-4000-8000-000000000001' AND NEW.status='deletedTombstone'
++                BEGIN
++                  SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM desktop_goal_context WHERE inputId=NEW.id AND retentionState='redacted' AND contextJson IS NULL)
++                    OR NOT EXISTS(SELECT 1 FROM desktop_goal_operation WHERE inputId=NEW.id AND phase='redacted' AND requestJson IS NULL AND resultJson IS NULL)
++                    OR NOT EXISTS(SELECT 1 FROM durable_work WHERE aggregateId=NEW.id AND kind='inputParsing' AND state='succeeded')
++                    THEN RAISE(ABORT,'complete_without_carrier_redaction') END;
++                  SELECT RAISE(ABORT,'desktop_retention_complete_abort');
++                END;
++                """)
++        }
++        let failed = Result { try InputGoalStore(database: database).completeDeletion(command) }
++        switch failed {
++        case .success: Issue.record("Expected injected failure after actual tombstone update")
++        case let .failure(error):
++            let databaseError = try #require(error as? DatabaseError)
++            #expect(databaseError.message == "desktop_retention_complete_abort")
++        }
++        let rolledBack = try desktopCaptureSQLSnapshot(database)
++        #expect(rolledBack.counts == before.counts)
++        #expect(rolledBack.rows == before.rows)
++        #expect(rolledBack.rowHashes == before.rowHashes)
++        try database.pool.write { db in try db.execute(sql: "DROP TRIGGER desktop_retention_complete_abort") }
++        let deletionReceipt = try InputGoalStore(database: database).completeDeletion(command)
++        try desktopRetentionAssertCarriers(database, intent: intent, capture: capture)
++        let deletedRows = try desktopCaptureSQLSnapshot(database)
++        try database.pool.close()
++        let reopened = try AppDatabase(path: path)
++        let replay = try InputGoalStore(database: reopened).completeDeletion(command)
++        #expect(replay == deletionReceipt)
++        #expect(command.input.expectedInputVersion == 3)
++        let replayBytes = try CanonicalContractCodingV1.wholeCommandBytes(envelope: command.envelope, payload: command)
++        #expect(replayBytes == originalCommandBytes)
++        let inputValue = try InputGoalStore(database: reopened).input(id: intent.context.inputId)
++        let input = try #require(inputValue)
++        #expect(input.status == .deletedTombstone)
++        #expect(input.aggregateVersion == 4)
++        #expect(input.inlineText == nil)
++        #expect(throws: Never.self) {
++            let read = try DesktopGoalWorkflowStore(database: reopened).snapshot(inputId: intent.context.inputId, campId: intent.campId)
++            #expect(read == .deleted(inputId: intent.context.inputId, goalId: intent.context.goalId))
++            try reopened.pool.write { db in try DesktopGoalWorkflowStore.redact(inputId: intent.context.inputId, at: command.envelope.occurredAt, in: db) }
++        }
++        #expect(throws: DesktopGoalFoundationErrorV1.inputDeleted) {
++            _ = try DesktopGoalWorkflowStore(database: reopened).prepareSubmission(intent)
++        }
++        let afterReplays = try desktopCaptureSQLSnapshot(reopened)
++        #expect(afterReplays == deletedRows)
++    }
++
++    @Test func tombstoneWithLiveCarrierFailsClosedAndLegacyDeleteStillWorks() throws {
++        for branch in ["cancel", "complete"] {
++            let (database, path) = try desktopTextDatabase()
++            let intent = try desktopRetentionIntent()
++            _ = try DesktopGoalWorkflowStore(database: database).prepareSubmission(intent)
++            let originalDelete: DesktopRetentionOriginalDelete
++            if branch == "cancel" {
++                originalDelete = .cancel(try desktopRetentionCancel(database, intent: intent))
++            } else {
++                originalDelete = .complete(try desktopRetentionCompleteCommand(database, intent: intent))
++            }
++            _ = try originalDelete.replay(in: database)
++            // Deliberately inconsistent retained rows; malformed bytes must not be decoded or repaired.
++            try database.pool.write { db in
++                try db.execute(sql: "UPDATE desktop_goal_context SET retentionState='live',contextJson='not-json' WHERE inputId=?", arguments: [intent.context.inputId])
++                try db.execute(sql: "UPDATE desktop_goal_operation SET phase='prepared',requestJson='not-json',resultJson='not-json' WHERE inputId=?", arguments: [intent.context.inputId])
++            }
++            let corrupted = try desktopCaptureSQLSnapshot(database)
++            try database.pool.close()
++            let reopened = try AppDatabase(path: path)
++            let store = DesktopGoalWorkflowStore(database: reopened)
++            #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) { _ = try store.snapshot(inputId: intent.context.inputId, campId: intent.campId) }
++            #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) { _ = try store.list(campId: intent.campId) }
++            #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) { _ = try store.prepareSubmission(intent) }
++            #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) { _ = try originalDelete.replay(in: reopened) }
++            let after = try desktopCaptureSQLSnapshot(reopened)
++            #expect(after == corrupted)
++        }
++
++        // Redacted safeReceiptJson is still strictly validated, including unexpected payload keys.
++        let (safeDB, _) = try desktopTextDatabase()
++        let safeIntent = try desktopRetentionIntent()
++        let capture = try DesktopGoalWorkflowStore(database: safeDB).prepareSubmission(safeIntent)
++        let safeDelete = try desktopRetentionCancel(safeDB, intent: safeIntent)
++        _ = try InputGoalStore(database: safeDB).cancelParsingAndDelete(safeDelete)
++        let safeObjectValue = try JSONSerialization.jsonObject(with: CanonicalContractCodingV1.encode(capture))
++        var unsafeObject = try #require(safeObjectValue as? [String: Any])
++        unsafeObject["originalText"] = "forbidden-retained-body"
++        let unsafeBytes = try desktopTextCanonicalFixture(unsafeObject)
++        try safeDB.pool.write { db in
++            try db.execute(sql: "UPDATE desktop_goal_operation SET safeReceiptJson=? WHERE inputId=?", arguments: [String(decoding: unsafeBytes, as: UTF8.self), safeIntent.context.inputId])
++        }
++        let unsafeRows = try desktopCaptureSQLSnapshot(safeDB)
++        #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) {
++            _ = try DesktopGoalWorkflowStore(database: safeDB).snapshot(inputId: safeIntent.context.inputId, campId: safeIntent.campId)
++        }
++        #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) {
++            try safeDB.pool.write { db in try DesktopGoalWorkflowStore.redact(inputId: safeIntent.context.inputId, at: safeDelete.envelope.occurredAt, in: db) }
++        }
++        #expect(throws: DesktopGoalFoundationErrorV1.retentionIntegrity) {
++            _ = try InputGoalStore(database: safeDB).cancelParsingAndDelete(safeDelete)
++        }
++        let afterUnsafe = try desktopCaptureSQLSnapshot(safeDB)
++        #expect(afterUnsafe == unsafeRows)
++
++        for branch in ["cancel", "complete"] {
++            let (legacyDB, legacyPath) = try desktopTextDatabase()
++            let intent = try desktopCaptureIntent()
++            _ = try InputGoalStore(database: legacyDB).captureAndEnqueueParsing(intent.captureCommand())
++            let originalDelete: DesktopRetentionOriginalDelete
++            if branch == "cancel" { originalDelete = .cancel(try desktopRetentionCancel(legacyDB, intent: intent)) }
++            else { originalDelete = .complete(try desktopRetentionCompleteCommand(legacyDB, intent: intent)) }
++            let receipt = try originalDelete.replay(in: legacyDB)
++            let before = try desktopCaptureSQLSnapshot(legacyDB)
++            #expect(before.counts["desktop_goal_context"] == 0)
++            #expect(before.counts["desktop_goal_operation"] == 0)
++            try legacyDB.pool.close()
++            let reopened = try AppDatabase(path: legacyPath)
++            let replay = try originalDelete.replay(in: reopened)
++            #expect(replay == receipt)
++            #expect(throws: Never.self) {
++                try reopened.pool.write { db in try DesktopGoalWorkflowStore.redact(inputId: intent.context.inputId, at: Date(timeIntervalSince1970: 140), in: db) }
++                let listed = try DesktopGoalWorkflowStore(database: reopened).list(campId: intent.campId)
++                #expect(listed.isEmpty)
++            }
++            let after = try desktopCaptureSQLSnapshot(reopened)
++            #expect(after == before)
++        }
++    }
++}
+*** End Patch
+

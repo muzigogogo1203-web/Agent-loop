@@ -1,0 +1,150 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[3/6] Emitting module AgentLoopTestSuite
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:722:13: error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 720 |     idempotencyKey: String? = nil,
+ 721 |     traceId: String = "candidate-first-trace"
+ 722 | ) throws -> CandidatePlanningStartCommand {
+     |             `- error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 723 |     CandidatePlanningStartCommand(
+ 724 |         draft: draft,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:744:13: error: cannot find type 'CandidatePlanningStartResult' in scope
+ 742 |     command: CandidatePlanningStartCommand,
+ 743 |     resolver: (any PlanningProviderResolver)? = nil
+ 744 | ) throws -> CandidatePlanningStartResult {
+     |             `- error: cannot find type 'CandidatePlanningStartResult' in scope
+ 745 |     try fixture.database.convertCandidateAndEnqueuePlanning(
+ 746 |         command,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:742:14: error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 740 | private func a3Convert(
+ 741 |     _ fixture: R01FailureFirstFixture,
+ 742 |     command: CandidatePlanningStartCommand,
+     |              `- error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 743 |     resolver: (any PlanningProviderResolver)? = nil
+ 744 | ) throws -> CandidatePlanningStartResult {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:909:14: error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 907 |     _ fixture: R01FailureFirstFixture,
+ 908 |     command: CandidatePlanningStartCommand
+ 909 | ) throws -> [CandidatePlanningStartCommand] {
+     |              `- error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 910 |     let draft = command.draft
+ 911 |     return try [
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:908:14: error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 906 | private func a3ConflictingCommands(
+ 907 |     _ fixture: R01FailureFirstFixture,
+ 908 |     command: CandidatePlanningStartCommand
+     |              `- error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 909 | ) throws -> [CandidatePlanningStartCommand] {
+ 910 |     let draft = command.draft
+[4/6] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:722:13: error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 720 |     idempotencyKey: String? = nil,
+ 721 |     traceId: String = "candidate-first-trace"
+ 722 | ) throws -> CandidatePlanningStartCommand {
+     |             `- error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 723 |     CandidatePlanningStartCommand(
+ 724 |         draft: draft,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:744:13: error: cannot find type 'CandidatePlanningStartResult' in scope
+ 742 |     command: CandidatePlanningStartCommand,
+ 743 |     resolver: (any PlanningProviderResolver)? = nil
+ 744 | ) throws -> CandidatePlanningStartResult {
+     |             `- error: cannot find type 'CandidatePlanningStartResult' in scope
+ 745 |     try fixture.database.convertCandidateAndEnqueuePlanning(
+ 746 |         command,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:742:14: error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 740 | private func a3Convert(
+ 741 |     _ fixture: R01FailureFirstFixture,
+ 742 |     command: CandidatePlanningStartCommand,
+     |              `- error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 743 |     resolver: (any PlanningProviderResolver)? = nil
+ 744 | ) throws -> CandidatePlanningStartResult {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:909:14: error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 907 |     _ fixture: R01FailureFirstFixture,
+ 908 |     command: CandidatePlanningStartCommand
+ 909 | ) throws -> [CandidatePlanningStartCommand] {
+     |              `- error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 910 |     let draft = command.draft
+ 911 |     return try [
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:908:14: error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 906 | private func a3ConflictingCommands(
+ 907 |     _ fixture: R01FailureFirstFixture,
+ 908 |     command: CandidatePlanningStartCommand
+     |              `- error: cannot find type 'CandidatePlanningStartCommand' in scope
+ 909 | ) throws -> [CandidatePlanningStartCommand] {
+ 910 |     let draft = command.draft
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1888:42: error: cannot infer contextual base in reference to member 'inserted'
+1886 |         )
+1887 |         let inserted = try a3Convert(fixture, command: firstCommand)
+1888 |         #expect(inserted.disposition == .inserted)
+     |                                          `- error: cannot infer contextual base in reference to member 'inserted'
+1889 |         try a3AdvanceReplayState(
+1890 |             state,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1928:42: error: cannot infer contextual base in reference to member 'replayed'
+1926 |             resolver: replayResolver
+1927 |         )
+1928 |         #expect(replayed.disposition == .replayed)
+     |                                          `- error: cannot infer contextual base in reference to member 'replayed'
+1929 |         #expect(replayed.missionId == inserted.missionId)
+1930 |         #expect(replayed.workId == inserted.workId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2021:42: error: cannot infer contextual base in reference to member 'inserted'
+2019 |     #expect(secondResolver.resolveCount == 1)
+2020 |     let dispositions = [first.disposition, second.disposition]
+2021 |     #expect(dispositions.filter { $0 == .inserted }.count == 1)
+     |                                          `- error: cannot infer contextual base in reference to member 'inserted'
+2022 |     #expect(dispositions.filter { $0 == .replayed }.count == 1)
+2023 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2022:42: error: cannot infer contextual base in reference to member 'replayed'
+2020 |     let dispositions = [first.disposition, second.disposition]
+2021 |     #expect(dispositions.filter { $0 == .inserted }.count == 1)
+2022 |     #expect(dispositions.filter { $0 == .replayed }.count == 1)
+     |                                          `- error: cannot infer contextual base in reference to member 'replayed'
+2023 | 
+2024 |     let snapshot = try a3BusinessSnapshot(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2013:21: warning: no 'async' operations occur within 'await' expression
+2011 |     await barrier.waitUntilReady()
+2012 |     barrier.release()
+2013 |     let first = try await firstTask.value
+     |                     `- warning: no 'async' operations occur within 'await' expression
+2014 |     let second = try await secondTask.value
+2015 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2013:17: warning: no calls to throwing functions occur within 'try' expression
+2011 |     await barrier.waitUntilReady()
+2012 |     barrier.release()
+2013 |     let first = try await firstTask.value
+     |                 `- warning: no calls to throwing functions occur within 'try' expression
+2014 |     let second = try await secondTask.value
+2015 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2014:22: warning: no 'async' operations occur within 'await' expression
+2012 |     barrier.release()
+2013 |     let first = try await firstTask.value
+2014 |     let second = try await secondTask.value
+     |                      `- warning: no 'async' operations occur within 'await' expression
+2015 | 
+2016 |     #expect(first.missionId == second.missionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2014:18: warning: no calls to throwing functions occur within 'try' expression
+2012 |     barrier.release()
+2013 |     let first = try await firstTask.value
+2014 |     let second = try await secondTask.value
+     |                  `- warning: no calls to throwing functions occur within 'try' expression
+2015 | 
+2016 |     #expect(first.missionId == second.missionId)

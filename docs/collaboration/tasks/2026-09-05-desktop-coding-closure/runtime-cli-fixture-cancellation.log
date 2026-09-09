@@ -1,0 +1,17 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.78s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test cliProcessBackendCancellationReturnsCheckedEvidence() started.
+◇ Test cliProcessBackendCancellationEscalatesAfterGrace() started.
+CLI fixture cleanup execution=00000000-0000-4000-8000-000000000346 continuedPIDs=[18904] fixture=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/c-346-1F77
+CLI fixture resource observations execution=00000000-0000-4000-8000-000000000346 failures=0
+CLI fixture cleanup execution=00000000-0000-4000-8000-000000000372 continuedPIDs=[18905] fixture=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/c-372-ED95
+CLI fixture resource observations execution=00000000-0000-4000-8000-000000000372 failures=0
+✘ Test cliProcessBackendCancellationReturnsCheckedEvidence() recorded an issue at CliBackendTests.swift:531:2: Caught error: primary: processLaunchFailed("process did not become ready")
+✘ Test cliProcessBackendCancellationReturnsCheckedEvidence() failed after 3.574 seconds with 1 issue.
+✘ Test cliProcessBackendCancellationEscalatesAfterGrace() recorded an issue at CliBackendTests.swift:471:2: Caught error: primary: processLaunchFailed("process did not become ready")
+✘ Test cliProcessBackendCancellationEscalatesAfterGrace() failed after 3.574 seconds with 1 issue.
+✘ Test run with 2 tests in 0 suites failed after 3.575 seconds with 2 issues.

@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/usr/bin/log",
+    "show",
+    "--style",
+    "ndjson",
+    "--start",
+    "2026-09-09 10:53:06+0800",
+    "--end",
+    "2026-09-09 10:53:10+0800",
+    "--predicate",
+    "processIdentifier == 73135 AND subsystem == \"com.muzi.agentloop\" AND category == \"runtime-lifecycle\""
+  ],
+  "target_pid": 73135,
+  "exact_start": "2026-09-09T10:53:06.037557000+08:00",
+  "exact_end": "2026-09-09T10:53:09.236692000+08:00",
+  "owned_pid": 73366,
+  "waited_pid": 73366,
+  "exit_code": 0,
+  "signal": null,
+  "log_sha256": "915b5938bfae96c56fab9000557a203a6ac186178b542e176c499155de03608b"
+}

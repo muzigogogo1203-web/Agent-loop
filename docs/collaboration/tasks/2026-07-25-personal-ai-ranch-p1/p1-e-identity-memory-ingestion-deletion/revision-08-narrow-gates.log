@@ -1,0 +1,950 @@
+P1-E REVISION 08 NARROW GATES
+gate=root-four-first-green
+command=swift run RunTests --filter shutdownWithCancellationIgnoringProviderReturnsBoundedly|rateLimitTriggersGlobalCooldownThenRecovers|boardServerFramingForwardsToolCallsWhenSocketsAreAllowed|boardSocketClientClosesDescriptorWhenConnectFails
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+[3/7] Compiling AgentLoopCore Orchestrator.swift
+[4/7] Compiling AgentLoopCore BoardToolServer.swift
+[5/7] Emitting module AgentLoopCore
+[6/8] Compiling AgentLoopCore CliProcessBackend.swift
+[7/11] Compiling AgentLoopApplication MissionWorkflowController.swift
+[8/11] Emitting module AgentLoopApplication
+[9/11] Compiling AgentLoopApplication InputWorkflowController.swift
+[9/13] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[11/29] Compiling AgentLoopTestSuite MultiCampTests.swift
+[12/30] Compiling AgentLoopTestSuite OrchestratorTests.swift
+[13/30] Compiling AgentLoopTestSuite McpTests.swift
+[14/30] Compiling AgentLoopTestSuite IngestionDeletionContractTests.swift
+[15/30] Compiling AgentLoopTestSuite KnowledgeGoldenPathTests.swift
+[16/30] Compiling AgentLoopTestSuite RuntimeProfileTests.swift
+[17/30] Compiling AgentLoopTestSuite FailureVisibilityTests.swift
+[18/30] Compiling AgentLoopTestSuite GoldenPathTests.swift
+[19/30] Compiling AgentLoopTestSuite GuideChatTests.swift
+[20/30] Compiling AgentLoopTestSuite HaltAndCooldownTests.swift
+[21/30] Compiling AgentLoopTestSuite CrashRecoveryTests.swift
+[22/30] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+[23/30] Compiling AgentLoopTestSuite BoardServerTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:247:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+245 |             probe.close()
+246 |             server?.stop()
+247 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+248 |             server = nil
+249 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:278:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+276 |             client.close()
+277 |             server?.stop()
+278 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+279 |             server = nil
+280 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[24/30] Compiling AgentLoopTestSuite BudgetTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:247:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+245 |             probe.close()
+246 |             server?.stop()
+247 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+248 |             server = nil
+249 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:278:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+276 |             client.close()
+277 |             server?.stop()
+278 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+279 |             server = nil
+280 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[25/30] Emitting module AgentLoopTestSuite
+[26/30] Compiling AgentLoopTestSuite ApplicationWorkflowTests.swift
+[27/30] Compiling AgentLoopTestSuite AskUserTests.swift
+[28/31] Compiling AgentLoopTestSuite CliBackendTests.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[28/31] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[29/31] Linking RunTests
+[30/31] Applying RunTests
+Build of product 'RunTests' complete! (39.62s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✘ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() recorded an issue at DurablePlanningTests.swift:7571:5: Expectation failed: (requestedDuration → 15.0 seconds) == (.milliseconds(25) → 0.025 seconds)
+AgentLoopTestSuite/DurablePlanningTests.swift:7492: Precondition failed
+root_four_command_code=133
+root_four_tee_code=0
+classified_root_four_failure=deadline probe intercepted shared 15s next-due sleep before the planned 25ms shutdown deadline
+bounded_correction=pass through every non-25ms sleep with original cancellable Task.sleep semantics
+gate=root-four-after-bounded-probe-correction
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+[4/6] Emitting module AgentLoopTestSuite
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (28.38s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+◇ Suite BoardServerTests started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() passed after 0.100 seconds.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.106 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.001 seconds.
+✔ Suite BoardServerTests passed after 0.108 seconds.
+✔ Test rateLimitTriggersGlobalCooldownThenRecovers() passed after 0.174 seconds.
+✔ Test run with 4 tests in 1 suite passed after 0.175 seconds.
+root_four_after_correction_command_code=0
+root_four_after_correction_tee_code=0
+gate=timing-causal iteration=1
+filter=shutdownWithCancellationIgnoringProviderReturnsBoundedly|rateLimitTriggersGlobalCooldownThenRecovers
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+✔ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() passed after 0.150 seconds.
+✔ Test rateLimitTriggersGlobalCooldownThenRecovers() passed after 0.222 seconds.
+✔ Test run with 2 tests in 0 suites passed after 0.222 seconds.
+timing_1_command_code=0
+timing_1_tee_code=0
+gate=timing-causal iteration=2
+filter=shutdownWithCancellationIgnoringProviderReturnsBoundedly|rateLimitTriggersGlobalCooldownThenRecovers
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+✔ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() passed after 0.104 seconds.
+✔ Test rateLimitTriggersGlobalCooldownThenRecovers() passed after 0.181 seconds.
+✔ Test run with 2 tests in 0 suites passed after 0.181 seconds.
+timing_2_command_code=0
+timing_2_tee_code=0
+gate=timing-causal iteration=3
+filter=shutdownWithCancellationIgnoringProviderReturnsBoundedly|rateLimitTriggersGlobalCooldownThenRecovers
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+✔ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() passed after 0.109 seconds.
+✔ Test rateLimitTriggersGlobalCooldownThenRecovers() passed after 0.185 seconds.
+✔ Test run with 2 tests in 0 suites passed after 0.185 seconds.
+timing_3_command_code=0
+timing_3_tee_code=0
+gate=timing-causal iteration=4
+filter=shutdownWithCancellationIgnoringProviderReturnsBoundedly|rateLimitTriggersGlobalCooldownThenRecovers
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+✔ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() passed after 0.092 seconds.
+✔ Test rateLimitTriggersGlobalCooldownThenRecovers() passed after 0.162 seconds.
+✔ Test run with 2 tests in 0 suites passed after 0.162 seconds.
+timing_4_command_code=0
+timing_4_tee_code=0
+gate=timing-causal iteration=5
+filter=shutdownWithCancellationIgnoringProviderReturnsBoundedly|rateLimitTriggersGlobalCooldownThenRecovers
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+✔ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() passed after 0.102 seconds.
+✔ Test rateLimitTriggersGlobalCooldownThenRecovers() passed after 0.176 seconds.
+✔ Test run with 2 tests in 0 suites passed after 0.176 seconds.
+timing_5_command_code=0
+timing_5_tee_code=0
+gate=board-four iteration=1
+filter=boardServerFramingForwardsToolCallsWhenSocketsAreAllowed|boardSocketClientDistinguishesTimeoutFromEOF|boardSocketClientClosesDescriptorWhenConnectFails|boardServerRejectsWrongTokenAndMismatchedCard
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.086 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.066 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.004 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.089 seconds.
+✔ Suite BoardServerTests passed after 5.247 seconds.
+✔ Test run with 4 tests in 1 suite passed after 5.247 seconds.
+board_four_1_command_code=0
+board_four_1_tee_code=0
+gate=board-four iteration=2
+filter=boardServerFramingForwardsToolCallsWhenSocketsAreAllowed|boardSocketClientDistinguishesTimeoutFromEOF|boardSocketClientClosesDescriptorWhenConnectFails|boardServerRejectsWrongTokenAndMismatchedCard
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.092 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.062 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.005 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.089 seconds.
+✔ Suite BoardServerTests passed after 5.249 seconds.
+✔ Test run with 4 tests in 1 suite passed after 5.250 seconds.
+board_four_2_command_code=0
+board_four_2_tee_code=0
+gate=board-four iteration=3
+filter=boardServerFramingForwardsToolCallsWhenSocketsAreAllowed|boardSocketClientDistinguishesTimeoutFromEOF|boardSocketClientClosesDescriptorWhenConnectFails|boardServerRejectsWrongTokenAndMismatchedCard
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.085 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.066 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.003 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.084 seconds.
+✔ Suite BoardServerTests passed after 5.240 seconds.
+✔ Test run with 4 tests in 1 suite passed after 5.240 seconds.
+board_four_3_command_code=0
+board_four_3_tee_code=0
+gate=board-four iteration=4
+filter=boardServerFramingForwardsToolCallsWhenSocketsAreAllowed|boardSocketClientDistinguishesTimeoutFromEOF|boardSocketClientClosesDescriptorWhenConnectFails|boardServerRejectsWrongTokenAndMismatchedCard
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.083 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.067 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.001 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.084 seconds.
+✔ Suite BoardServerTests passed after 5.236 seconds.
+✔ Test run with 4 tests in 1 suite passed after 5.236 seconds.
+board_four_4_command_code=0
+board_four_4_tee_code=0
+gate=board-four iteration=5
+filter=boardServerFramingForwardsToolCallsWhenSocketsAreAllowed|boardSocketClientDistinguishesTimeoutFromEOF|boardSocketClientClosesDescriptorWhenConnectFails|boardServerRejectsWrongTokenAndMismatchedCard
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.079 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.068 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.001 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.091 seconds.
+✔ Suite BoardServerTests passed after 5.242 seconds.
+✔ Test run with 4 tests in 1 suite passed after 5.242 seconds.
+board_four_5_command_code=0
+board_four_5_tee_code=0
+gate=complete-board-suite iteration=1
+filter=BoardServerTests
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerForwardsProgressSearchAndCompleteTools() started.
+✔ Test boardServerForwardsProgressSearchAndCompleteTools() passed after 0.079 seconds.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.070 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.064 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.003 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.077 seconds.
+◇ Test boardServerRejectsSecondConcurrentConnection() started.
+✔ Test boardServerRejectsSecondConcurrentConnection() passed after 0.067 seconds.
+◇ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() started.
+✔ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() passed after 0.067 seconds.
+◇ Test boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses() started.
+✔ Test boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses() passed after 8.009 seconds.
+◇ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() started.
+✔ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() passed after 6.469 seconds.
+◇ Test boardServerDefinitionsExposeFiveToolsWhenFullAccess() started.
+✔ Test boardServerDefinitionsExposeFiveToolsWhenFullAccess() passed after 0.065 seconds.
+✔ Suite BoardServerTests passed after 19.976 seconds.
+✔ Test run with 10 tests in 1 suite passed after 19.976 seconds.
+board_suite_1_command_code=0
+board_suite_1_tee_code=0
+gate=complete-board-suite iteration=2
+filter=BoardServerTests
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.12s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerForwardsProgressSearchAndCompleteTools() started.
+✔ Test boardServerForwardsProgressSearchAndCompleteTools() passed after 0.076 seconds.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.067 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.069 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.002 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.086 seconds.
+◇ Test boardServerRejectsSecondConcurrentConnection() started.
+✔ Test boardServerRejectsSecondConcurrentConnection() passed after 0.066 seconds.
+◇ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() started.
+✔ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() passed after 0.066 seconds.
+◇ Test boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses() started.
+✔ Test boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses() passed after 8.032 seconds.
+◇ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() started.
+✔ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() passed after 6.449 seconds.
+◇ Test boardServerDefinitionsExposeFiveToolsWhenFullAccess() started.
+✔ Test boardServerDefinitionsExposeFiveToolsWhenFullAccess() passed after 0.063 seconds.
+✔ Suite BoardServerTests passed after 19.982 seconds.
+✔ Test run with 10 tests in 1 suite passed after 19.982 seconds.
+board_suite_2_command_code=0
+board_suite_2_tee_code=0
+gate=complete-board-suite iteration=3
+filter=BoardServerTests
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.12s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerForwardsProgressSearchAndCompleteTools() started.
+✔ Test boardServerForwardsProgressSearchAndCompleteTools() passed after 0.076 seconds.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.068 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.070 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.001 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.089 seconds.
+◇ Test boardServerRejectsSecondConcurrentConnection() started.
+✔ Test boardServerRejectsSecondConcurrentConnection() passed after 0.065 seconds.
+◇ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() started.
+✔ Test boardServerStopWhileConnectionIsActiveClosesExactlyOnce() passed after 0.064 seconds.
+◇ Test boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses() started.
+✔ Test boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses() passed after 7.950 seconds.
+◇ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() started.
+✔ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() passed after 6.621 seconds.
+◇ Test boardServerDefinitionsExposeFiveToolsWhenFullAccess() started.
+✔ Test boardServerDefinitionsExposeFiveToolsWhenFullAccess() passed after 0.064 seconds.
+✔ Suite BoardServerTests passed after 20.073 seconds.
+✔ Test run with 10 tests in 1 suite passed after 20.073 seconds.
+board_suite_3_command_code=0
+board_suite_3_tee_code=0
+gate=resource-sensitive-eight iteration=1
+filter=shutdownWithCancellationIgnoringProviderReturnsBoundedly|rateLimitTriggersGlobalCooldownThenRecovers|boardServerFramingForwardsToolCallsWhenSocketsAreAllowed|boardSocketClientDistinguishesTimeoutFromEOF|boardSocketClientClosesDescriptorWhenConnectFails|boardServerRejectsWrongTokenAndMismatchedCard|shellRegistryTerminateAllKillsRunning|loginShellEnvironmentCapturesPath
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+◇ Test loginShellEnvironmentCapturesPath() started.
+◇ Test shellRegistryTerminateAllKillsRunning() started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test loginShellEnvironmentCapturesPath() passed after 0.001 seconds.
+✔ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() passed after 0.097 seconds.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.100 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test rateLimitTriggersGlobalCooldownThenRecovers() passed after 0.171 seconds.
+✔ Test shellRegistryTerminateAllKillsRunning() passed after 0.178 seconds.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.067 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.002 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.076 seconds.
+✔ Suite BoardServerTests passed after 5.247 seconds.
+✔ Test run with 8 tests in 1 suite passed after 5.247 seconds.
+resource_eight_1_command_code=0
+resource_eight_1_tee_code=0
+gate=resource-sensitive-eight iteration=2
+filter=shutdownWithCancellationIgnoringProviderReturnsBoundedly|rateLimitTriggersGlobalCooldownThenRecovers|boardServerFramingForwardsToolCallsWhenSocketsAreAllowed|boardSocketClientDistinguishesTimeoutFromEOF|boardSocketClientClosesDescriptorWhenConnectFails|boardServerRejectsWrongTokenAndMismatchedCard|shellRegistryTerminateAllKillsRunning|loginShellEnvironmentCapturesPath
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test loginShellEnvironmentCapturesPath() started.
+◇ Test shellRegistryTerminateAllKillsRunning() started.
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test loginShellEnvironmentCapturesPath() passed after 0.001 seconds.
+✔ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() passed after 0.100 seconds.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.101 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test rateLimitTriggersGlobalCooldownThenRecovers() passed after 0.171 seconds.
+✔ Test shellRegistryTerminateAllKillsRunning() passed after 0.175 seconds.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.063 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.001 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.073 seconds.
+✔ Suite BoardServerTests passed after 5.240 seconds.
+✔ Test run with 8 tests in 1 suite passed after 5.240 seconds.
+resource_eight_2_command_code=0
+resource_eight_2_tee_code=0
+gate=resource-sensitive-eight iteration=3
+filter=shutdownWithCancellationIgnoringProviderReturnsBoundedly|rateLimitTriggersGlobalCooldownThenRecovers|boardServerFramingForwardsToolCallsWhenSocketsAreAllowed|boardSocketClientDistinguishesTimeoutFromEOF|boardSocketClientClosesDescriptorWhenConnectFails|boardServerRejectsWrongTokenAndMismatchedCard|shellRegistryTerminateAllKillsRunning|loginShellEnvironmentCapturesPath
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test loginShellEnvironmentCapturesPath() started.
+◇ Test shellRegistryTerminateAllKillsRunning() started.
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+✔ Test loginShellEnvironmentCapturesPath() passed after 0.001 seconds.
+✔ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() passed after 0.102 seconds.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.104 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test rateLimitTriggersGlobalCooldownThenRecovers() passed after 0.174 seconds.
+✔ Test shellRegistryTerminateAllKillsRunning() passed after 0.181 seconds.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.065 seconds.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✔ Test boardSocketClientClosesDescriptorWhenConnectFails() passed after 0.002 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.073 seconds.
+✔ Suite BoardServerTests passed after 5.247 seconds.
+✔ Test run with 8 tests in 1 suite passed after 5.247 seconds.
+resource_eight_3_command_code=0
+resource_eight_3_tee_code=0
+gate=successor-112
+extracted_unique_tests=112
+source=revision-06-narrow-gates.log current-successor-green
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1DApprovalGrantContractTests started.
+◇ Suite P1CInputEnvelopeContractTests started.
+◇ Suite A2DurableRuminationTests started.
+◇ Suite A2CodingRanchTests started.
+◇ Suite P1CGoalCoachContractTests started.
+◇ Test failedSlotDoesNotSpinOrAutoRetryAfterConfigurationFix() started.
+◇ Suite P1CDomainEventContractTests started.
+◇ Test answerResumesWithQAInContext() started.
+◇ Suite BoardServerTests started.
+◇ Test approvedGrantFailsClosedWhenWorkflowPortIsMissing() started.
+◇ Test inputRefreshFailurePreservesDashboardAndInbox() started.
+◇ Suite P1DOutcomeContractTests started.
+◇ Test scheduleFireSchemaReservesRedactionWithoutAllowingOrdinaryMutation() started.
+◇ Test twoCardMissionWithMidwayAskUser() started.
+◇ Test ddlRejectsEveryInvalidWorkAttemptEventErrorStatePair() started.
+◇ Test existingSpentUsageOverflowTerminalizesWithExactEvidence() started.
+◇ Test feedCapsAtLimit() started.
+◇ Test completeCopiesArtifactBeforeDone() started.
+◇ Test a1bSchedulePathDoesNotCreateScheduleFireOrChangeClaimCAS() started.
+◇ Test testCowRequiresAcceptedMissionWithRealArtifactAndUnlocksOnce() started.
+◇ Test multipleQARoundsAccumulate() started.
+◇ Test approvalAnswerCreatesGrantAndStartupWithoutWorkflowFailsClosed() started.
+◇ Test pinnedAndRecentCompanionNotes() started.
+◇ Test deniedActionRoutesToErrorAndCardContinues() started.
+◇ Test scheduleMissionStartUsesCheckedUTCMillisecondsKey() started.
+◇ Test validProposalPersistsCardsWithKernelIds() started.
+◇ Test rateLimitTriggersGlobalCooldownThenRecovers() started.
+◇ Test startupProposalHealingFailureIsPersistedAndEmitted() started.
+◇ Test planningIdentityAndTokenEventsPreserveIntegersAboveTwoTo53() started.
+◇ Test malformedApprovalOptionsAbortAnswerWithoutGrantOrResume() started.
+◇ Test planAfterCancelIsNoop() started.
+◇ Test scheduleFiredEventMarksScheduledOrigin() started.
+◇ Test suspendAndAnswerRoundTrip() started.
+◇ Test progressNoteAppendsEvent() started.
+◇ Test approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() started.
+◇ Test replaySamePayloadReturnsSameFireButConflictFails() started.
+◇ Test sameSlotReplayReturnsSameMission() started.
+◇ Test broadcastFailureDoesNotRewriteStartedFire() started.
+◇ Test schedulePlannerSelectionFailureClaimsSlotThenRecordsMissedOnce() started.
+◇ Test nextClaimableDateIgnoresRunningTerminalAndArchivedCampRows() started.
+◇ Test scheduleValidationFailureAdvancesEvaluationCursorButNotLastFiredAt() started.
+◇ Test a3Revision02EntryBoundaryRemainsByteExact() started.
+◇ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() started.
+◇ Test inputOutputUsageOverflowTerminalizesWithExactEvidence() started.
+◇ Test invalidProposalRetriesOnceThenFallsBack() started.
+◇ Test dmSystemCarriesCompanionMemory() started.
+◇ Test scheduleStartedTransactionSurvivesRestartBeforePlannerKick() started.
+◇ Test scheduleCRUDAndClaimDedupe() started.
+◇ Test explicitReplayUsesNewIdempotencyKeyAndDoesNotMoveCursor() started.
+◇ Test pendingRequestsAcrossCards() started.
+◇ Test companionNoteCRUDIsolatedPerCompanion() started.
+◇ Test reworkCompletionPreservesPreviousArtifactVersion() started.
+◇ Test shellRegistryTerminateAllKillsRunning() started.
+◇ Test doublePlanIsNoopWithAuditEvent() started.
+◇ Test failureRecordResolveReopenAndOverflowAreChecked() started.
+◇ Test confirmedProposalMissionStartUsesProposalKeyAndPreservesFirstTrace() started.
+◇ Test planningUsageOverflowEvidencePreservesIntegersAboveTwoTo53() started.
+◇ Test activeRuminationFencesDiscardDeleteAndArchiveRaces() started.
+◇ Test approvalAnswerCreatesTypedSingleUseGrantWithRecomputedCamp() started.
+◇ Test ruminationPhaseProjectionUsesOnlyMatchingSupervisorEvents() started.
+◇ Test captureAndInputParsingWorkCommitAtomically() started.
+◇ Test replayValidatesCompleteStoredEventAndOutboxGraph() started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+◇ Test outcomeContractMigrationRemainsPresentUnderV16Head() started.
+◇ Test crossCampAmbiguityBlocksGoalCreationWithoutWrites() started.
+✔ Test completeCopiesArtifactBeforeDone() passed after 0.816 seconds.
+✔ Test feedCapsAtLimit() passed after 0.816 seconds.
+✔ Test existingSpentUsageOverflowTerminalizesWithExactEvidence() passed after 0.816 seconds.
+✔ Test ddlRejectsEveryInvalidWorkAttemptEventErrorStatePair() passed after 0.842 seconds.
+✔ Test pinnedAndRecentCompanionNotes() passed after 0.847 seconds.
+✔ Test validProposalPersistsCardsWithKernelIds() passed after 0.858 seconds.
+✔ Test planningIdentityAndTokenEventsPreserveIntegersAboveTwoTo53() passed after 0.907 seconds.
+✔ Test scheduleFiredEventMarksScheduledOrigin() passed after 0.907 seconds.
+✔ Test planAfterCancelIsNoop() passed after 0.978 seconds.
+✔ Test suspendAndAnswerRoundTrip() passed after 0.978 seconds.
+✔ Test a3Revision02EntryBoundaryRemainsByteExact() passed after 0.985 seconds.
+✔ Test nextClaimableDateIgnoresRunningTerminalAndArchivedCampRows() passed after 0.987 seconds.
+✔ Test inputOutputUsageOverflowTerminalizesWithExactEvidence() passed after 1.003 seconds.
+✔ Test scheduleCRUDAndClaimDedupe() passed after 1.003 seconds.
+✔ Test pendingRequestsAcrossCards() passed after 1.085 seconds.
+✔ Test companionNoteCRUDIsolatedPerCompanion() passed after 1.085 seconds.
+✔ Test reworkCompletionPreservesPreviousArtifactVersion() passed after 1.127 seconds.
+✔ Test doublePlanIsNoopWithAuditEvent() passed after 1.126 seconds.
+✔ Test failureRecordResolveReopenAndOverflowAreChecked() passed after 1.127 seconds.
+✔ Test explicitReplayUsesNewIdempotencyKeyAndDoesNotMoveCursor() passed after 1.127 seconds.
+✔ Test scheduleMissionStartUsesCheckedUTCMillisecondsKey() passed after 1.128 seconds.
+✔ Test progressNoteAppendsEvent() passed after 1.128 seconds.
+✔ Test failedSlotDoesNotSpinOrAutoRetryAfterConfigurationFix() passed after 1.131 seconds.
+✔ Test schedulePlannerSelectionFailureClaimsSlotThenRecordsMissedOnce() passed after 1.130 seconds.
+✔ Test planningUsageOverflowEvidencePreservesIntegersAboveTwoTo53() passed after 1.129 seconds.
+✔ Test approvalAnswerCreatesTypedSingleUseGrantWithRecomputedCamp() passed after 0.669 seconds.
+✔ Test outcomeContractMigrationRemainsPresentUnderV16Head() passed after 0.358 seconds.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.392 seconds.
+✔ Test captureAndInputParsingWorkCommitAtomically() passed after 0.568 seconds.
+✔ Suite P1DOutcomeContractTests passed after 1.198 seconds.
+✔ Test startupProposalHealingFailureIsPersistedAndEmitted() passed after 1.231 seconds.
+✔ Test dmSystemCarriesCompanionMemory() passed after 1.231 seconds.
+✔ Test a1bSchedulePathDoesNotCreateScheduleFireOrChangeClaimCAS() passed after 1.232 seconds.
+✔ Suite BoardServerTests passed after 1.232 seconds.
+✔ Test approvalAnswerCreatesGrantAndStartupWithoutWorkflowFailsClosed() passed after 1.235 seconds.
+◇ Test rejectionCreatesNoGrantAndExpiredRevokedMismatchFailClosed() started.
+✔ Test testCowRequiresAcceptedMissionWithRealArtifactAndUnlocksOnce() passed after 1.280 seconds.
+◇ Test inputCaptureReplayAndPayloadDriftConflict() started.
+✔ Test crossCampAmbiguityBlocksGoalCreationWithoutWrites() passed after 0.471 seconds.
+✔ Test invalidProposalRetriesOnceThenFallsBack() passed after 1.377 seconds.
+✔ Test scheduleFireSchemaReservesRedactionWithoutAllowingOrdinaryMutation() passed after 1.398 seconds.
+✔ Test shutdownWithCancellationIgnoringProviderReturnsBoundedly() passed after 1.398 seconds.
+◇ Test convertToGoalCommitsInputGoalEventsAndOutboxesAtomically() started.
+✔ Test replayValidatesCompleteStoredEventAndOutboxGraph() passed after 0.814 seconds.
+◇ Test inboxOrdinaryRedactionIsRejectedWithoutCASOrHandler() started.
+✔ Test malformedApprovalOptionsAbortAnswerWithoutGrantOrResume() passed after 1.473 seconds.
+✔ Test inputCaptureReplayAndPayloadDriftConflict() passed after 0.212 seconds.
+✔ Test approvedGrantFailsClosedWhenWorkflowPortIsMissing() passed after 1.530 seconds.
+◇ Test inputCaptureReplayUsesCallerOwnedIDAndExistingWorkResult() started.
+✔ Test deniedActionRoutesToErrorAndCardContinues() passed after 1.529 seconds.
+✔ Test confirmedProposalMissionStartUsesProposalKeyAndPreservesFirstTrace() passed after 1.598 seconds.
+✔ Test convertToGoalCommitsInputGoalEventsAndOutboxesAtomically() passed after 0.196 seconds.
+◇ Test convertToGoalReplayUsesCallerOwnedGoalIDAfterProjectionAdvances() started.
+✔ Test inboxOrdinaryRedactionIsRejectedWithoutCASOrHandler() passed after 0.183 seconds.
+◇ Test inboxOrdinaryRedactionFencePreservesEveryOrigin() started.
+✔ Test rateLimitTriggersGlobalCooldownThenRecovers() passed after 1.637 seconds.
+✔ Test approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() passed after 1.657 seconds.
+✔ Test answerResumesWithQAInContext() passed after 1.658 seconds.
+✔ Test sameSlotReplayReturnsSameMission() passed after 1.674 seconds.
+✔ Test scheduleStartedTransactionSurvivesRestartBeforePlannerKick() passed after 1.687 seconds.
+✔ Test inputCaptureReplayUsesCallerOwnedIDAndExistingWorkResult() passed after 0.165 seconds.
+◇ Test inputParsingCrashIsAdopted() started.
+✔ Test twoCardMissionWithMidwayAskUser() passed after 1.722 seconds.
+✔ Test rejectionCreatesNoGrantAndExpiredRevokedMismatchFailClosed() passed after 0.502 seconds.
+✔ Test multipleQARoundsAccumulate() passed after 1.749 seconds.
+✔ Suite P1DApprovalGrantContractTests passed after 1.753 seconds.
+✔ Test convertToGoalReplayUsesCallerOwnedGoalIDAfterProjectionAdvances() passed after 0.203 seconds.
+◇ Test openCoachSessionEnqueuesDurableCoachWorkAtomically() started.
+✔ Test inputParsingCrashIsAdopted() passed after 0.160 seconds.
+◇ Test controlWorkAdoptionRequiresExpiredLeaseAndRecoversSameOwnerAcrossKinds() started.
+✔ Test activeRuminationFencesDiscardDeleteAndArchiveRaces() passed after 1.475 seconds.
+✔ Suite A2DurableRuminationTests passed after 1.936 seconds.
+✔ Test openCoachSessionEnqueuesDurableCoachWorkAtomically() passed after 0.154 seconds.
+◇ Test openCoachReplayUsesCallerOwnedSessionAndQuestionIDs() started.
+✔ Test shellRegistryTerminateAllKillsRunning() passed after 1.979 seconds.
+✔ Test inboxOrdinaryRedactionFencePreservesEveryOrigin() passed after 0.380 seconds.
+✔ Suite P1CDomainEventContractTests passed after 2.012 seconds.
+✔ Test inputRefreshFailurePreservesDashboardAndInbox() passed after 2.079 seconds.
+✔ Test controlWorkAdoptionRequiresExpiredLeaseAndRecoversSameOwnerAcrossKinds() passed after 0.225 seconds.
+◇ Test inputParsingRenewalHandsLatestClaimToTerminalCommit() started.
+✔ Test openCoachReplayUsesCallerOwnedSessionAndQuestionIDs() passed after 0.139 seconds.
+◇ Test oneCoachSessionPerGoalControlsConcurrentOpenResumeAndTerminalBranches() started.
+✔ Test inputParsingRenewalHandsLatestClaimToTerminalCommit() passed after 0.103 seconds.
+◇ Test inputParsingTerminalTimeIsMonotonicAndRetryBackoffStartsAtFailure() started.
+✔ Test oneCoachSessionPerGoalControlsConcurrentOpenResumeAndTerminalBranches() passed after 0.144 seconds.
+◇ Test coachSessionAllowsExactlyOneOpenQuestion() started.
+✔ Test inputParsingTerminalTimeIsMonotonicAndRetryBackoffStartsAtFailure() passed after 0.127 seconds.
+◇ Test inputParsingRenewalFailureCancelsParserWithoutProjectionCommit() started.
+✔ Test coachSessionAllowsExactlyOneOpenQuestion() passed after 0.133 seconds.
+◇ Test coachSealedDecisionKeyNeverComesFromProvider() started.
+✔ Test inputParsingRenewalFailureCancelsParserWithoutProjectionCommit() passed after 0.103 seconds.
+◇ Test inputParsingRetriesBoundedlyThenParseFailed() started.
+✔ Test coachSealedDecisionKeyNeverComesFromProvider() passed after 0.146 seconds.
+◇ Test coachProviderInterfaceOrdersPersistedHistoryBeforeAwait() started.
+✔ Test inputParsingRetriesBoundedlyThenParseFailed() passed after 0.147 seconds.
+◇ Test inputParsingCancelRejectsStaleResult() started.
+✔ Test replaySamePayloadReturnsSameFireButConflictFails() passed after 2.608 seconds.
+✔ Test inputParsingCancelRejectsStaleResult() passed after 0.090 seconds.
+◇ Test inputParsingTerminalMutationRollbackIsTotal() started.
+✔ Test coachProviderInterfaceOrdersPersistedHistoryBeforeAwait() passed after 0.162 seconds.
+◇ Test coachProviderInvalidOutputFailsDeterministicallyExactlyOnce() started.
+✔ Test broadcastFailureDoesNotRewriteStartedFire() passed after 2.736 seconds.
+✔ Test inputParsingTerminalMutationRollbackIsTotal() passed after 0.103 seconds.
+◇ Test ordinaryInputTransitionsRejectEveryActiveParsingStateWithoutWrites() started.
+✔ Test coachProviderInvalidOutputFailsDeterministicallyExactlyOnce() passed after 0.123 seconds.
+◇ Test coachAnswerEnqueuesNextDurableTurnAtomically() started.
+✔ Test coachAnswerEnqueuesNextDurableTurnAtomically() passed after 0.128 seconds.
+◇ Test coachAnswerReplayDoesNotEnqueueSecondTurn() started.
+✔ Test ordinaryInputTransitionsRejectEveryActiveParsingStateWithoutWrites() passed after 0.275 seconds.
+◇ Test inputParserInterfaceUsesOnePersistedPreAwaitSnapshotAndClosedOutcome() started.
+✔ Test coachAnswerReplayDoesNotEnqueueSecondTurn() passed after 0.133 seconds.
+◇ Test coachProposalReplayUsesGoalIDAsUnderstandingID() started.
+✔ Test inputParserInterfaceUsesOnePersistedPreAwaitSnapshotAndClosedOutcome() passed after 0.095 seconds.
+◇ Test inputParserInvalidOutputFailsDeterministicallyExactlyOnce() started.
+✔ Test inputParserInvalidOutputFailsDeterministicallyExactlyOnce() passed after 0.108 seconds.
+◇ Test crossCampAmbiguityNeverSelectsDefaultCamp() started.
+✔ Test coachProposalReplayUsesGoalIDAsUnderstandingID() passed after 0.151 seconds.
+◇ Test coachFailureRetriesAtomicallyAndKeepsSessionInterviewing() started.
+✔ Test crossCampAmbiguityNeverSelectsDefaultCamp() passed after 0.093 seconds.
+◇ Test inputCampScopeIsStableFromCaptureThroughAssignment() started.
+✔ Test coachFailureRetriesAtomicallyAndKeepsSessionInterviewing() passed after 0.119 seconds.
+◇ Test coachFailureExhaustionFailsSessionAndGoalAtomically() started.
+✔ Test inputCampScopeIsStableFromCaptureThroughAssignment() passed after 0.101 seconds.
+◇ Test inputRejectsInitialOrAssignedCampDifferentFromAuditCamp() started.
+✔ Test inputRejectsInitialOrAssignedCampDifferentFromAuditCamp() passed after 0.094 seconds.
+◇ Test inputParsingWorkAlwaysUsesAuditCampAndArchivedCampFailsClosed() started.
+✔ Test coachFailureExhaustionFailsSessionAndGoalAtomically() passed after 0.170 seconds.
+◇ Test coachReopenedTerminalFailuresAndReplayPreserveReadyGoalAndConfirmedHead() started.
+✔ Test scheduleValidationFailureAdvancesEvaluationCursorButNotLastFiredAt() passed after 3.570 seconds.
+✔ Test inputParsingWorkAlwaysUsesAuditCampAndArchivedCampFailsClosed() passed after 0.088 seconds.
+◇ Test inputTombstoneRetainsOnlyExactIdentityHashAndTimes() started.
+✔ Test inputTombstoneRetainsOnlyExactIdentityHashAndTimes() passed after 0.085 seconds.
+◇ Test inputTombstoneNullsDeviceConnectorAuthorBodyRefErrorAndParent() started.
+✔ Test coachReopenedTerminalFailuresAndReplayPreserveReadyGoalAndConfirmedHead() passed after 0.181 seconds.
+◇ Test readyRevisionWorkSealsAndValidatesJoinedConfirmedUnderstandingHash() started.
+✔ Test inputTombstoneNullsDeviceConnectorAuthorBodyRefErrorAndParent() passed after 0.092 seconds.
+◇ Test inputTombstoneForcesEmptyCandidatesUnspecifiedIntentLocalOnlyAndEqualDeleteTime() started.
+✔ Test readyRevisionWorkSealsAndValidatesJoinedConfirmedUnderstandingHash() passed after 0.142 seconds.
+◇ Test coachWorkerRestartAdoptsInterruptedTurn() started.
+✔ Test inputTombstoneForcesEmptyCandidatesUnspecifiedIntentLocalOnlyAndEqualDeleteTime() passed after 0.084 seconds.
+◇ Test localCaptureUsesLocalOwnerAndInstallationDeviceWithoutAccountIdentity() started.
+✔ Test localCaptureUsesLocalOwnerAndInstallationDeviceWithoutAccountIdentity() passed after 0.089 seconds.
+◇ Test nilInputCampNeverInfersAuthority() started.
+✔ Test coachWorkerRestartAdoptsInterruptedTurn() passed after 0.125 seconds.
+◇ Test coachRenewalHandsLatestClaimToTerminalCommit() started.
+✔ Test nilInputCampNeverInfersAuthority() passed after 0.091 seconds.
+✔ Suite P1CInputEnvelopeContractTests passed after 4.057 seconds.
+✔ Test coachRenewalHandsLatestClaimToTerminalCommit() passed after 0.112 seconds.
+◇ Test coachTerminalTimeIsMonotonicAfterRenewalAndBackoffStartsAtFailure() started.
+✔ Test coachTerminalTimeIsMonotonicAfterRenewalAndBackoffStartsAtFailure() passed after 0.126 seconds.
+◇ Test coachWorkerCancellationLeavesRecoverableRunningWork() started.
+✔ Test coachWorkerCancellationLeavesRecoverableRunningWork() passed after 0.098 seconds.
+◇ Test coachTerminalMutationRollbackRestoresWorkSessionGoal() started.
+✔ Test coachTerminalMutationRollbackRestoresWorkSessionGoal() passed after 0.106 seconds.
+◇ Test understandingEditAlwaysCreatesNewVersion() started.
+✔ Test understandingEditAlwaysCreatesNewVersion() passed after 0.155 seconds.
+◇ Test requestConfirmationDoesNotRewriteUnderstandingBody() started.
+✔ Test requestConfirmationDoesNotRewriteUnderstandingBody() passed after 0.119 seconds.
+◇ Test requestUnderstandingRevisionWithdrawsOrReopensAndEnqueuesTurn() started.
+✔ Test requestUnderstandingRevisionWithdrawsOrReopensAndEnqueuesTurn() passed after 0.401 seconds.
+◇ Test confirmUnderstandingSupersedesPriorVersionAndMakesGoalReady() started.
+✔ Test confirmUnderstandingSupersedesPriorVersionAndMakesGoalReady() passed after 0.178 seconds.
+◇ Test coachRestartRestoresExactlyOneOpenQuestionWithoutChatMemory() started.
+✔ Test coachRestartRestoresExactlyOneOpenQuestionWithoutChatMemory() passed after 0.108 seconds.
+◇ Test goalAbandonAndFailCancelActiveControlWorkAtomically() started.
+✔ Test goalAbandonAndFailCancelActiveControlWorkAtomically() passed after 0.212 seconds.
+◇ Test goalAbandonReplayUsesSealedSessionBranchAfterProjectionChanges() started.
+✔ Test goalAbandonReplayUsesSealedSessionBranchAfterProjectionChanges() passed after 0.110 seconds.
+◇ Test goalFailReplayUsesSealedSessionBranchAfterProjectionChanges() started.
+✔ Test goalFailReplayUsesSealedSessionBranchAfterProjectionChanges() passed after 0.107 seconds.
+◇ Test goalReadyRemainsContractFreeBeforeExplicitActivation() started.
+✔ Test goalReadyRemainsContractFreeBeforeExplicitActivation() passed after 0.134 seconds.
+✔ Suite P1CGoalCoachContractTests passed after 5.959 seconds.
+✔ Test ruminationPhaseProjectionUsesOnlyMatchingSupervisorEvents() passed after 8.714 seconds.
+✔ Suite A2CodingRanchTests passed after 9.318 seconds.
+✔ Test run with 112 tests in 8 suites passed after 9.319 seconds.
+successor_112_command_code=0
+successor_112_tee_code=0
+gate=p1e-focused-90
+extracted_unique_tests=90
+source=focused-verify.log
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1ECowResidencyContractTests started.
+◇ Suite P1ECampProviderDispatchTests started.
+◇ Suite P1EMemoryProvenanceTests started.
+◇ Suite P1ECampIsolationTests started.
+◇ Suite P1ELegacyScopeMigrationTests started.
+◇ Suite P1EIngestionDeletionContractTests started.
+◇ Suite P1ESQLiteMigrationCompatibilityTests started.
+◇ Suite P1EContractIntegrationTests started.
+◇ Test p1e17CowIdentityContractValidation() started.
+◇ Test p1e37ProviderMessageAndWorkCommitAtomically() started.
+◇ Test p1e33LegacyContentWritesScopeFirst() started.
+◇ Test p1e32P1DInvalidationAndMemoryRollbackAtomically() started.
+◇ Test p1e20SameCowTwoCampsMemoryIsolation() started.
+◇ Test p1e25MemoryRawWorkingPromotionFlow() started.
+◇ Suite P1ECampLifecycleMigrationTests started.
+◇ Test p1e49DeletionPrepareRequestSurface() started.
+◇ Test p1e14LiteralSQLite351V16Fence() started.
+◇ Test p1e01V16MigrationIsImmediateSuccessor() started.
+✔ Test p1e01V16MigrationIsImmediateSuccessor() passed after 0.001 seconds.
+◇ Test p1e02V16SchemaObjectCountsAndDDL() started.
+✔ Test p1e49DeletionPrepareRequestSurface() passed after 0.122 seconds.
+◇ Test p1e50DeletionCommandFactoryAuthority() started.
+✔ Test p1e50DeletionCommandFactoryAuthority() passed after 0.006 seconds.
+◇ Test p1e51DeletionPrepareSnapshotZeroWritePrivacy() started.
+✔ Test p1e17CowIdentityContractValidation() passed after 0.130 seconds.
+◇ Test p1e18ResidencyTransitionsReplayAndRejoin() started.
+✔ Test p1e02V16SchemaObjectCountsAndDDL() passed after 0.136 seconds.
+◇ Test p1e03CompanionCowResidencyBackfillReplay() started.
+✔ Test p1e33LegacyContentWritesScopeFirst() passed after 0.143 seconds.
+◇ Test p1e34LegacyContentRawWriteRejected() started.
+✔ Test p1e37ProviderMessageAndWorkCommitAtomically() passed after 0.157 seconds.
+◇ Test p1e38ProviderPrepareStartReturnConsumeSuccess() started.
+✔ Test p1e25MemoryRawWorkingPromotionFlow() passed after 0.159 seconds.
+◇ Test p1e26MemoryLayerOwnerAndCarrierInvariants() started.
+✔ Test p1e26MemoryLayerOwnerAndCarrierInvariants() passed after 0.001 seconds.
+◇ Test p1e27AcceptedOutcomeSkillPromotion() started.
+✔ Test p1e20SameCowTwoCampsMemoryIsolation() passed after 0.168 seconds.
+◇ Test p1e21InactiveResidencyBlocksReadWrite() started.
+✔ Test p1e14LiteralSQLite351V16Fence() passed after 0.170 seconds.
+◇ Test p1e15LiteralSQLite352V16Fence() started.
+✔ Test p1e51DeletionPrepareSnapshotZeroWritePrivacy() passed after 0.141 seconds.
+◇ Test p1e52DeletionCommandCanonicalHashAndCounts() started.
+✔ Test p1e34LegacyContentRawWriteRejected() passed after 0.141 seconds.
+◇ Test p1e35LegacyEventAppendScopeFirst() started.
+✔ Test p1e03CompanionCowResidencyBackfillReplay() passed after 0.149 seconds.
+◇ Test p1e04NilAndCorruptCampBackfillMatrix() started.
+✔ Test p1e32P1DInvalidationAndMemoryRollbackAtomically() passed after 0.298 seconds.
+✔ Suite P1EContractIntegrationTests passed after 0.298 seconds.
+✔ Test p1e18ResidencyTransitionsReplayAndRejoin() passed after 0.169 seconds.
+◇ Test p1e19RequireActiveResidencyAuthorization() started.
+✔ Test p1e21InactiveResidencyBlocksReadWrite() passed after 0.132 seconds.
+✔ Suite P1ECampIsolationTests passed after 0.301 seconds.
+✔ Test p1e38ProviderPrepareStartReturnConsumeSuccess() passed after 0.149 seconds.
+◇ Test p1e39ReturnedCheckpointNeverRecallsProvider() started.
+✔ Test p1e15LiteralSQLite352V16Fence() passed after 0.180 seconds.
+◇ Test p1e16RealSQLiteDualLaneV16Contract() started.
+✔ Test p1e16RealSQLiteDualLaneV16Contract() passed after 0.006 seconds.
+✔ Suite P1ESQLiteMigrationCompatibilityTests passed after 0.357 seconds.
+✔ Test p1e27AcceptedOutcomeSkillPromotion() passed after 0.205 seconds.
+◇ Test p1e28UnacceptedOrInvalidSkillPromotionRejects() started.
+✔ Test p1e52DeletionCommandCanonicalHashAndCounts() passed after 0.107 seconds.
+◇ Test p1e53ResultOnlyNeedsReviewSuccess() started.
+✔ Test p1e35LegacyEventAppendScopeFirst() passed after 0.101 seconds.
+◇ Test p1e36LegacyEventMissingMismatchRejected() started.
+✔ Test p1e19RequireActiveResidencyAuthorization() passed after 0.105 seconds.
+◇ Test p1e22BridgeDirectionScopeAndRevocation() started.
+✔ Test p1e39ReturnedCheckpointNeverRecallsProvider() passed after 0.109 seconds.
+◇ Test p1e40StartedDispatchAbandonAndExactReplay() started.
+✔ Test p1e36LegacyEventMissingMismatchRejected() passed after 0.083 seconds.
+✔ Suite P1ELegacyScopeMigrationTests passed after 0.470 seconds.
+✔ Test p1e53ResultOnlyNeedsReviewSuccess() passed after 0.096 seconds.
+◇ Test p1e54ResultOnlyFailedWithResultSuccess() started.
+✔ Test p1e04NilAndCorruptCampBackfillMatrix() passed after 0.211 seconds.
+◇ Test p1e05ArchivedWorkClosureAndLifecycleBinding() started.
+✔ Test p1e22BridgeDirectionScopeAndRevocation() passed after 0.107 seconds.
+◇ Test p1e23RequireActiveCampWriteFence() started.
+✔ Test p1e40StartedDispatchAbandonAndExactReplay() passed after 0.097 seconds.
+◇ Test p1e41ProviderLifecycleFenceRace() started.
+✔ Test p1e54ResultOnlyFailedWithResultSuccess() passed after 0.087 seconds.
+◇ Test p1e55ResultOnlyRejectionMatrix() started.
+✔ Test p1e05ArchivedWorkClosureAndLifecycleBinding() passed after 0.090 seconds.
+◇ Test p1e06LegacyPoisonDiagnosticsRollback() started.
+✔ Test p1e23RequireActiveCampWriteFence() passed after 0.081 seconds.
+◇ Test p1e24P1ERetirementAPIsRemainClosed() started.
+✔ Test p1e41ProviderLifecycleFenceRace() passed after 0.091 seconds.
+◇ Test p1e42GuideAndCampDistillReplayClass() started.
+✔ Test p1e42GuideAndCampDistillReplayClass() passed after 0.001 seconds.
+◇ Test p1e43GlobalProviderRoutesAvoidCampDispatch() started.
+✔ Test p1e06LegacyPoisonDiagnosticsRollback() passed after 0.019 seconds.
+◇ Test p1e07DurableChildFKRebuildUsesFinalNames() started.
+✔ Test p1e24P1ERetirementAPIsRemainClosed() passed after 0.035 seconds.
+✔ Suite P1ECowResidencyContractTests passed after 0.631 seconds.
+✔ Test p1e28UnacceptedOrInvalidSkillPromotionRejects() passed after 0.295 seconds.
+◇ Test p1e29MemoryDependencyAppendOnlyGraph() started.
+✔ Test p1e43GlobalProviderRoutesAvoidCampDispatch() passed after 0.075 seconds.
+◇ Test p1e44UnknownExternalWriteRouteRejects() started.
+✔ Test p1e07DurableChildFKRebuildUsesFinalNames() passed after 0.094 seconds.
+◇ Test p1e08LegacyChatNoteScopeBackfill() started.
+✔ Test p1e29MemoryDependencyAppendOnlyGraph() passed after 0.079 seconds.
+◇ Test p1e30DependencyInvalidationStateMatrix() started.
+✔ Test p1e44UnknownExternalWriteRouteRejects() passed after 0.068 seconds.
+◇ Test p1e45GuideToolAllowlistAndReceiptDedupe() started.
+✔ Test p1e08LegacyChatNoteScopeBackfill() passed after 0.082 seconds.
+◇ Test p1e09LegacyEventScopeExhaustiveBackfill() started.
+✔ Test p1e30DependencyInvalidationStateMatrix() passed after 0.082 seconds.
+◇ Test p1e31MemoryTombstoneErasesPrivateCarrier() started.
+✔ Test p1e45GuideToolAllowlistAndReceiptDedupe() passed after 0.086 seconds.
+◇ Test p1e46HistoricUnsafeStartedFailsObservably() started.
+✔ Test p1e09LegacyEventScopeExhaustiveBackfill() passed after 0.085 seconds.
+◇ Test p1e10LegacyScopeMalformedRollback() started.
+✔ Test p1e31MemoryTombstoneErasesPrivateCarrier() passed after 0.081 seconds.
+✔ Suite P1EMemoryProvenanceTests passed after 0.905 seconds.
+✔ Test p1e46HistoricUnsafeStartedFailsObservably() passed after 0.089 seconds.
+◇ Test p1e47ServicesHaveNoUnregisteredProviderAuthority() started.
+✔ Test p1e47ServicesHaveNoUnregisteredProviderAuthority() passed after 0.002 seconds.
+◇ Test p1e48P1EProviderScopeIntegrationFailsClosed() started.
+✔ Test p1e10LegacyScopeMalformedRollback() passed after 0.089 seconds.
+◇ Test p1e11V16GuardDropOrdering() started.
+✔ Test p1e55ResultOnlyRejectionMatrix() passed after 0.402 seconds.
+◇ Test p1e56SourceAndResultWithoutResultSuccess() started.
+✔ Test p1e11V16GuardDropOrdering() passed after 0.017 seconds.
+◇ Test p1e12V16FailureBoundaryRestoresV15() started.
+✔ Test p1e48P1EProviderScopeIntegrationFailsClosed() passed after 0.078 seconds.
+✔ Suite P1ECampProviderDispatchTests passed after 1.007 seconds.
+✔ Test p1e56SourceAndResultWithoutResultSuccess() passed after 0.077 seconds.
+◇ Test p1e57SourceAndResultWithResultSuccess() started.
+✔ Test p1e57SourceAndResultWithResultSuccess() passed after 0.081 seconds.
+◇ Test p1e58SourceAndResultRejectionMatrix() started.
+✔ Test p1e12V16FailureBoundaryRestoresV15() passed after 0.323 seconds.
+◇ Test p1e13V16RedactionAndAppendOnlyGuards() started.
+✔ Test p1e58SourceAndResultRejectionMatrix() passed after 0.196 seconds.
+◇ Test p1e59ProjectionScopeAndPermanentProjectionGuards() started.
+✔ Test p1e13V16RedactionAndAppendOnlyGuards() passed after 0.068 seconds.
+✔ Suite P1ECampLifecycleMigrationTests passed after 1.370 seconds.
+✔ Test p1e59ProjectionScopeAndPermanentProjectionGuards() passed after 0.066 seconds.
+◇ Test p1e60KnowledgeLinkBlockerRejects() started.
+✔ Test p1e60KnowledgeLinkBlockerRejects() passed after 0.063 seconds.
+◇ Test p1e61CandidateBlockerRejects() started.
+✔ Test p1e61CandidateBlockerRejects() passed after 0.060 seconds.
+◇ Test p1e62RuminationWorkBlockerRejects() started.
+✔ Test p1e62RuminationWorkBlockerRejects() passed after 0.059 seconds.
+◇ Test p1e63OpenAttemptBlockerRejects() started.
+✔ Test p1e63OpenAttemptBlockerRejects() passed after 0.064 seconds.
+◇ Test p1e64ProviderDispatchBlockerRejects() started.
+✔ Test p1e64ProviderDispatchBlockerRejects() passed after 0.060 seconds.
+◇ Test p1e65DeletionLifecycleTOCTOURejects() started.
+✔ Test p1e65DeletionLifecycleTOCTOURejects() passed after 0.062 seconds.
+◇ Test p1e66DeletionRowAndResultTOCTOURejects() started.
+✔ Test p1e66DeletionRowAndResultTOCTOURejects() passed after 0.127 seconds.
+◇ Test p1e67DeletionBlockerTOCTOURejects() started.
+✔ Test p1e67DeletionBlockerTOCTOURejects() passed after 0.062 seconds.
+◇ Test p1e68DeletionEnvelopeAndPersistedGraph() started.
+✔ Test p1e68DeletionEnvelopeAndPersistedGraph() passed after 0.072 seconds.
+◇ Test p1e69DeletionExactJSONAndOutboxContract() started.
+✔ Test p1e69DeletionExactJSONAndOutboxContract() passed after 0.069 seconds.
+◇ Test p1e70DeletionReplayAfterLifecycleAndSourceLoss() started.
+✔ Test p1e70DeletionReplayAfterLifecycleAndSourceLoss() passed after 0.076 seconds.
+◇ Test p1e71DeletionConflictIntegrityAndNewKeyMatrix() started.
+✔ Test p1e71DeletionConflictIntegrityAndNewKeyMatrix() passed after 0.077 seconds.
+◇ Test p1e72DeletionRawEvidenceAndUDFRejectMatrix() started.
+✔ Test p1e72DeletionRawEvidenceAndUDFRejectMatrix() passed after 0.066 seconds.
+◇ Test p1e73DeletionOriginalFourP0Counterexamples() started.
+✔ Test p1e73DeletionOriginalFourP0Counterexamples() passed after 0.073 seconds.
+◇ Test p1e74PermitRegistryInstallAndIsolationContract() started.
+✔ Test p1e74PermitRegistryInstallAndIsolationContract() passed after 0.001 seconds.
+◇ Test p1e75PermitLifecycleScenarioMatrix() started.
+✔ Test p1e75PermitLifecycleScenarioMatrix() passed after 0.006 seconds.
+◇ Test p1e76PermitCleanupMismatchStickyFaultMatrix() started.
+✔ Test p1e76PermitCleanupMismatchStickyFaultMatrix() passed after 0.004 seconds.
+◇ Test p1e77PermitGenerationArityCursorAndReuseMatrix() started.
+✔ Test p1e77PermitGenerationArityCursorAndReuseMatrix() passed after 0.078 seconds.
+◇ Test p1e78DeletionExecutionResolutionMatrix() started.
+✔ Test p1e78DeletionExecutionResolutionMatrix() passed after 0.142 seconds.
+◇ Test p1e79DeletionSharedValidatorForgeryAndRelaunch() started.
+✔ Test p1e79DeletionSharedValidatorForgeryAndRelaunch() passed after 0.072 seconds.
+◇ Test p1e80DeletionWorkerAndMaterializerRaceMatrix() started.
+✔ Test p1e80DeletionWorkerAndMaterializerRaceMatrix() passed after 0.688 seconds.
+◇ Test p1e81DeletionControllerSingleFlight() started.
+✔ Test p1e81DeletionControllerSingleFlight() passed after 0.074 seconds.
+◇ Test p1e82DeletionPreparedCancelAndNotCommittedRetry() started.
+✔ Test p1e82DeletionPreparedCancelAndNotCommittedRetry() passed after 0.075 seconds.
+◇ Test p1e83DeletionExecutingCancelCommitRace() started.
+✔ Test p1e83DeletionExecutingCancelCommitRace() passed after 0.076 seconds.
+◇ Test p1e84DeletionRefreshFailureSameKeyReplay() started.
+✔ Test p1e84DeletionRefreshFailureSameKeyReplay() passed after 0.073 seconds.
+◇ Test p1e85DeletionCommitOutcomeUnknownActions() started.
+✔ Test p1e85DeletionCommitOutcomeUnknownActions() passed after 0.078 seconds.
+◇ Test p1e86DeletionIntegrityBlockedActions() started.
+✔ Test p1e86DeletionIntegrityBlockedActions() passed after 0.066 seconds.
+◇ Test p1e87DeletionTerminalConflictAbandonFlow() started.
+✔ Test p1e87DeletionTerminalConflictAbandonFlow() passed after 0.062 seconds.
+◇ Test p1e88DeletionCommittedDismissAndReload() started.
+✔ Test p1e88DeletionCommittedDismissAndReload() passed after 0.074 seconds.
+◇ Test p1e89DeletionProcessDeathPersistenceMatrix() started.
+✔ Test p1e89DeletionProcessDeathPersistenceMatrix() passed after 0.081 seconds.
+◇ Test p1e90DeletionUISourcePrivacyAndScopeSentinels() started.
+✔ Test p1e90DeletionUISourcePrivacyAndScopeSentinels() passed after 0.244 seconds.
+✔ Suite P1EIngestionDeletionContractTests passed after 4.288 seconds.
+✔ Test run with 90 tests in 9 suites passed after 4.288 seconds.
+p1e_90_command_code=0
+p1e_90_tee_code=0
+gate=migration-input-hash-retention
+stage_sha256=bacc1a99492f4d4acdb48ffb4f94918ffa7ba0358122547db7a828b31c1620b6
+runner_sha256=609da1982272f8773f1598f432cc4fa6fa55b06042034f808e59e7bd8e989338
+app_database_sha256=ad4e88e51016b3b2ae8e8af71a35650dba1ebcac7a90237578ba896509b64c04
+matrix_script_sha256=21f48dee6c6f029598c3839728100b4209f6cd4b92a08746a10ef346290c2ef4
+package_resolved_sha256=d2786c9b64c245c62f5793e697bb406d4960753e5f33c622250e804cd865fb3a
+retained_matrix_sha256=060c9af4f9b8c336918871e4324a304efd6d39b554a2d3919d255c13c0aea40d
+migration_input_hash_gate=pass

@@ -13,6 +13,7 @@ struct CodingRanchHomeHost: View {
     var onOpenGuide: () -> Void
     var onOpenNotes: () -> Void
     var onOpenSettings: () -> Void
+    var onArchiveCamp: () -> Void
 
     var body: some View {
         Group {
@@ -35,7 +36,8 @@ struct CodingRanchHomeHost: View {
                     onStartMission: onStartMission,
                     onOpenGuide: onOpenGuide,
                     onOpenNotes: onOpenNotes,
-                    onOpenSettings: onOpenSettings
+                    onOpenSettings: onOpenSettings,
+                    onArchiveCamp: onArchiveCamp
                 )
             } else {
                 ProgressView("正在整理营地…")
@@ -69,6 +71,7 @@ struct RuminationInboxHost: View {
             onClose: onClose,
             onFeed: onFeed,
             actionError: store.ruminationActionError,
+            startingIds: store.ruminationActionInFlightIds,
             onClearActionError: { store.ruminationActionError = nil }
         )
         .task(id: campId) {
@@ -106,9 +109,29 @@ struct RuminationDetailHost: View {
                         review: review,
                         onSave: store.saveRuminationReview,
                         onMaterialize: store.materializeRumination,
-                        onDelete: { scope in
-                            try await store.deleteIngestion(ingestionId: ingestionId, scope: scope)
+                        pendingDeletion:
+                            store.pendingIngestionDeletion?.ingestionId
+                                == ingestionId
+                            ? store.pendingIngestionDeletion
+                            : nil,
+                        onPrepareDeletion: { scope in
+                            try await store.prepareIngestionDeletion(
+                                ingestionId: ingestionId,
+                                scope: scope
+                            )
                         },
+                        onExecuteDeletion:
+                            store.executeIngestionDeletion,
+                        onResolveDeletion:
+                            store.resolveIngestionDeletion,
+                        onCancelDeletion:
+                            store.cancelIngestionDeletion,
+                        onRetryDeletionRefresh:
+                            store.retryIngestionDeletionRefresh,
+                        onAbandonDeletionConflict:
+                            store.abandonIngestionDeletionConflict,
+                        onDismissCommittedDeletion:
+                            store.dismissCommittedIngestionDeletion,
                         onMissionDraft: onMissionDraft,
                         onClose: onClose
                     )
@@ -162,13 +185,28 @@ struct RuminationDetailHost: View {
     }
 
     private func queuedView(_ item: RuminationInboxItemViewState) -> some View {
-        CodingRanchEmptyState(
-            title: item.title,
-            message: "原文已经保存，还没有开始反刍。",
-            systemImage: "clock.fill",
-            actionTitle: "开始反刍",
-            action: { Task { await store.startRumination(ingestionId: ingestionId) } }
-        )
+        Group {
+            if store.ruminationActionInFlightIds.contains(ingestionId) {
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .controlSize(.large)
+                    Text("正在开始反刍…")
+                        .font(.headline)
+                        .foregroundStyle(Camp.ink)
+                    Text("原文已经保存，正在建立可恢复的后台任务。")
+                        .font(.callout)
+                        .foregroundStyle(Camp.inkSecondary)
+                }
+            } else {
+                CodingRanchEmptyState(
+                    title: item.title,
+                    message: "原文已经保存，还没有开始反刍。",
+                    systemImage: "clock.fill",
+                    actionTitle: "开始反刍",
+                    action: { Task { await store.startRumination(ingestionId: ingestionId) } }
+                )
+            }
+        }
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Camp.canvas)
@@ -370,26 +408,52 @@ struct ReturnSummaryHost: View {
 
     @State private var summary: ReturnSummaryViewState?
     @State private var loadState: CodingRanchLoadState = .loading
+    @State private var acceptanceInFlight = false
+    @State private var acceptanceFailure: String?
 
     var body: some View {
         Group {
             if let summary {
-                ReturnSummaryView(
-                    state: summary,
-                    onReveal: { store.revealPath($0.path) },
-                    onRequestChanges: onBackToMission,
-                    onAccept: {
-                        store.closeoutCurrentMission()
-                        onAccepted()
-                    },
-                    onAbandon: {
-                        Task {
-                            await store.cancelMission(missionId: missionId)
-                            onBackToMission()
-                        }
-                    },
-                    onOpenRoster: onOpenRoster
-                )
+                VStack(spacing: 10) {
+                    if let acceptanceFailure {
+                        Label(
+                            acceptanceFailure,
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(Camp.charcoalRed)
+                        .padding(.horizontal, 20)
+                    }
+                    ReturnSummaryView(
+                        state: summary,
+                        onReveal: { store.revealReturnArtifact($0) },
+                        onRequestChanges: onBackToMission,
+                        onAccept: {
+                            guard !acceptanceInFlight else { return }
+                            acceptanceInFlight = true
+                            acceptanceFailure = nil
+                            Task {
+                                let committed = await store
+                                    .closeoutCurrentMission()
+                                acceptanceInFlight = false
+                                if committed {
+                                    onAccepted()
+                                } else {
+                                    acceptanceFailure =
+                                        store.returnAcceptanceError
+                                        ?? "Acceptance did not commit"
+                                }
+                            }
+                        },
+                        onAbandon: {
+                            Task {
+                                await store.cancelMission(missionId: missionId)
+                                onBackToMission()
+                            }
+                        },
+                        onOpenRoster: onOpenRoster
+                    )
+                }
             } else {
                 switch loadState {
                 case .idle, .loading:

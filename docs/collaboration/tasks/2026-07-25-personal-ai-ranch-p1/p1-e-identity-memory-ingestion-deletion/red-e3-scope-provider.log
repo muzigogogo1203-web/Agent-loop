@@ -1,0 +1,559 @@
+status=EXPECTED_RED_E3
+command=swift run RunTests --filter p1e(3[3-9]|4[0-8])
+[0/1] Planning build
+Building for debugging...
+[0/5] Write sources
+[1/5] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/8] Compiling AgentLoopTestSuite LegacyScopeMigrationTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:70:21: error: cannot find 'LegacyContentScopeStore' in scope
+ 68 |         )
+ 69 |         _ = try p1eE2SeedCow("cow:scope", database: database)
+ 70 |         let store = LegacyContentScopeStore(database: database)
+    |                     `- error: cannot find 'LegacyContentScopeStore' in scope
+ 71 | 
+ 72 |         let dm = try store.findOrCreateDMThread(cowId: "cow:scope")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:82:43: error: 'nil' requires a contextual type
+ 80 |             role: "user",
+ 81 |             contentJson: "{\"text\":\"private\"}",
+ 82 |             expectedCampLifecycleVersion: nil
+    |                                           `- error: 'nil' requires a contextual type
+ 83 |         )
+ 84 |         let guideMessage = try store.appendMessage(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:102:21: error: cannot infer contextual base in reference to member 'sourceThread'
+100 |         try store.recordCompanionNote(
+101 |             note,
+102 |             scope: .sourceThread(dm.id),
+    |                     `- error: cannot infer contextual base in reference to member 'sourceThread'
+103 |             expectedCampLifecycleVersion: nil
+104 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:103:43: error: 'nil' requires a contextual type
+101 |             note,
+102 |             scope: .sourceThread(dm.id),
+103 |             expectedCampLifecycleVersion: nil
+    |                                           `- error: 'nil' requires a contextual type
+104 |         )
+105 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:107:39: error: cannot infer contextual base in reference to member 'globalCow'
+105 | 
+106 |         let dmScope = try #require(store.threadScope(id: dm.id))
+107 |         #expect(dmScope.scopeKind == .globalCow)
+    |                                       `- error: cannot infer contextual base in reference to member 'globalCow'
+108 |         #expect(dmScope.campId == nil)
+109 |         #expect(dmScope.cowId == "cow:scope")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:110:42: error: cannot infer contextual base in reference to member 'dmThread'
+108 |         #expect(dmScope.campId == nil)
+109 |         #expect(dmScope.cowId == "cow:scope")
+110 |         #expect(dmScope.evidenceKind == .dmThread)
+    |                                          `- error: cannot infer contextual base in reference to member 'dmThread'
+111 |         let guideScope = try #require(store.threadScope(id: guideThread.id))
+112 |         #expect(guideScope.scopeKind == .camp)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:112:42: error: cannot infer contextual base in reference to member 'camp'
+110 |         #expect(dmScope.evidenceKind == .dmThread)
+111 |         let guideScope = try #require(store.threadScope(id: guideThread.id))
+112 |         #expect(guideScope.scopeKind == .camp)
+    |                                          `- error: cannot infer contextual base in reference to member 'camp'
+113 |         #expect(guideScope.campId == "camp:scope")
+114 |         #expect(guideScope.evidenceKind == .guideThread)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:114:45: error: cannot infer contextual base in reference to member 'guideThread'
+112 |         #expect(guideScope.scopeKind == .camp)
+113 |         #expect(guideScope.campId == "camp:scope")
+114 |         #expect(guideScope.evidenceKind == .guideThread)
+    |                                             `- error: cannot infer contextual base in reference to member 'guideThread'
+115 |         let noteScope = try #require(store.noteScope(id: note.id))
+116 |         #expect(noteScope.scopeKind == .globalCow)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:116:41: error: cannot infer contextual base in reference to member 'globalCow'
+114 |         #expect(guideScope.evidenceKind == .guideThread)
+115 |         let noteScope = try #require(store.noteScope(id: note.id))
+116 |         #expect(noteScope.scopeKind == .globalCow)
+    |                                         `- error: cannot infer contextual base in reference to member 'globalCow'
+117 |         #expect(noteScope.sourceThreadId == dm.id)
+118 |         #expect(try database.messages(threadId: dm.id).map(\.id) == [dmMessage])
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:106:23: warning: no calls to throwing functions occur within 'try' expression
+104 |         )
+105 | 
+106 |         let dmScope = try #require(store.threadScope(id: dm.id))
+    |                       `- warning: no calls to throwing functions occur within 'try' expression
+107 |         #expect(dmScope.scopeKind == .globalCow)
+108 |         #expect(dmScope.campId == nil)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:111:26: warning: no calls to throwing functions occur within 'try' expression
+109 |         #expect(dmScope.cowId == "cow:scope")
+110 |         #expect(dmScope.evidenceKind == .dmThread)
+111 |         let guideScope = try #require(store.threadScope(id: guideThread.id))
+    |                          `- warning: no calls to throwing functions occur within 'try' expression
+112 |         #expect(guideScope.scopeKind == .camp)
+113 |         #expect(guideScope.campId == "camp:scope")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:115:25: warning: no calls to throwing functions occur within 'try' expression
+113 |         #expect(guideScope.campId == "camp:scope")
+114 |         #expect(guideScope.evidenceKind == .guideThread)
+115 |         let noteScope = try #require(store.noteScope(id: note.id))
+    |                         `- warning: no calls to throwing functions occur within 'try' expression
+116 |         #expect(noteScope.scopeKind == .globalCow)
+117 |         #expect(noteScope.sourceThreadId == dm.id)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:159:21: error: cannot find 'LegacyContentScopeStore' in scope
+157 |             }
+158 |         }
+159 |         let store = LegacyContentScopeStore(database: database)
+    |                     `- error: cannot find 'LegacyContentScopeStore' in scope
+160 |         #expect(
+161 |             throws: LegacyContentScopeError.lifecycleVersionRequired
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:161:21: error: cannot find 'LegacyContentScopeError' in scope
+159 |         let store = LegacyContentScopeStore(database: database)
+160 |         #expect(
+161 |             throws: LegacyContentScopeError.lifecycleVersionRequired
+    |                     `- error: cannot find 'LegacyContentScopeError' in scope
+162 |         ) {
+163 |             _ = try store.findOrCreateGuideThread(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:165:43: error: 'nil' requires a contextual type
+163 |             _ = try store.findOrCreateGuideThread(
+164 |                 campId: "camp:raw-content",
+165 |                 expectedLifecycleVersion: nil
+    |                                           `- error: 'nil' requires a contextual type
+166 |             )
+167 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:243:37: error: type 'AppDatabase' has no member 'appendLegacyEventAndScope'
+241 |         #expect(throws: P1EMigrationIntegrityError.self) {
+242 |             try database.pool.write { db in
+243 |                 _ = try AppDatabase.appendLegacyEventAndScope(
+    |                                     `- error: type 'AppDatabase' has no member 'appendLegacyEventAndScope'
+244 |                     db,
+245 |                     missionId: missionA.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:246:29: error: 'nil' requires a contextual type
+244 |                     db,
+245 |                     missionId: missionA.id,
+246 |                     cardId: nil,
+    |                             `- error: 'nil' requires a contextual type
+247 |                     runId: nil,
+248 |                     kind: EventKind.missionStatusChanged,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:247:28: error: 'nil' requires a contextual type
+245 |                     missionId: missionA.id,
+246 |                     cardId: nil,
+247 |                     runId: nil,
+    |                            `- error: 'nil' requires a contextual type
+248 |                     kind: EventKind.missionStatusChanged,
+249 |                     payload: ["missionId": .string(missionB.id)]
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/LegacyScopeMigrationTests.swift:249:45: error: type 'Any' has no member 'string'
+247 |                     runId: nil,
+248 |                     kind: EventKind.missionStatusChanged,
+249 |                     payload: ["missionId": .string(missionB.id)]
+    |                                             `- error: type 'Any' has no member 'string'
+250 |                 )
+251 |             }
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[4/8] Emitting module AgentLoopTestSuite
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:8:16: error: cannot find type 'CampProviderDispatchStore' in scope
+  6 | private struct P1EProviderFixture {
+  7 |     let database: AppDatabase
+  8 |     let store: CampProviderDispatchStore
+    |                `- error: cannot find type 'CampProviderDispatchStore' in scope
+  9 |     let work: DurableWorkRecord
+ 10 |     let claim: DurableWorkClaim
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:71:13: error: cannot find type 'CampProviderDispatchSnapshotV1' in scope
+ 69 |     _ fixture: P1EProviderFixture,
+ 70 |     suffix: String = "turn"
+ 71 | ) throws -> CampProviderDispatchSnapshotV1 {
+    |             `- error: cannot find type 'CampProviderDispatchSnapshotV1' in scope
+ 72 |     try fixture.store.prepare(
+ 73 |         claim: fixture.claim,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:85:13: error: cannot find type 'CampProviderDispatchSnapshotV1' in scope
+ 83 |     _ fixture: P1EProviderFixture,
+ 84 |     suffix: String = "turn"
+ 85 | ) throws -> CampProviderDispatchSnapshotV1 {
+    |             `- error: cannot find type 'CampProviderDispatchSnapshotV1' in scope
+ 86 |     let prepared = try p1eE3PreparedDispatch(fixture, suffix: suffix)
+ 87 |     let started = try fixture.store.start(
+[5/8] Compiling AgentLoopTestSuite CampProviderDispatchTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:8:16: error: cannot find type 'CampProviderDispatchStore' in scope
+  6 | private struct P1EProviderFixture {
+  7 |     let database: AppDatabase
+  8 |     let store: CampProviderDispatchStore
+    |                `- error: cannot find type 'CampProviderDispatchStore' in scope
+  9 |     let work: DurableWorkRecord
+ 10 |     let claim: DurableWorkClaim
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:71:13: error: cannot find type 'CampProviderDispatchSnapshotV1' in scope
+ 69 |     _ fixture: P1EProviderFixture,
+ 70 |     suffix: String = "turn"
+ 71 | ) throws -> CampProviderDispatchSnapshotV1 {
+    |             `- error: cannot find type 'CampProviderDispatchSnapshotV1' in scope
+ 72 |     try fixture.store.prepare(
+ 73 |         claim: fixture.claim,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:85:13: error: cannot find type 'CampProviderDispatchSnapshotV1' in scope
+ 83 |     _ fixture: P1EProviderFixture,
+ 84 |     suffix: String = "turn"
+ 85 | ) throws -> CampProviderDispatchSnapshotV1 {
+    |             `- error: cannot find type 'CampProviderDispatchSnapshotV1' in scope
+ 86 |     let prepared = try p1eE3PreparedDispatch(fixture, suffix: suffix)
+ 87 |     let started = try fixture.store.start(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:43:17: error: cannot find 'CampProviderDispatchStore' in scope
+ 41 |     _ = try p1eE2SeedCamp(campID, database: database)
+ 42 |     try p1eE3ProviderSeedGuide(campID: campID, database: database)
+ 43 |     let store = CampProviderDispatchStore(database: database)
+    |                 `- error: cannot find 'CampProviderDispatchStore' in scope
+ 44 |     let queued = try store.enqueueGuideTurn(
+ 45 |         campId: campID,
+
+macro expansion #require:2:3: error: call can throw, but it is not marked with 'try' and the error is not handled
+`- /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:58:6: note: expanded code originates here
+ 49 |         at: p1eE2Epoch
+ 50 |     )
+ 51 |     let claim = try #require(
+    |                     `- note: in expansion of macro 'require' here
+ 52 |         DurableWorkStore(database: database).claimNext(
+ 53 |             kinds: [.guideChat],
+    :
+ 56 |             leaseDuration: 60
+ 57 |         )
+ 58 |     )
+    +--- macro expansion #require --------------------------------------
+    |1 | Testing.__checkFunctionCall(DurableWorkStore(database: database).self,calling: {
+    |2 |   $0.claimNext(kinds: $1,workerId: $2,now: $3,leaseDuration: $4)
+    |  |   `- error: call can throw, but it is not marked with 'try' and the error is not handled
+    |3 | },[.guideChat],"worker:p1e:provider",p1eE2Epoch.addingTimeInterval(1),60,expression: .__fromFunctionCall(.__fromSyntaxNode("DurableWorkStore(database: database)"),"claimNext",("kinds",.__fromSyntaxNode("[.guideChat]")),("workerId",.__fromStringLiteral(#""worker:p1e:provider""#, "worker:p1e:provider")),("now",.__fromSyntaxNode("p1eE2Epoch.addingTimeInterval(1)")),("leaseDuration",.__fromSyntaxNode("60"))),comments: [],isRequired: true,sourceLocation: Testing.SourceLocation.__here()).__required()
+    +-------------------------------------------------------------------
+ 59 |     return P1EProviderFixture(
+ 60 |         database: database,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:116:21: error: cannot find 'CampProviderDispatchStore' in scope
+114 |         _ = try p1eE2SeedCamp(campID, database: database)
+115 |         try p1eE3ProviderSeedGuide(campID: campID, database: database)
+116 |         let store = CampProviderDispatchStore(database: database)
+    |                     `- error: cannot find 'CampProviderDispatchStore' in scope
+117 |         try database.pool.write { db in
+118 |             try db.execute(sql: """
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:153:41: error: cannot infer contextual base in reference to member 'guideChat'
+151 |             at: p1eE2Epoch
+152 |         )
+153 |         #expect(committed.work.kind == .guideChat)
+    |                                         `- error: cannot infer contextual base in reference to member 'guideChat'
+154 |         #expect(committed.work.state == .queued)
+155 |         #expect(try database.messages(threadId: committed.thread.id).count == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:154:42: error: cannot infer contextual base in reference to member 'queued'
+152 |         )
+153 |         #expect(committed.work.kind == .guideChat)
+154 |         #expect(committed.work.state == .queued)
+    |                                          `- error: cannot infer contextual base in reference to member 'queued'
+155 |         #expect(try database.messages(threadId: committed.thread.id).count == 1)
+156 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:161:36: error: cannot infer contextual base in reference to member 'prepared'
+159 |         let fixture = try p1eE3ProviderFixture("success")
+160 |         let prepared = try p1eE3PreparedDispatch(fixture, suffix: "success")
+161 |         #expect(prepared.state == .prepared)
+    |                                    `- error: cannot infer contextual base in reference to member 'prepared'
+162 |         #expect(prepared.replayClass == .replaySafeInference)
+163 |         let started = try fixture.store.start(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:162:42: error: cannot infer contextual base in reference to member 'replaySafeInference'
+160 |         let prepared = try p1eE3PreparedDispatch(fixture, suffix: "success")
+161 |         #expect(prepared.state == .prepared)
+162 |         #expect(prepared.replayClass == .replaySafeInference)
+    |                                          `- error: cannot infer contextual base in reference to member 'replaySafeInference'
+163 |         let started = try fixture.store.start(
+164 |             dispatchId: prepared.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:169:35: error: cannot infer contextual base in reference to member 'started'
+167 |             at: p1eE2Epoch.addingTimeInterval(3)
+168 |         )
+169 |         #expect(started.state == .started)
+    |                                   `- error: cannot infer contextual base in reference to member 'started'
+170 |         let returned = try fixture.store.recordReturned(
+171 |             dispatchId: started.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:177:36: error: cannot infer contextual base in reference to member 'returned'
+175 |             at: p1eE2Epoch.addingTimeInterval(4)
+176 |         )
+177 |         #expect(returned.state == .returned)
+    |                                    `- error: cannot infer contextual base in reference to member 'returned'
+178 |         #expect(
+179 |             try fixture.store.nextAction(dispatchId: returned.id)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:189:47: error: cannot infer contextual base in reference to member 'consumed'
+187 |             at: p1eE2Epoch.addingTimeInterval(5)
+188 |         )
+189 |         #expect(completion.dispatch.state == .consumed)
+    |                                               `- error: cannot infer contextual base in reference to member 'consumed'
+190 |         #expect(completion.work.state == .succeeded)
+191 |         let eventKinds = try fixture.database.pool.read { db in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:190:43: error: cannot infer contextual base in reference to member 'succeeded'
+188 |         )
+189 |         #expect(completion.dispatch.state == .consumed)
+190 |         #expect(completion.work.state == .succeeded)
+    |                                           `- error: cannot infer contextual base in reference to member 'succeeded'
+191 |         let eventKinds = try fixture.database.pool.read { db in
+192 |             try String.fetchAll(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:213:25: error: cannot find 'CampProviderDispatchStore' in scope
+211 |             suffix: "returned-restart"
+212 |         )
+213 |         let restarted = CampProviderDispatchStore(database: fixture.database)
+    |                         `- error: cannot find 'CampProviderDispatchStore' in scope
+214 |         #expect(
+215 |             try restarted.nextAction(dispatchId: returned.id)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:220:36: error: cannot infer contextual base in reference to member 'returned'
+218 |         let reloaded = try #require(restarted.dispatch(id: returned.id))
+219 |         #expect(reloaded.responseHash == returned.responseHash)
+220 |         #expect(reloaded.state == .returned)
+    |                                    `- error: cannot infer contextual base in reference to member 'returned'
+221 |     }
+222 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:218:24: warning: no calls to throwing functions occur within 'try' expression
+216 |                 == .consumeReturned(responseJson: "{\"text\":\"hello\"}")
+217 |         )
+218 |         let reloaded = try #require(restarted.dispatch(id: returned.id))
+    |                        `- warning: no calls to throwing functions occur within 'try' expression
+219 |         #expect(reloaded.responseHash == returned.responseHash)
+220 |         #expect(reloaded.state == .returned)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:245:37: error: cannot infer contextual base in reference to member 'abandoned'
+243 |             fixture.store.dispatch(id: started.id)
+244 |         )
+245 |         #expect(abandoned.state == .abandoned)
+    |                                     `- error: cannot infer contextual base in reference to member 'abandoned'
+246 |         #expect(replay.state == .prepared)
+247 |         #expect(replay.dispatchAttempt == 2)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:246:34: error: cannot infer contextual base in reference to member 'prepared'
+244 |         )
+245 |         #expect(abandoned.state == .abandoned)
+246 |         #expect(replay.state == .prepared)
+    |                                  `- error: cannot infer contextual base in reference to member 'prepared'
+247 |         #expect(replay.dispatchAttempt == 2)
+248 |         #expect(replay.replayOfDispatchId == started.id)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:242:25: warning: no calls to throwing functions occur within 'try' expression
+240 |             at: p1eE2Epoch.addingTimeInterval(4)
+241 |         )
+242 |         let abandoned = try #require(
+    |                         `- warning: no calls to throwing functions occur within 'try' expression
+243 |             fixture.store.dispatch(id: started.id)
+244 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:291:37: error: cannot infer contextual base in reference to member 'started'
+289 |         }
+290 |         let persisted = try #require(fixture.store.dispatch(id: started.id))
+291 |         #expect(persisted.state == .started)
+    |                                     `- error: cannot infer contextual base in reference to member 'started'
+292 |         #expect(persisted.responseJson == nil)
+293 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:290:25: warning: no calls to throwing functions occur within 'try' expression
+288 |             )
+289 |         }
+290 |         let persisted = try #require(fixture.store.dispatch(id: started.id))
+    |                         `- warning: no calls to throwing functions occur within 'try' expression
+291 |         #expect(persisted.state == .started)
+292 |         #expect(persisted.responseJson == nil)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:297:17: error: cannot find 'CampProviderRoutePolicyV1' in scope
+295 |     @Test func p1e42GuideAndCampDistillReplayClass() throws {
+296 |         #expect(
+297 |             try CampProviderRoutePolicyV1.resolve(.guideChat(campId: "camp:a"))
+    |                 `- error: cannot find 'CampProviderRoutePolicyV1' in scope
+298 |                 == .camp(
+299 |                     campId: "camp:a",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:297:52: error: cannot infer contextual base in reference to member 'guideChat'
+295 |     @Test func p1e42GuideAndCampDistillReplayClass() throws {
+296 |         #expect(
+297 |             try CampProviderRoutePolicyV1.resolve(.guideChat(campId: "camp:a"))
+    |                                                    `- error: cannot infer contextual base in reference to member 'guideChat'
+298 |                 == .camp(
+299 |                     campId: "camp:a",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:300:37: error: cannot infer contextual base in reference to member 'guideChat'
+298 |                 == .camp(
+299 |                     campId: "camp:a",
+300 |                     operationKind: .guideChat,
+    |                                     `- error: cannot infer contextual base in reference to member 'guideChat'
+301 |                     replayClass: .replaySafeInference
+302 |                 )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:301:35: error: cannot infer contextual base in reference to member 'replaySafeInference'
+299 |                     campId: "camp:a",
+300 |                     operationKind: .guideChat,
+301 |                     replayClass: .replaySafeInference
+    |                                   `- error: cannot infer contextual base in reference to member 'replaySafeInference'
+302 |                 )
+303 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:305:13: error: cannot find 'CampProviderRouteV1' in scope
+303 |         )
+304 |         for route in [
+305 |             CampProviderRouteV1.guideDistillation(campId: "camp:a"),
+    |             `- error: cannot find 'CampProviderRouteV1' in scope
+306 |             .closeoutDistillation(campId: "camp:a"),
+307 |             .coworkDistillation(campId: "camp:a"),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:306:14: error: type 'Any' has no member 'closeoutDistillation'
+304 |         for route in [
+305 |             CampProviderRouteV1.guideDistillation(campId: "camp:a"),
+306 |             .closeoutDistillation(campId: "camp:a"),
+    |              `- error: type 'Any' has no member 'closeoutDistillation'
+307 |             .coworkDistillation(campId: "camp:a"),
+308 |         ] {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:307:14: error: type 'Any' has no member 'coworkDistillation'
+305 |             CampProviderRouteV1.guideDistillation(campId: "camp:a"),
+306 |             .closeoutDistillation(campId: "camp:a"),
+307 |             .coworkDistillation(campId: "camp:a"),
+    |              `- error: type 'Any' has no member 'coworkDistillation'
+308 |         ] {
+309 |             #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:310:21: error: cannot find 'CampProviderRoutePolicyV1' in scope
+308 |         ] {
+309 |             #expect(
+310 |                 try CampProviderRoutePolicyV1.resolve(route)
+    |                     `- error: cannot find 'CampProviderRoutePolicyV1' in scope
+311 |                     == .camp(
+312 |                         campId: "camp:a",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:313:41: error: cannot infer contextual base in reference to member 'memoryPromotion'
+311 |                     == .camp(
+312 |                         campId: "camp:a",
+313 |                         operationKind: .memoryPromotion,
+    |                                         `- error: cannot infer contextual base in reference to member 'memoryPromotion'
+314 |                         replayClass: .replaySafeInference
+315 |                     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:314:39: error: cannot infer contextual base in reference to member 'replaySafeInference'
+312 |                         campId: "camp:a",
+313 |                         operationKind: .memoryPromotion,
+314 |                         replayClass: .replaySafeInference
+    |                                       `- error: cannot infer contextual base in reference to member 'replaySafeInference'
+315 |                     )
+316 |             )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:322:21: error: cannot find 'CampProviderDispatchStore' in scope
+320 |     @Test func p1e43GlobalProviderRoutesAvoidCampDispatch() throws {
+321 |         let database = try p1eE2Database("provider-global-routes")
+322 |         let store = CampProviderDispatchStore(database: database)
+    |                     `- error: cannot find 'CampProviderDispatchStore' in scope
+323 |         for route in [
+324 |             CampProviderRouteV1.dmDistillation(cowId: "cow:global"),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:324:13: error: cannot find 'CampProviderRouteV1' in scope
+322 |         let store = CampProviderDispatchStore(database: database)
+323 |         for route in [
+324 |             CampProviderRouteV1.dmDistillation(cowId: "cow:global"),
+    |             `- error: cannot find 'CampProviderRouteV1' in scope
+325 |             .globalDistillation(ownerId: "user:local-owner"),
+326 |             .connectionTest,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:325:14: error: type 'Any' has no member 'globalDistillation'
+323 |         for route in [
+324 |             CampProviderRouteV1.dmDistillation(cowId: "cow:global"),
+325 |             .globalDistillation(ownerId: "user:local-owner"),
+    |              `- error: type 'Any' has no member 'globalDistillation'
+326 |             .connectionTest,
+327 |         ] {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:326:14: error: reference to member 'connectionTest' cannot be resolved without a contextual type
+324 |             CampProviderRouteV1.dmDistillation(cowId: "cow:global"),
+325 |             .globalDistillation(ownerId: "user:local-owner"),
+326 |             .connectionTest,
+    |              `- error: reference to member 'connectionTest' cannot be resolved without a contextual type
+327 |         ] {
+328 |             #expect(try CampProviderRoutePolicyV1.resolve(route) == .global)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:328:25: error: cannot find 'CampProviderRoutePolicyV1' in scope
+326 |             .connectionTest,
+327 |         ] {
+328 |             #expect(try CampProviderRoutePolicyV1.resolve(route) == .global)
+    |                         `- error: cannot find 'CampProviderRoutePolicyV1' in scope
+329 |         }
+330 |         #expect(try store.dispatchCount() == 0)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:335:21: error: cannot find 'CampProviderDispatchStore' in scope
+333 |     @Test func p1e44UnknownExternalWriteRouteRejects() throws {
+334 |         let database = try p1eE2Database("provider-external-reject")
+335 |         let store = CampProviderDispatchStore(database: database)
+    |                     `- error: cannot find 'CampProviderDispatchStore' in scope
+336 |         #expect(
+337 |             throws: CampProviderRouteError.unregisteredExternalWrite
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:337:21: error: cannot find 'CampProviderRouteError' in scope
+335 |         let store = CampProviderDispatchStore(database: database)
+336 |         #expect(
+337 |             throws: CampProviderRouteError.unregisteredExternalWrite
+    |                     `- error: cannot find 'CampProviderRouteError' in scope
+338 |         ) {
+339 |             _ = try CampProviderRoutePolicyV1.resolve(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:339:21: error: cannot find 'CampProviderRoutePolicyV1' in scope
+337 |             throws: CampProviderRouteError.unregisteredExternalWrite
+338 |         ) {
+339 |             _ = try CampProviderRoutePolicyV1.resolve(
+    |                     `- error: cannot find 'CampProviderRoutePolicyV1' in scope
+340 |                 .externalWrite(name: "send_webhook", campId: "camp:a")
+341 |             )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:340:18: error: cannot infer contextual base in reference to member 'externalWrite'
+338 |         ) {
+339 |             _ = try CampProviderRoutePolicyV1.resolve(
+340 |                 .externalWrite(name: "send_webhook", campId: "camp:a")
+    |                  `- error: cannot infer contextual base in reference to member 'externalWrite'
+341 |             )
+342 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:352:17: error: cannot find 'CampProviderRoutePolicyV1' in scope
+350 |             suffix: "guide-tool"
+351 |         )
+352 |         #expect(CampProviderRoutePolicyV1.guideToolNames == [
+    |                 `- error: cannot find 'CampProviderRoutePolicyV1' in scope
+353 |             "camp_status", "propose_squad", "search_camp_notes",
+354 |         ])
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:355:25: error: cannot find 'GuideToolAuthorizationError' in scope
+353 |             "camp_status", "propose_squad", "search_camp_notes",
+354 |         ])
+355 |         #expect(throws: GuideToolAuthorizationError.unregisteredTool) {
+    |                         `- error: cannot find 'GuideToolAuthorizationError' in scope
+356 |             try CampProviderRoutePolicyV1.requireGuideTool("send_webhook")
+357 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:356:17: error: cannot find 'CampProviderRoutePolicyV1' in scope
+354 |         ])
+355 |         #expect(throws: GuideToolAuthorizationError.unregisteredTool) {
+356 |             try CampProviderRoutePolicyV1.requireGuideTool("send_webhook")
+    |                 `- error: cannot find 'CampProviderRoutePolicyV1' in scope
+357 |         }
+358 |         let block = SquadProposalBlock(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampProviderDispatchTests.swift:497:21: error: cannot find 'LegacyContentScopeStore' in scope
+495 |         }
+496 |         #expect(throws: CampLifecycleWriteAuthorizationError.self) {
+497 |             _ = try LegacyContentScopeStore(database: fixture.database)
+    |                     `- error: cannot find 'LegacyContentScopeStore' in scope
+498 |                 .appendMessage(
+499 |                     threadId: fixture.threadId,
+test_status=1
+wrapper_status=1 initial_tee_status=0

@@ -1,6 +1,10 @@
 import Foundation
 import os
 
+public enum DistillerError: Error, Sendable, Equatable {
+    case invalidPayload
+}
+
 /// 知识蒸馏（spec §9/§10.1，plan D1）：单轮无工具 LLM 调用，强制 JSON 提示 + 宽松解析。
 /// 蒸馏是旁路增强——收营蒸馏失败走确定性回退（任何路径都产出一张笔记）；
 /// 记忆蒸馏失败向上抛，调用方静默留水位下次再试。
@@ -29,14 +33,17 @@ public struct Distiller: Sendable {
         }
     }
 
-    let provider: any LLMProvider
+    private let inference: RegisteredProviderInferenceV1
     let maxTokens: Int
     private static let logger = Logger(subsystem: "com.muzi.agentloop", category: "distiller")
     /// 笔记标题上限（plan D1：≤30 字，代码强制兜底）
     package static let titleLimit = 30
 
-    public init(provider: any LLMProvider, maxTokens: Int = 2048) {
-        self.provider = provider
+    package init(
+        inference: RegisteredProviderInferenceV1,
+        maxTokens: Int = 2048
+    ) {
+        self.inference = inference
         self.maxTokens = maxTokens
     }
 
@@ -46,8 +53,12 @@ public struct Distiller: Sendable {
     public func distillCloseout(goal: String, cards: [CardDigest]) async -> (note: Note, fallback: Bool) {
         let prompt = Self.closeoutPrompt(goal: goal, cards: cards)
         do {
-            let raw = try await singleTurn(system: Self.closeoutSystem, user: prompt)
-            if case .note(let title, let body) = Self.parseNoteJSON(raw) {
+        let raw = try await inference.singleTextTurn(
+            system: Self.closeoutSystem,
+            user: prompt,
+            maxTokens: maxTokens
+        )
+            if case .note(let title, let body) = try Self.parseNoteJSON(raw) {
                 return (Note(title: title, bodyMd: body), false)
             }
             Self.logger.info("closeout distillation unparseable, falling back")
@@ -64,8 +75,12 @@ public struct Distiller: Sendable {
         companionName: String, rolePrompt: String, messages: [(role: String, text: String)]
     ) async throws -> Note? {
         let prompt = Self.memoryPrompt(companionName: companionName, rolePrompt: rolePrompt, messages: messages)
-        let raw = try await singleTurn(system: Self.memorySystem, user: prompt)
-        switch Self.parseNoteJSON(raw) {
+        let raw = try await inference.singleTextTurn(
+            system: Self.memorySystem,
+            user: prompt,
+            maxTokens: maxTokens
+        )
+        switch try Self.parseNoteJSON(raw) {
         case .note(let title, let body):
             return Note(title: title, bodyMd: body)
         case .skip:
@@ -76,8 +91,12 @@ public struct Distiller: Sendable {
     /// 向导对话手动沉淀为营地笔记（D9，spec §10.2）；skip/失败语义与记忆蒸馏一致。
     public func distillGuideChat(messages: [(role: String, text: String)]) async throws -> Note? {
         let prompt = Self.guideChatPrompt(messages: messages)
-        let raw = try await singleTurn(system: Self.guideChatSystem, user: prompt)
-        switch Self.parseNoteJSON(raw) {
+        let raw = try await inference.singleTextTurn(
+            system: Self.guideChatSystem,
+            user: prompt,
+            maxTokens: maxTokens
+        )
+        switch try Self.parseNoteJSON(raw) {
         case .note(let title, let body):
             return Note(title: title, bodyMd: body)
         case .skip:
@@ -85,61 +104,32 @@ public struct Distiller: Sendable {
         }
     }
 
-    // MARK: - 单轮调用
-
-    private func singleTurn(system: String, user: String) async throws -> String {
-        var text = ""
-        var sawTurn = false
-        for try await event in provider.streamTurn(
-            system: system,
-            history: [.user(user)],
-            tools: [],
-            toolChoice: .auto,
-            maxTokens: maxTokens
-        ) {
-            if case .turn(let result) = event {
-                sawTurn = true
-                text = result.content.compactMap { block -> String? in
-                    if case .text(let t) = block { return t }
-                    return nil
-                }.joined()
-            }
-        }
-        guard sawTurn else {
-            throw ProviderError.malformedStream("no distillation turn result")
-        }
-        return text
-    }
-
-    // MARK: - 解析（剥围栏 → JSON → 首行回退）
+    // MARK: - 解析（剥围栏 → 严格 JSON）
 
     package enum ParsedNote: Equatable {
         case note(title: String, body: String)
         case skip
     }
 
-    package static func parseNoteJSON(_ raw: String) -> ParsedNote {
+    package static func parseNoteJSON(_ raw: String) throws -> ParsedNote {
         let stripped = stripCodeFence(raw).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !stripped.isEmpty else { return .skip }
-
-        if let value = try? JSONValue.decoded(from: stripped) {
-            if value["skip"]?.boolValue == true {
-                return .skip
-            }
-            if let title = value["title"]?.stringValue,
-               let body = value["body"]?.stringValue,
-               !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-               !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return .note(title: String(title.prefix(titleLimit)), body: body)
-            }
+        guard !stripped.isEmpty,
+              let object = try? JSONValue.decoded(from: stripped).objectValue
+        else {
+            throw DistillerError.invalidPayload
         }
-
-        // 畸形输出回退：首行为题，其余为体；只有一行时题体同源
-        let lines = stripped.split(separator: "\n", omittingEmptySubsequences: false)
-        let title = String((lines.first ?? "").trimmingCharacters(in: .whitespacesAndNewlines).prefix(titleLimit))
-        let body = lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty else { return .skip }
-        return .note(title: title, body: body.isEmpty ? stripped : body)
+        if object.count == 1, object["skip"]?.boolValue == true {
+            return .skip
+        }
+        guard object.count == 2,
+              let title = object["title"]?.stringValue,
+              let body = object["body"]?.stringValue,
+              !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else {
+            throw DistillerError.invalidPayload
+        }
+        return .note(title: String(title.prefix(titleLimit)), body: body)
     }
 
     package static func stripCodeFence(_ raw: String) -> String {

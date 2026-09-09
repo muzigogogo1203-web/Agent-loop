@@ -1,0 +1,55 @@
+{
+  "raw_directory": "/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-runtime-halt-gate-build1-20260908-34734-2cftwj",
+  "cwd": "/Users/muzi/Agent-loop",
+  "command": [
+    "swift",
+    "build",
+    "--jobs",
+    "2",
+    "--product",
+    "RunTests"
+  ],
+  "pid": 34742,
+  "launcher_pid": 34734,
+  "uid": 501,
+  "start": "2026-09-08T22:42:28.613871000+08:00",
+  "resources": [
+    {
+      "command": [
+        "df",
+        "-h",
+        "/Users/muzi/Agent-loop"
+      ],
+      "stdout": "Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on\n/dev/disk3s1   926Gi   888Gi    13Gi    99%    3.9M  132M    3%   /System/Volumes/Data\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "command": [
+        "sysctl",
+        "kern.memorystatus_vm_pressure_level",
+        "vm.swapusage"
+      ],
+      "stdout": "kern.memorystatus_vm_pressure_level: 2\nvm.swapusage: total = 4096.00M  used = 2928.19M  free = 1167.81M  (encrypted)\n",
+      "stderr": "",
+      "exit": 0
+    }
+  ],
+  "pins": {
+    "docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-halt-gate-source1-review.md": "f353f0ed53bbd7a8388002db949b3f1aa9ab2ed6586487b002285a8d0352d1b1",
+    "docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-halt-gate-evidence-check.rb": "d4c882c2290b772dd7df7f8a4f7310c561860ce8ed8c92010e67164e4c4e6a8c"
+  },
+  "source_before_sha256": "ecef432164402b0ef2ea2cc83958c39b608a8edfb9ade7711167072ef255a4f8",
+  "binary": "/Users/muzi/Agent-loop/.build/arm64-apple-macosx/debug/RunTests",
+  "binary_before_sha256": "5f7c24dd9f76616e11ccd553066e06f4f5683ac11520089bb27758183aea5386",
+  "status": "finished",
+  "end": "2026-09-08T22:46:08.225125000+08:00",
+  "wall_seconds": 219.611254,
+  "exit": 0,
+  "signal": null,
+  "source_after_sha256": "ecef432164402b0ef2ea2cc83958c39b608a8edfb9ade7711167072ef255a4f8",
+  "source_stable": true,
+  "binary_after_sha256": "94b6e7ab743afe85ba8406bbf7f7c98dda2bffe6c26da5a5e52908fb2940b061",
+  "binary_mtime": "2026-09-08T22:46:08.205653158+08:00",
+  "build_log_sha256": "b264090f518efaa2a76660afb4516bbaa8a6d383912adc47480433e6848f84ac"
+}

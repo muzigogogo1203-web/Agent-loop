@@ -120,8 +120,58 @@ private func planTurn(goal: String) -> TurnResult {
     let plannerHome = MockProvider(script: [planTurn(goal: "家务")])
     let plannerNorth = MockProvider(script: [planTurn(goal: "探路")])
     let cardProvider = MockProvider(script: [])
+    let northIdentity = try testPlanningCommandIdentity(
+        db: db,
+        command: "multi-camp-north-notes-isolation",
+        model: "planner-north"
+    )
+    let homeIdentity = try testPlanningCommandIdentity(
+        db: db,
+        command: "multi-camp-home-notes-isolation",
+        model: "planner-home"
+    )
+    let stateRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "multi-camp-notes-state-\(UUID().uuidString)",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: stateRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
+    defer { try? FileManager.default.removeItem(at: stateRoot) }
+    let artifactRoot = stateRoot.appendingPathComponent(
+        "artifacts",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: artifactRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
     let orch = Orchestrator(
         db: db,
+        planningProviderResolver: TestPlanningProviderResolver {
+            profileId,
+            model in
+            guard profileId == northIdentity.runtimeProfileId else {
+                throw TestPlanningProviderResolverError.unexpectedProfile(
+                    expected: northIdentity.runtimeProfileId,
+                    actual: profileId
+                )
+            }
+            switch model {
+            case northIdentity.plannerModel:
+                return plannerNorth
+            case homeIdentity.plannerModel:
+                return plannerHome
+            default:
+                throw TestPlanningProviderResolverError.unexpectedModel(
+                    expected: "\(northIdentity.plannerModel)|\(homeIdentity.plannerModel)",
+                    actual: model
+                )
+            }
+        },
         makeProvider: { model, _ in
             switch model {
             case "planner-home": plannerHome
@@ -129,18 +179,48 @@ private func planTurn(goal: String) -> TurnResult {
             default: cardProvider
             }
         },
-        artifactStoreRoot: try multiCampArtifactRoot(),
+        artifactStoreRoot: artifactRoot,
         tickInterval: nil
     )
 
+    await orch.recoverAndReconcile()
     // 北岭的规划不得携带家的笔记
     _ = try await orch.startMission(
         goal: "探路", companionIds: [companion.id], workspacePath: nil,
-        plannerModel: "planner-north", campId: north.id)
+        plannerModel: northIdentity.plannerModel,
+        runtimeProfileId: northIdentity.runtimeProfileId,
+        budgetTokens: KernelDefaults.missionBudget,
+        campId: north.id,
+        autonomy: .standard,
+        idempotencyKey: northIdentity.idempotencyKey,
+        traceId: northIdentity.traceId
+    )
     // 家的规划应携带
     _ = try await orch.startMission(
         goal: "家务", companionIds: [companion.id], workspacePath: nil,
-        plannerModel: "planner-home", campId: home.id)
+        plannerModel: homeIdentity.plannerModel,
+        runtimeProfileId: homeIdentity.runtimeProfileId,
+        budgetTokens: KernelDefaults.missionBudget,
+        campId: home.id,
+        autonomy: .standard,
+        idempotencyKey: homeIdentity.idempotencyKey,
+        traceId: homeIdentity.traceId
+    )
+    let planningDeadline =
+        ContinuousClock.now.advanced(by: .seconds(5))
+    var bothPlannersStarted = false
+    while ContinuousClock.now < planningDeadline {
+        let northStarted =
+            !(await plannerNorth.recordedHistories).isEmpty
+        let homeStarted =
+            !(await plannerHome.recordedHistories).isEmpty
+        if northStarted && homeStarted {
+            bothPlannersStarted = true
+            break
+        }
+        try await Task.sleep(for: .milliseconds(20))
+    }
+    #expect(bothPlannersStarted)
     await orch.shutdown() // 取消后台执行（cardProvider 空脚本会慢重试，无需等）
 
     guard case .text(let northPrompt) = (await plannerNorth.recordedHistories.first)?.first?.content.first else {
@@ -176,6 +256,7 @@ private func planTurn(goal: String) -> TurnResult {
 
 // MARK: - 提案建队归属向导所在营地
 
+@MainActor
 @Test func confirmedProposalLandsInGuidesCamp() async throws {
     let db = try multiCampDB()
     _ = try db.ensureDefaultCamp()
@@ -190,13 +271,47 @@ private func planTurn(goal: String) -> TurnResult {
     let messageId = try db.appendChatMessage(
         threadId: thread.id, role: "guide", contentJson: try block.encodedString())
 
+    let provider = MockProvider(script: [])
+    let runtime = try testPlanningRuntimeSelection(db: db, model: "m")
+    let stateRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "multi-camp-proposal-state-\(UUID().uuidString)",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: stateRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
+    defer { try? FileManager.default.removeItem(at: stateRoot) }
+    let artifactRoot = stateRoot.appendingPathComponent(
+        "artifacts",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: artifactRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
     let orch = Orchestrator(
         db: db,
-        makeProvider: { _, _ in MockProvider(script: []) },
-        artifactStoreRoot: try multiCampArtifactRoot(),
+        planningProviderResolver: TestPlanningProviderResolver(provider: provider),
+        makeProvider: { _, _ in provider },
+        artifactStoreRoot: artifactRoot,
         tickInterval: nil
     )
-    let missionId = try await orch.confirmSquadProposal(messageId: messageId, plannerModel: "m")
+    let coordinator = PlanningEntryCoordinator(
+        db: db,
+        orchestrator: orch,
+        makeUUIDString: { "multi-camp-confirmed-proposal-trace" }
+    )
+    let captured = try coordinator.captureConfirmedProposal(
+        messageId: messageId,
+        runtime: runtime,
+        fallbackBudget: KernelDefaults.missionBudget,
+        autonomy: .standard
+    )
+    await orch.recoverAndReconcile()
+    let missionId = try await coordinator.startConfirmedProposal(captured)
     // 归属北岭而非默认营地
     #expect(try db.squad(forMission: missionId)?.campId == north.id)
     await orch.shutdown()

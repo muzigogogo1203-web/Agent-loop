@@ -1,0 +1,22 @@
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite ExecutionEngineConformanceTests started.
+◇ Test p1f1_065AbortOwnerJoinsAfterHelloFailure() started.
+065 ABORT OWNER HELLO: body=hello gates=aborted waiters=joined guard=joined-not-expired client=shutdown-closed peer=closed reader=absent no-child=true
+✘ Test p1f1_065AbortOwnerJoinsAfterHelloFailure() recorded an issue at ExecutionEngineConformanceTests.swift:9544:13: Expectation failed: (result.owner.epilogue != nil → false) && (result.epilogue.claimant == .owner → <not evaluated>)
+✘ Test p1f1_065AbortOwnerJoinsAfterHelloFailure() failed after 0.003 seconds with 1 issue.
+◇ Test p1f1_065AbortOwnerJoinsAfterClientConstructionFailure() started.
+065 ABORT OWNER CONSTRUCTION: body=clientConstruction gates=aborted waiters=joined guard=joined-not-expired client=absent reader=absent no-child=true
+✘ Test p1f1_065AbortOwnerJoinsAfterClientConstructionFailure() recorded an issue at ExecutionEngineConformanceTests.swift:9551:13: Expectation failed: (result.owner.epilogue != nil → false) && (result.epilogue.claimant == .owner → <not evaluated>)
+✘ Test p1f1_065AbortOwnerJoinsAfterClientConstructionFailure() failed after 0.001 seconds with 1 issue.
+◇ Test p1f1_065AbortGuardExpiryWakesPendingWaiters() started.
+065 ABORT OWNER EXPIRY: body=gateAborted async-waiters=aborted-joined first-aborts=one-per-gate releases=zero guard=joined-expired-once client=absent reader=absent no-child=true
+✘ Test p1f1_065AbortGuardExpiryWakesPendingWaiters() recorded an issue at ExecutionEngineConformanceTests.swift:9558:13: Expectation failed: (result.owner.epilogue != nil → false) && (result.epilogue.claimant == .owner → <not evaluated>)
+✘ Test p1f1_065AbortGuardExpiryWakesPendingWaiters() failed after 0.123 seconds with 1 issue.
+◇ Test p1f1_065AbortOwnerJoinsStartedReaderAfterBodyFailure() started.
+065 ABORT OWNER READER: body=gateCompleted.reader reader-entry=one reader=joined-eof waiters=joined guard=joined-not-expired client=shutdown-closed peer=closed no-child=true
+✘ Test p1f1_065AbortOwnerJoinsStartedReaderAfterBodyFailure() recorded an issue at ExecutionEngineConformanceTests.swift:9565:13: Expectation failed: (result.owner.epilogue != nil → false) && (result.epilogue.claimant == .owner → <not evaluated>)
+✘ Test p1f1_065AbortOwnerJoinsStartedReaderAfterBodyFailure() failed after 0.001 seconds with 1 issue.
+✘ Suite ExecutionEngineConformanceTests failed after 0.128 seconds with 4 issues.
+✘ Test run with 4 tests in 1 suite failed after 0.128 seconds with 4 issues.

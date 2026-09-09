@@ -1,0 +1,41 @@
+[0/1] Planning build
+Building for production...
+[0/2] Write sources
+[1/2] Write swift-version--1AB21518FC5DEDBE.txt
+[3/3] Compiling AgentLoopCore ChatService.swift
+Build of target: 'AgentLoopCore' complete! (32.90s)
+Building for production...
+[0/2] Write sources
+[1/2] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/3] Compiling AgentLoopTestSuite AgentLoopTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:945:5: warning: no calls to throwing functions occur within 'try' expression
+ 943 |     _ fixture: R01FailureFirstFixture
+ 944 | ) throws -> Int {
+ 945 |     try fixture.database.pool.writeWithoutTransaction { database in
+     |     `- warning: no calls to throwing functions occur within 'try' expression
+ 946 |         database.totalChangesCount
+ 947 |     }
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+Build of target: 'AgentLoopTestSuite' complete! (92.36s)
+revision02.symbol_gate_attempt01=carrier_sigpipe_rejected
+revision02.release_core_seam_symbols=0
+revision02.debug_core_seam_symbols=65
+revision02.symbol_direction=pass

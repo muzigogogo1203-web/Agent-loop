@@ -1,0 +1,210 @@
+P1-E FINAL FOCUSED VERIFICATION — 2026-08-26
+shell=/bin/bash
+COMMAND: swift run RunTests --filter p1e01V16MigrationIsImmediateSuccessor|p1e02V16SchemaObjectCountsAndDDL|p1e03CompanionCowResidencyBackfillReplay|p1e04NilAndCorruptCampBackfillMatrix|p1e05ArchivedWorkClosureAndLifecycleBinding|p1e06LegacyPoisonDiagnosticsRollback|p1e07DurableChildFKRebuildUsesFinalNames|p1e08LegacyChatNoteScopeBackfill|p1e09LegacyEventScopeExhaustiveBackfill|p1e10LegacyScopeMalformedRollback|p1e11V16GuardDropOrdering|p1e12V16FailureBoundaryRestoresV15|p1e13V16RedactionAndAppendOnlyGuards|p1e14LiteralSQLite351V16Fence|p1e15LiteralSQLite352V16Fence|p1e16RealSQLiteDualLaneV16Contract|p1e17CowIdentityContractValidation|p1e18ResidencyTransitionsReplayAndRejoin|p1e19RequireActiveResidencyAuthorization|p1e20SameCowTwoCampsMemoryIsolation|p1e21InactiveResidencyBlocksReadWrite|p1e22BridgeDirectionScopeAndRevocation|p1e23RequireActiveCampWriteFence|p1e24P1ERetirementAPIsRemainClosed|p1e25MemoryRawWorkingPromotionFlow|p1e26MemoryLayerOwnerAndCarrierInvariants|p1e27AcceptedOutcomeSkillPromotion|p1e28UnacceptedOrInvalidSkillPromotionRejects|p1e29MemoryDependencyAppendOnlyGraph|p1e30DependencyInvalidationStateMatrix|p1e31MemoryTombstoneErasesPrivateCarrier|p1e32P1DInvalidationAndMemoryRollbackAtomically|p1e33LegacyContentWritesScopeFirst|p1e34LegacyContentRawWriteRejected|p1e35LegacyEventAppendScopeFirst|p1e36LegacyEventMissingMismatchRejected|p1e37ProviderMessageAndWorkCommitAtomically|p1e38ProviderPrepareStartReturnConsumeSuccess|p1e39ReturnedCheckpointNeverRecallsProvider|p1e40StartedDispatchAbandonAndExactReplay|p1e41ProviderLifecycleFenceRace|p1e42GuideAndCampDistillReplayClass|p1e43GlobalProviderRoutesAvoidCampDispatch|p1e44UnknownExternalWriteRouteRejects|p1e45GuideToolAllowlistAndReceiptDedupe|p1e46HistoricUnsafeStartedFailsObservably|p1e47ServicesHaveNoUnregisteredProviderAuthority|p1e48P1EProviderScopeIntegrationFailsClosed|p1e49DeletionPrepareRequestSurface|p1e50DeletionCommandFactoryAuthority|p1e51DeletionPrepareSnapshotZeroWritePrivacy|p1e52DeletionCommandCanonicalHashAndCounts|p1e53ResultOnlyNeedsReviewSuccess|p1e54ResultOnlyFailedWithResultSuccess|p1e55ResultOnlyRejectionMatrix|p1e56SourceAndResultWithoutResultSuccess|p1e57SourceAndResultWithResultSuccess|p1e58SourceAndResultRejectionMatrix|p1e59ProjectionScopeAndPermanentProjectionGuards|p1e60KnowledgeLinkBlockerRejects|p1e61CandidateBlockerRejects|p1e62RuminationWorkBlockerRejects|p1e63OpenAttemptBlockerRejects|p1e64ProviderDispatchBlockerRejects|p1e65DeletionLifecycleTOCTOURejects|p1e66DeletionRowAndResultTOCTOURejects|p1e67DeletionBlockerTOCTOURejects|p1e68DeletionEnvelopeAndPersistedGraph|p1e69DeletionExactJSONAndOutboxContract|p1e70DeletionReplayAfterLifecycleAndSourceLoss|p1e71DeletionConflictIntegrityAndNewKeyMatrix|p1e72DeletionRawEvidenceAndUDFRejectMatrix|p1e73DeletionOriginalFourP0Counterexamples|p1e74PermitRegistryInstallAndIsolationContract|p1e75PermitLifecycleScenarioMatrix|p1e76PermitCleanupMismatchStickyFaultMatrix|p1e77PermitGenerationArityCursorAndReuseMatrix|p1e78DeletionExecutionResolutionMatrix|p1e79DeletionSharedValidatorForgeryAndRelaunch|p1e80DeletionWorkerAndMaterializerRaceMatrix|p1e81DeletionControllerSingleFlight|p1e82DeletionPreparedCancelAndNotCommittedRetry|p1e83DeletionExecutingCancelCommitRace|p1e84DeletionRefreshFailureSameKeyReplay|p1e85DeletionCommitOutcomeUnknownActions|p1e86DeletionIntegrityBlockedActions|p1e87DeletionTerminalConflictAbandonFlow|p1e88DeletionCommittedDismissAndReload|p1e89DeletionProcessDeathPersistenceMatrix|p1e90DeletionUISourcePrivacyAndScopeSentinels
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1ECampLifecycleMigrationTests started.
+◇ Suite P1ECampIsolationTests started.
+◇ Suite P1EContractIntegrationTests started.
+◇ Suite P1ELegacyScopeMigrationTests started.
+◇ Suite P1ECampProviderDispatchTests started.
+◇ Suite P1ESQLiteMigrationCompatibilityTests started.
+◇ Suite P1EIngestionDeletionContractTests started.
+◇ Suite P1EMemoryProvenanceTests started.
+◇ Test p1e20SameCowTwoCampsMemoryIsolation() started.
+◇ Test p1e33LegacyContentWritesScopeFirst() started.
+◇ Test p1e32P1DInvalidationAndMemoryRollbackAtomically() started.
+◇ Suite P1ECowResidencyContractTests started.
+◇ Test p1e01V16MigrationIsImmediateSuccessor() started.
+◇ Test p1e14LiteralSQLite351V16Fence() started.
+◇ Test p1e17CowIdentityContractValidation() started.
+◇ Test p1e37ProviderMessageAndWorkCommitAtomically() started.
+◇ Test p1e25MemoryRawWorkingPromotionFlow() started.
+◇ Test p1e49DeletionPrepareRequestSurface() started.
+✔ Test p1e01V16MigrationIsImmediateSuccessor() passed after 0.001 seconds.
+◇ Test p1e02V16SchemaObjectCountsAndDDL() started.
+✔ Test p1e02V16SchemaObjectCountsAndDDL() passed after 0.124 seconds.
+◇ Test p1e03CompanionCowResidencyBackfillReplay() started.
+✔ Test p1e17CowIdentityContractValidation() passed after 0.145 seconds.
+◇ Test p1e18ResidencyTransitionsReplayAndRejoin() started.
+✔ Test p1e49DeletionPrepareRequestSurface() passed after 0.180 seconds.
+◇ Test p1e50DeletionCommandFactoryAuthority() started.
+✔ Test p1e37ProviderMessageAndWorkCommitAtomically() passed after 0.183 seconds.
+◇ Test p1e38ProviderPrepareStartReturnConsumeSuccess() started.
+✔ Test p1e50DeletionCommandFactoryAuthority() passed after 0.004 seconds.
+◇ Test p1e51DeletionPrepareSnapshotZeroWritePrivacy() started.
+✔ Test p1e33LegacyContentWritesScopeFirst() passed after 0.211 seconds.
+◇ Test p1e34LegacyContentRawWriteRejected() started.
+✔ Test p1e25MemoryRawWorkingPromotionFlow() passed after 0.212 seconds.
+◇ Test p1e26MemoryLayerOwnerAndCarrierInvariants() started.
+✔ Test p1e20SameCowTwoCampsMemoryIsolation() passed after 0.212 seconds.
+◇ Test p1e21InactiveResidencyBlocksReadWrite() started.
+✔ Test p1e26MemoryLayerOwnerAndCarrierInvariants() passed after 0.001 seconds.
+◇ Test p1e27AcceptedOutcomeSkillPromotion() started.
+✔ Test p1e14LiteralSQLite351V16Fence() passed after 0.223 seconds.
+◇ Test p1e15LiteralSQLite352V16Fence() started.
+✔ Test p1e32P1DInvalidationAndMemoryRollbackAtomically() passed after 0.281 seconds.
+✔ Suite P1EContractIntegrationTests passed after 0.281 seconds.
+✔ Test p1e03CompanionCowResidencyBackfillReplay() passed after 0.163 seconds.
+◇ Test p1e04NilAndCorruptCampBackfillMatrix() started.
+✔ Test p1e18ResidencyTransitionsReplayAndRejoin() passed after 0.153 seconds.
+◇ Test p1e19RequireActiveResidencyAuthorization() started.
+✔ Test p1e51DeletionPrepareSnapshotZeroWritePrivacy() passed after 0.173 seconds.
+◇ Test p1e52DeletionCommandCanonicalHashAndCounts() started.
+✔ Test p1e21InactiveResidencyBlocksReadWrite() passed after 0.165 seconds.
+✔ Suite P1ECampIsolationTests passed after 0.378 seconds.
+✔ Test p1e34LegacyContentRawWriteRejected() passed after 0.167 seconds.
+◇ Test p1e35LegacyEventAppendScopeFirst() started.
+✔ Test p1e38ProviderPrepareStartReturnConsumeSuccess() passed after 0.195 seconds.
+◇ Test p1e39ReturnedCheckpointNeverRecallsProvider() started.
+✔ Test p1e15LiteralSQLite352V16Fence() passed after 0.161 seconds.
+◇ Test p1e16RealSQLiteDualLaneV16Contract() started.
+✔ Test p1e16RealSQLiteDualLaneV16Contract() passed after 0.007 seconds.
+✔ Suite P1ESQLiteMigrationCompatibilityTests passed after 0.392 seconds.
+✔ Test p1e27AcceptedOutcomeSkillPromotion() passed after 0.228 seconds.
+◇ Test p1e28UnacceptedOrInvalidSkillPromotionRejects() started.
+✔ Test p1e19RequireActiveResidencyAuthorization() passed after 0.150 seconds.
+◇ Test p1e22BridgeDirectionScopeAndRevocation() started.
+✔ Test p1e52DeletionCommandCanonicalHashAndCounts() passed after 0.127 seconds.
+◇ Test p1e53ResultOnlyNeedsReviewSuccess() started.
+✔ Test p1e35LegacyEventAppendScopeFirst() passed after 0.126 seconds.
+◇ Test p1e36LegacyEventMissingMismatchRejected() started.
+✔ Test p1e39ReturnedCheckpointNeverRecallsProvider() passed after 0.134 seconds.
+◇ Test p1e40StartedDispatchAbandonAndExactReplay() started.
+✔ Test p1e04NilAndCorruptCampBackfillMatrix() passed after 0.261 seconds.
+◇ Test p1e05ArchivedWorkClosureAndLifecycleBinding() started.
+✔ Test p1e22BridgeDirectionScopeAndRevocation() passed after 0.142 seconds.
+◇ Test p1e23RequireActiveCampWriteFence() started.
+✔ Test p1e53ResultOnlyNeedsReviewSuccess() passed after 0.139 seconds.
+◇ Test p1e54ResultOnlyFailedWithResultSuccess() started.
+✔ Test p1e36LegacyEventMissingMismatchRejected() passed after 0.121 seconds.
+✔ Suite P1ELegacyScopeMigrationTests passed after 0.627 seconds.
+✔ Test p1e40StartedDispatchAbandonAndExactReplay() passed after 0.122 seconds.
+◇ Test p1e41ProviderLifecycleFenceRace() started.
+✔ Test p1e05ArchivedWorkClosureAndLifecycleBinding() passed after 0.114 seconds.
+◇ Test p1e06LegacyPoisonDiagnosticsRollback() started.
+✔ Test p1e06LegacyPoisonDiagnosticsRollback() passed after 0.018 seconds.
+◇ Test p1e07DurableChildFKRebuildUsesFinalNames() started.
+✔ Test p1e23RequireActiveCampWriteFence() passed after 0.105 seconds.
+◇ Test p1e24P1ERetirementAPIsRemainClosed() started.
+✔ Test p1e24P1ERetirementAPIsRemainClosed() passed after 0.025 seconds.
+✔ Suite P1ECowResidencyContractTests passed after 0.723 seconds.
+✔ Test p1e54ResultOnlyFailedWithResultSuccess() passed after 0.117 seconds.
+◇ Test p1e55ResultOnlyRejectionMatrix() started.
+✔ Test p1e41ProviderLifecycleFenceRace() passed after 0.107 seconds.
+◇ Test p1e42GuideAndCampDistillReplayClass() started.
+✔ Test p1e42GuideAndCampDistillReplayClass() passed after 0.001 seconds.
+◇ Test p1e43GlobalProviderRoutesAvoidCampDispatch() started.
+✔ Test p1e07DurableChildFKRebuildUsesFinalNames() passed after 0.104 seconds.
+◇ Test p1e08LegacyChatNoteScopeBackfill() started.
+✔ Test p1e28UnacceptedOrInvalidSkillPromotionRejects() passed after 0.354 seconds.
+◇ Test p1e29MemoryDependencyAppendOnlyGraph() started.
+✔ Test p1e43GlobalProviderRoutesAvoidCampDispatch() passed after 0.099 seconds.
+◇ Test p1e44UnknownExternalWriteRouteRejects() started.
+✔ Test p1e08LegacyChatNoteScopeBackfill() passed after 0.090 seconds.
+◇ Test p1e09LegacyEventScopeExhaustiveBackfill() started.
+✔ Test p1e29MemoryDependencyAppendOnlyGraph() passed after 0.088 seconds.
+◇ Test p1e30DependencyInvalidationStateMatrix() started.
+✔ Test p1e44UnknownExternalWriteRouteRejects() passed after 0.093 seconds.
+◇ Test p1e45GuideToolAllowlistAndReceiptDedupe() started.
+✔ Test p1e09LegacyEventScopeExhaustiveBackfill() passed after 0.084 seconds.
+◇ Test p1e10LegacyScopeMalformedRollback() started.
+✔ Test p1e30DependencyInvalidationStateMatrix() passed after 0.100 seconds.
+◇ Test p1e31MemoryTombstoneErasesPrivateCarrier() started.
+✔ Test p1e45GuideToolAllowlistAndReceiptDedupe() passed after 0.113 seconds.
+◇ Test p1e46HistoricUnsafeStartedFailsObservably() started.
+✔ Test p1e10LegacyScopeMalformedRollback() passed after 0.098 seconds.
+◇ Test p1e11V16GuardDropOrdering() started.
+✔ Test p1e31MemoryTombstoneErasesPrivateCarrier() passed after 0.086 seconds.
+✔ Suite P1EMemoryProvenanceTests passed after 1.071 seconds.
+✔ Test p1e11V16GuardDropOrdering() passed after 0.017 seconds.
+◇ Test p1e12V16FailureBoundaryRestoresV15() started.
+✔ Test p1e46HistoricUnsafeStartedFailsObservably() passed after 0.101 seconds.
+◇ Test p1e47ServicesHaveNoUnregisteredProviderAuthority() started.
+✔ Test p1e47ServicesHaveNoUnregisteredProviderAuthority() passed after 0.003 seconds.
+◇ Test p1e48P1EProviderScopeIntegrationFailsClosed() started.
+✔ Test p1e55ResultOnlyRejectionMatrix() passed after 0.478 seconds.
+◇ Test p1e56SourceAndResultWithoutResultSuccess() started.
+✔ Test p1e48P1EProviderScopeIntegrationFailsClosed() passed after 0.100 seconds.
+✔ Suite P1ECampProviderDispatchTests passed after 1.257 seconds.
+✔ Test p1e56SourceAndResultWithoutResultSuccess() passed after 0.091 seconds.
+◇ Test p1e57SourceAndResultWithResultSuccess() started.
+✔ Test p1e57SourceAndResultWithResultSuccess() passed after 0.097 seconds.
+◇ Test p1e58SourceAndResultRejectionMatrix() started.
+✔ Test p1e12V16FailureBoundaryRestoresV15() passed after 0.341 seconds.
+◇ Test p1e13V16RedactionAndAppendOnlyGuards() started.
+✔ Test p1e13V16RedactionAndAppendOnlyGuards() passed after 0.074 seconds.
+✔ Suite P1ECampLifecycleMigrationTests passed after 1.494 seconds.
+✔ Test p1e58SourceAndResultRejectionMatrix() passed after 0.256 seconds.
+◇ Test p1e59ProjectionScopeAndPermanentProjectionGuards() started.
+✔ Test p1e59ProjectionScopeAndPermanentProjectionGuards() passed after 0.077 seconds.
+◇ Test p1e60KnowledgeLinkBlockerRejects() started.
+✔ Test p1e60KnowledgeLinkBlockerRejects() passed after 0.072 seconds.
+◇ Test p1e61CandidateBlockerRejects() started.
+✔ Test p1e61CandidateBlockerRejects() passed after 0.071 seconds.
+◇ Test p1e62RuminationWorkBlockerRejects() started.
+✔ Test p1e62RuminationWorkBlockerRejects() passed after 0.076 seconds.
+◇ Test p1e63OpenAttemptBlockerRejects() started.
+✔ Test p1e63OpenAttemptBlockerRejects() passed after 0.076 seconds.
+◇ Test p1e64ProviderDispatchBlockerRejects() started.
+✔ Test p1e64ProviderDispatchBlockerRejects() passed after 0.075 seconds.
+◇ Test p1e65DeletionLifecycleTOCTOURejects() started.
+✔ Test p1e65DeletionLifecycleTOCTOURejects() passed after 0.073 seconds.
+◇ Test p1e66DeletionRowAndResultTOCTOURejects() started.
+✔ Test p1e66DeletionRowAndResultTOCTOURejects() passed after 0.143 seconds.
+◇ Test p1e67DeletionBlockerTOCTOURejects() started.
+✔ Test p1e67DeletionBlockerTOCTOURejects() passed after 0.070 seconds.
+◇ Test p1e68DeletionEnvelopeAndPersistedGraph() started.
+✔ Test p1e68DeletionEnvelopeAndPersistedGraph() passed after 0.083 seconds.
+◇ Test p1e69DeletionExactJSONAndOutboxContract() started.
+✔ Test p1e69DeletionExactJSONAndOutboxContract() passed after 0.086 seconds.
+◇ Test p1e70DeletionReplayAfterLifecycleAndSourceLoss() started.
+✔ Test p1e70DeletionReplayAfterLifecycleAndSourceLoss() passed after 0.086 seconds.
+◇ Test p1e71DeletionConflictIntegrityAndNewKeyMatrix() started.
+✔ Test p1e71DeletionConflictIntegrityAndNewKeyMatrix() passed after 0.084 seconds.
+◇ Test p1e72DeletionRawEvidenceAndUDFRejectMatrix() started.
+✔ Test p1e72DeletionRawEvidenceAndUDFRejectMatrix() passed after 0.075 seconds.
+◇ Test p1e73DeletionOriginalFourP0Counterexamples() started.
+✔ Test p1e73DeletionOriginalFourP0Counterexamples() passed after 0.075 seconds.
+◇ Test p1e74PermitRegistryInstallAndIsolationContract() started.
+✔ Test p1e74PermitRegistryInstallAndIsolationContract() passed after 0.001 seconds.
+◇ Test p1e75PermitLifecycleScenarioMatrix() started.
+✔ Test p1e75PermitLifecycleScenarioMatrix() passed after 0.005 seconds.
+◇ Test p1e76PermitCleanupMismatchStickyFaultMatrix() started.
+✔ Test p1e76PermitCleanupMismatchStickyFaultMatrix() passed after 0.005 seconds.
+◇ Test p1e77PermitGenerationArityCursorAndReuseMatrix() started.
+✔ Test p1e77PermitGenerationArityCursorAndReuseMatrix() passed after 0.090 seconds.
+◇ Test p1e78DeletionExecutionResolutionMatrix() started.
+✔ Test p1e78DeletionExecutionResolutionMatrix() passed after 0.155 seconds.
+◇ Test p1e79DeletionSharedValidatorForgeryAndRelaunch() started.
+✔ Test p1e79DeletionSharedValidatorForgeryAndRelaunch() passed after 0.085 seconds.
+◇ Test p1e80DeletionWorkerAndMaterializerRaceMatrix() started.
+✔ Test p1e80DeletionWorkerAndMaterializerRaceMatrix() passed after 0.712 seconds.
+◇ Test p1e81DeletionControllerSingleFlight() started.
+✔ Test p1e81DeletionControllerSingleFlight() passed after 0.083 seconds.
+◇ Test p1e82DeletionPreparedCancelAndNotCommittedRetry() started.
+✔ Test p1e82DeletionPreparedCancelAndNotCommittedRetry() passed after 0.081 seconds.
+◇ Test p1e83DeletionExecutingCancelCommitRace() started.
+✔ Test p1e83DeletionExecutingCancelCommitRace() passed after 0.081 seconds.
+◇ Test p1e84DeletionRefreshFailureSameKeyReplay() started.
+✔ Test p1e84DeletionRefreshFailureSameKeyReplay() passed after 0.085 seconds.
+◇ Test p1e85DeletionCommitOutcomeUnknownActions() started.
+✔ Test p1e85DeletionCommitOutcomeUnknownActions() passed after 0.086 seconds.
+◇ Test p1e86DeletionIntegrityBlockedActions() started.
+✔ Test p1e86DeletionIntegrityBlockedActions() passed after 0.074 seconds.
+◇ Test p1e87DeletionTerminalConflictAbandonFlow() started.
+✔ Test p1e87DeletionTerminalConflictAbandonFlow() passed after 0.076 seconds.
+◇ Test p1e88DeletionCommittedDismissAndReload() started.
+✔ Test p1e88DeletionCommittedDismissAndReload() passed after 0.079 seconds.
+◇ Test p1e89DeletionProcessDeathPersistenceMatrix() started.
+✔ Test p1e89DeletionProcessDeathPersistenceMatrix() passed after 0.082 seconds.
+◇ Test p1e90DeletionUISourcePrivacyAndScopeSentinels() started.
+✔ Test p1e90DeletionUISourcePrivacyAndScopeSentinels() passed after 0.241 seconds.
+✔ Suite P1EIngestionDeletionContractTests passed after 4.928 seconds.
+✔ Test run with 90 tests in 9 suites passed after 4.929 seconds.
+command_code=0
+tee_code=0

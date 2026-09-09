@@ -1,0 +1,1961 @@
+COMMAND: swift run RunTests --filter p1f1_017ContextEnvelopeCanonicalGoldenBytes|p1f1_018ContextEnvelopeRejectsInvalidBeforeWrite|p1f1_019ContextEnvelopePromptRenderingDoesNotChangeIdentity|p1f1_020SessionScopeDerivedCanonicalGoldenBytes|p1f1_021SessionScopeSpoofAndDriftZeroWrite|p1f1_022BeginAllocatesExecutionRunCardAndLifecycleAtomically|p1f1_023BeginReplaySameHashAndConflictMatrix|p1f1_024DescriptorReplayClassIsDerivedAndPersisted|p1f1_025DispatchCASStartsAdapterExactlyOnce|p1f1_026PreDispatchFailureTerminalizesWithoutDispatch|p1f1_027AcceptEventMonotonicSequenceMatrix|p1f1_028UsageOverflowFailsWithoutPartialProjection|p1f1_029TerminalReceiptLinksDomainResultHashNotProposalHash|p1f1_030WholeProposalCanonicalIdentityIncludesArtifacts|p1f1_031ProposalReplayReturnsGeneratedArtifactIds|p1f1_032TerminalKeyManifestAndOrdinalConflictMatrix|p1f1_033CompletedTerminalCommitsAllProjectionsAtomically|p1f1_034BlockedFailedCanceledTerminalTaxonomy|p1f1_035AskUserCommitsBlockedNeedsHumanInputAtomically|p1f1_036InvalidPreparationCommitsOneProtocolErrorReceipt|p1f1_037TerminalMutationFailureRollsBackEveryProjection|p1f1_038DuplicateTerminalReplaysAndSecondTerminalRejects|p1f1_039BindResumeRequiresExactScopeAndWorkspace|p1f1_040UserAnswerNewContextSameScopeResumes|p1f1_041ScopeDriftStartsNewSessionAndMismatchZeroWrite|p1f1_042RecoveryPrecedenceAndFourDispatchCrashWindows
+Building for debugging...
+[0/5] Write sources
+[1/5] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/10] Compiling AgentLoopTestSuite EngineExecutionStoreTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:63:39: error: cannot find type 'ExecutionEngineAdapter' in scope
+  61 | }
+  62 | 
+  63 | final class P1F1DispatchProbeAdapter: ExecutionEngineAdapter, @unchecked Sendable {
+     |                                       `- error: cannot find type 'ExecutionEngineAdapter' in scope
+  64 |     private let lock = NSLock()
+  65 |     private let engineDescriptor: ExecutionEngineDescriptor
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:65:35: error: cannot find type 'ExecutionEngineDescriptor' in scope
+  63 | final class P1F1DispatchProbeAdapter: ExecutionEngineAdapter, @unchecked Sendable {
+  64 |     private let lock = NSLock()
+  65 |     private let engineDescriptor: ExecutionEngineDescriptor
+     |                                   `- error: cannot find type 'ExecutionEngineDescriptor' in scope
+  66 |     private var starts = 0
+  67 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:68:22: error: cannot find type 'ExecutionEngineDescriptor' in scope
+  66 |     private var starts = 0
+  67 | 
+  68 |     init(descriptor: ExecutionEngineDescriptor) {
+     |                      `- error: cannot find type 'ExecutionEngineDescriptor' in scope
+  69 |         self.engineDescriptor = descriptor
+  70 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:72:62: error: cannot find type 'ExecutionEngineDescriptor' in scope
+  70 |     }
+  71 | 
+  72 |     func descriptor(profile: RuntimeProfileRecord) throws -> ExecutionEngineDescriptor {
+     |                                                              `- error: cannot find type 'ExecutionEngineDescriptor' in scope
+  73 |         engineDescriptor
+  74 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:78:30: error: cannot find type 'EngineExecutionEvent' in scope
+  76 |     func execute(
+  77 |         request: EngineExecutionRequest
+  78 |     ) -> AsyncThrowingStream<EngineExecutionEvent, Error> {
+     |                              `- error: cannot find type 'EngineExecutionEvent' in scope
+  79 |         lock.lock()
+  80 |         starts += 1
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:77:18: error: cannot find type 'EngineExecutionRequest' in scope
+  75 | 
+  76 |     func execute(
+  77 |         request: EngineExecutionRequest
+     |                  `- error: cannot find type 'EngineExecutionRequest' in scope
+  78 |     ) -> AsyncThrowingStream<EngineExecutionEvent, Error> {
+  79 |         lock.lock()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:101:6: error: cannot find type 'ExecutionEngineDescriptor' in scope
+  99 |     adapterId: String = "adapter.codex",
+ 100 |     adapterVersion: String = "1.2.3"
+ 101 | ) -> ExecutionEngineDescriptor {
+     |      `- error: cannot find type 'ExecutionEngineDescriptor' in scope
+ 102 |     ExecutionEngineDescriptor(
+ 103 |         adapterId: adapterId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:97:18: error: cannot find type 'EngineExecutionReplayClassV1' in scope
+  95 | 
+  96 | func p1f1ExecutionDescriptor(
+  97 |     replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+     |                  `- error: cannot find type 'EngineExecutionReplayClassV1' in scope
+  98 |     sessionResume: EngineCapabilitySupportV1 = .supported,
+  99 |     adapterId: String = "adapter.codex",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:98:20: error: cannot find type 'EngineCapabilitySupportV1' in scope
+  96 | func p1f1ExecutionDescriptor(
+  97 |     replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+  98 |     sessionResume: EngineCapabilitySupportV1 = .supported,
+     |                    `- error: cannot find type 'EngineCapabilitySupportV1' in scope
+  99 |     adapterId: String = "adapter.codex",
+ 100 |     adapterVersion: String = "1.2.3"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:121:13: error: cannot find type 'EngineContextReferencesV1' in scope
+ 119 | func p1f1ContextReferences(
+ 120 |     memoryHash: String = p1f1EngineHashC
+ 121 | ) throws -> EngineContextReferencesV1 {
+     |             `- error: cannot find type 'EngineContextReferencesV1' in scope
+ 122 |     try EngineContextReferencesV1(
+ 123 |         inputRefs: [
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:175:13: error: cannot find type 'EngineContextScopeV1' in scope
+ 173 |     cardID: String = p1f1EngineCardID,
+ 174 |     contractHash: String = p1f1EngineHashA
+ 175 | ) throws -> EngineContextScopeV1 {
+     |             `- error: cannot find type 'EngineContextScopeV1' in scope
+ 176 |     try EngineContextScopeV1(
+ 177 |         campId: p1f1EngineCampID,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:192:17: error: cannot find type 'EngineContextReferencesV1' in scope
+ 190 |     rolePrompt: String = "ship the requested change",
+ 191 |     cardDescription: String = "bounded engine task",
+ 192 |     references: EngineContextReferencesV1? = nil
+     |                 `- error: cannot find type 'EngineContextReferencesV1' in scope
+ 193 | ) throws -> ContextPacket {
+ 194 |     ContextPacket(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:213:13: error: cannot find type 'EngineContextEnvelopeV1' in scope
+ 211 |     cardID: String = p1f1EngineCardID,
+ 212 |     memoryHash: String = p1f1EngineHashC
+ 213 | ) throws -> EngineContextEnvelopeV1 {
+     |             `- error: cannot find type 'EngineContextEnvelopeV1' in scope
+ 214 |     try EngineContextEnvelopeV1.from(
+ 215 |         packet: p1f1ContextPacket(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:257:16: error: cannot find type 'EngineExecutionStore' in scope
+ 255 | struct P1F1EngineFixture {
+ 256 |     let db: AppDatabase
+ 257 |     let store: EngineExecutionStore
+     |                `- error: cannot find type 'EngineExecutionStore' in scope
+ 258 |     let ids: P1F1DeterministicIDs
+ 259 |     let descriptor: ExecutionEngineDescriptor
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:259:21: error: cannot find type 'ExecutionEngineDescriptor' in scope
+ 257 |     let store: EngineExecutionStore
+ 258 |     let ids: P1F1DeterministicIDs
+ 259 |     let descriptor: ExecutionEngineDescriptor
+     |                     `- error: cannot find type 'ExecutionEngineDescriptor' in scope
+ 260 | 
+ 261 |     init(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:262:22: error: cannot find type 'EngineExecutionReplayClassV1' in scope
+ 260 | 
+ 261 |     init(
+ 262 |         replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+     |                      `- error: cannot find type 'EngineExecutionReplayClassV1' in scope
+ 263 |         sessionResume: EngineCapabilitySupportV1 = .supported
+ 264 |     ) throws {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:263:24: error: cannot find type 'EngineCapabilitySupportV1' in scope
+ 261 |     init(
+ 262 |         replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+ 263 |         sessionResume: EngineCapabilitySupportV1 = .supported
+     |                        `- error: cannot find type 'EngineCapabilitySupportV1' in scope
+ 264 |     ) throws {
+ 265 |         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:425:17: error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 423 |         claimedSessionScopeJson: String? = nil,
+ 424 |         claimedSessionScopeHash: String? = nil
+ 425 |     ) throws -> EngineExecutionRequestFieldsV1 {
+     |                 `- error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 426 |         try EngineExecutionRequestFieldsV1(
+ 427 |             campId: campID,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:413:17: error: cannot find type 'EngineExecutionBudgetV1' in scope
+ 411 |         contextHash: String = p1f1ContextGoldenHash,
+ 412 |         grantIDs: [String] = [p1f1EngineGrantB, p1f1EngineGrantA],
+ 413 |         budget: EngineExecutionBudgetV1 = EngineExecutionBudgetV1(
+     |                 `- error: cannot find type 'EngineExecutionBudgetV1' in scope
+ 414 |             tokenLimit: 10_000,
+ 415 |             costMicrosLimit: 5_000_000,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:418:20: error: cannot find type 'EngineWorkspaceRefV1' in scope
+ 416 |             wallClockSeconds: 900
+ 417 |         ),
+ 418 |         workspace: EngineWorkspaceRefV1 = EngineWorkspaceRefV1(
+     |                    `- error: cannot find type 'EngineWorkspaceRefV1' in scope
+ 419 |             reference: "workspace:primary",
+ 420 |             hash: p1f1EngineWorkspaceHash
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:422:21: error: cannot find type 'EngineSessionReferenceV1' in scope
+ 420 |             hash: p1f1EngineWorkspaceHash
+ 421 |         ),
+ 422 |         sessionRef: EngineSessionReferenceV1? = nil,
+     |                     `- error: cannot find type 'EngineSessionReferenceV1' in scope
+ 423 |         claimedSessionScopeJson: String? = nil,
+ 424 |         claimedSessionScopeHash: String? = nil
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:456:17: error: cannot find type 'EngineExecutionRequest' in scope
+ 454 |         key: String = "p1f1-engine-begin",
+ 455 |         fields: EngineExecutionRequestFieldsV1? = nil
+ 456 |     ) throws -> EngineExecutionRequest {
+     |                 `- error: cannot find type 'EngineExecutionRequest' in scope
+ 457 |         try store.beginEngineExecution(
+ 458 |             requestFields: fields ?? self.fields(),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:455:17: error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 453 |     func begin(
+ 454 |         key: String = "p1f1-engine-begin",
+ 455 |         fields: EngineExecutionRequestFieldsV1? = nil
+     |                 `- error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 456 |     ) throws -> EngineExecutionRequest {
+ 457 |         try store.beginEngineExecution(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:483:13: error: cannot find type 'EngineTerminalProposalContentV1' in scope
+ 481 |     key: String = "p1f1-terminal-completed",
+ 482 |     sequence: Int = 0
+ 483 | ) throws -> EngineTerminalProposalContentV1 {
+     |             `- error: cannot find type 'EngineTerminalProposalContentV1' in scope
+ 484 |     try EngineTerminalProposalContentV1(
+ 485 |         protocolVersion: "agentloop.execution.v1",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:480:14: error: cannot find type 'EngineExecutionRequest' in scope
+ 478 | 
+ 479 | func p1f1TerminalCompletedProposal(
+ 480 |     request: EngineExecutionRequest,
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+ 481 |     key: String = "p1f1-terminal-completed",
+ 482 |     sequence: Int = 0
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:206:49: error: extra argument 'engineContextReferences' in call
+ 204 |         companionNotes: [],
+ 205 |         toolNames: [],
+ 206 |         engineContextReferences: try references ?? p1f1ContextReferences()
+     |                                                 `- error: extra argument 'engineContextReferences' in call
+ 207 |     )
+ 208 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:349:22: error: cannot find 'EngineExecutionStore' in scope
+ 347 |         self.ids = ids
+ 348 |         self.descriptor = descriptor
+ 349 |         self.store = EngineExecutionStore(
+     |                      `- error: cannot find 'EngineExecutionStore' in scope
+ 350 |             database: db,
+ 351 |             descriptorResolver: { profile in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:353:27: error: cannot find 'EngineDescriptorMismatchErrorV1' in scope
+ 351 |             descriptorResolver: { profile in
+ 352 |                 guard profile.kind == descriptor.profileKind else {
+ 353 |                     throw EngineDescriptorMismatchErrorV1()
+     |                           `- error: cannot find 'EngineDescriptorMismatchErrorV1' in scope
+ 354 |                 }
+ 355 |                 return descriptor
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:517:41: error: cannot infer key path type from context; consider explicitly specifying a root type
+ 515 |         #expect(String(decoding: bytes, as: UTF8.self) == p1f1ContextGolden)
+ 516 |         #expect(CanonicalJSONV1.sha256Hex(bytes) == p1f1ContextGoldenHash)
+ 517 |         #expect(envelope.memoryRefs.map(\.id) == [
+     |                                         `- error: cannot infer key path type from context; consider explicitly specifying a root type
+ 518 |             "00000000-0000-4000-8000-000000000011",
+ 519 |             "00000000-0000-4000-8000-000000000012",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:536:29: error: cannot find 'EngineContextValidationErrorV1' in scope
+ 534 | 
+ 535 |         for (offset, variant) in variants.enumerated() {
+ 536 |             #expect(throws: EngineContextValidationErrorV1.self) {
+     |                             `- error: cannot find 'EngineContextValidationErrorV1' in scope
+ 537 |                 _ = try fixture.begin(
+ 538 |                     key: "p1f1-context-reject-\(offset)",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:565:33: error: cannot find 'EngineContextEnvelopeV1' in scope
+ 563 |         #expect(terse.system != verbose.system)
+ 564 | 
+ 565 |         let terseEnvelope = try EngineContextEnvelopeV1.from(
+     |                                 `- error: cannot find 'EngineContextEnvelopeV1' in scope
+ 566 |             packet: terse,
+ 567 |             scope: scope
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:569:35: error: cannot find 'EngineContextEnvelopeV1' in scope
+ 567 |             scope: scope
+ 568 |         )
+ 569 |         let verboseEnvelope = try EngineContextEnvelopeV1.from(
+     |                                   `- error: cannot find 'EngineContextEnvelopeV1' in scope
+ 570 |             packet: verbose,
+ 571 |             scope: scope
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:575:27: error: cannot find 'EngineContextEnvelopeV1' in scope
+ 573 |         #expect(try CanonicalJSONV1.encode(terseEnvelope) == CanonicalJSONV1.encode(verboseEnvelope))
+ 574 | 
+ 575 |         let drifted = try EngineContextEnvelopeV1.from(
+     |                           `- error: cannot find 'EngineContextEnvelopeV1' in scope
+ 576 |             packet: p1f1ContextPacket(
+ 577 |                 rolePrompt: "short transport",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:601:25: error: cannot find 'EngineSessionScopeMismatchError' in scope
+ 599 |         let fixture = try P1F1EngineFixture()
+ 600 |         let baseline = try p1f1EngineSurfaceCounts(fixture.db)
+ 601 |         #expect(throws: EngineSessionScopeMismatchError.self) {
+     |                         `- error: cannot find 'EngineSessionScopeMismatchError' in scope
+ 602 |             _ = try fixture.begin(
+ 603 |                 key: "p1f1-scope-spoof",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:686:30: error: cannot find 'EngineSessionReferenceV1' in scope
+ 684 |             with: p1f1EngineHashF
+ 685 |         )
+ 686 |         let driftedSession = EngineSessionReferenceV1(
+     |                              `- error: cannot find 'EngineSessionReferenceV1' in scope
+ 687 |             sessionId: "70000000-0000-4000-8000-000000000099"
+ 688 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:689:24: error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 687 |             sessionId: "70000000-0000-4000-8000-000000000099"
+ 688 |         )
+ 689 |         let variants: [EngineExecutionRequestFieldsV1] = try [
+     |                        `- error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 690 |             fixture.fields(campID: "00000000-0000-4000-8000-000000000101"),
+ 691 |             fixture.fields(contractHash: p1f1EngineHashB),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:715:29: error: cannot find 'EngineExecutionReplayConflictError' in scope
+ 713 |         ]
+ 714 |         for variant in variants {
+ 715 |             #expect(throws: EngineExecutionReplayConflictError.self) {
+     |                             `- error: cannot find 'EngineExecutionReplayConflictError' in scope
+ 716 |                 _ = try fixture.begin(
+ 717 |                     key: "p1f1-begin-replay",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:726:59: error: cannot infer contextual base in reference to member 'replaySafe'
+ 724 | 
+ 725 |     @Test func p1f1_024DescriptorReplayClassIsDerivedAndPersisted() throws {
+ 726 |         let fixture = try P1F1EngineFixture(replayClass: .replaySafe)
+     |                                                           `- error: cannot infer contextual base in reference to member 'replaySafe'
+ 727 |         try fixture.db.pool.write { database in
+ 728 |             try database.execute(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:760:41: error: cannot infer contextual base in reference to member 'replaySafe'
+ 758 |             fields: fixture.fields(grantIDs: [p1f1EngineGrantA])
+ 759 |         )
+ 760 |         #expect(request.replayClass == .replaySafe)
+     |                                         `- error: cannot infer contextual base in reference to member 'replaySafe'
+ 761 |         let row = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+ 762 |         #expect((row["replayClass"] as String) == "replaySafe")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:803:25: error: cannot find 'EngineDispatchConflictErrorV1' in scope
+ 801 | 
+ 802 |         let stable = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+ 803 |         #expect(throws: EngineDispatchConflictErrorV1.self) {
+     |                         `- error: cannot find 'EngineDispatchConflictErrorV1' in scope
+ 804 |             _ = try fixture.store.markEngineDispatchStarted(
+ 805 |                 executionId: request.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:812:25: error: cannot find 'EngineDispatchConflictErrorV1' in scope
+ 810 |             )
+ 811 |         }
+ 812 |         #expect(throws: EngineDispatchConflictErrorV1.self) {
+     |                         `- error: cannot find 'EngineDispatchConflictErrorV1' in scope
+ 813 |             _ = try fixture.store.markEngineDispatchStarted(
+ 814 |                 executionId: request.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:831:23: error: cannot find 'EnginePreDispatchFailureV1' in scope
+ 829 |         let row = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+ 830 |         let version: Int = row["version"]
+ 831 |         let failure = EnginePreDispatchFailureV1(
+     |                       `- error: cannot find 'EnginePreDispatchFailureV1' in scope
+ 832 |             terminalKind: .blocked,
+ 833 |             terminalSubtype: .engineProtocolError,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:832:28: error: cannot infer contextual base in reference to member 'blocked'
+ 830 |         let version: Int = row["version"]
+ 831 |         let failure = EnginePreDispatchFailureV1(
+ 832 |             terminalKind: .blocked,
+     |                            `- error: cannot infer contextual base in reference to member 'blocked'
+ 833 |             terminalSubtype: .engineProtocolError,
+ 834 |             reasonCode: "descriptor_capability_mismatch",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:833:31: error: cannot infer contextual base in reference to member 'engineProtocolError'
+ 831 |         let failure = EnginePreDispatchFailureV1(
+ 832 |             terminalKind: .blocked,
+ 833 |             terminalSubtype: .engineProtocolError,
+     |                               `- error: cannot infer contextual base in reference to member 'engineProtocolError'
+ 834 |             reasonCode: "descriptor_capability_mismatch",
+ 835 |             detail: "required capability unavailable"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:859:25: error: cannot find 'EngineTerminalConflictErrorV1' in scope
+ 857 |         )
+ 858 |         #expect(replay == receipt)
+ 859 |         #expect(throws: EngineTerminalConflictErrorV1.self) {
+     |                         `- error: cannot find 'EngineTerminalConflictErrorV1' in scope
+ 860 |             _ = try fixture.store.commitEnginePreDispatchFailure(
+ 861 |                 executionId: request.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:863:26: error: cannot find 'EnginePreDispatchFailureV1' in scope
+ 861 |                 executionId: request.executionId,
+ 862 |                 expectedVersion: version,
+ 863 |                 failure: EnginePreDispatchFailureV1(
+     |                          `- error: cannot find 'EnginePreDispatchFailureV1' in scope
+ 864 |                     terminalKind: .failed,
+ 865 |                     terminalSubtype: nil,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:864:36: error: cannot infer contextual base in reference to member 'failed'
+ 862 |                 expectedVersion: version,
+ 863 |                 failure: EnginePreDispatchFailureV1(
+ 864 |                     terminalKind: .failed,
+     |                                    `- error: cannot infer contextual base in reference to member 'failed'
+ 865 |                     terminalSubtype: nil,
+ 866 |                     reasonCode: "different_failure",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:865:38: error: 'nil' requires a contextual type
+ 863 |                 failure: EnginePreDispatchFailureV1(
+ 864 |                     terminalKind: .failed,
+ 865 |                     terminalSubtype: nil,
+     |                                      `- error: 'nil' requires a contextual type
+ 866 |                     reasonCode: "different_failure",
+ 867 |                     detail: "must conflict"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:889:20: error: cannot find 'EngineExecutionEvent' in scope
+ 887 |             executionId: request.executionId,
+ 888 |             sequence: 0,
+ 889 |             event: EngineExecutionEvent(
+     |                    `- error: cannot find 'EngineExecutionEvent' in scope
+ 890 |                 executionId: request.executionId,
+ 891 |                 sequence: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:892:27: error: cannot infer contextual base in reference to member 'accepted'
+ 890 |                 executionId: request.executionId,
+ 891 |                 sequence: 0,
+ 892 |                 payload: .accepted
+     |                           `- error: cannot infer contextual base in reference to member 'accepted'
+ 893 |             )
+ 894 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:898:20: error: cannot find 'EngineExecutionEvent' in scope
+ 896 |             executionId: request.executionId,
+ 897 |             sequence: 1,
+ 898 |             event: EngineExecutionEvent(
+     |                    `- error: cannot find 'EngineExecutionEvent' in scope
+ 899 |                 executionId: request.executionId,
+ 900 |                 sequence: 1,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:901:27: error: cannot infer contextual base in reference to member 'progress'
+ 899 |                 executionId: request.executionId,
+ 900 |                 sequence: 1,
+ 901 |                 payload: .progress(message: "halfway")
+     |                           `- error: cannot infer contextual base in reference to member 'progress'
+ 902 |             )
+ 903 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:905:35: error: cannot find type 'EngineExecutionEvent' in scope
+ 903 |         )
+ 904 |         let stable = try p1f1EngineSurfaceCounts(fixture.db)
+ 905 |         let invalidEvents: [(Int, EngineExecutionEvent)] = [
+     |                                   `- error: cannot find type 'EngineExecutionEvent' in scope
+ 906 |             (1, EngineExecutionEvent(
+ 907 |                 executionId: request.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:928:29: error: cannot find 'EngineEventSequenceErrorV1' in scope
+ 926 |         ]
+ 927 |         for invalid in invalidEvents {
+ 928 |             #expect(throws: EngineEventSequenceErrorV1.self) {
+     |                             `- error: cannot find 'EngineEventSequenceErrorV1' in scope
+ 929 |                 try fixture.store.acceptEngineEvent(
+ 930 |                     executionId: request.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:965:25: error: cannot find 'EngineUsageV1' in scope
+ 963 |             ) ?? -1
+ 964 |         }
+ 965 |         #expect(throws: EngineUsageV1.UsageOverflowError.self) {
+     |                         `- error: cannot find 'EngineUsageV1' in scope
+ 966 |             try fixture.store.acceptEngineEvent(
+ 967 |                 executionId: request.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:969:24: error: cannot find 'EngineExecutionEvent' in scope
+ 967 |                 executionId: request.executionId,
+ 968 |                 sequence: 0,
+ 969 |                 event: EngineExecutionEvent(
+     |                        `- error: cannot find 'EngineExecutionEvent' in scope
+ 970 |                     executionId: request.executionId,
+ 971 |                     sequence: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:973:25: error: cannot find 'EngineUsageV1' in scope
+ 971 |                     sequence: 0,
+ 972 |                     payload: .usage(
+ 973 |                         EngineUsageV1(
+     |                         `- error: cannot find 'EngineUsageV1' in scope
+ 974 |                             inputTokens: 1,
+ 975 |                             outputTokens: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:972:31: error: cannot infer contextual base in reference to member 'usage'
+ 970 |                     executionId: request.executionId,
+ 971 |                     sequence: 0,
+ 972 |                     payload: .usage(
+     |                               `- error: cannot infer contextual base in reference to member 'usage'
+ 973 |                         EngineUsageV1(
+ 974 |                             inputTokens: 1,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:1013:28: error: cannot infer contextual base in reference to member 'zero'
+1011 |         let receipt = try fixture.store.commitEngineTerminal(
+1012 |             proposalId: recorded.proposal.id,
+1013 |             checkedUsage: .zero,
+     |                            `- error: cannot infer contextual base in reference to member 'zero'
+1014 |             now: p1f1EngineTestNow.addingTimeInterval(2)
+1015 |         )
+[4/10] Compiling AgentLoopTestSuite EngineTerminalProposalTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:44:13: error: cannot find type 'EngineExecutionRequest' in scope
+  42 |     fixture: P1F1EngineFixture,
+  43 |     key: String
+  44 | ) throws -> EngineExecutionRequest {
+     |             `- error: cannot find type 'EngineExecutionRequest' in scope
+  45 |     let request = try fixture.begin(key: key)
+  46 |     let prepared = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:63:13: error: cannot find type 'EngineTerminalProposalContentV1' in scope
+  61 |     declarations: [P1F1TerminalArtifactShape] = p1f1TerminalArtifacts,
+  62 |     handoffDeclarations: [P1F1TerminalArtifactShape] = p1f1TerminalArtifacts
+  63 | ) throws -> EngineTerminalProposalContentV1 {
+     |             `- error: cannot find type 'EngineTerminalProposalContentV1' in scope
+  64 |     try EngineTerminalProposalContentV1(
+  65 |         protocolVersion: "agentloop.execution.v1",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:58:14: error: cannot find type 'EngineExecutionRequest' in scope
+  56 | 
+  57 | private func p1f1ArtifactProposal(
+  58 |     request: EngineExecutionRequest,
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+  59 |     key: String,
+  60 |     sequence: Int = 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:142:14: error: cannot find type 'EngineExecutionRequest' in scope
+ 140 | private func p1f1TerminalAtomicSnapshot(
+ 141 |     fixture: P1F1EngineFixture,
+ 142 |     request: EngineExecutionRequest,
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+ 143 |     proposalID: String
+ 144 | ) throws -> P1F1TerminalAtomicSnapshot {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:456:17: error: cannot find type 'EngineExecutionRequest' in scope
+ 454 |         key: String = "p1f1-engine-begin",
+ 455 |         fields: EngineExecutionRequestFieldsV1? = nil
+ 456 |     ) throws -> EngineExecutionRequest {
+     |                 `- error: cannot find type 'EngineExecutionRequest' in scope
+ 457 |         try store.beginEngineExecution(
+ 458 |             requestFields: fields ?? self.fields(),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:455:17: error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 453 |     func begin(
+ 454 |         key: String = "p1f1-engine-begin",
+ 455 |         fields: EngineExecutionRequestFieldsV1? = nil
+     |                 `- error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 456 |     ) throws -> EngineExecutionRequest {
+ 457 |         try store.beginEngineExecution(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:257:16: error: cannot find type 'EngineExecutionStore' in scope
+ 255 | struct P1F1EngineFixture {
+ 256 |     let db: AppDatabase
+ 257 |     let store: EngineExecutionStore
+     |                `- error: cannot find type 'EngineExecutionStore' in scope
+ 258 |     let ids: P1F1DeterministicIDs
+ 259 |     let descriptor: ExecutionEngineDescriptor
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:262:22: error: cannot find type 'EngineExecutionReplayClassV1' in scope
+ 260 | 
+ 261 |     init(
+ 262 |         replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+     |                      `- error: cannot find type 'EngineExecutionReplayClassV1' in scope
+ 263 |         sessionResume: EngineCapabilitySupportV1 = .supported
+ 264 |     ) throws {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:263:24: error: cannot find type 'EngineCapabilitySupportV1' in scope
+ 261 |     init(
+ 262 |         replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+ 263 |         sessionResume: EngineCapabilitySupportV1 = .supported
+     |                        `- error: cannot find type 'EngineCapabilitySupportV1' in scope
+ 264 |     ) throws {
+ 265 |         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:221:22: warning: no calls to throwing functions occur within 'try' expression
+ 219 |         #expect(canonicalJSON == p1f1TerminalProposalGolden)
+ 220 |         #expect(CanonicalJSONV1.sha256Hex(canonicalBytes) == p1f1TerminalProposalGoldenHash)
+ 221 |         let object = try #require(
+     |                      `- warning: no calls to throwing functions occur within 'try' expression
+ 222 |             JSONSerialization.jsonObject(with: canonicalBytes) as? [String: Any]
+ 223 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:224:25: warning: no calls to throwing functions occur within 'try' expression
+ 222 |             JSONSerialization.jsonObject(with: canonicalBytes) as? [String: Any]
+ 223 |         )
+ 224 |         let artifacts = try #require(object["artifacts"] as? [[String: Any]])
+     |                         `- warning: no calls to throwing functions occur within 'try' expression
+ 225 | 
+ 226 |         #expect(artifacts.count == 2)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:385:29: error: cannot find 'EngineTerminalConflictErrorV1' in scope
+ 383 |         ]
+ 384 |         for declarations in variants {
+ 385 |             #expect(throws: EngineTerminalConflictErrorV1.self) {
+     |                             `- error: cannot find 'EngineTerminalConflictErrorV1' in scope
+ 386 |                 _ = try fixture.store.recordEngineTerminalProposal(
+ 387 |                     p1f1ArtifactProposal(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:397:25: error: cannot find 'EngineTerminalConflictErrorV1' in scope
+ 395 |             #expect(fixture.ids.count("artifact") == 2)
+ 396 |         }
+ 397 |         #expect(throws: EngineTerminalConflictErrorV1.self) {
+     |                         `- error: cannot find 'EngineTerminalConflictErrorV1' in scope
+ 398 |             _ = try fixture.store.recordEngineTerminalProposal(
+ 399 |                 p1f1ArtifactProposal(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:432:29: error: cannot find 'EngineTerminalProposalValidationErrorV1' in scope
+ 430 |         ]
+ 431 |         for declarations in invalidOrdinals {
+ 432 |             #expect(throws: EngineTerminalProposalValidationErrorV1.self) {
+     |                             `- error: cannot find 'EngineTerminalProposalValidationErrorV1' in scope
+ 433 |                 _ = try p1f1ArtifactProposal(
+ 434 |                     request: request,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:441:25: error: cannot find 'EngineTerminalProposalValidationErrorV1' in scope
+ 439 |             #expect(try p1f1EngineSurfaceCounts(fixture.db) == stable)
+ 440 |         }
+ 441 |         #expect(throws: EngineTerminalProposalValidationErrorV1.self) {
+     |                         `- error: cannot find 'EngineTerminalProposalValidationErrorV1' in scope
+ 442 |             _ = try EngineTerminalProposalContentV1(
+ 443 |                 protocolVersion: "agentloop.execution.v1",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:442:21: error: cannot find 'EngineTerminalProposalContentV1' in scope
+ 440 |         }
+ 441 |         #expect(throws: EngineTerminalProposalValidationErrorV1.self) {
+ 442 |             _ = try EngineTerminalProposalContentV1(
+     |                     `- error: cannot find 'EngineTerminalProposalContentV1' in scope
+ 443 |                 protocolVersion: "agentloop.execution.v1",
+ 444 |                 executionId: request.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:449:32: error: cannot infer contextual base in reference to member 'completed'
+ 447 |                 sequence: 0,
+ 448 |                 terminalIdempotencyKey: "p1f1-empty-artifacts-no-reason",
+ 449 |                 terminalKind: .completed,
+     |                                `- error: cannot infer contextual base in reference to member 'completed'
+ 450 |                 terminalSubtype: nil,
+ 451 |                 payload: .completed(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:450:34: error: 'nil' requires a contextual type
+ 448 |                 terminalIdempotencyKey: "p1f1-empty-artifacts-no-reason",
+ 449 |                 terminalKind: .completed,
+ 450 |                 terminalSubtype: nil,
+     |                                  `- error: 'nil' requires a contextual type
+ 451 |                 payload: .completed(
+ 452 |                     handoff: HandoffPayload(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:451:27: error: cannot infer contextual base in reference to member 'completed'
+ 449 |                 terminalKind: .completed,
+ 450 |                 terminalSubtype: nil,
+ 451 |                 payload: .completed(
+     |                           `- error: cannot infer contextual base in reference to member 'completed'
+ 452 |                     handoff: HandoffPayload(
+ 453 |                         outcome: "implemented",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:483:13: error: cannot find type 'EngineTerminalProposalContentV1' in scope
+ 481 |     key: String = "p1f1-terminal-completed",
+ 482 |     sequence: Int = 0
+ 483 | ) throws -> EngineTerminalProposalContentV1 {
+     |             `- error: cannot find type 'EngineTerminalProposalContentV1' in scope
+ 484 |     try EngineTerminalProposalContentV1(
+ 485 |         protocolVersion: "agentloop.execution.v1",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:480:14: error: cannot find type 'EngineExecutionRequest' in scope
+ 478 | 
+ 479 | func p1f1TerminalCompletedProposal(
+ 480 |     request: EngineExecutionRequest,
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+ 481 |     key: String = "p1f1-terminal-completed",
+ 482 |     sequence: Int = 0
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:486:28: error: cannot infer contextual base in reference to member 'zero'
+ 484 |         let receipt = try fixture.store.commitEngineTerminal(
+ 485 |             proposalId: recorded.proposal.id,
+ 486 |             checkedUsage: .zero,
+     |                            `- error: cannot infer contextual base in reference to member 'zero'
+ 487 |             now: p1f1EngineTestNow.addingTimeInterval(2)
+ 488 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:495:41: error: cannot infer contextual base in reference to member 'committedProposal'
+ 493 |         )
+ 494 | 
+ 495 |         #expect(receipt.disposition == .committedProposal)
+     |                                         `- error: cannot infer contextual base in reference to member 'committedProposal'
+ 496 |         #expect(receipt.terminalKind == .completed)
+ 497 |         #expect(receipt.terminalSubtype == nil)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:496:42: error: cannot infer contextual base in reference to member 'completed'
+ 494 | 
+ 495 |         #expect(receipt.disposition == .committedProposal)
+ 496 |         #expect(receipt.terminalKind == .completed)
+     |                                          `- error: cannot infer contextual base in reference to member 'completed'
+ 497 |         #expect(receipt.terminalSubtype == nil)
+ 498 |         #expect(receipt.artifactIds.isEmpty)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:507:27: warning: no calls to throwing functions occur within 'try' expression
+ 505 |         #expect(after.runEndedAt != nil)
+ 506 |         #expect(after.cardStatus == "done")
+ 507 |         let handoffJSON = try #require(after.cardHandoffJSON)
+     |                           `- warning: no calls to throwing functions occur within 'try' expression
+ 508 |         let handoff = try JSONDecoder().decode(
+ 509 |             HandoffPayload.self,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:543:35: error: cannot find 'EngineTerminalProposalContentV1' in scope
+ 541 |             key: "p1f1-taxonomy-blocked"
+ 542 |         )
+ 543 |         let blockedProposal = try EngineTerminalProposalContentV1(
+     |                                   `- error: cannot find 'EngineTerminalProposalContentV1' in scope
+ 544 |             protocolVersion: "agentloop.execution.v1",
+ 545 |             executionId: blockedRequest.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:550:28: error: cannot infer contextual base in reference to member 'blocked'
+ 548 |             sequence: 0,
+ 549 |             terminalIdempotencyKey: "p1f1-taxonomy-blocked-terminal",
+ 550 |             terminalKind: .blocked,
+     |                            `- error: cannot infer contextual base in reference to member 'blocked'
+ 551 |             terminalSubtype: .ordinary,
+ 552 |             payload: .blocked(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:551:31: error: cannot infer contextual base in reference to member 'ordinary'
+ 549 |             terminalIdempotencyKey: "p1f1-taxonomy-blocked-terminal",
+ 550 |             terminalKind: .blocked,
+ 551 |             terminalSubtype: .ordinary,
+     |                               `- error: cannot infer contextual base in reference to member 'ordinary'
+ 552 |             payload: .blocked(
+ 553 |                 reasonCode: "dependency_blocked",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:552:23: error: cannot infer contextual base in reference to member 'blocked'
+ 550 |             terminalKind: .blocked,
+ 551 |             terminalSubtype: .ordinary,
+ 552 |             payload: .blocked(
+     |                       `- error: cannot infer contextual base in reference to member 'blocked'
+ 553 |                 reasonCode: "dependency_blocked",
+ 554 |                 detail: "bounded dependency is unavailable"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:561:28: error: cannot infer contextual base in reference to member 'zero'
+ 559 |         let blockedReceipt = try blocked.store.commitEngineTerminal(
+ 560 |             proposalId: blockedRecord.proposal.id,
+ 561 |             checkedUsage: .zero,
+     |                            `- error: cannot infer contextual base in reference to member 'zero'
+ 562 |             now: p1f1EngineTestNow.addingTimeInterval(2)
+ 563 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:564:49: error: cannot infer contextual base in reference to member 'blocked'
+ 562 |             now: p1f1EngineTestNow.addingTimeInterval(2)
+ 563 |         )
+ 564 |         #expect(blockedReceipt.terminalKind == .blocked)
+     |                                                 `- error: cannot infer contextual base in reference to member 'blocked'
+ 565 |         #expect(blockedReceipt.terminalSubtype == .ordinary)
+ 566 |         #expect(blockedReceipt.reasonCode == "dependency_blocked")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:565:52: error: cannot infer contextual base in reference to member 'ordinary'
+ 563 |         )
+ 564 |         #expect(blockedReceipt.terminalKind == .blocked)
+ 565 |         #expect(blockedReceipt.terminalSubtype == .ordinary)
+     |                                                    `- error: cannot infer contextual base in reference to member 'ordinary'
+ 566 |         #expect(blockedReceipt.reasonCode == "dependency_blocked")
+ 567 |         #expect((try p1f1ExecutionRow(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:579:13: error: cannot find 'EngineTerminalProposalContentV1' in scope
+ 577 |         )
+ 578 |         let failedRecord = try failed.store.recordEngineTerminalProposal(
+ 579 |             EngineTerminalProposalContentV1(
+     |             `- error: cannot find 'EngineTerminalProposalContentV1' in scope
+ 580 |                 protocolVersion: "agentloop.execution.v1",
+ 581 |                 executionId: failedRequest.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:586:32: error: cannot infer contextual base in reference to member 'failed'
+ 584 |                 sequence: 0,
+ 585 |                 terminalIdempotencyKey: "p1f1-taxonomy-failed-terminal",
+ 586 |                 terminalKind: .failed,
+     |                                `- error: cannot infer contextual base in reference to member 'failed'
+ 587 |                 terminalSubtype: nil,
+ 588 |                 payload: .failed(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:587:34: error: 'nil' requires a contextual type
+ 585 |                 terminalIdempotencyKey: "p1f1-taxonomy-failed-terminal",
+ 586 |                 terminalKind: .failed,
+ 587 |                 terminalSubtype: nil,
+     |                                  `- error: 'nil' requires a contextual type
+ 588 |                 payload: .failed(
+ 589 |                     code: "adapter_failure",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:588:27: error: cannot infer contextual base in reference to member 'failed'
+ 586 |                 terminalKind: .failed,
+ 587 |                 terminalSubtype: nil,
+ 588 |                 payload: .failed(
+     |                           `- error: cannot infer contextual base in reference to member 'failed'
+ 589 |                     code: "adapter_failure",
+ 590 |                     detail: "sanitized adapter failure"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:597:28: error: cannot infer contextual base in reference to member 'zero'
+ 595 |         let failedReceipt = try failed.store.commitEngineTerminal(
+ 596 |             proposalId: failedRecord.proposal.id,
+ 597 |             checkedUsage: .zero,
+     |                            `- error: cannot infer contextual base in reference to member 'zero'
+ 598 |             now: p1f1EngineTestNow.addingTimeInterval(2)
+ 599 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:600:48: error: cannot infer contextual base in reference to member 'failed'
+ 598 |             now: p1f1EngineTestNow.addingTimeInterval(2)
+ 599 |         )
+ 600 |         #expect(failedReceipt.terminalKind == .failed)
+     |                                                `- error: cannot infer contextual base in reference to member 'failed'
+ 601 |         #expect(failedReceipt.terminalSubtype == nil)
+ 602 |         #expect(failedReceipt.reasonCode == "adapter_failure")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:614:13: error: cannot find 'EngineTerminalProposalContentV1' in scope
+ 612 |         )
+ 613 |         let canceledRecord = try canceled.store.recordEngineTerminalProposal(
+ 614 |             EngineTerminalProposalContentV1(
+     |             `- error: cannot find 'EngineTerminalProposalContentV1' in scope
+ 615 |                 protocolVersion: "agentloop.execution.v1",
+ 616 |                 executionId: canceledRequest.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:621:32: error: cannot infer contextual base in reference to member 'canceled'
+ 619 |                 sequence: 0,
+ 620 |                 terminalIdempotencyKey: "p1f1-taxonomy-canceled-terminal",
+ 621 |                 terminalKind: .canceled,
+     |                                `- error: cannot infer contextual base in reference to member 'canceled'
+ 622 |                 terminalSubtype: nil,
+ 623 |                 payload: .canceled(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:622:34: error: 'nil' requires a contextual type
+ 620 |                 terminalIdempotencyKey: "p1f1-taxonomy-canceled-terminal",
+ 621 |                 terminalKind: .canceled,
+ 622 |                 terminalSubtype: nil,
+     |                                  `- error: 'nil' requires a contextual type
+ 623 |                 payload: .canceled(
+ 624 |                     reasonCode: "user_canceled",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:623:27: error: cannot infer contextual base in reference to member 'canceled'
+ 621 |                 terminalKind: .canceled,
+ 622 |                 terminalSubtype: nil,
+ 623 |                 payload: .canceled(
+     |                           `- error: cannot infer contextual base in reference to member 'canceled'
+ 624 |                     reasonCode: "user_canceled",
+ 625 |                     detail: "user requested cancellation"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:632:28: error: cannot infer contextual base in reference to member 'zero'
+ 630 |         let canceledReceipt = try canceled.store.commitEngineTerminal(
+ 631 |             proposalId: canceledRecord.proposal.id,
+ 632 |             checkedUsage: .zero,
+     |                            `- error: cannot infer contextual base in reference to member 'zero'
+ 633 |             now: p1f1EngineTestNow.addingTimeInterval(2)
+ 634 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:635:50: error: cannot infer contextual base in reference to member 'canceled'
+ 633 |             now: p1f1EngineTestNow.addingTimeInterval(2)
+ 634 |         )
+ 635 |         #expect(canceledReceipt.terminalKind == .canceled)
+     |                                                  `- error: cannot infer contextual base in reference to member 'canceled'
+ 636 |         #expect(canceledReceipt.terminalSubtype == nil)
+ 637 |         #expect(canceledReceipt.reasonCode == "user_canceled")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:687:13: error: cannot find 'EngineTerminalProposalContentV1' in scope
+ 685 |         )
+ 686 |         let recorded = try fixture.store.recordEngineTerminalProposal(
+ 687 |             EngineTerminalProposalContentV1(
+     |             `- error: cannot find 'EngineTerminalProposalContentV1' in scope
+ 688 |                 protocolVersion: "agentloop.execution.v1",
+ 689 |                 executionId: request.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:694:32: error: cannot infer contextual base in reference to member 'blocked'
+ 692 |                 sequence: 0,
+ 693 |                 terminalIdempotencyKey: "p1f1-ask-user-terminal",
+ 694 |                 terminalKind: .blocked,
+     |                                `- error: cannot infer contextual base in reference to member 'blocked'
+ 695 |                 terminalSubtype: .needsHumanInput,
+ 696 |                 payload: .needsHumanInput(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:695:35: error: cannot infer contextual base in reference to member 'needsHumanInput'
+ 693 |                 terminalIdempotencyKey: "p1f1-ask-user-terminal",
+ 694 |                 terminalKind: .blocked,
+ 695 |                 terminalSubtype: .needsHumanInput,
+     |                                   `- error: cannot infer contextual base in reference to member 'needsHumanInput'
+ 696 |                 payload: .needsHumanInput(
+ 697 |                     kind: .choice,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:696:27: error: cannot infer contextual base in reference to member 'needsHumanInput'
+ 694 |                 terminalKind: .blocked,
+ 695 |                 terminalSubtype: .needsHumanInput,
+ 696 |                 payload: .needsHumanInput(
+     |                           `- error: cannot infer contextual base in reference to member 'needsHumanInput'
+ 697 |                     kind: .choice,
+ 698 |                     prompt: "Choose the invariant to preserve",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:697:28: error: cannot infer contextual base in reference to member 'choice'
+ 695 |                 terminalSubtype: .needsHumanInput,
+ 696 |                 payload: .needsHumanInput(
+ 697 |                     kind: .choice,
+     |                            `- error: cannot infer contextual base in reference to member 'choice'
+ 698 |                     prompt: "Choose the invariant to preserve",
+ 699 |                     options: ["preserve_atomicity", "reduce_scope"]
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:711:28: error: cannot infer contextual base in reference to member 'zero'
+ 709 |         let receipt = try fixture.store.commitEngineAskUser(
+ 710 |             proposalId: recorded.proposal.id,
+ 711 |             checkedUsage: .zero,
+     |                            `- error: cannot infer contextual base in reference to member 'zero'
+ 712 |             now: p1f1EngineTestNow.addingTimeInterval(2)
+ 713 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:726:41: error: cannot infer contextual base in reference to member 'committedProposal'
+ 724 |             )
+ 725 |         }
+ 726 |         #expect(receipt.disposition == .committedProposal)
+     |                                         `- error: cannot infer contextual base in reference to member 'committedProposal'
+ 727 |         #expect(receipt.terminalKind == .blocked)
+ 728 |         #expect(receipt.terminalSubtype == .needsHumanInput)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:727:42: error: cannot infer contextual base in reference to member 'blocked'
+ 725 |         }
+ 726 |         #expect(receipt.disposition == .committedProposal)
+ 727 |         #expect(receipt.terminalKind == .blocked)
+     |                                          `- error: cannot infer contextual base in reference to member 'blocked'
+ 728 |         #expect(receipt.terminalSubtype == .needsHumanInput)
+ 729 |         #expect(receipt.reasonCode == "needs_human_input")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:728:45: error: cannot infer contextual base in reference to member 'needsHumanInput'
+ 726 |         #expect(receipt.disposition == .committedProposal)
+ 727 |         #expect(receipt.terminalKind == .blocked)
+ 728 |         #expect(receipt.terminalSubtype == .needsHumanInput)
+     |                                             `- error: cannot infer contextual base in reference to member 'needsHumanInput'
+ 729 |         #expect(receipt.reasonCode == "needs_human_input")
+ 730 |         #expect(userRequest.kind == .choice)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:730:38: error: cannot infer contextual base in reference to member 'choice'
+ 728 |         #expect(receipt.terminalSubtype == .needsHumanInput)
+ 729 |         #expect(receipt.reasonCode == "needs_human_input")
+ 730 |         #expect(userRequest.kind == .choice)
+     |                                      `- error: cannot infer contextual base in reference to member 'choice'
+ 731 |         #expect(userRequest.prompt == "Choose the invariant to preserve")
+ 732 |         #expect(userRequest.optionsJson == #"["preserve_atomicity","reduce_scope"]"#)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:734:48: error: cannot infer contextual base in reference to member 'open'
+ 732 |         #expect(userRequest.optionsJson == #"["preserve_atomicity","reduce_scope"]"#)
+ 733 |         #expect(userRequest.answerJson == nil)
+ 734 |         #expect(userRequest.lifecycleState == .open)
+     |                                                `- error: cannot infer contextual base in reference to member 'open'
+ 735 |         #expect(after.userRequests == before.userRequests + 1)
+ 736 |         #expect(after.proposalState == "committed")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:749:13: error: cannot find 'EngineTerminalProposalContentV1' in scope
+ 747 |         )
+ 748 |         let abortedProposal = try aborted.store.recordEngineTerminalProposal(
+ 749 |             EngineTerminalProposalContentV1(
+     |             `- error: cannot find 'EngineTerminalProposalContentV1' in scope
+ 750 |                 protocolVersion: "agentloop.execution.v1",
+ 751 |                 executionId: abortedRequest.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:756:32: error: cannot infer contextual base in reference to member 'blocked'
+ 754 |                 sequence: 0,
+ 755 |                 terminalIdempotencyKey: "p1f1-ask-user-abort-terminal",
+ 756 |                 terminalKind: .blocked,
+     |                                `- error: cannot infer contextual base in reference to member 'blocked'
+ 757 |                 terminalSubtype: .needsHumanInput,
+ 758 |                 payload: .needsHumanInput(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:757:35: error: cannot infer contextual base in reference to member 'needsHumanInput'
+ 755 |                 terminalIdempotencyKey: "p1f1-ask-user-abort-terminal",
+ 756 |                 terminalKind: .blocked,
+ 757 |                 terminalSubtype: .needsHumanInput,
+     |                                   `- error: cannot infer contextual base in reference to member 'needsHumanInput'
+ 758 |                 payload: .needsHumanInput(
+ 759 |                     kind: .text,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:758:27: error: cannot infer contextual base in reference to member 'needsHumanInput'
+ 756 |                 terminalKind: .blocked,
+ 757 |                 terminalSubtype: .needsHumanInput,
+ 758 |                 payload: .needsHumanInput(
+     |                           `- error: cannot infer contextual base in reference to member 'needsHumanInput'
+ 759 |                     kind: .text,
+ 760 |                     prompt: "Need one answer",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:759:28: error: cannot infer contextual base in reference to member 'text'
+ 757 |                 terminalSubtype: .needsHumanInput,
+ 758 |                 payload: .needsHumanInput(
+ 759 |                     kind: .text,
+     |                            `- error: cannot infer contextual base in reference to member 'text'
+ 760 |                     prompt: "Need one answer",
+ 761 |                     options: []
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:781:32: error: cannot infer contextual base in reference to member 'zero'
+ 779 |             _ = try aborted.store.commitEngineAskUser(
+ 780 |                 proposalId: abortedProposal.proposal.id,
+ 781 |                 checkedUsage: .zero,
+     |                                `- error: cannot infer contextual base in reference to member 'zero'
+ 782 |                 now: p1f1EngineTestNow.addingTimeInterval(2)
+ 783 |             )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:813:23: error: cannot find 'EngineTerminalPreparationFailure' in scope
+ 811 |             )
+ 812 |         }
+ 813 |         let failure = EngineTerminalPreparationFailure(
+     |                       `- error: cannot find 'EngineTerminalPreparationFailure' in scope
+ 814 |             reasonCode: "artifact_path_escape",
+ 815 |             detail: "normalized source escaped the execution workspace"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:835:41: error: cannot infer contextual base in reference to member 'invalidProtocolError'
+ 833 |             )
+ 834 |         }
+ 835 |         #expect(receipt.disposition == .invalidProtocolError)
+     |                                         `- error: cannot infer contextual base in reference to member 'invalidProtocolError'
+ 836 |         #expect(receipt.proposalId == recorded.proposal.id)
+ 837 |         #expect(receipt.proposalHash == recorded.proposal.proposalHash)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:838:42: error: cannot infer contextual base in reference to member 'blocked'
+ 836 |         #expect(receipt.proposalId == recorded.proposal.id)
+ 837 |         #expect(receipt.proposalHash == recorded.proposal.proposalHash)
+ 838 |         #expect(receipt.terminalKind == .blocked)
+     |                                          `- error: cannot infer contextual base in reference to member 'blocked'
+ 839 |         #expect(receipt.terminalSubtype == .engineProtocolError)
+ 840 |         #expect(receipt.reasonCode == "artifact_path_escape")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:839:45: error: cannot infer contextual base in reference to member 'engineProtocolError'
+ 837 |         #expect(receipt.proposalHash == recorded.proposal.proposalHash)
+ 838 |         #expect(receipt.terminalKind == .blocked)
+ 839 |         #expect(receipt.terminalSubtype == .engineProtocolError)
+     |                                             `- error: cannot infer contextual base in reference to member 'engineProtocolError'
+ 840 |         #expect(receipt.reasonCode == "artifact_path_escape")
+ 841 |         #expect(receipt.artifactIds.isEmpty)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:897:25: error: cannot find 'EngineTerminalConflictErrorV1' in scope
+ 895 |         )
+ 896 |         #expect(replay == receipt)
+ 897 |         #expect(throws: EngineTerminalConflictErrorV1.self) {
+     |                         `- error: cannot find 'EngineTerminalConflictErrorV1' in scope
+ 898 |             _ = try fixture.store.invalidateProposalAndCommitProtocolError(
+ 899 |                 proposalId: recorded.proposal.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:901:26: error: cannot find 'EngineTerminalPreparationFailure' in scope
+ 899 |                 proposalId: recorded.proposal.id,
+ 900 |                 expectedVersion: proposalVersion,
+ 901 |                 failure: EngineTerminalPreparationFailure(
+     |                          `- error: cannot find 'EngineTerminalPreparationFailure' in scope
+ 902 |                     reasonCode: "artifact_hash_mismatch",
+ 903 |                     detail: "different deterministic failure"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:817:34: warning: no calls to throwing functions occur within 'try' expression
+ 815 |             detail: "normalized source escaped the execution workspace"
+ 816 |         )
+ 817 |         let receiptCountBefore = try p1f1EngineSurfaceCounts(fixture.db)
+     |                                  `- warning: no calls to throwing functions occur within 'try' expression
+ 818 |             .receipts
+ 819 |         let receipt = try fixture.store.invalidateProposalAndCommitProtocolError(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:874:32: warning: no calls to throwing functions occur within 'try' expression
+ 872 |             )
+ 873 |         }
+ 874 |         let attentionPayload = try #require(
+     |                                `- warning: no calls to throwing functions occur within 'try' expression
+ 875 |             JSONSerialization.jsonObject(
+ 876 |                 with: Data((attentionIntent["payloadJson"] as String).utf8)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:954:36: error: cannot infer contextual base in reference to member 'zero'
+ 952 |                 _ = try fixture.store.commitEngineTerminal(
+ 953 |                     proposalId: recorded.proposal.id,
+ 954 |                     checkedUsage: .zero,
+     |                                    `- error: cannot infer contextual base in reference to member 'zero'
+ 955 |                     now: p1f1EngineTestNow.addingTimeInterval(2)
+ 956 |                 )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:986:28: error: cannot infer contextual base in reference to member 'zero'
+ 984 |         let receipt = try fixture.store.commitEngineTerminal(
+ 985 |             proposalId: recorded.proposal.id,
+ 986 |             checkedUsage: .zero,
+     |                            `- error: cannot infer contextual base in reference to member 'zero'
+ 987 |             now: p1f1EngineTestNow.addingTimeInterval(2)
+ 988 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:998:28: error: cannot infer contextual base in reference to member 'zero'
+ 996 |         let receiptReplay = try fixture.store.commitEngineTerminal(
+ 997 |             proposalId: proposalReplay.proposal.id,
+ 998 |             checkedUsage: .zero,
+     |                            `- error: cannot infer contextual base in reference to member 'zero'
+ 999 |             now: p1f1EngineTestNow.addingTimeInterval(3)
+1000 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:1010:13: error: cannot find 'EngineTerminalProposalContentV1' in scope
+1008 | 
+1009 |         let conflicts = try [
+1010 |             EngineTerminalProposalContentV1(
+     |             `- error: cannot find 'EngineTerminalProposalContentV1' in scope
+1011 |                 protocolVersion: "agentloop.execution.v1",
+1012 |                 executionId: request.executionId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:1017:32: error: cannot infer contextual base in reference to member 'failed'
+1015 |                 sequence: 0,
+1016 |                 terminalIdempotencyKey: "p1f1-terminal-second-key",
+1017 |                 terminalKind: .failed,
+     |                                `- error: cannot infer contextual base in reference to member 'failed'
+1018 |                 terminalSubtype: nil,
+1019 |                 payload: .failed(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:1018:34: error: 'nil' requires a contextual type
+1016 |                 terminalIdempotencyKey: "p1f1-terminal-second-key",
+1017 |                 terminalKind: .failed,
+1018 |                 terminalSubtype: nil,
+     |                                  `- error: 'nil' requires a contextual type
+1019 |                 payload: .failed(
+1020 |                     code: "late_failure",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:1019:27: error: cannot infer contextual base in reference to member 'failed'
+1017 |                 terminalKind: .failed,
+1018 |                 terminalSubtype: nil,
+1019 |                 payload: .failed(
+     |                           `- error: cannot infer contextual base in reference to member 'failed'
+1020 |                     code: "late_failure",
+1021 |                     detail: "must not overwrite completion"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:1032:29: error: cannot find 'EngineTerminalConflictErrorV1' in scope
+1030 |         ]
+1031 |         for conflict in conflicts {
+1032 |             #expect(throws: EngineTerminalConflictErrorV1.self) {
+     |                             `- error: cannot find 'EngineTerminalConflictErrorV1' in scope
+1033 |                 _ = try fixture.store.recordEngineTerminalProposal(conflict)
+1034 |             }
+[5/10] Compiling AgentLoopTestSuite EngineSessionTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:8:6: error: cannot find type 'EngineSessionStore' in scope
+  6 | private func p1f1SessionStore(
+  7 |     ids: P1F1DeterministicIDs
+  8 | ) -> EngineSessionStore {
+    |      `- error: cannot find type 'EngineSessionStore' in scope
+  9 |     EngineSessionStore(
+ 10 |         sessionIdFactory: { ids.next("session") }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:18:13: error: cannot find type 'EngineExecutionRequest' in scope
+ 16 |     key: String,
+ 17 |     fields: EngineExecutionRequestFieldsV1? = nil
+ 18 | ) throws -> EngineExecutionRequest {
+    |             `- error: cannot find type 'EngineExecutionRequest' in scope
+ 19 |     let request = try fixture.begin(key: key, fields: fields)
+ 20 |     let row = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:17:13: error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 15 |     fixture: P1F1EngineFixture,
+ 16 |     key: String,
+ 17 |     fields: EngineExecutionRequestFieldsV1? = nil
+    |             `- error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 18 | ) throws -> EngineExecutionRequest {
+ 19 |     let request = try fixture.begin(key: key, fields: fields)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:34:13: error: cannot find type 'EngineExecutionRecord' in scope
+ 32 |     fixture: P1F1EngineFixture,
+ 33 |     id: String
+ 34 | ) throws -> EngineExecutionRecord {
+    |             `- error: cannot find type 'EngineExecutionRecord' in scope
+ 35 |     try fixture.db.pool.read { database in
+ 36 |         try #require(EngineExecutionRecord.fetchOne(database, key: id))
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:46:13: error: cannot find type 'EngineSessionRecord' in scope
+ 44 |     externalID: String,
+ 45 |     now: Date
+ 46 | ) throws -> EngineSessionRecord {
+    |             `- error: cannot find type 'EngineSessionRecord' in scope
+ 47 |     try fixture.db.pool.write { database in
+ 48 |         let execution = try #require(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:42:19: error: cannot find type 'EngineSessionStore' in scope
+ 40 | private func p1f1BindSession(
+ 41 |     fixture: P1F1EngineFixture,
+ 42 |     sessionStore: EngineSessionStore,
+    |                   `- error: cannot find type 'EngineSessionStore' in scope
+ 43 |     executionID: String,
+ 44 |     externalID: String,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:64:13: error: cannot find type 'EngineTerminalProposalContentV1' in scope
+ 62 |     key: String,
+ 63 |     sequence: Int = 0
+ 64 | ) throws -> EngineTerminalProposalContentV1 {
+    |             `- error: cannot find type 'EngineTerminalProposalContentV1' in scope
+ 65 |     try EngineTerminalProposalContentV1(
+ 66 |         protocolVersion: "agentloop.execution.v1",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:61:14: error: cannot find type 'EngineExecutionRequest' in scope
+ 59 | 
+ 60 | private func p1f1NeedsHumanProposal(
+ 61 |     request: EngineExecutionRequest,
+    |              `- error: cannot find type 'EngineExecutionRequest' in scope
+ 62 |     key: String,
+ 63 |     sequence: Int = 0
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:456:17: error: cannot find type 'EngineExecutionRequest' in scope
+ 454 |         key: String = "p1f1-engine-begin",
+ 455 |         fields: EngineExecutionRequestFieldsV1? = nil
+ 456 |     ) throws -> EngineExecutionRequest {
+     |                 `- error: cannot find type 'EngineExecutionRequest' in scope
+ 457 |         try store.beginEngineExecution(
+ 458 |             requestFields: fields ?? self.fields(),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:455:17: error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 453 |     func begin(
+ 454 |         key: String = "p1f1-engine-begin",
+ 455 |         fields: EngineExecutionRequestFieldsV1? = nil
+     |                 `- error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 456 |     ) throws -> EngineExecutionRequest {
+ 457 |         try store.beginEngineExecution(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:257:16: error: cannot find type 'EngineExecutionStore' in scope
+ 255 | struct P1F1EngineFixture {
+ 256 |     let db: AppDatabase
+ 257 |     let store: EngineExecutionStore
+     |                `- error: cannot find type 'EngineExecutionStore' in scope
+ 258 |     let ids: P1F1DeterministicIDs
+ 259 |     let descriptor: ExecutionEngineDescriptor
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:262:22: error: cannot find type 'EngineExecutionReplayClassV1' in scope
+ 260 | 
+ 261 |     init(
+ 262 |         replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+     |                      `- error: cannot find type 'EngineExecutionReplayClassV1' in scope
+ 263 |         sessionResume: EngineCapabilitySupportV1 = .supported
+ 264 |     ) throws {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:263:24: error: cannot find type 'EngineCapabilitySupportV1' in scope
+ 261 |     init(
+ 262 |         replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+ 263 |         sessionResume: EngineCapabilitySupportV1 = .supported
+     |                        `- error: cannot find type 'EngineCapabilitySupportV1' in scope
+ 264 |     ) throws {
+ 265 |         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:96:20: error: cannot find 'EngineExecutionEvent' in scope
+ 94 |             executionId: request.executionId,
+ 95 |             sequence: 0,
+ 96 |             event: EngineExecutionEvent(
+    |                    `- error: cannot find 'EngineExecutionEvent' in scope
+ 97 |                 executionId: request.executionId,
+ 98 |                 sequence: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:99:27: error: cannot infer contextual base in reference to member 'sessionBound'
+ 97 |                 executionId: request.executionId,
+ 98 |                 sequence: 0,
+ 99 |                 payload: .sessionBound(
+    |                           `- error: cannot infer contextual base in reference to member 'sessionBound'
+100 |                     externalSessionId: "codex-thread-exact-1"
+101 |                 )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:110:17: error: cannot find 'EngineSessionRecord' in scope
+108 |         let session = try fixture.db.pool.read { database in
+109 |             try #require(
+110 |                 EngineSessionRecord.fetchOne(
+    |                 `- error: cannot find 'EngineSessionRecord' in scope
+111 |                     database,
+112 |                     key: try #require(boundExecution.sessionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:119:50: error: cannot infer contextual base in reference to member 'sessionBound'
+117 | 
+118 |         #expect(boundExecution.sessionId == session.id)
+119 |         #expect(boundExecution.dispatchState == .sessionBound)
+    |                                                  `- error: cannot infer contextual base in reference to member 'sessionBound'
+120 |         #expect(boundExecution.nextSequence == 1)
+121 |         #expect(session.campId == boundExecution.campId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:128:35: error: cannot infer contextual base in reference to member 'active'
+126 |         #expect(session.workspaceHash == request.workspace.hash)
+127 |         #expect(session.externalSessionId == "codex-thread-exact-1")
+128 |         #expect(session.state == .active)
+    |                                   `- error: cannot infer contextual base in reference to member 'active'
+129 |         #expect(afterBind.sessions == beforeBind.sessions + 1)
+130 |         #expect(afterBind.legacyEvents == beforeBind.legacyEvents + 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:148:21: error: cannot find 'EngineExecutionRecord' in scope
+146 |             try sessionStore.requireExactResume(
+147 |                 execution: try #require(
+148 |                     EngineExecutionRecord.fetchOne(
+    |                     `- error: cannot find 'EngineExecutionRecord' in scope
+149 |                         database,
+150 |                         key: request.executionId
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:177:24: error: cannot find 'EngineExecutionEvent' in scope
+175 |                 executionId: abortedRequest.executionId,
+176 |                 sequence: 0,
+177 |                 event: EngineExecutionEvent(
+    |                        `- error: cannot find 'EngineExecutionEvent' in scope
+178 |                     executionId: abortedRequest.executionId,
+179 |                     sequence: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:180:31: error: cannot infer contextual base in reference to member 'sessionBound'
+178 |                     executionId: abortedRequest.executionId,
+179 |                     sequence: 0,
+180 |                     payload: .sessionBound(
+    |                               `- error: cannot infer contextual base in reference to member 'sessionBound'
+181 |                         externalSessionId: "codex-thread-abort"
+182 |                     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:192:48: error: cannot infer contextual base in reference to member 'started'
+190 |         )
+191 |         #expect(stillStarted.sessionId == nil)
+192 |         #expect(stillStarted.dispatchState == .started)
+    |                                                `- error: cannot infer contextual base in reference to member 'started'
+193 |     }
+194 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:204:20: error: cannot find 'EngineExecutionEvent' in scope
+202 |             executionId: first.executionId,
+203 |             sequence: 0,
+204 |             event: EngineExecutionEvent(
+    |                    `- error: cannot find 'EngineExecutionEvent' in scope
+205 |                 executionId: first.executionId,
+206 |                 sequence: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:207:27: error: cannot infer contextual base in reference to member 'sessionBound'
+205 |                 executionId: first.executionId,
+206 |                 sequence: 0,
+207 |                 payload: .sessionBound(
+    |                           `- error: cannot infer contextual base in reference to member 'sessionBound'
+208 |                     externalSessionId: "codex-thread-answer"
+209 |                 )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:218:17: error: cannot find 'EngineSessionRecord' in scope
+216 |         let session = try fixture.db.pool.read { database in
+217 |             try #require(
+218 |                 EngineSessionRecord.fetchOne(
+    |                 `- error: cannot find 'EngineSessionRecord' in scope
+219 |                     database,
+220 |                     key: try #require(firstBound.sessionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:233:28: error: cannot infer contextual base in reference to member 'zero'
+231 |         _ = try fixture.store.commitEngineAskUser(
+232 |             proposalId: proposal.proposal.id,
+233 |             checkedUsage: .zero,
+    |                            `- error: cannot infer contextual base in reference to member 'zero'
+234 |             now: p1f1EngineTestNow.addingTimeInterval(3)
+235 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:213:13: error: cannot find type 'EngineContextEnvelopeV1' in scope
+ 211 |     cardID: String = p1f1EngineCardID,
+ 212 |     memoryHash: String = p1f1EngineHashC
+ 213 | ) throws -> EngineContextEnvelopeV1 {
+     |             `- error: cannot find type 'EngineContextEnvelopeV1' in scope
+ 214 |     try EngineContextEnvelopeV1.from(
+ 215 |         packet: p1f1ContextPacket(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:263:29: error: cannot find 'EngineSessionReferenceV1' in scope
+261 |                 contextJson: answeredJSON,
+262 |                 contextHash: CanonicalJSONV1.sha256Hex(Data(answeredJSON.utf8)),
+263 |                 sessionRef: EngineSessionReferenceV1(sessionId: session.id)
+    |                             `- error: cannot find 'EngineSessionReferenceV1' in scope
+264 |             )
+265 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:273:20: error: cannot find 'EngineExecutionEvent' in scope
+271 |             executionId: next.executionId,
+272 |             sequence: 0,
+273 |             event: EngineExecutionEvent(
+    |                    `- error: cannot find 'EngineExecutionEvent' in scope
+274 |                 executionId: next.executionId,
+275 |                 sequence: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:276:27: error: cannot infer contextual base in reference to member 'sessionBound'
+274 |                 executionId: next.executionId,
+275 |                 sequence: 0,
+276 |                 payload: .sessionBound(
+    |                           `- error: cannot infer contextual base in reference to member 'sessionBound'
+277 |                     externalSessionId: "codex-thread-answer"
+278 |                 )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:286:43: error: cannot infer contextual base in reference to member 'sessionBound'
+284 |         )
+285 |         #expect(resumed.sessionId == session.id)
+286 |         #expect(resumed.dispatchState == .sessionBound)
+    |                                           `- error: cannot infer contextual base in reference to member 'sessionBound'
+287 |         #expect(resumed.nextSequence == 1)
+288 |         let oldRun = try #require(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:296:18: error: cannot infer key path type from context; consider explicitly specifying a root type
+294 |         let activeRunIDs = try fixture.db.runs(cardId: p1f1EngineCardID)
+295 |             .filter { $0.endedAt == nil }
+296 |             .map(\.id)
+    |                  `- error: cannot infer key path type from context; consider explicitly specifying a root type
+297 |         #expect(activeRunIDs == [next.runId])
+298 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:288:22: warning: no calls to throwing functions occur within 'try' expression
+286 |         #expect(resumed.dispatchState == .sessionBound)
+287 |         #expect(resumed.nextSequence == 1)
+288 |         let oldRun = try #require(
+    |                      `- warning: no calls to throwing functions occur within 'try' expression
+289 |             try fixture.db.runs(cardId: p1f1EngineCardID)
+290 |                 .first { $0.id == first.runId }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:310:20: error: cannot find 'EngineExecutionEvent' in scope
+308 |             executionId: first.executionId,
+309 |             sequence: 0,
+310 |             event: EngineExecutionEvent(
+    |                    `- error: cannot find 'EngineExecutionEvent' in scope
+311 |                 executionId: first.executionId,
+312 |                 sequence: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:313:27: error: cannot infer contextual base in reference to member 'sessionBound'
+311 |                 executionId: first.executionId,
+312 |                 sequence: 0,
+313 |                 payload: .sessionBound(
+    |                           `- error: cannot infer contextual base in reference to member 'sessionBound'
+314 |                     externalSessionId: "codex-thread-scope-1"
+315 |                 )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:324:17: error: cannot find 'EngineSessionRecord' in scope
+322 |         let firstSession = try fixture.db.pool.read { database in
+323 |             try #require(
+324 |                 EngineSessionRecord.fetchOne(
+    |                 `- error: cannot find 'EngineSessionRecord' in scope
+325 |                     database,
+326 |                     key: try #require(firstBound.sessionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:339:25: error: cannot find type 'ExecutionEngineDescriptor' in scope
+337 |             campId: String = p1f1EngineCampID,
+338 |             profileId: String = p1f1EngineProfileID,
+339 |             descriptor: ExecutionEngineDescriptor? = nil,
+    |                         `- error: cannot find type 'ExecutionEngineDescriptor' in scope
+340 |             engineKind: String = "cli",
+341 |             model: String = "gpt-test",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:345:29: error: cannot find 'EngineSessionScopeV1' in scope
+343 |             contractOverride: OutcomeContractRef? = nil
+344 |         ) throws -> String {
+345 |             let scope = try EngineSessionScopeV1.derived(
+    |                             `- error: cannot find 'EngineSessionScopeV1' in scope
+346 |                 campId: campId,
+347 |                 profileId: profileId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:101:6: error: cannot find type 'ExecutionEngineDescriptor' in scope
+  99 |     adapterId: String = "adapter.codex",
+ 100 |     adapterVersion: String = "1.2.3"
+ 101 | ) -> ExecutionEngineDescriptor {
+     |      `- error: cannot find type 'ExecutionEngineDescriptor' in scope
+ 102 |     ExecutionEngineDescriptor(
+ 103 |         adapterId: adapterId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:97:18: error: cannot find type 'EngineExecutionReplayClassV1' in scope
+  95 | 
+  96 | func p1f1ExecutionDescriptor(
+  97 |     replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+     |                  `- error: cannot find type 'EngineExecutionReplayClassV1' in scope
+  98 |     sessionResume: EngineCapabilitySupportV1 = .supported,
+  99 |     adapterId: String = "adapter.codex",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:98:20: error: cannot find type 'EngineCapabilitySupportV1' in scope
+  96 | func p1f1ExecutionDescriptor(
+  97 |     replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+  98 |     sessionResume: EngineCapabilitySupportV1 = .supported,
+     |                    `- error: cannot find type 'EngineCapabilitySupportV1' in scope
+  99 |     adapterId: String = "adapter.codex",
+ 100 |     adapterVersion: String = "1.2.3"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:400:25: error: cannot find 'EngineSessionScopeMismatchError' in scope
+398 |         #expect(second.sessionScopeHash != first.sessionScopeHash)
+399 |         let beforeMismatch = try p1f1EngineSurfaceCounts(fixture.db)
+400 |         #expect(throws: EngineSessionScopeMismatchError.self) {
+    |                         `- error: cannot find 'EngineSessionScopeMismatchError' in scope
+401 |             _ = try fixture.db.pool.write { database in
+402 |                 try sessionStore.requireExactResume(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:404:25: error: cannot find 'EngineExecutionRecord' in scope
+402 |                 try sessionStore.requireExactResume(
+403 |                     execution: try #require(
+404 |                         EngineExecutionRecord.fetchOne(
+    |                         `- error: cannot find 'EngineExecutionRecord' in scope
+405 |                             database,
+406 |                             key: second.executionId
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:420:20: error: cannot find 'EngineExecutionEvent' in scope
+418 |             executionId: second.executionId,
+419 |             sequence: 0,
+420 |             event: EngineExecutionEvent(
+    |                    `- error: cannot find 'EngineExecutionEvent' in scope
+421 |                 executionId: second.executionId,
+422 |                 sequence: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:423:27: error: cannot infer contextual base in reference to member 'sessionBound'
+421 |                 executionId: second.executionId,
+422 |                 sequence: 0,
+423 |                 payload: .sessionBound(
+    |                           `- error: cannot infer contextual base in reference to member 'sessionBound'
+424 |                     externalSessionId: "codex-thread-scope-2"
+425 |                 )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:434:17: error: cannot find 'EngineSessionRecord' in scope
+432 |         let secondSession = try fixture.db.pool.read { database in
+433 |             try #require(
+434 |                 EngineSessionRecord.fetchOne(
+    |                 `- error: cannot find 'EngineSessionRecord' in scope
+435 |                     database,
+436 |                     key: try #require(secondBound.sessionId)
+[6/10] Compiling AgentLoopTestSuite CrashRecoveryTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1563:14: error: cannot find type 'EngineExecutionRequest' in scope
+1561 | private func p1f1RecoveryMarkStarted(
+1562 |     fixture: P1F1EngineFixture,
+1563 |     request: EngineExecutionRequest,
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+1564 |     command: String
+1565 | ) throws {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1578:14: error: cannot find type 'EngineExecutionRequest' in scope
+1576 | private func p1f1RecoveryCancel(
+1577 |     fixture: P1F1EngineFixture,
+1578 |     request: EngineExecutionRequest,
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+1579 |     reason: String = "user_cancel"
+1580 | ) throws {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1592:14: error: cannot find type 'EngineExecutionRequest' in scope
+1590 | private func p1f1RecoveryRowState(
+1591 |     fixture: P1F1EngineFixture,
+1592 |     request: EngineExecutionRequest
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+1593 | ) throws -> (String, String, String?) {
+1594 |     let row = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:257:16: error: cannot find type 'EngineExecutionStore' in scope
+ 255 | struct P1F1EngineFixture {
+ 256 |     let db: AppDatabase
+ 257 |     let store: EngineExecutionStore
+     |                `- error: cannot find type 'EngineExecutionStore' in scope
+ 258 |     let ids: P1F1DeterministicIDs
+ 259 |     let descriptor: ExecutionEngineDescriptor
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:262:22: error: cannot find type 'EngineExecutionReplayClassV1' in scope
+ 260 | 
+ 261 |     init(
+ 262 |         replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+     |                      `- error: cannot find type 'EngineExecutionReplayClassV1' in scope
+ 263 |         sessionResume: EngineCapabilitySupportV1 = .supported
+ 264 |     ) throws {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:263:24: error: cannot find type 'EngineCapabilitySupportV1' in scope
+ 261 |     init(
+ 262 |         replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+ 263 |         sessionResume: EngineCapabilitySupportV1 = .supported
+     |                        `- error: cannot find type 'EngineCapabilitySupportV1' in scope
+ 264 |     ) throws {
+ 265 |         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:483:13: error: cannot find type 'EngineTerminalProposalContentV1' in scope
+ 481 |     key: String = "p1f1-terminal-completed",
+ 482 |     sequence: Int = 0
+ 483 | ) throws -> EngineTerminalProposalContentV1 {
+     |             `- error: cannot find type 'EngineTerminalProposalContentV1' in scope
+ 484 |     try EngineTerminalProposalContentV1(
+ 485 |         protocolVersion: "agentloop.execution.v1",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:480:14: error: cannot find type 'EngineExecutionRequest' in scope
+ 478 | 
+ 479 | func p1f1TerminalCompletedProposal(
+ 480 |     request: EngineExecutionRequest,
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+ 481 |     key: String = "p1f1-terminal-completed",
+ 482 |     sequence: Int = 0
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1664:40: error: cannot infer key path type from context; consider explicitly specifying a root type
+1662 |         )
+1663 |         #expect(summary.terminalReceipts.isEmpty)
+1664 |         #expect(summary.directives.map(\.action) == [
+     |                                        `- error: cannot infer key path type from context; consider explicitly specifying a root type
+1665 |             .deferCampDeletion(proposalId: pending.proposal.id),
+1666 |         ])
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1665:14: error: type 'Any' has no member 'deferCampDeletion'
+1663 |         #expect(summary.terminalReceipts.isEmpty)
+1664 |         #expect(summary.directives.map(\.action) == [
+1665 |             .deferCampDeletion(proposalId: pending.proposal.id),
+     |              `- error: type 'Any' has no member 'deferCampDeletion'
+1666 |         ])
+1667 |         #expect(try fixture.db.pool.read { database in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1680:59: error: cannot infer contextual base in reference to member 'nonReplayable'
+1678 |     // cancellation was also recorded; it is never replayed or guessed canceled.
+1679 |     do {
+1680 |         let fixture = try P1F1EngineFixture(replayClass: .nonReplayable)
+     |                                                           `- error: cannot infer contextual base in reference to member 'nonReplayable'
+1681 |         let request = try fixture.begin(key: "p1f1-recovery-nonreplayable")
+1682 |         try p1f1RecoveryMarkStarted(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1719:59: error: cannot infer contextual base in reference to member 'idempotencyKeyed'
+1717 |     // reconciliation evidence; a local request alone cannot become canceled.
+1718 |     do {
+1719 |         let fixture = try P1F1EngineFixture(replayClass: .idempotencyKeyed)
+     |                                                           `- error: cannot infer contextual base in reference to member 'idempotencyKeyed'
+1720 |         let request = try fixture.begin(key: "p1f1-recovery-cancel-started")
+1721 |         try p1f1RecoveryMarkStarted(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1731:40: error: cannot infer key path type from context; consider explicitly specifying a root type
+1729 |         )
+1730 |         #expect(summary.terminalReceipts.isEmpty)
+1731 |         #expect(summary.directives.map(\.action) == [.cancelAndReconcile])
+     |                                        `- error: cannot infer key path type from context; consider explicitly specifying a root type
+1732 |         #expect(try p1f1RecoveryRowState(fixture: fixture, request: request).0 == "running")
+1733 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1731:55: error: reference to member 'cancelAndReconcile' cannot be resolved without a contextual type
+1729 |         )
+1730 |         #expect(summary.terminalReceipts.isEmpty)
+1731 |         #expect(summary.directives.map(\.action) == [.cancelAndReconcile])
+     |                                                       `- error: reference to member 'cancelAndReconcile' cannot be resolved without a contextual type
+1732 |         #expect(try p1f1RecoveryRowState(fixture: fixture, request: request).0 == "running")
+1733 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1757:59: error: cannot infer contextual base in reference to member 'replaySafe'
+1755 |         "p1f1-recovery-window-post-call",
+1756 |     ] {
+1757 |         let fixture = try P1F1EngineFixture(replayClass: .replaySafe)
+     |                                                           `- error: cannot infer contextual base in reference to member 'replaySafe'
+1758 |         let request = try fixture.begin(key: key)
+1759 |         try p1f1RecoveryMarkStarted(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1770:40: error: cannot infer key path type from context; consider explicitly specifying a root type
+1768 |             now: p1f1EngineTestNow.addingTimeInterval(10)
+1769 |         )
+1770 |         #expect(summary.directives.map(\.action) == [.replayExecution])
+     |                                        `- error: cannot infer key path type from context; consider explicitly specifying a root type
+1771 |         #expect(summary.terminalReceipts.isEmpty)
+1772 |         let after = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1770:55: error: reference to member 'replayExecution' cannot be resolved without a contextual type
+1768 |             now: p1f1EngineTestNow.addingTimeInterval(10)
+1769 |         )
+1770 |         #expect(summary.directives.map(\.action) == [.replayExecution])
+     |                                                       `- error: reference to member 'replayExecution' cannot be resolved without a contextual type
+1771 |         #expect(summary.terminalReceipts.isEmpty)
+1772 |         let after = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1788:28: error: cannot find 'EngineSessionStore' in scope
+1786 |             command: "p1f1-recovery-window-session-dispatch"
+1787 |         )
+1788 |         let sessionStore = EngineSessionStore(
+     |                            `- error: cannot find 'EngineSessionStore' in scope
+1789 |             sessionIdFactory: { fixture.ids.next("session") }
+1790 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1794:21: error: cannot find 'EngineExecutionRecord' in scope
+1792 |             try sessionStore.bindOrReplay(
+1793 |                 execution: try #require(
+1794 |                     EngineExecutionRecord.fetchOne(
+     |                     `- error: cannot find 'EngineExecutionRecord' in scope
+1795 |                         database,
+1796 |                         key: request.executionId
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1807:40: error: cannot infer key path type from context; consider explicitly specifying a root type
+1805 |             now: p1f1EngineTestNow.addingTimeInterval(10)
+1806 |         )
+1807 |         #expect(summary.directives.map(\.action) == [
+     |                                        `- error: cannot infer key path type from context; consider explicitly specifying a root type
+1808 |             .resumeSession(
+1809 |                 sessionId: session.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1808:14: error: type 'Any' has no member 'resumeSession'
+1806 |         )
+1807 |         #expect(summary.directives.map(\.action) == [
+1808 |             .resumeSession(
+     |              `- error: type 'Any' has no member 'resumeSession'
+1809 |                 sessionId: session.id,
+1810 |                 externalSessionId: "codex-thread-recovery"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1819:59: error: cannot infer contextual base in reference to member 'replaySafe'
+1817 |     // permissive replay-class substitution.
+1818 |     do {
+1819 |         let fixture = try P1F1EngineFixture(replayClass: .replaySafe)
+     |                                                           `- error: cannot infer contextual base in reference to member 'replaySafe'
+1820 |         let request = try fixture.begin(key: "p1f1-recovery-descriptor-drift")
+1821 |         try p1f1RecoveryMarkStarted(
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[7/10] Emitting module AgentLoopTestSuite
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1563:14: error: cannot find type 'EngineExecutionRequest' in scope
+1561 | private func p1f1RecoveryMarkStarted(
+1562 |     fixture: P1F1EngineFixture,
+1563 |     request: EngineExecutionRequest,
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+1564 |     command: String
+1565 | ) throws {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1578:14: error: cannot find type 'EngineExecutionRequest' in scope
+1576 | private func p1f1RecoveryCancel(
+1577 |     fixture: P1F1EngineFixture,
+1578 |     request: EngineExecutionRequest,
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+1579 |     reason: String = "user_cancel"
+1580 | ) throws {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1592:14: error: cannot find type 'EngineExecutionRequest' in scope
+1590 | private func p1f1RecoveryRowState(
+1591 |     fixture: P1F1EngineFixture,
+1592 |     request: EngineExecutionRequest
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+1593 | ) throws -> (String, String, String?) {
+1594 |     let row = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:63:39: error: cannot find type 'ExecutionEngineAdapter' in scope
+  61 | }
+  62 | 
+  63 | final class P1F1DispatchProbeAdapter: ExecutionEngineAdapter, @unchecked Sendable {
+     |                                       `- error: cannot find type 'ExecutionEngineAdapter' in scope
+  64 |     private let lock = NSLock()
+  65 |     private let engineDescriptor: ExecutionEngineDescriptor
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:65:35: error: cannot find type 'ExecutionEngineDescriptor' in scope
+  63 | final class P1F1DispatchProbeAdapter: ExecutionEngineAdapter, @unchecked Sendable {
+  64 |     private let lock = NSLock()
+  65 |     private let engineDescriptor: ExecutionEngineDescriptor
+     |                                   `- error: cannot find type 'ExecutionEngineDescriptor' in scope
+  66 |     private var starts = 0
+  67 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:68:22: error: cannot find type 'ExecutionEngineDescriptor' in scope
+  66 |     private var starts = 0
+  67 | 
+  68 |     init(descriptor: ExecutionEngineDescriptor) {
+     |                      `- error: cannot find type 'ExecutionEngineDescriptor' in scope
+  69 |         self.engineDescriptor = descriptor
+  70 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:72:62: error: cannot find type 'ExecutionEngineDescriptor' in scope
+  70 |     }
+  71 | 
+  72 |     func descriptor(profile: RuntimeProfileRecord) throws -> ExecutionEngineDescriptor {
+     |                                                              `- error: cannot find type 'ExecutionEngineDescriptor' in scope
+  73 |         engineDescriptor
+  74 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:78:30: error: cannot find type 'EngineExecutionEvent' in scope
+  76 |     func execute(
+  77 |         request: EngineExecutionRequest
+  78 |     ) -> AsyncThrowingStream<EngineExecutionEvent, Error> {
+     |                              `- error: cannot find type 'EngineExecutionEvent' in scope
+  79 |         lock.lock()
+  80 |         starts += 1
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:77:18: error: cannot find type 'EngineExecutionRequest' in scope
+  75 | 
+  76 |     func execute(
+  77 |         request: EngineExecutionRequest
+     |                  `- error: cannot find type 'EngineExecutionRequest' in scope
+  78 |     ) -> AsyncThrowingStream<EngineExecutionEvent, Error> {
+  79 |         lock.lock()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:101:6: error: cannot find type 'ExecutionEngineDescriptor' in scope
+  99 |     adapterId: String = "adapter.codex",
+ 100 |     adapterVersion: String = "1.2.3"
+ 101 | ) -> ExecutionEngineDescriptor {
+     |      `- error: cannot find type 'ExecutionEngineDescriptor' in scope
+ 102 |     ExecutionEngineDescriptor(
+ 103 |         adapterId: adapterId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:97:18: error: cannot find type 'EngineExecutionReplayClassV1' in scope
+  95 | 
+  96 | func p1f1ExecutionDescriptor(
+  97 |     replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+     |                  `- error: cannot find type 'EngineExecutionReplayClassV1' in scope
+  98 |     sessionResume: EngineCapabilitySupportV1 = .supported,
+  99 |     adapterId: String = "adapter.codex",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:98:20: error: cannot find type 'EngineCapabilitySupportV1' in scope
+  96 | func p1f1ExecutionDescriptor(
+  97 |     replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+  98 |     sessionResume: EngineCapabilitySupportV1 = .supported,
+     |                    `- error: cannot find type 'EngineCapabilitySupportV1' in scope
+  99 |     adapterId: String = "adapter.codex",
+ 100 |     adapterVersion: String = "1.2.3"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:121:13: error: cannot find type 'EngineContextReferencesV1' in scope
+ 119 | func p1f1ContextReferences(
+ 120 |     memoryHash: String = p1f1EngineHashC
+ 121 | ) throws -> EngineContextReferencesV1 {
+     |             `- error: cannot find type 'EngineContextReferencesV1' in scope
+ 122 |     try EngineContextReferencesV1(
+ 123 |         inputRefs: [
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:175:13: error: cannot find type 'EngineContextScopeV1' in scope
+ 173 |     cardID: String = p1f1EngineCardID,
+ 174 |     contractHash: String = p1f1EngineHashA
+ 175 | ) throws -> EngineContextScopeV1 {
+     |             `- error: cannot find type 'EngineContextScopeV1' in scope
+ 176 |     try EngineContextScopeV1(
+ 177 |         campId: p1f1EngineCampID,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:192:17: error: cannot find type 'EngineContextReferencesV1' in scope
+ 190 |     rolePrompt: String = "ship the requested change",
+ 191 |     cardDescription: String = "bounded engine task",
+ 192 |     references: EngineContextReferencesV1? = nil
+     |                 `- error: cannot find type 'EngineContextReferencesV1' in scope
+ 193 | ) throws -> ContextPacket {
+ 194 |     ContextPacket(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:213:13: error: cannot find type 'EngineContextEnvelopeV1' in scope
+ 211 |     cardID: String = p1f1EngineCardID,
+ 212 |     memoryHash: String = p1f1EngineHashC
+ 213 | ) throws -> EngineContextEnvelopeV1 {
+     |             `- error: cannot find type 'EngineContextEnvelopeV1' in scope
+ 214 |     try EngineContextEnvelopeV1.from(
+ 215 |         packet: p1f1ContextPacket(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:257:16: error: cannot find type 'EngineExecutionStore' in scope
+ 255 | struct P1F1EngineFixture {
+ 256 |     let db: AppDatabase
+ 257 |     let store: EngineExecutionStore
+     |                `- error: cannot find type 'EngineExecutionStore' in scope
+ 258 |     let ids: P1F1DeterministicIDs
+ 259 |     let descriptor: ExecutionEngineDescriptor
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:259:21: error: cannot find type 'ExecutionEngineDescriptor' in scope
+ 257 |     let store: EngineExecutionStore
+ 258 |     let ids: P1F1DeterministicIDs
+ 259 |     let descriptor: ExecutionEngineDescriptor
+     |                     `- error: cannot find type 'ExecutionEngineDescriptor' in scope
+ 260 | 
+ 261 |     init(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:262:22: error: cannot find type 'EngineExecutionReplayClassV1' in scope
+ 260 | 
+ 261 |     init(
+ 262 |         replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+     |                      `- error: cannot find type 'EngineExecutionReplayClassV1' in scope
+ 263 |         sessionResume: EngineCapabilitySupportV1 = .supported
+ 264 |     ) throws {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:263:24: error: cannot find type 'EngineCapabilitySupportV1' in scope
+ 261 |     init(
+ 262 |         replayClass: EngineExecutionReplayClassV1 = .idempotencyKeyed,
+ 263 |         sessionResume: EngineCapabilitySupportV1 = .supported
+     |                        `- error: cannot find type 'EngineCapabilitySupportV1' in scope
+ 264 |     ) throws {
+ 265 |         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:425:17: error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 423 |         claimedSessionScopeJson: String? = nil,
+ 424 |         claimedSessionScopeHash: String? = nil
+ 425 |     ) throws -> EngineExecutionRequestFieldsV1 {
+     |                 `- error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 426 |         try EngineExecutionRequestFieldsV1(
+ 427 |             campId: campID,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:413:17: error: cannot find type 'EngineExecutionBudgetV1' in scope
+ 411 |         contextHash: String = p1f1ContextGoldenHash,
+ 412 |         grantIDs: [String] = [p1f1EngineGrantB, p1f1EngineGrantA],
+ 413 |         budget: EngineExecutionBudgetV1 = EngineExecutionBudgetV1(
+     |                 `- error: cannot find type 'EngineExecutionBudgetV1' in scope
+ 414 |             tokenLimit: 10_000,
+ 415 |             costMicrosLimit: 5_000_000,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:418:20: error: cannot find type 'EngineWorkspaceRefV1' in scope
+ 416 |             wallClockSeconds: 900
+ 417 |         ),
+ 418 |         workspace: EngineWorkspaceRefV1 = EngineWorkspaceRefV1(
+     |                    `- error: cannot find type 'EngineWorkspaceRefV1' in scope
+ 419 |             reference: "workspace:primary",
+ 420 |             hash: p1f1EngineWorkspaceHash
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:422:21: error: cannot find type 'EngineSessionReferenceV1' in scope
+ 420 |             hash: p1f1EngineWorkspaceHash
+ 421 |         ),
+ 422 |         sessionRef: EngineSessionReferenceV1? = nil,
+     |                     `- error: cannot find type 'EngineSessionReferenceV1' in scope
+ 423 |         claimedSessionScopeJson: String? = nil,
+ 424 |         claimedSessionScopeHash: String? = nil
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:456:17: error: cannot find type 'EngineExecutionRequest' in scope
+ 454 |         key: String = "p1f1-engine-begin",
+ 455 |         fields: EngineExecutionRequestFieldsV1? = nil
+ 456 |     ) throws -> EngineExecutionRequest {
+     |                 `- error: cannot find type 'EngineExecutionRequest' in scope
+ 457 |         try store.beginEngineExecution(
+ 458 |             requestFields: fields ?? self.fields(),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:455:17: error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 453 |     func begin(
+ 454 |         key: String = "p1f1-engine-begin",
+ 455 |         fields: EngineExecutionRequestFieldsV1? = nil
+     |                 `- error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 456 |     ) throws -> EngineExecutionRequest {
+ 457 |         try store.beginEngineExecution(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:483:13: error: cannot find type 'EngineTerminalProposalContentV1' in scope
+ 481 |     key: String = "p1f1-terminal-completed",
+ 482 |     sequence: Int = 0
+ 483 | ) throws -> EngineTerminalProposalContentV1 {
+     |             `- error: cannot find type 'EngineTerminalProposalContentV1' in scope
+ 484 |     try EngineTerminalProposalContentV1(
+ 485 |         protocolVersion: "agentloop.execution.v1",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:480:14: error: cannot find type 'EngineExecutionRequest' in scope
+ 478 | 
+ 479 | func p1f1TerminalCompletedProposal(
+ 480 |     request: EngineExecutionRequest,
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+ 481 |     key: String = "p1f1-terminal-completed",
+ 482 |     sequence: Int = 0
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:8:6: error: cannot find type 'EngineSessionStore' in scope
+  6 | private func p1f1SessionStore(
+  7 |     ids: P1F1DeterministicIDs
+  8 | ) -> EngineSessionStore {
+    |      `- error: cannot find type 'EngineSessionStore' in scope
+  9 |     EngineSessionStore(
+ 10 |         sessionIdFactory: { ids.next("session") }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:18:13: error: cannot find type 'EngineExecutionRequest' in scope
+ 16 |     key: String,
+ 17 |     fields: EngineExecutionRequestFieldsV1? = nil
+ 18 | ) throws -> EngineExecutionRequest {
+    |             `- error: cannot find type 'EngineExecutionRequest' in scope
+ 19 |     let request = try fixture.begin(key: key, fields: fields)
+ 20 |     let row = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:17:13: error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 15 |     fixture: P1F1EngineFixture,
+ 16 |     key: String,
+ 17 |     fields: EngineExecutionRequestFieldsV1? = nil
+    |             `- error: cannot find type 'EngineExecutionRequestFieldsV1' in scope
+ 18 | ) throws -> EngineExecutionRequest {
+ 19 |     let request = try fixture.begin(key: key, fields: fields)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:34:13: error: cannot find type 'EngineExecutionRecord' in scope
+ 32 |     fixture: P1F1EngineFixture,
+ 33 |     id: String
+ 34 | ) throws -> EngineExecutionRecord {
+    |             `- error: cannot find type 'EngineExecutionRecord' in scope
+ 35 |     try fixture.db.pool.read { database in
+ 36 |         try #require(EngineExecutionRecord.fetchOne(database, key: id))
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:46:13: error: cannot find type 'EngineSessionRecord' in scope
+ 44 |     externalID: String,
+ 45 |     now: Date
+ 46 | ) throws -> EngineSessionRecord {
+    |             `- error: cannot find type 'EngineSessionRecord' in scope
+ 47 |     try fixture.db.pool.write { database in
+ 48 |         let execution = try #require(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:42:19: error: cannot find type 'EngineSessionStore' in scope
+ 40 | private func p1f1BindSession(
+ 41 |     fixture: P1F1EngineFixture,
+ 42 |     sessionStore: EngineSessionStore,
+    |                   `- error: cannot find type 'EngineSessionStore' in scope
+ 43 |     executionID: String,
+ 44 |     externalID: String,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:64:13: error: cannot find type 'EngineTerminalProposalContentV1' in scope
+ 62 |     key: String,
+ 63 |     sequence: Int = 0
+ 64 | ) throws -> EngineTerminalProposalContentV1 {
+    |             `- error: cannot find type 'EngineTerminalProposalContentV1' in scope
+ 65 |     try EngineTerminalProposalContentV1(
+ 66 |         protocolVersion: "agentloop.execution.v1",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:61:14: error: cannot find type 'EngineExecutionRequest' in scope
+ 59 | 
+ 60 | private func p1f1NeedsHumanProposal(
+ 61 |     request: EngineExecutionRequest,
+    |              `- error: cannot find type 'EngineExecutionRequest' in scope
+ 62 |     key: String,
+ 63 |     sequence: Int = 0
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:44:13: error: cannot find type 'EngineExecutionRequest' in scope
+  42 |     fixture: P1F1EngineFixture,
+  43 |     key: String
+  44 | ) throws -> EngineExecutionRequest {
+     |             `- error: cannot find type 'EngineExecutionRequest' in scope
+  45 |     let request = try fixture.begin(key: key)
+  46 |     let prepared = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:63:13: error: cannot find type 'EngineTerminalProposalContentV1' in scope
+  61 |     declarations: [P1F1TerminalArtifactShape] = p1f1TerminalArtifacts,
+  62 |     handoffDeclarations: [P1F1TerminalArtifactShape] = p1f1TerminalArtifacts
+  63 | ) throws -> EngineTerminalProposalContentV1 {
+     |             `- error: cannot find type 'EngineTerminalProposalContentV1' in scope
+  64 |     try EngineTerminalProposalContentV1(
+  65 |         protocolVersion: "agentloop.execution.v1",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:58:14: error: cannot find type 'EngineExecutionRequest' in scope
+  56 | 
+  57 | private func p1f1ArtifactProposal(
+  58 |     request: EngineExecutionRequest,
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+  59 |     key: String,
+  60 |     sequence: Int = 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineTerminalProposalTests.swift:142:14: error: cannot find type 'EngineExecutionRequest' in scope
+ 140 | private func p1f1TerminalAtomicSnapshot(
+ 141 |     fixture: P1F1EngineFixture,
+ 142 |     request: EngineExecutionRequest,
+     |              `- error: cannot find type 'EngineExecutionRequest' in scope
+ 143 |     proposalID: String
+ 144 | ) throws -> P1F1TerminalAtomicSnapshot {
+red_command_status=1
+red_tee_status=0
+red_candidate=/tmp/p1f1-f1b-red-final.u9UuRs

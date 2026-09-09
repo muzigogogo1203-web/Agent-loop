@@ -1,0 +1,34 @@
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-diagnostics.diff	2026-09-05 23:05:51
++++ /tmp/agentloop-diagnostic-diff.RjMVgG	2026-09-05 23:13:19
+@@ -100,7 +100,7 @@
+              }
+          }
+ --- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-diagnostics-before/Sources/AgentLoopCore/Kernel/Orchestrator.swift	2026-09-05 22:51:40
+-+++ Sources/AgentLoopCore/Kernel/Orchestrator.swift	2026-09-05 23:03:47
+++++ Sources/AgentLoopCore/Kernel/Orchestrator.swift	2026-09-05 23:12:03
+ @@ -8120,6 +8120,7 @@
+      private let control = EngineManagedProbeDrainControlV1()
+      private let group = DispatchGroup()
+@@ -113,10 +113,11 @@
+      }
+  
+      package func finish() throws -> EngineManagedProbeCapturedOutputV1 {
+-+        let diagnosticId = diagnosticId
+-         try barrier.join(
++-        try barrier.join(
+ -            waitUntilClosed: { _ in
+ -                group.wait(
+++        let diagnosticId = diagnosticId
+++        return try barrier.join(
+ +            waitUntilClosed: { retryingAfterTimeout in
+ +                let attempt = retryingAfterTimeout ? 2 : 1
+ +                RuntimeLifecycleDiagnostics.event(
+@@ -380,7 +381,7 @@
+  }
+  
+  @Test func p1f1_075CLIHelpCapabilityMismatchIsUnsupported() async throws {
+---- /dev/null	2026-09-05 23:05:51
++--- /dev/null	2026-09-05 23:13:19
+ +++ Sources/AgentLoopCore/Observability/RuntimeLifecycleDiagnostics.swift	2026-09-05 23:03:47
+ @@ -0,0 +1,30 @@
+ +import Dispatch

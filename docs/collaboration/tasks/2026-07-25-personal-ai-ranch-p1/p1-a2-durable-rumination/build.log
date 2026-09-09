@@ -1,0 +1,33 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'AgentLoopApp' complete! (0.18s)
+[0/1] Planning build
+Building for production...
+warning: '--product' cannot be used with the automatic product 'AgentLoopCore'; building the default target instead
+[0/7] Write sources
+[1/7] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/5] Compiling AgentLoopTestSuite AgentLoopTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[4/6] Compiling RunTests main.swift
+[4/6] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/6] Linking RunTests
+Build of product 'AgentLoopCore' complete! (90.05s)

@@ -1,0 +1,317 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+[3/8] Emitting module AgentLoopCore
+[4/8] Compiling AgentLoopCore CanonicalContractCoding.swift
+[5/8] Compiling AgentLoopCore CoachContracts.swift
+[6/8] Compiling AgentLoopCore GoalController.swift
+[7/33] Compiling AgentLoopCore InputEnvelope.swift
+[8/33] Compiling AgentLoopCore UnderstandingCard.swift
+[9/55] Compiling AgentLoopCore CowIdentity.swift
+[10/55] Compiling AgentLoopCore DesktopGoalWorkflow.swift
+[11/55] Compiling AgentLoopCore DomainEvent.swift
+[12/55] Compiling AgentLoopCore EngineExecutionReceipt.swift
+[13/55] Compiling AgentLoopCore ExecutionEngine.swift
+[14/55] Compiling AgentLoopCore IngestionDeletion.swift
+[15/55] Compiling AgentLoopCore MemoryRecord.swift
+[16/55] Compiling AgentLoopCore Outcome.swift
+[17/55] Compiling AgentLoopCore OutcomeContract.swift
+[18/55] Compiling AgentLoopCore Verification.swift
+[19/55] Compiling AgentLoopCore Orchestrator.swift
+[20/55] Compiling AgentLoopCore ArtifactOwnershipVerifier.swift
+[21/55] Compiling AgentLoopCore BoardServerBridgeMain.swift
+[22/55] Compiling AgentLoopCore BoardToolServer.swift
+[23/55] Compiling AgentLoopCore CardRunner.swift
+[24/55] Compiling AgentLoopCore CliEngineAdapter.swift
+[25/55] Compiling AgentLoopCore CliProcessBackend.swift
+[26/55] Compiling AgentLoopCore ContextPacket.swift
+[27/55] Compiling AgentLoopCore ModelLoopEngineAdapter.swift
+[28/55] Compiling AgentLoopCore ApprovalPolicy.swift
+[29/55] Compiling AgentLoopCore DurableWorkSupervisor.swift
+[30/55] Compiling AgentLoopCore InputParsingWorker.swift
+[31/55] Compiling AgentLoopCore AppDatabase.swift
+[32/55] Compiling AgentLoopCore ApprovalGrantStore.swift
+[33/55] Compiling AgentLoopCore ArtifactBlobStore.swift
+[34/55] Compiling AgentLoopCore ArtifactStorageOriginStore.swift
+[35/55] Compiling AgentLoopCore CampLifecycleStore.swift
+[36/55] Compiling AgentLoopCore CampProviderDispatchStore.swift
+[37/55] Compiling AgentLoopCore CoachUnderstandingStore.swift
+[38/55] Compiling AgentLoopCore CowResidencyStore.swift
+[39/55] Compiling AgentLoopCore DomainEventStore.swift
+[40/55] Compiling AgentLoopCore DurableWorkStore.swift
+[41/55] Compiling AgentLoopCore EngineExecutionStore.swift
+[42/55] Compiling AgentLoopCore EngineSessionStore.swift
+[43/55] Compiling AgentLoopCore IngestionDeletionStore.swift
+[44/55] Compiling AgentLoopCore InputGoalStore.swift
+[45/55] Compiling AgentLoopCore LegacyContentScopeStore.swift
+[46/55] Compiling AgentLoopCore LegacyEventScopeResolver.swift
+[47/55] Compiling AgentLoopCore MemoryRecordStore.swift
+[48/55] Compiling AgentLoopCore OutcomeStore.swift
+[49/55] Compiling AgentLoopCore Acceptance.swift
+[50/55] Compiling AgentLoopCore ApprovalGrant.swift
+[51/55] Compiling AgentLoopCore CampBridge.swift
+[52/55] Compiling AgentLoopCore CampResidency.swift
+[53/55] Compiling AgentLoopCore CommandEnvelope.swift
+[54/57] Compiling AgentLoopApplication AcceptanceWorkflowController.swift
+[55/57] Emitting module AgentLoopApplication
+[56/58] Compiling AgentLoopApplication LocalCaptureIdentity.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[57/69] Compiling AgentLoopTestSuite AcceptanceWorkflowTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[58/69] Compiling AgentLoopTestSuite ApprovalGrantContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[59/69] Compiling AgentLoopTestSuite ArtifactOwnershipVerifierTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[60/69] Compiling AgentLoopTestSuite ArtifactStorageOriginTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[61/69] Compiling AgentLoopTestSuite CrashRecoveryTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[62/69] Compiling AgentLoopTestSuite DesktopGoalFoundationTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[63/69] Compiling AgentLoopTestSuite DomainEventContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[64/69] Compiling AgentLoopTestSuite EngineExecutionStoreTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[65/69] Compiling AgentLoopTestSuite EngineTerminalProposalTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[66/69] Emitting module AgentLoopTestSuite
+[67/77] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+[68/77] Compiling AgentLoopTestSuite GoalCoachContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+[69/77] Compiling AgentLoopTestSuite MemoryProvenanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+[70/77] Compiling AgentLoopTestSuite OrchestratorTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+[71/77] Compiling AgentLoopTestSuite OutcomeContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+[72/77] Compiling AgentLoopTestSuite P1ContractIntegrationTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+[73/77] Compiling AgentLoopTestSuite SQLiteMigrationCompatibilityTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+[74/77] Compiling AgentLoopTestSuite VerificationContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[74/77] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[75/77] Linking RunTests
+[76/77] Applying RunTests
+Build of product 'RunTests' complete! (89.30s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite DesktopGoalFoundationTests started.
+◇ Test desktopTextConversionAndGoalPreserveInteriorFormatting() started.
+✔ Test desktopTextConversionAndGoalPreserveInteriorFormatting() passed after 0.002 seconds.
+◇ Test desktopTextCoachRecordCommandAndAnswerPreserveFormatting() started.
+✔ Test desktopTextCoachRecordCommandAndAnswerPreserveFormatting() passed after 0.001 seconds.
+◇ Test desktopTextUnderstandingFieldsPreserveFormattingIndependently() started.
+✔ Test desktopTextUnderstandingFieldsPreserveFormattingIndependently() passed after 0.016 seconds.
+◇ Test desktopTextContentDecodingRejectsCanonicalInvalidControlsAndEdges() started.
+✔ Test desktopTextContentDecodingRejectsCanonicalInvalidControlsAndEdges() passed after 0.061 seconds.
+◇ Test desktopTextContentDecodersRejectUnknownAndMissingRawKeys() started.
+✔ Test desktopTextContentDecodersRejectUnknownAndMissingRawKeys() passed after 0.001 seconds.
+◇ Test desktopTextStrictIdentityReferenceAndOperationalFieldsRemainStrict() started.
+✔ Test desktopTextStrictIdentityReferenceAndOperationalFieldsRemainStrict() passed after 0.095 seconds.
+◇ Test desktopTextGoalDecodingRetainsLegitimateActivatedContractState() started.
+✔ Test desktopTextGoalDecodingRetainsLegitimateActivatedContractState() passed after 0.094 seconds.
+◇ Test desktopTextRealFlowPersistsAndReplaysWithoutFormattingDrift() started.
+✔ Test desktopTextRealFlowPersistsAndReplaysWithoutFormattingDrift() passed after 0.205 seconds.
+◇ Test desktopDomainOutputPolicyHasExactCanonicalWireShape() started.
+✔ Test desktopDomainOutputPolicyHasExactCanonicalWireShape() passed after 0.001 seconds.
+◇ Test desktopDomainContextBindsPolicyAndUnresolvedRuntime() started.
+✔ Test desktopDomainContextBindsPolicyAndUnresolvedRuntime() passed after 0.003 seconds.
+◇ Test desktopDomainCaptureIntentSealsNormalizedCallerOwnedCommand() started.
+✔ Test desktopDomainCaptureIntentSealsNormalizedCallerOwnedCommand() passed after 0.001 seconds.
+◇ Test desktopDomainOutputPolicyRejectsUnsupportedWirePayloads() started.
+✔ Test desktopDomainOutputPolicyRejectsUnsupportedWirePayloads() passed after 0.001 seconds.
+◇ Test desktopDomainCaptureIntentRejectsWrongIdentityAndEmptyText() started.
+✔ Test desktopDomainCaptureIntentRejectsWrongIdentityAndEmptyText() passed after 0.001 seconds.
+◇ Test desktopTextCapturePreservesInteriorFormatting() started.
+✔ Test desktopTextCapturePreservesInteriorFormatting() passed after 0.001 seconds.
+✔ Suite DesktopGoalFoundationTests passed after 0.488 seconds.
+✔ Test run with 14 tests in 1 suite passed after 0.488 seconds.

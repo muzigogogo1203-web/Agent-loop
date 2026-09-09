@@ -1,27 +1,18 @@
 import Foundation
 
 public struct BoardTools: Sendable {
-    let db: AppDatabase
-    let cardId: String
-    let runId: String
-    let workspaceRoot: URL?
-    let artifactStoreRoot: URL
+    package let boardTerminalSink: any EngineBoardTerminalSink
+    package let progressSink: any EngineProgressSink
 
-    public init(
-        db: AppDatabase,
-        cardId: String,
-        runId: String,
-        workspaceRoot: URL?,
-        artifactStoreRoot: URL
+    package init(
+        boardTerminalSink: any EngineBoardTerminalSink,
+        progressSink: any EngineProgressSink
     ) {
-        self.db = db
-        self.cardId = cardId
-        self.runId = runId
-        self.workspaceRoot = workspaceRoot
-        self.artifactStoreRoot = artifactStoreRoot
+        self.boardTerminalSink = boardTerminalSink
+        self.progressSink = progressSink
     }
 
-    public func complete(input: JSONValue) async -> ToolOutcome {
+    package func complete(input: JSONValue) async throws -> ToolOutcome {
         let handoff: HandoffPayload
         switch HandoffPayload.parse(from: input) {
         case .failure(let message):
@@ -29,89 +20,41 @@ public struct BoardTools: Sendable {
         case .success(let parsed):
             handoff = parsed
         }
-
-        let fileTools = FileTools(workspaceRoot: workspaceRoot)
-        var copies: [(decl: HandoffPayload.ArtifactDecl, source: URL, destination: URL)] = []
-        for decl in handoff.artifacts {
-            switch fileTools.resolve(decl.relativePath, forWrite: false) {
-            case .failure(let message):
-                return .error("产物 \(decl.relativePath)：\(message)")
-            case .success(let source):
-                guard FileManager.default.fileExists(atPath: source.path) else {
-                    return .error("声明的产物 \(decl.relativePath) 在工作目录中不存在。请先用 write_file 写入，或修正 relativePath。")
-                }
-                let destination = uniqueArtifactDestination(for: decl.relativePath)
-                copies.append((decl: decl, source: source, destination: destination))
-            }
+        guard handoff.artifacts.allSatisfy({
+            Self.isValidRelativeArtifactPath($0.relativePath)
+        }) else {
+            return .error("artifact.relativePath 必须是规范的工作区相对路径")
         }
 
-        var copied: [URL] = []
-        do {
-            for copy in copies {
-                try FileManager.default.createDirectory(
-                    at: copy.destination.deletingLastPathComponent(),
-                    withIntermediateDirectories: true
-                )
-                try FileManager.default.copyItem(at: copy.source, to: copy.destination)
-                copied.append(copy.destination)
-            }
-        } catch {
-            for url in copied {
-                try? FileManager.default.removeItem(at: url)
-            }
-            return .error("产物拷贝失败：\(error.localizedDescription)")
-        }
-
-        do {
-            try db.completeCard(
-                id: cardId,
-                runId: runId,
-                handoff: handoff,
-                durableArtifacts: copies.map { (decl: $0.decl, durablePath: $0.destination.path) }
-            )
-            return .completed(handoff)
-        } catch {
-            for copy in copies {
-                try? FileManager.default.removeItem(at: copy.destination)
-            }
-            return .error("完成落库失败：\(error)")
-        }
+        try await boardTerminalSink.submit(.completed(handoff: handoff))
+        return .completed(handoff)
     }
 
-    public func block(input: JSONValue) async -> ToolOutcome {
-        let reason = input["reason"]?.stringValue ?? "other"
-        let detail = input["detail"]?.stringValue ?? ""
-        do {
-            try db.blockCard(id: cardId, runId: runId, reason: reason, detail: detail)
-            return .blocked(reason: reason, detail: detail)
-        } catch {
-            return .error("挂起失败：\(error)")
+    package func block(input: JSONValue) async throws -> ToolOutcome {
+        guard let reason = input["reason"]?.stringValue,
+              let detail = input["detail"]?.stringValue,
+              !reason.isEmpty,
+              !detail.isEmpty
+        else {
+            return .error("block_card.reason 和 detail 必须是非空字符串")
         }
+        try await boardTerminalSink.submit(
+            .blocked(reasonCode: reason, detail: detail)
+        )
+        return .blocked(reason: reason, detail: detail)
     }
 
-    public func progressNote(input: JSONValue) async -> ToolOutcome {
-        let text = input["text"]?.stringValue ?? ""
-        do {
-            try await db.pool.write { database in
-                guard let card = try CardRecord.fetchOne(database, key: cardId) else {
-                    throw RecordNotFoundError(table: "card", id: cardId)
-                }
-                try AppDatabase.appendEvent(
-                    database,
-                    missionId: card.missionId,
-                    cardId: cardId,
-                    runId: runId,
-                    kind: EventKind.progressNote,
-                    payload: ["text": .string(text)]
-                )
-            }
-            return .result("已汇报")
-        } catch {
-            return .error("汇报失败：\(error)")
+    package func progressNote(
+        input: JSONValue
+    ) async throws -> ToolOutcome {
+        guard let text = input["text"]?.stringValue, !text.isEmpty else {
+            return .error("progress_note.text 必须是非空字符串")
         }
+        try await progressSink.submit(.progress(message: text))
+        return .result("已汇报")
     }
 
-    public func askUser(input: JSONValue) async -> ToolOutcome {
+    package func askUser(input: JSONValue) async throws -> ToolOutcome {
         guard let object = input.objectValue else {
             return .error("ask_user 参数必须是对象")
         }
@@ -158,47 +101,35 @@ public struct BoardTools: Sendable {
             return .error("ask_user.kind 必须是 choice / confirm / text")
         }
 
-        do {
-            _ = try db.suspendCardForUserRequest(
-                cardId: cardId,
-                runId: runId,
+        try await boardTerminalSink.submit(
+            .needsHumanInput(
                 kind: kind,
                 prompt: prompt,
-                options: options
+                options: options ?? []
             )
-            return .blocked(reason: "needs_human_input", detail: prompt)
-        } catch {
-            return .error("提问落库失败：\(error)")
+        )
+        return .blocked(reason: "needs_human_input", detail: prompt)
+    }
+
+    private static func isValidRelativeArtifactPath(_ path: String) -> Bool {
+        guard !path.isEmpty,
+              !path.hasPrefix("/"),
+              !path.hasSuffix("/"),
+              !path.contains("\\"),
+              !path.unicodeScalars.contains(where: {
+                  CharacterSet.controlCharacters.contains($0)
+              })
+        else {
+            return false
+        }
+        return path.split(
+            separator: "/",
+            omittingEmptySubsequences: false
+        ).allSatisfy { component in
+            !component.isEmpty && component != "." && component != ".."
         }
     }
 
-    private func artifactDestination(for relativePath: String) -> URL {
-        artifactStoreRoot
-            .appendingPathComponent(cardId)
-            .appendingPathComponent(relativePath)
-            .standardizedFileURL
-    }
-
-    private func uniqueArtifactDestination(for relativePath: String) -> URL {
-        let original = artifactDestination(for: relativePath)
-        guard FileManager.default.fileExists(atPath: original.path) else {
-            return original
-        }
-
-        let directory = original.deletingLastPathComponent()
-        let ext = original.pathExtension
-        let base = ext.isEmpty
-            ? original.lastPathComponent
-            : String(original.lastPathComponent.dropLast(ext.count + 1))
-        for index in 2...999 {
-            let filename = ext.isEmpty ? "\(base) (\(index))" : "\(base) (\(index)).\(ext)"
-            let candidate = directory.appendingPathComponent(filename)
-            if !FileManager.default.fileExists(atPath: candidate.path) {
-                return candidate
-            }
-        }
-        return directory.appendingPathComponent("\(base) (\(UUID().uuidString))" + (ext.isEmpty ? "" : ".\(ext)"))
-    }
 }
 
 public struct BoardToolHandler: ToolHandler {
@@ -218,15 +149,19 @@ public struct BoardToolHandler: ToolHandler {
     }
 
     public func execute(input: JSONValue) async -> ToolOutcome {
-        switch op {
-        case .complete:
-            return await tools.complete(input: input)
-        case .block:
-            return await tools.block(input: input)
-        case .note:
-            return await tools.progressNote(input: input)
-        case .askUser:
-            return await tools.askUser(input: input)
+        do {
+            switch op {
+            case .complete:
+                return try await tools.complete(input: input)
+            case .block:
+                return try await tools.block(input: input)
+            case .note:
+                return try await tools.progressNote(input: input)
+            case .askUser:
+                return try await tools.askUser(input: input)
+            }
+        } catch {
+            return .error("Board intent rejected.")
         }
     }
 }

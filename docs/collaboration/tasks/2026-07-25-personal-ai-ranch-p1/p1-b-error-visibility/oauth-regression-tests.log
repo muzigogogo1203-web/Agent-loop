@@ -1,0 +1,30 @@
+command=swift run RunTests --filter openAIOAuthSessionRefreshSuccessUpdatesStoredTokensAndAccountID|openAIOAuthSessionWritesRotatedRefreshToken|openAIOAuthSessionInvalidGrantIsPermanentFailure|openAIOAuthSessionNetworkErrorIsTransient|openAIOAuthSessionSingleFlightsConcurrentRefreshes|openAIOAuthSessionWithoutRefreshTokenIsPermanentFailure|oauthCredentialCommitFailureRollsBackEarlierWrites|oauthCredentialRollbackFailureIsExplicitAndCritical|oauthPermanentUnauthorizedDeleteFailureNeverReportsCleanRelogin
+cwd=/Users/muzi/Agent-loop
+env_boundary=local swift package; no network credentials; URLProtocol/test stores only
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test oauthPermanentUnauthorizedDeleteFailureNeverReportsCleanRelogin() started.
+◇ Test openAIOAuthSessionWritesRotatedRefreshToken() started.
+◇ Test openAIOAuthSessionNetworkErrorIsTransient() started.
+◇ Test openAIOAuthSessionSingleFlightsConcurrentRefreshes() started.
+◇ Test oauthCredentialCommitFailureRollsBackEarlierWrites() started.
+◇ Test oauthCredentialRollbackFailureIsExplicitAndCritical() started.
+◇ Test openAIOAuthSessionInvalidGrantIsPermanentFailure() started.
+◇ Test openAIOAuthSessionWithoutRefreshTokenIsPermanentFailure() started.
+◇ Test openAIOAuthSessionRefreshSuccessUpdatesStoredTokensAndAccountID() started.
+✔ Test oauthCredentialCommitFailureRollsBackEarlierWrites() passed after 0.002 seconds.
+✔ Test openAIOAuthSessionWithoutRefreshTokenIsPermanentFailure() passed after 0.007 seconds.
+✔ Test openAIOAuthSessionInvalidGrantIsPermanentFailure() passed after 0.009 seconds.
+✔ Test openAIOAuthSessionNetworkErrorIsTransient() passed after 0.009 seconds.
+✔ Test openAIOAuthSessionWritesRotatedRefreshToken() passed after 0.009 seconds.
+✔ Test oauthCredentialRollbackFailureIsExplicitAndCritical() passed after 0.009 seconds.
+✔ Test openAIOAuthSessionSingleFlightsConcurrentRefreshes() passed after 0.062 seconds.
+✔ Test openAIOAuthSessionRefreshSuccessUpdatesStoredTokensAndAccountID() passed after 0.062 seconds.
+✔ Test oauthPermanentUnauthorizedDeleteFailureNeverReportsCleanRelogin() passed after 0.065 seconds.
+✔ Test run with 9 tests in 0 suites passed after 0.065 seconds.
+command_exit=0
+oauth_regression.result=pass

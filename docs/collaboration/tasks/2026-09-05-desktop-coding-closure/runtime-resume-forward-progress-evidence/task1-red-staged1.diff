@@ -1,0 +1,688 @@
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-resume-progress-20260909.w2sYr31u4P/CliProcessBackend.swift.before b/Sources/AgentLoopCore/Loop/CliProcessBackend.swift
+index bc05fba..43c5168 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-resume-progress-20260909.w2sYr31u4P/CliProcessBackend.swift.before
++++ b/Sources/AgentLoopCore/Loop/CliProcessBackend.swift
+@@ -18,24 +18,34 @@ private struct CliProcessLiveCodeSignatureRevalidatorV1:
+         _ authority: CliExecutableAuthorityV1
+     ) throws {
+         try authority.revalidateStagedCodeSignature()
+     }
+ 
+     func revalidateBoardBridge(
+         _ authority: EngineBoardBridgeExecutableAuthorityV1
+     ) throws {
+         try authority.revalidateStagedCodeSignature()
+     }
+ }
+ 
++package enum CliProcessSignalOperationV1 {
++    package static func send(
++        signal: Int32,
++        processGroupId: Int32,
++        using inspector: any EngineRuntimeProcessInspectingV1
++    ) async throws {
++        try inspector.send(signal: signal, processGroupId: processGroupId)
++    }
++}
++
+ package struct CliProcessCleanupFailureV1: Error, Sendable, CustomStringConvertible {
+     package enum Phase: String, Sendable {
+         case boardStop
+         case cleanupAuthority
+         case signal
+         case liveness
+         case reap
+         case descriptor
+     }
+ 
+     package struct Cause: Error, Sendable, CustomStringConvertible {
+         package let phase: Phase
+@@ -1159,27 +1169,28 @@ private final class CliProcessExecution: @unchecked Sendable {
+                     fd: stderrFD,
+                     reapState: reapState,
+                     grace: pipeDrainGrace,
+                     continuation: continuation
+                 )
+             }
+             stderrTask = createdStderrTask
+ 
+             RuntimeLifecycleDiagnostics.event(
+                 .cliSIGCONTCalled,
+                 owner: diagnosticOwner, value: Int(processGroupID)
+             )
+-            try processInspector.send(
++            try await CliProcessSignalOperationV1.send(
+                 signal: SIGCONT,
+-                processGroupId: processGroupID
++                processGroupId: processGroupID,
++                using: processInspector
+             )
+             RuntimeLifecycleDiagnostics.event(
+                 .cliSIGCONTReturned,
+                 owner: diagnosticOwner, value: Int(processGroupID)
+             )
+             let stdinFD = stdinWrite
+             stdinWrite = -1
+             let stdinGate = CliStdinStartGate()
+             let stdinData = request.spec.stdinBytes
+             let stdinTask = Task.detached {
+                 await stdinGate.wait()
+                 try await Self.writeAllStdinCancellable(
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-resume-progress-20260909.w2sYr31u4P/BlockingProcessOperationTests.swift.before b/Sources/AgentLoopTestSuite/BlockingProcessOperationTests.swift
+index a7fd4a3..e220bc0 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-resume-progress-20260909.w2sYr31u4P/BlockingProcessOperationTests.swift.before
++++ b/Sources/AgentLoopTestSuite/BlockingProcessOperationTests.swift
+@@ -1,45 +1,52 @@
+ import Darwin
+ import Foundation
+ import Testing
+ @testable import AgentLoopCore
+ 
+ private let blockingProgressEvidenceKey =
+     "AGENTLOOP_BLOCKING_PROGRESS_EVIDENCE"
+ private let blockingProgressLabel = "blocking-process-progress-child"
+ private let helpProbeProgressEvidenceKey =
+     "AGENTLOOP_HELP_PROBE_PROGRESS_EVIDENCE"
+ private let helpProbeProgressLabel = "help-probe-progress-child"
++private let cliResumeSignalProgressEvidenceKey =
++    "AGENTLOOP_CLI_RESUME_SIGNAL_PROGRESS_EVIDENCE"
++private let cliResumeSignalProgressLabel = "cli-resume-signal-progress-child"
+ 
+ private enum BlockingProgressTestError: Error, CustomStringConvertible {
+     case invalidChildEnvironment
+     case invalidEvidencePath
+     case setup([String])
+ 
+     var description: String {
+         switch self {
+         case .invalidChildEnvironment:
+             return "invalid blocking-progress child environment"
+         case .invalidEvidencePath:
+             return "invalid blocking-progress evidence path"
+         case .setup(let failures):
+             return "blocking-progress setup failed: \(failures.joined(separator: "; "))"
+         }
+     }
+ }
+ 
+ private enum HelpProbeProgressSentinel: Error, Equatable {
+     case blockedVersionRun
+ }
+ 
++private enum CliResumeSignalProgressSentinel: Error, Equatable {
++    case blockedResume
++}
++
+ private final class HelpProbeProgressObservation: @unchecked Sendable {
+     private let lock = NSLock()
+     private var invocationCountStorage = 0
+     private var authorityStorage: CliExecutableAuthorityV1?
+     private var argumentsStorage: [String]?
+ 
+     func record(
+         authority: CliExecutableAuthorityV1,
+         arguments: [String]
+     ) {
+         lock.withLock {
+             invocationCountStorage += 1
+@@ -89,24 +96,86 @@ private struct HelpProbeProgressUnusedInspector:
+         throw BlockingProgressTestError.invalidChildEnvironment
+     }
+ 
+     func send(signal: Int32, processGroupId: Int32) throws {
+         throw BlockingProgressTestError.invalidChildEnvironment
+     }
+ 
+     func processGroupExists(_ processGroupId: Int32) throws -> Bool {
+         throw BlockingProgressTestError.invalidChildEnvironment
+     }
+ }
+ 
++private final class CliResumeSignalProgressInspector:
++    EngineRuntimeProcessInspectingV1, @unchecked Sendable
++{
++    private let lock = NSLock()
++    private let state: BlockingProgressState
++    private let readerOwner: HelpProbeProgressOwnedDescriptor
++    private var invocationCount = 0
++    private var observedSignal: Int32?
++    private var observedProcessGroupId: Int32?
++
++    init(
++        state: BlockingProgressState,
++        readerOwner: HelpProbeProgressOwnedDescriptor
++    ) {
++        self.state = state
++        self.readerOwner = readerOwner
++    }
++
++    func snapshots() throws -> [EngineRuntimeProcessSnapshotV1] {
++        throw BlockingProgressTestError.invalidChildEnvironment
++    }
++
++    func processGroupExists(_ processGroupId: Int32) throws -> Bool {
++        throw BlockingProgressTestError.invalidChildEnvironment
++    }
++
++    func send(signal: Int32, processGroupId: Int32) throws {
++        lock.withLock {
++            invocationCount += 1
++            observedSignal = signal
++            observedProcessGroupId = processGroupId
++        }
++        guard let ownedReader = readerOwner.take() else {
++            throw BlockingProgressTestError.setup([
++                "resume signal reader ownership lost",
++            ])
++        }
++        var byte: UInt8 = 0
++        state.markReadEntered()
++        var count: Int
++        repeat {
++            count = Darwin.read(ownedReader, &byte, 1)
++        } while count < 0 && errno == EINTR
++        let readError = count < 0 ? errno : nil
++        let closeResult = Darwin.close(ownedReader)
++        let closeError = closeResult == 0 ? nil : errno
++        state.recordRead(
++            count: count,
++            byte: byte,
++            errorNumber: readError,
++            closeError: closeError
++        )
++        throw CliResumeSignalProgressSentinel.blockedResume
++    }
++
++    var invocation: (count: Int, signal: Int32?, processGroupId: Int32?) {
++        lock.withLock {
++            (invocationCount, observedSignal, observedProcessGroupId)
++        }
++    }
++}
++
+ private struct BlockingProgressSnapshot: Sendable {
+     let readEntered: Bool
+     let siblingProgressed: Bool
+     let rescueUsed: Bool
+     let entryTimedOut: Bool
+     let readCount: Int?
+     let readByte: UInt8?
+     let readError: Int32?
+     let readerCloseError: Int32?
+     let writeCount: Int?
+     let writeError: Int32?
+     let writerCloseError: Int32?
+@@ -270,24 +339,46 @@ private func helpProbeProgressEvidenceURL(
+     guard evidence.standardizedFileURL.path == path,
+           evidence.lastPathComponent == "phases.evidence",
+           base.lastPathComponent.hasPrefix(prefix),
+           UUID(uuidString: String(
+               base.lastPathComponent.dropFirst(prefix.count)
+           )) != nil,
+           base.deletingLastPathComponent().standardizedFileURL
+             == FileManager.default.temporaryDirectory.standardizedFileURL
+     else { throw BlockingProgressTestError.invalidEvidencePath }
+     return evidence
+ }
+ 
++private func cliResumeSignalProgressEvidenceURL(
++    environment: [String: String]
++) throws -> URL {
++    guard let path = environment[cliResumeSignalProgressEvidenceKey],
++          path.hasPrefix("/"),
++          !path.utf8.contains(0)
++    else { throw BlockingProgressTestError.invalidEvidencePath }
++    let evidence = URL(fileURLWithPath: path)
++    let base = evidence.deletingLastPathComponent()
++    let prefix = cliResumeSignalProgressLabel + "-"
++    guard evidence.standardizedFileURL.path == path,
++          evidence.lastPathComponent == "phases.evidence",
++          base.lastPathComponent.hasPrefix(prefix),
++          UUID(uuidString: String(
++              base.lastPathComponent.dropFirst(prefix.count)
++          )) != nil,
++          base.deletingLastPathComponent().standardizedFileURL
++            == FileManager.default.temporaryDirectory.standardizedFileURL
++    else { throw BlockingProgressTestError.invalidEvidencePath }
++    return evidence
++}
++
+ private func helpProbeProgressAuthority(
+     base: URL
+ ) throws -> CliExecutableAuthorityV1 {
+     let executable = base.appendingPathComponent("validated-not-executed")
+     let bytes = Data("help-probe fixture must not execute\n".utf8)
+     try bytes.write(to: executable, options: .withoutOverwriting)
+     guard Darwin.chmod(executable.path, 0o700) == 0 else {
+         throw BlockingProgressTestError.setup([
+             "chmod fixture errno=\(errno)",
+         ])
+     }
+     var information = stat()
+@@ -328,93 +419,108 @@ private func closeBlockingProgressSetupDescriptors(
+         if Darwin.close(descriptor) != 0 {
+             failures.append("close \(label) errno=\(errno)")
+         }
+         if label == "read" {
+             readDescriptor = -1
+         } else {
+             writeDescriptor = -1
+         }
+     }
+     throw BlockingProgressTestError.setup(failures)
+ }
+ 
+-private func runBlockingProgressChild(evidence: URL) async throws {
+-    var descriptors = [Int32](repeating: -1, count: 2)
+-    guard Darwin.pipe(&descriptors) == 0 else {
+-        throw BlockingProgressTestError.setup(["pipe errno=\(errno)"])
+-    }
+-    var readDescriptor = descriptors[0]
+-    var writeDescriptor = descriptors[1]
+-    guard Darwin.fcntl(writeDescriptor, F_SETNOSIGPIPE, 1) == 0 else {
+-        try closeBlockingProgressSetupDescriptors(
+-            readDescriptor: &readDescriptor,
+-            writeDescriptor: &writeDescriptor,
+-            primary: "F_SETNOSIGPIPE errno=\(errno)"
+-        )
+-    }
+-
+-    let state = BlockingProgressState()
+-    let ownedWriter = writeDescriptor
+-    writeDescriptor = -1
++private func startBlockingProgressController(
++    state: BlockingProgressState,
++    ownedWriter: Int32,
++    releaseByte: UInt8,
++    name: String
++) -> Thread {
+     let controller = Thread {
+         let entryDeadline = ContinuousClock.now.advanced(by: .seconds(5))
+         while !state.hasReadEntered(), ContinuousClock.now < entryDeadline {
+             Thread.sleep(forTimeInterval: 0.001)
+         }
+ 
+         if state.hasReadEntered() {
+             let sibling = Task.detached {
+                 state.markSiblingProgressed()
+             }
+             state.retainSiblingTask(sibling)
+             let progressDeadline = ContinuousClock.now.advanced(
+                 by: .seconds(1)
+             )
+             while !state.hasSiblingProgressed(),
+                   ContinuousClock.now < progressDeadline
+             {
+                 Thread.sleep(forTimeInterval: 0.001)
+             }
+             if !state.hasSiblingProgressed() {
+                 state.markRescueUsed()
+             }
+ 
+-            var byte: UInt8 = 0xA5
++            var byte = releaseByte
+             var written: Int
+             repeat {
+                 written = Darwin.write(ownedWriter, &byte, 1)
+             } while written < 0 && errno == EINTR
+             let writeError = written < 0 ? errno : nil
+             let closeResult = Darwin.close(ownedWriter)
+             let closeError = closeResult == 0 ? nil : errno
+             state.recordWrite(
+                 count: written,
+                 errorNumber: writeError,
+                 closeError: closeError
+             )
+         } else {
+             state.markEntryTimedOut()
+             let closeResult = Darwin.close(ownedWriter)
+             let closeError = closeResult == 0 ? nil : errno
+             state.recordWrite(
+                 count: nil,
+                 errorNumber: nil,
+                 closeError: closeError
+             )
+         }
+         state.completeController()
+     }
+-    controller.name = "AgentLoop.test.blocking-process-controller"
++    controller.name = name
+     controller.qualityOfService = .utility
+     controller.start()
++    return controller
++}
++
++private func runBlockingProgressChild(evidence: URL) async throws {
++    var descriptors = [Int32](repeating: -1, count: 2)
++    guard Darwin.pipe(&descriptors) == 0 else {
++        throw BlockingProgressTestError.setup(["pipe errno=\(errno)"])
++    }
++    var readDescriptor = descriptors[0]
++    var writeDescriptor = descriptors[1]
++    guard Darwin.fcntl(writeDescriptor, F_SETNOSIGPIPE, 1) == 0 else {
++        try closeBlockingProgressSetupDescriptors(
++            readDescriptor: &readDescriptor,
++            writeDescriptor: &writeDescriptor,
++            primary: "F_SETNOSIGPIPE errno=\(errno)"
++        )
++    }
++
++    let state = BlockingProgressState()
++    let ownedWriter = writeDescriptor
++    writeDescriptor = -1
++    let controller = startBlockingProgressController(
++        state: state,
++        ownedWriter: ownedWriter,
++        releaseByte: 0xA5,
++        name: "AgentLoop.test.blocking-process-controller"
++    )
+ 
+     let ownedReader = readDescriptor
+     readDescriptor = -1
+     let operationTask = BlockingProcessOperation.start {
+         var byte: UInt8 = 0
+         state.markReadEntered()
+         var count: Int
+         repeat {
+             count = Darwin.read(ownedReader, &byte, 1)
+         } while count < 0 && errno == EINTR
+         let readError = count < 0 ? errno : nil
+         let closeResult = Darwin.close(ownedReader)
+@@ -422,24 +528,25 @@ private func runBlockingProgressChild(evidence: URL) async throws {
+         state.recordRead(
+             count: count,
+             byte: byte,
+             errorNumber: readError,
+             closeError: closeError
+         )
+         return count
+     }
+     operationTask.cancel()
+     let cancellationObserved = operationTask.isCancelled
+     let operationResult = await operationTask.value
+     await state.waitForControllerCompletion()
++    withExtendedLifetime(controller) {}
+     if let siblingTask = state.retainedSiblingTask() {
+         await siblingTask.value
+     }
+     let snapshot = state.snapshot()
+     print(
+         "BLOCKING PROGRESS PHASES "
+             + "cancelled=\(cancellationObserved) "
+             + "operation=\(operationResult) "
+             + "entered=\(snapshot.readEntered) "
+             + "sibling=\(snapshot.siblingProgressed) "
+             + "rescue=\(snapshot.rescueUsed) "
+             + "entry-timeout=\(snapshot.entryTimedOut) "
+@@ -486,75 +593,30 @@ private func runHelpProbeProgressChild(evidence: URL) async throws {
+     guard Darwin.fcntl(writeDescriptor, F_SETNOSIGPIPE, 1) == 0 else {
+         try closeBlockingProgressSetupDescriptors(
+             readDescriptor: &readDescriptor,
+             writeDescriptor: &writeDescriptor,
+             primary: "F_SETNOSIGPIPE errno=\(errno)"
+         )
+     }
+ 
+     let state = BlockingProgressState()
+     let observation = HelpProbeProgressObservation()
+     let ownedWriter = writeDescriptor
+     writeDescriptor = -1
+-    let controller = Thread {
+-        let entryDeadline = ContinuousClock.now.advanced(by: .seconds(5))
+-        while !state.hasReadEntered(), ContinuousClock.now < entryDeadline {
+-            Thread.sleep(forTimeInterval: 0.001)
+-        }
+-
+-        if state.hasReadEntered() {
+-            let sibling = Task.detached {
+-                state.markSiblingProgressed()
+-            }
+-            state.retainSiblingTask(sibling)
+-            let progressDeadline = ContinuousClock.now.advanced(
+-                by: .seconds(1)
+-            )
+-            while !state.hasSiblingProgressed(),
+-                  ContinuousClock.now < progressDeadline
+-            {
+-                Thread.sleep(forTimeInterval: 0.001)
+-            }
+-            if !state.hasSiblingProgressed() {
+-                state.markRescueUsed()
+-            }
+-
+-            var byte: UInt8 = 0xC7
+-            var written: Int
+-            repeat {
+-                written = Darwin.write(ownedWriter, &byte, 1)
+-            } while written < 0 && errno == EINTR
+-            let writeError = written < 0 ? errno : nil
+-            let closeResult = Darwin.close(ownedWriter)
+-            let closeError = closeResult == 0 ? nil : errno
+-            state.recordWrite(
+-                count: written,
+-                errorNumber: writeError,
+-                closeError: closeError
+-            )
+-        } else {
+-            state.markEntryTimedOut()
+-            let closeResult = Darwin.close(ownedWriter)
+-            let closeError = closeResult == 0 ? nil : errno
+-            state.recordWrite(
+-                count: nil,
+-                errorNumber: nil,
+-                closeError: closeError
+-            )
+-        }
+-        state.completeController()
+-    }
+-    controller.name = "AgentLoop.test.help-probe-controller"
+-    controller.qualityOfService = .utility
+-    controller.start()
++    let controller = startBlockingProgressController(
++        state: state,
++        ownedWriter: ownedWriter,
++        releaseByte: 0xC7,
++        name: "AgentLoop.test.help-probe-controller"
++    )
+ 
+     let readerOwner = HelpProbeProgressOwnedDescriptor(readDescriptor)
+     readDescriptor = -1
+     let probe = CliHelpProbeV1(
+         processInspector: HelpProbeProgressUnusedInspector(),
+         synchronousRunner: { observedAuthority, arguments in
+             observation.record(
+                 authority: observedAuthority,
+                 arguments: arguments
+             )
+             guard let ownedReader = readerOwner.take() else {
+                 throw BlockingProgressTestError.setup([
+@@ -577,24 +639,25 @@ private func runHelpProbeProgressChild(evidence: URL) async throws {
+                 closeError: closeError
+             )
+             throw HelpProbeProgressSentinel.blockedVersionRun
+         }
+     )
+     let snapshotTask = Task {
+         try await probe.snapshot(for: .cliCodex, authority: authority)
+     }
+     snapshotTask.cancel()
+     let cancellationObserved = snapshotTask.isCancelled
+     let result = await snapshotTask.result
+     await state.waitForControllerCompletion()
++    withExtendedLifetime(controller) {}
+     if let siblingTask = state.retainedSiblingTask() {
+         await siblingTask.value
+     }
+     let abandonedReaderCloseError = readerOwner.closeIfOwned()
+     let snapshot = state.snapshot()
+     let invocation = observation.snapshot
+     print(
+         "HELP PROBE PROGRESS PHASES "
+             + "cancelled=\(cancellationObserved) "
+             + "invocations=\(invocation.invocationCount) "
+             + "arguments=\(String(describing: invocation.arguments)) "
+             + "entered=\(snapshot.readEntered) "
+@@ -635,24 +698,125 @@ private func runHelpProbeProgressChild(evidence: URL) async throws {
+     try #require(snapshot.writeCount == 1)
+     try #require(snapshot.writeError == nil)
+     try #require(snapshot.writerCloseError == nil)
+     try #require(snapshot.siblingProgressed)
+     try #require(snapshot.controllerCompleted)
+     try #require(!snapshot.rescueUsed)
+     try Data("help-probe-progress-ok\n".utf8).write(
+         to: evidence,
+         options: .withoutOverwriting
+     )
+ }
+ 
++private func runCliResumeSignalProgressChild(evidence: URL) async throws {
++    var descriptors = [Int32](repeating: -1, count: 2)
++    guard Darwin.pipe(&descriptors) == 0 else {
++        throw BlockingProgressTestError.setup(["pipe errno=\(errno)"])
++    }
++    var readDescriptor = descriptors[0]
++    var writeDescriptor = descriptors[1]
++    guard Darwin.fcntl(writeDescriptor, F_SETNOSIGPIPE, 1) == 0 else {
++        try closeBlockingProgressSetupDescriptors(
++            readDescriptor: &readDescriptor,
++            writeDescriptor: &writeDescriptor,
++            primary: "F_SETNOSIGPIPE errno=\(errno)"
++        )
++    }
++
++    let state = BlockingProgressState()
++    let readerOwner = HelpProbeProgressOwnedDescriptor(readDescriptor)
++    readDescriptor = -1
++    let inspector = CliResumeSignalProgressInspector(
++        state: state,
++        readerOwner: readerOwner
++    )
++    let ownedWriter = writeDescriptor
++    writeDescriptor = -1
++    let controller = startBlockingProgressController(
++        state: state,
++        ownedWriter: ownedWriter,
++        releaseByte: 0xD3,
++        name: "AgentLoop.test.cli-resume-signal-controller"
++    )
++    let signalTask = Task {
++        try await CliProcessSignalOperationV1.send(
++            signal: SIGCONT,
++            processGroupId: 31415,
++            using: inspector
++        )
++    }
++    signalTask.cancel()
++    let cancellationObserved = signalTask.isCancelled
++    let result = await signalTask.result
++    await state.waitForControllerCompletion()
++    withExtendedLifetime(controller) {}
++    if let siblingTask = state.retainedSiblingTask() {
++        await siblingTask.value
++    }
++    let abandonedReaderCloseError = readerOwner.closeIfOwned()
++    let snapshot = state.snapshot()
++    let invocation = inspector.invocation
++    print(
++        "CLI RESUME SIGNAL PROGRESS PHASES "
++            + "cancelled=\(cancellationObserved) "
++            + "invocations=\(invocation.count) "
++            + "signal=\(String(describing: invocation.signal)) "
++            + "group=\(String(describing: invocation.processGroupId)) "
++            + "entered=\(snapshot.readEntered) "
++            + "sibling=\(snapshot.siblingProgressed) "
++            + "rescue=\(snapshot.rescueUsed) "
++            + "entry-timeout=\(snapshot.entryTimedOut) "
++            + "read=\(String(describing: snapshot.readCount)) "
++            + "read-byte=\(String(describing: snapshot.readByte)) "
++            + "read-errno=\(String(describing: snapshot.readError)) "
++            + "read-close-errno=\(String(describing: snapshot.readerCloseError)) "
++            + "write=\(String(describing: snapshot.writeCount)) "
++            + "write-errno=\(String(describing: snapshot.writeError)) "
++            + "write-close-errno=\(String(describing: snapshot.writerCloseError)) "
++            + "controller=\(snapshot.controllerCompleted)"
++    )
++
++    try #require(cancellationObserved)
++    try #require(abandonedReaderCloseError == nil)
++    try #require(invocation.count == 1)
++    try #require(invocation.signal == SIGCONT)
++    try #require(invocation.processGroupId == 31415)
++    switch result {
++    case .success:
++        throw BlockingProgressTestError.setup([
++            "injected resume signal unexpectedly succeeded",
++        ])
++    case .failure(let error):
++        try #require(
++            error as? CliResumeSignalProgressSentinel == .blockedResume
++        )
++    }
++    try #require(snapshot.readEntered)
++    try #require(!snapshot.entryTimedOut)
++    try #require(snapshot.readCount == 1)
++    try #require(snapshot.readByte == 0xD3)
++    try #require(snapshot.readError == nil)
++    try #require(snapshot.readerCloseError == nil)
++    try #require(snapshot.writeCount == 1)
++    try #require(snapshot.writeError == nil)
++    try #require(snapshot.writerCloseError == nil)
++    try #require(snapshot.siblingProgressed)
++    try #require(snapshot.controllerCompleted)
++    try #require(!snapshot.rescueUsed)
++    try Data("cli-resume-signal-progress-ok\n".utf8).write(
++        to: evidence,
++        options: .withoutOverwriting
++    )
++}
++
+ @Test func blockingProcessOperationPreservesCooperativeProgress() async throws {
+     let environment = ProcessInfo.processInfo.environment
+     if environment[blockingProgressEvidenceKey] != nil {
+         guard environment["LIBDISPATCH_COOPERATIVE_POOL_STRICT"] == "1"
+         else { throw BlockingProgressTestError.invalidChildEnvironment }
+         try await runBlockingProgressChild(
+             evidence: try blockingProgressEvidenceURL(environment: environment)
+         )
+         return
+     }
+     guard environment["LIBDISPATCH_COOPERATIVE_POOL_STRICT"] == nil
+     else { throw BlockingProgressTestError.invalidChildEnvironment }
+@@ -682,12 +846,37 @@ private func runHelpProbeProgressChild(evidence: URL) async throws {
+     guard environment["LIBDISPATCH_COOPERATIVE_POOL_STRICT"] == nil
+     else { throw BlockingProgressTestError.invalidChildEnvironment }
+     try await runOwnedSelfExecTest(OwnedSelfExecTestRequest(
+         label: helpProbeProgressLabel,
+         filter: "cliHelpProbeSnapshotPreservesCooperativeProgress",
+         modeEnvironmentKey: "LIBDISPATCH_COOPERATIVE_POOL_STRICT",
+         mode: "1",
+         evidenceEnvironmentKey: helpProbeProgressEvidenceKey,
+         expectedEvidence: Data("help-probe-progress-ok\n".utf8),
+         containment: .seconds(15)
+     ))
+ }
++
++@Test func cliResumeSignalPreservesCooperativeProgress() async throws {
++    let environment = ProcessInfo.processInfo.environment
++    if environment[cliResumeSignalProgressEvidenceKey] != nil {
++        guard environment["LIBDISPATCH_COOPERATIVE_POOL_STRICT"] == "1"
++        else { throw BlockingProgressTestError.invalidChildEnvironment }
++        try await runCliResumeSignalProgressChild(
++            evidence: try cliResumeSignalProgressEvidenceURL(
++                environment: environment
++            )
++        )
++        return
++    }
++    guard environment["LIBDISPATCH_COOPERATIVE_POOL_STRICT"] == nil
++    else { throw BlockingProgressTestError.invalidChildEnvironment }
++    try await runOwnedSelfExecTest(OwnedSelfExecTestRequest(
++        label: cliResumeSignalProgressLabel,
++        filter: "cliResumeSignalPreservesCooperativeProgress",
++        modeEnvironmentKey: "LIBDISPATCH_COOPERATIVE_POOL_STRICT",
++        mode: "1",
++        evidenceEnvironmentKey: cliResumeSignalProgressEvidenceKey,
++        expectedEvidence: Data("cli-resume-signal-progress-ok\n".utf8),
++        containment: .seconds(15)
++    ))
++}

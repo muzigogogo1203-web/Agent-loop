@@ -1,0 +1,150 @@
+diff --git a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cli-provenance-before/CliEngineAdapter.swift b/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift
+index 62434a5..5638198 100644
+--- a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cli-provenance-before/CliEngineAdapter.swift
++++ b/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift
+@@ -3312,6 +3312,7 @@ private final class CliEngineAdapterGenerationV1: @unchecked Sendable {
+     ] = []
+     private var authority: TerminalAuthority = .open
+     private var cancellationOwner: CancellationOwnerState = .none
++    private var failureBeforeOuterCancellation: (any Error)?
+ 
+     init(executionId: String) {
+         self.executionId = executionId
+@@ -3463,14 +3464,29 @@ private final class CliEngineAdapterGenerationV1: @unchecked Sendable {
+         }
+     }
+ 
+-    func publishOutcome(_ result: Result<Void, any Error>) {
++    func recordFailureBeforeOuterCancellation(_ error: any Error) {
++        guard !(error is CancellationError) else { return }
++        lock.withLock {
++            guard case .cancellation = authority,
++                  outcome == nil,
++                  failureBeforeOuterCancellation == nil
++            else { return }
++            failureBeforeOuterCancellation = error
++        }
++    }
++
++    func publishOutcome(
++        _ result: Result<Void, any Error>,
++        outerTaskIsCancelled: Bool
++    ) -> Result<Void, any Error> {
+         let waiters = lock.withLock { () -> (
+             launch: [CheckedContinuation<LaunchResolution, Never>],
+             task: [CheckedContinuation<Task<Void, Error>?, Never>],
+             outcome: [
+                 CheckedContinuation<Result<Void, any Error>, Never>
+             ],
+-            launchResolution: LaunchResolution
++            launchResolution: LaunchResolution,
++            result: Result<Void, any Error>
+         ) in
+             guard outcome == nil else {
+                 preconditionFailure("duplicate CLI generation outcome")
+@@ -3490,7 +3506,18 @@ private final class CliEngineAdapterGenerationV1: @unchecked Sendable {
+             case .launchReturned: phase = .terminal
+             case .unlaunched: phase = .unlaunched
+             }
+-            outcome = result
++            let selectedResult: Result<Void, any Error>
++            if case let .failure(error) = result,
++               error is CancellationError,
++               outerTaskIsCancelled,
++               let failureBeforeOuterCancellation
++            {
++                selectedResult = .failure(failureBeforeOuterCancellation)
++            } else {
++                selectedResult = result
++            }
++            outcome = selectedResult
++            self.failureBeforeOuterCancellation = nil
+             if !hasCancellationOwnerLocked()
+                 || outerTaskLoadedForCancellation
+             {
+@@ -3502,13 +3529,20 @@ private final class CliEngineAdapterGenerationV1: @unchecked Sendable {
+             outerTaskWaiters.removeAll()
+             let outcome = outcomeWaiters
+             outcomeWaiters.removeAll()
+-            return (launch, task, outcome, launchResolution)
++            return (
++                launch,
++                task,
++                outcome,
++                launchResolution,
++                selectedResult
++            )
+         }
+         waiters.launch.forEach {
+             $0.resume(returning: waiters.launchResolution)
+         }
+         waiters.task.forEach { $0.resume(returning: nil) }
+-        waiters.outcome.forEach { $0.resume(returning: result) }
++        waiters.outcome.forEach { $0.resume(returning: waiters.result) }
++        return waiters.result
+     }
+ 
+     func snapshotOutcome() -> Result<Void, any Error>? {
+@@ -3781,15 +3815,20 @@ private final class CliEngineAdapterTaskRegistryV1: @unchecked Sendable {
+     func publishOutcome(
+         executionId: String,
+         generation: CliEngineAdapterGenerationV1,
+-        result: Result<Void, any Error>
+-    ) {
+-        generation.publishOutcome(result)
++        result: Result<Void, any Error>,
++        outerTaskIsCancelled: Bool
++    ) -> Result<Void, any Error> {
++        let selectedResult = generation.publishOutcome(
++            result,
++            outerTaskIsCancelled: outerTaskIsCancelled
++        )
+         lock.withLock {
+             guard let entry = entries[executionId],
+                   entry.generation === generation
+             else { return }
+             retireIfEligibleLocked(executionId: executionId, entry: entry)
+         }
++        return selectedResult
+     }
+ 
+     func claimCancellation(
+@@ -4060,7 +4099,7 @@ package struct CliEngineAdapter: ExecutionEngineAdapter {
+             let gate = CliEngineAdapterPublicationGateV1()
+             let task = Task {
+                 await gate.waitUntilOpened()
+-                let result: Result<Void, any Error>
++                let rawResult: Result<Void, any Error>
+                 do {
+                     let effectiveSessionRef = try effectiveSessionReference(
+                         for: request
+@@ -4071,14 +4110,15 @@ package struct CliEngineAdapter: ExecutionEngineAdapter {
+                         generation: generation,
+                         continuation: continuation
+                     )
+-                    result = .success(())
++                    rawResult = .success(())
+                 } catch {
+-                    result = .failure(error)
++                    rawResult = .failure(error)
+                 }
+-                taskRegistry.publishOutcome(
++                let result = taskRegistry.publishOutcome(
+                     executionId: request.executionId,
+                     generation: generation,
+-                    result: result
++                    result: rawResult,
++                    outerTaskIsCancelled: Task.isCancelled
+                 )
+                 cancellationLifecycleObserver(.outcomePublished)
+                 if case let .failure(error) = result {
+@@ -4147,6 +4187,9 @@ package struct CliEngineAdapter: ExecutionEngineAdapter {
+             } catch {
+                 firstError = error
+             }
++            if let firstError {
++                generation.recordFailureBeforeOuterCancellation(firstError)
++            }
+             outerTask?.cancel()
+         }
+ 

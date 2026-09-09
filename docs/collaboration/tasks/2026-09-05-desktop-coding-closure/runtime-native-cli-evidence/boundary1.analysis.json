@@ -1,0 +1,1446 @@
+{
+  "admitted": true,
+  "pid": 87977,
+  "total_events": 2562,
+  "statistics": [
+    {
+      "count": 2562,
+      "finished": 1
+    }
+  ],
+  "errors": [
+
+  ],
+  "workload_exit": 1,
+  "raw_sha256": "13d584a8ac084ceefaa3b01388aaf7653a9244fff47476344aa2db0c37014cdd",
+  "timelines": [
+    {
+      "execution": "00000000-0000-4000-8000-000000000346",
+      "recorder": "7F562334-FF20-4D9C-A513-C03AF042B564",
+      "pid": 88025,
+      "backend": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+      "events": [
+        {
+          "line": 28,
+          "stage": "cliFixtureLaunchCalled",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177327721364791,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:48.056321+0800",
+          "seconds_from_ready_start": -4.1709e-05
+        },
+        {
+          "line": 29,
+          "stage": "cliRunQueued",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177327721384750,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:48.056339+0800",
+          "seconds_from_ready_start": -2.175e-05
+        },
+        {
+          "line": 30,
+          "stage": "cliFixtureLaunchReturned",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177327721393708,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:48.056348+0800",
+          "seconds_from_ready_start": -1.2792e-05
+        },
+        {
+          "line": 31,
+          "stage": "cliFixtureConsumerQueued",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177327721395833,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:48.056350+0800",
+          "seconds_from_ready_start": -1.0667e-05
+        },
+        {
+          "line": 32,
+          "stage": "cliFixtureBodyStarted",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177327721399666,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:48.056353+0800",
+          "seconds_from_ready_start": -6.834e-06
+        },
+        {
+          "line": 33,
+          "stage": "cliFixtureReadyAwaitQueued",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177327721402833,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:48.056357+0800",
+          "seconds_from_ready_start": -3.667e-06
+        },
+        {
+          "line": 34,
+          "stage": "cliFixtureReadyWaitStarted",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177327721406500,
+          "value": 3000,
+          "timestamp": "2026-09-09 01:07:48.056360+0800",
+          "seconds_from_ready_start": 0.0
+        },
+        {
+          "line": 122,
+          "stage": "cliRunStarted",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332398007375,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.732965+0800",
+          "seconds_from_ready_start": 4.676600875
+        },
+        {
+          "line": 123,
+          "stage": "cliLaunchInputsValidated",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332399297791,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.734254+0800",
+          "seconds_from_ready_start": 4.677891291
+        },
+        {
+          "line": 124,
+          "stage": "cliEnvironmentRequested",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332399303291,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.734257+0800",
+          "seconds_from_ready_start": 4.677896791
+        },
+        {
+          "line": 125,
+          "stage": "cliEnvironmentReady",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332399311666,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.734265+0800",
+          "seconds_from_ready_start": 4.677905166
+        },
+        {
+          "line": 126,
+          "stage": "cliEnvironmentValidated",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332399389000,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.734343+0800",
+          "seconds_from_ready_start": 4.6779825
+        },
+        {
+          "line": 127,
+          "stage": "cliBoardStartCalled",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332399664916,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.734619+0800",
+          "seconds_from_ready_start": 4.678258416
+        },
+        {
+          "line": 129,
+          "stage": "cliBoardStartReturned",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332399852083,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.734806+0800",
+          "seconds_from_ready_start": 4.678445583
+        },
+        {
+          "line": 130,
+          "stage": "cliSpawnPreparationStarted",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332399861875,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.734816+0800",
+          "seconds_from_ready_start": 4.678455375
+        },
+        {
+          "line": 132,
+          "stage": "cliPosixSpawnCalled",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332399912166,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.734866+0800",
+          "seconds_from_ready_start": 4.678505666
+        },
+        {
+          "line": 133,
+          "stage": "cliSpawned",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332400226916,
+          "value": 88025,
+          "timestamp": "2026-09-09 01:07:52.735181+0800",
+          "seconds_from_ready_start": 4.678820416
+        },
+        {
+          "line": 134,
+          "stage": "cliSuspendedValidationCalled",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332400230708,
+          "value": 88025,
+          "timestamp": "2026-09-09 01:07:52.735184+0800",
+          "seconds_from_ready_start": 4.678824208
+        },
+        {
+          "line": 135,
+          "stage": "cliSuspendedValidationReturned",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332400331625,
+          "value": 88025,
+          "timestamp": "2026-09-09 01:07:52.735285+0800",
+          "seconds_from_ready_start": 4.678925125
+        },
+        {
+          "line": 136,
+          "stage": "cliReapTaskQueued",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332400335541,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.735289+0800",
+          "seconds_from_ready_start": 4.678929041
+        },
+        {
+          "line": 137,
+          "stage": "cliStdoutTaskQueued",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332400341000,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.735295+0800",
+          "seconds_from_ready_start": 4.6789345
+        },
+        {
+          "line": 138,
+          "stage": "cliStderrTaskQueued",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332400344000,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.735298+0800",
+          "seconds_from_ready_start": 4.6789375
+        },
+        {
+          "line": 139,
+          "stage": "cliSIGCONTCalled",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332400347083,
+          "value": 88025,
+          "timestamp": "2026-09-09 01:07:52.735301+0800",
+          "seconds_from_ready_start": 4.678940583
+        },
+        {
+          "line": 145,
+          "stage": "cliSIGCONTReturned",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177332400369000,
+          "value": 88025,
+          "timestamp": "2026-09-09 01:07:52.735323+0800",
+          "seconds_from_ready_start": 4.6789625
+        },
+        {
+          "line": 146,
+          "stage": "cliFixtureConsumerStarted",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177332400385541,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.735339+0800",
+          "seconds_from_ready_start": 4.678979041
+        },
+        {
+          "line": 217,
+          "stage": "cliStdoutTaskStarted",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177333301905333,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.636862+0800",
+          "seconds_from_ready_start": 5.580498833
+        },
+        {
+          "line": 218,
+          "stage": "cliStdoutDrainEntered",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177333301912083,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.636866+0800",
+          "seconds_from_ready_start": 5.580505583
+        },
+        {
+          "line": 219,
+          "stage": "cliStderrTaskStarted",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177333301921708,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.636877+0800",
+          "seconds_from_ready_start": 5.580515208
+        },
+        {
+          "line": 220,
+          "stage": "cliFinalizeStarted",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177333301943750,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.636898+0800",
+          "seconds_from_ready_start": 5.58053725
+        },
+        {
+          "line": 221,
+          "stage": "cliStdinFinished",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177333301946583,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.636900+0800",
+          "seconds_from_ready_start": 5.580540083
+        },
+        {
+          "line": 222,
+          "stage": "cliFixtureReadyWaitEnded",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177333301958833,
+          "value": 3,
+          "timestamp": "2026-09-09 01:07:53.636913+0800",
+          "seconds_from_ready_start": 5.580552333
+        },
+        {
+          "line": 223,
+          "stage": "cliReapTaskStarted",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177333302222833,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.637178+0800",
+          "seconds_from_ready_start": 5.580816333
+        },
+        {
+          "line": 253,
+          "stage": "cliWaitpidReturned",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177333826492416,
+          "value": 88025,
+          "timestamp": "2026-09-09 01:07:54.161448+0800",
+          "seconds_from_ready_start": 6.105085916
+        },
+        {
+          "line": 273,
+          "stage": "cliReaped",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177334353278416,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.688236+0800",
+          "seconds_from_ready_start": 6.631871916
+        },
+        {
+          "line": 274,
+          "stage": "cliStdoutFinished",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177334353286666,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.688241+0800",
+          "seconds_from_ready_start": 6.631880166
+        },
+        {
+          "line": 275,
+          "stage": "cliStderrFinished",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177334353289000,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.688243+0800",
+          "seconds_from_ready_start": 6.6318825
+        },
+        {
+          "line": 276,
+          "stage": "cliServerStopStarted",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177334353298458,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.688252+0800",
+          "seconds_from_ready_start": 6.631891958
+        },
+        {
+          "line": 317,
+          "stage": "cliServerStopFinished",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177334893813416,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:55.228772+0800",
+          "seconds_from_ready_start": 7.172406916
+        },
+        {
+          "line": 318,
+          "stage": "cliFinalizeFinished",
+          "owner": "8BFE86F2-E7E6-4DAC-BB3D-517A83F21ED5",
+          "mono": 177334893842458,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:55.228796+0800",
+          "seconds_from_ready_start": 7.172435958
+        },
+        {
+          "line": 344,
+          "stage": "cliFixtureStreamFinished",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177335914543791,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:56.249498+0800",
+          "seconds_from_ready_start": 8.193137291
+        },
+        {
+          "line": 400,
+          "stage": "cliFixtureConsumerJoined",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177336531609916,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:56.866565+0800",
+          "seconds_from_ready_start": 8.810203416
+        },
+        {
+          "line": 401,
+          "stage": "cliFixtureCancellationPID",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177336531650875,
+          "value": 88025,
+          "timestamp": "2026-09-09 01:07:56.866605+0800",
+          "seconds_from_ready_start": 8.810244375
+        },
+        {
+          "line": 402,
+          "stage": "cliFixtureCancellationGroup",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177336531654500,
+          "value": 88025,
+          "timestamp": "2026-09-09 01:07:56.866608+0800",
+          "seconds_from_ready_start": 8.810248
+        },
+        {
+          "line": 403,
+          "stage": "cliFixtureCancellationStatus",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177336531656625,
+          "value": 143,
+          "timestamp": "2026-09-09 01:07:56.866610+0800",
+          "seconds_from_ready_start": 8.810250125
+        },
+        {
+          "line": 404,
+          "stage": "cliFixtureTermSent",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177336531658541,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:56.866612+0800",
+          "seconds_from_ready_start": 8.810252041
+        },
+        {
+          "line": 405,
+          "stage": "cliFixtureKillSent",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177336531660458,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:56.866614+0800",
+          "seconds_from_ready_start": 8.810253958
+        },
+        {
+          "line": 406,
+          "stage": "cliFixtureChildReaped",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177336531662458,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:56.866616+0800",
+          "seconds_from_ready_start": 8.810255958
+        },
+        {
+          "line": 407,
+          "stage": "cliFixtureStdoutEOF",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177336531664208,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:56.866618+0800",
+          "seconds_from_ready_start": 8.810257708
+        },
+        {
+          "line": 408,
+          "stage": "cliFixtureStderrEOF",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177336531666000,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:56.866620+0800",
+          "seconds_from_ready_start": 8.8102595
+        },
+        {
+          "line": 409,
+          "stage": "cliFixtureCancellationState",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177336531668625,
+          "value": 2,
+          "timestamp": "2026-09-09 01:07:56.866622+0800",
+          "seconds_from_ready_start": 8.810262125
+        },
+        {
+          "line": 410,
+          "stage": "cliFixtureExitFrameCount",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177336531674875,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:56.866629+0800",
+          "seconds_from_ready_start": 8.810268375
+        },
+        {
+          "line": 411,
+          "stage": "cliFixtureExitFrameStatus",
+          "owner": "7F562334-FF20-4D9C-A513-C03AF042B564",
+          "mono": 177336531677625,
+          "value": 143,
+          "timestamp": "2026-09-09 01:07:56.866631+0800",
+          "seconds_from_ready_start": 8.810271125
+        }
+      ]
+    },
+    {
+      "execution": "00000000-0000-4000-8000-000000000372",
+      "recorder": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+      "pid": 88018,
+      "backend": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+      "events": [
+        {
+          "line": 1,
+          "stage": "cliFixtureLaunchCalled",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177322728352416,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:43.063316+0800",
+          "seconds_from_ready_start": -0.001500375
+        },
+        {
+          "line": 2,
+          "stage": "cliRunQueued",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177322729800291,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:43.064756+0800",
+          "seconds_from_ready_start": -5.25e-05
+        },
+        {
+          "line": 3,
+          "stage": "cliFixtureLaunchReturned",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177322729815500,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:43.064769+0800",
+          "seconds_from_ready_start": -3.7291e-05
+        },
+        {
+          "line": 4,
+          "stage": "cliFixtureConsumerQueued",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177322729818583,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:43.064772+0800",
+          "seconds_from_ready_start": -3.4208e-05
+        },
+        {
+          "line": 5,
+          "stage": "cliFixtureBodyStarted",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177322729834666,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:43.064789+0800",
+          "seconds_from_ready_start": -1.8125e-05
+        },
+        {
+          "line": 6,
+          "stage": "cliFixtureReadyAwaitQueued",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177322729846125,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:43.064800+0800",
+          "seconds_from_ready_start": -6.666e-06
+        },
+        {
+          "line": 7,
+          "stage": "cliFixtureReadyWaitStarted",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177322729852791,
+          "value": 3000,
+          "timestamp": "2026-09-09 01:07:43.064807+0800",
+          "seconds_from_ready_start": 0.0
+        },
+        {
+          "line": 44,
+          "stage": "cliRunStarted",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331941535166,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.276491+0800",
+          "seconds_from_ready_start": 9.211682375
+        },
+        {
+          "line": 45,
+          "stage": "cliLaunchInputsValidated",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331942846708,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.277803+0800",
+          "seconds_from_ready_start": 9.212993917
+        },
+        {
+          "line": 46,
+          "stage": "cliEnvironmentRequested",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331942859166,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.277813+0800",
+          "seconds_from_ready_start": 9.213006375
+        },
+        {
+          "line": 47,
+          "stage": "cliEnvironmentReady",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331942871791,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.277826+0800",
+          "seconds_from_ready_start": 9.213019
+        },
+        {
+          "line": 48,
+          "stage": "cliEnvironmentValidated",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331943051625,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.278006+0800",
+          "seconds_from_ready_start": 9.213198834
+        },
+        {
+          "line": 49,
+          "stage": "cliBoardStartCalled",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331943426833,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.278382+0800",
+          "seconds_from_ready_start": 9.213574042
+        },
+        {
+          "line": 51,
+          "stage": "cliBoardStartReturned",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331943659166,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.278613+0800",
+          "seconds_from_ready_start": 9.213806375
+        },
+        {
+          "line": 52,
+          "stage": "cliSpawnPreparationStarted",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331943664208,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.278618+0800",
+          "seconds_from_ready_start": 9.213811417
+        },
+        {
+          "line": 53,
+          "stage": "cliPosixSpawnCalled",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331943715333,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.278669+0800",
+          "seconds_from_ready_start": 9.213862542
+        },
+        {
+          "line": 55,
+          "stage": "cliSpawned",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331944077291,
+          "value": 88018,
+          "timestamp": "2026-09-09 01:07:52.279031+0800",
+          "seconds_from_ready_start": 9.2142245
+        },
+        {
+          "line": 56,
+          "stage": "cliSuspendedValidationCalled",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331944081583,
+          "value": 88018,
+          "timestamp": "2026-09-09 01:07:52.279035+0800",
+          "seconds_from_ready_start": 9.214228792
+        },
+        {
+          "line": 57,
+          "stage": "cliSuspendedValidationReturned",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331944202208,
+          "value": 88018,
+          "timestamp": "2026-09-09 01:07:52.279156+0800",
+          "seconds_from_ready_start": 9.214349417
+        },
+        {
+          "line": 58,
+          "stage": "cliReapTaskQueued",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331944217166,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.279171+0800",
+          "seconds_from_ready_start": 9.214364375
+        },
+        {
+          "line": 59,
+          "stage": "cliStdoutTaskQueued",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331944223375,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.279177+0800",
+          "seconds_from_ready_start": 9.214370584
+        },
+        {
+          "line": 60,
+          "stage": "cliStderrTaskQueued",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331944227000,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.279181+0800",
+          "seconds_from_ready_start": 9.214374209
+        },
+        {
+          "line": 61,
+          "stage": "cliSIGCONTCalled",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331944229458,
+          "value": 88018,
+          "timestamp": "2026-09-09 01:07:52.279183+0800",
+          "seconds_from_ready_start": 9.214376667
+        },
+        {
+          "line": 67,
+          "stage": "cliSIGCONTReturned",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177331944254958,
+          "value": 88018,
+          "timestamp": "2026-09-09 01:07:52.279209+0800",
+          "seconds_from_ready_start": 9.214402167
+        },
+        {
+          "line": 68,
+          "stage": "cliFixtureConsumerStarted",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177331944299666,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.279254+0800",
+          "seconds_from_ready_start": 9.214446875
+        },
+        {
+          "line": 196,
+          "stage": "cliStdoutTaskStarted",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177333111696791,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.446653+0800",
+          "seconds_from_ready_start": 10.381844
+        },
+        {
+          "line": 197,
+          "stage": "cliStdoutDrainEntered",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177333111702875,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.446657+0800",
+          "seconds_from_ready_start": 10.381850084
+        },
+        {
+          "line": 198,
+          "stage": "cliStderrTaskStarted",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177333111732333,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.446686+0800",
+          "seconds_from_ready_start": 10.381879542
+        },
+        {
+          "line": 199,
+          "stage": "cliFinalizeStarted",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177333111762041,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.446716+0800",
+          "seconds_from_ready_start": 10.38190925
+        },
+        {
+          "line": 200,
+          "stage": "cliStdinFinished",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177333111765208,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.446719+0800",
+          "seconds_from_ready_start": 10.381912417
+        },
+        {
+          "line": 201,
+          "stage": "cliReapTaskStarted",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177333111808083,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.446764+0800",
+          "seconds_from_ready_start": 10.381955292
+        },
+        {
+          "line": 202,
+          "stage": "cliFixtureReadyWaitEnded",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177333111901958,
+          "value": 3,
+          "timestamp": "2026-09-09 01:07:53.446856+0800",
+          "seconds_from_ready_start": 10.382049167
+        },
+        {
+          "line": 241,
+          "stage": "cliWaitpidReturned",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177333720435500,
+          "value": 88018,
+          "timestamp": "2026-09-09 01:07:54.055391+0800",
+          "seconds_from_ready_start": 10.990582709
+        },
+        {
+          "line": 255,
+          "stage": "cliReaped",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177334218644041,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.553600+0800",
+          "seconds_from_ready_start": 11.48879125
+        },
+        {
+          "line": 256,
+          "stage": "cliStdoutFinished",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177334218889666,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.553845+0800",
+          "seconds_from_ready_start": 11.489036875
+        },
+        {
+          "line": 257,
+          "stage": "cliStderrFinished",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177334218896083,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.553850+0800",
+          "seconds_from_ready_start": 11.489043292
+        },
+        {
+          "line": 258,
+          "stage": "cliServerStopStarted",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177334218903666,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.553857+0800",
+          "seconds_from_ready_start": 11.489050875
+        },
+        {
+          "line": 297,
+          "stage": "cliServerStopFinished",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177334425833916,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.760790+0800",
+          "seconds_from_ready_start": 11.695981125
+        },
+        {
+          "line": 298,
+          "stage": "cliFinalizeFinished",
+          "owner": "F2F8FB25-2DB7-4875-AB21-70B2B3468892",
+          "mono": 177334425844833,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.760799+0800",
+          "seconds_from_ready_start": 11.695992042
+        },
+        {
+          "line": 334,
+          "stage": "cliFixtureStreamFinished",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177335747671625,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:56.082628+0800",
+          "seconds_from_ready_start": 13.017818834
+        },
+        {
+          "line": 423,
+          "stage": "cliFixtureConsumerJoined",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177336609154250,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:56.944111+0800",
+          "seconds_from_ready_start": 13.879301459
+        },
+        {
+          "line": 424,
+          "stage": "cliFixtureCancellationPID",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177336609165416,
+          "value": 88018,
+          "timestamp": "2026-09-09 01:07:56.944119+0800",
+          "seconds_from_ready_start": 13.879312625
+        },
+        {
+          "line": 425,
+          "stage": "cliFixtureCancellationGroup",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177336609168291,
+          "value": 88018,
+          "timestamp": "2026-09-09 01:07:56.944122+0800",
+          "seconds_from_ready_start": 13.8793155
+        },
+        {
+          "line": 426,
+          "stage": "cliFixtureCancellationStatus",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177336609170666,
+          "value": 143,
+          "timestamp": "2026-09-09 01:07:56.944124+0800",
+          "seconds_from_ready_start": 13.879317875
+        },
+        {
+          "line": 427,
+          "stage": "cliFixtureTermSent",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177336609172541,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:56.944126+0800",
+          "seconds_from_ready_start": 13.87931975
+        },
+        {
+          "line": 428,
+          "stage": "cliFixtureKillSent",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177336609174541,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:56.944128+0800",
+          "seconds_from_ready_start": 13.87932175
+        },
+        {
+          "line": 429,
+          "stage": "cliFixtureChildReaped",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177336609176791,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:56.944131+0800",
+          "seconds_from_ready_start": 13.879324
+        },
+        {
+          "line": 430,
+          "stage": "cliFixtureStdoutEOF",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177336609178708,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:56.944132+0800",
+          "seconds_from_ready_start": 13.879325917
+        },
+        {
+          "line": 431,
+          "stage": "cliFixtureStderrEOF",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177336609180833,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:56.944135+0800",
+          "seconds_from_ready_start": 13.879328042
+        },
+        {
+          "line": 432,
+          "stage": "cliFixtureCancellationState",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177336609183541,
+          "value": 2,
+          "timestamp": "2026-09-09 01:07:56.944137+0800",
+          "seconds_from_ready_start": 13.87933075
+        },
+        {
+          "line": 433,
+          "stage": "cliFixtureExitFrameCount",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177336609188583,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:56.944142+0800",
+          "seconds_from_ready_start": 13.879335792
+        },
+        {
+          "line": 434,
+          "stage": "cliFixtureExitFrameStatus",
+          "owner": "6CB27F0D-7032-4211-9A55-3C60CAD6DE34",
+          "mono": 177336609191333,
+          "value": 143,
+          "timestamp": "2026-09-09 01:07:56.944145+0800",
+          "seconds_from_ready_start": 13.879338542
+        }
+      ]
+    },
+    {
+      "execution": "00000000-0000-4000-8000-000000000347",
+      "recorder": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+      "pid": 88024,
+      "backend": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+      "events": [
+        {
+          "line": 21,
+          "stage": "cliFixtureLaunchCalled",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177326066948541,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:46.401905+0800",
+          "seconds_from_ready_start": -4.65e-05
+        },
+        {
+          "line": 22,
+          "stage": "cliRunQueued",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177326066967291,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:46.401921+0800",
+          "seconds_from_ready_start": -2.775e-05
+        },
+        {
+          "line": 23,
+          "stage": "cliFixtureLaunchReturned",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177326066976125,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:46.401930+0800",
+          "seconds_from_ready_start": -1.8916e-05
+        },
+        {
+          "line": 24,
+          "stage": "cliFixtureConsumerQueued",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177326066984875,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:46.401939+0800",
+          "seconds_from_ready_start": -1.0166e-05
+        },
+        {
+          "line": 25,
+          "stage": "cliFixtureBodyStarted",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177326066988250,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:46.401942+0800",
+          "seconds_from_ready_start": -6.791e-06
+        },
+        {
+          "line": 26,
+          "stage": "cliFixtureReadyAwaitQueued",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177326066990916,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:46.401945+0800",
+          "seconds_from_ready_start": -4.125e-06
+        },
+        {
+          "line": 27,
+          "stage": "cliFixtureReadyWaitStarted",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177326066995041,
+          "value": 3000,
+          "timestamp": "2026-09-09 01:07:46.401949+0800",
+          "seconds_from_ready_start": 0.0
+        },
+        {
+          "line": 97,
+          "stage": "cliRunStarted",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332264958041,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.599914+0800",
+          "seconds_from_ready_start": 6.197963
+        },
+        {
+          "line": 98,
+          "stage": "cliLaunchInputsValidated",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332265916708,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.600875+0800",
+          "seconds_from_ready_start": 6.198921667
+        },
+        {
+          "line": 99,
+          "stage": "cliEnvironmentRequested",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332265939833,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.600894+0800",
+          "seconds_from_ready_start": 6.198944792
+        },
+        {
+          "line": 100,
+          "stage": "cliEnvironmentReady",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332265966458,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.600921+0800",
+          "seconds_from_ready_start": 6.198971417
+        },
+        {
+          "line": 101,
+          "stage": "cliEnvironmentValidated",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332266700708,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.601656+0800",
+          "seconds_from_ready_start": 6.199705667
+        },
+        {
+          "line": 102,
+          "stage": "cliBoardStartCalled",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332266948375,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.601903+0800",
+          "seconds_from_ready_start": 6.199953334
+        },
+        {
+          "line": 104,
+          "stage": "cliBoardStartReturned",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332267355833,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.602311+0800",
+          "seconds_from_ready_start": 6.200360792
+        },
+        {
+          "line": 105,
+          "stage": "cliSpawnPreparationStarted",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332267441791,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.602396+0800",
+          "seconds_from_ready_start": 6.20044675
+        },
+        {
+          "line": 106,
+          "stage": "cliPosixSpawnCalled",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332267495166,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.602449+0800",
+          "seconds_from_ready_start": 6.200500125
+        },
+        {
+          "line": 108,
+          "stage": "cliSpawned",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332268234458,
+          "value": 88024,
+          "timestamp": "2026-09-09 01:07:52.603189+0800",
+          "seconds_from_ready_start": 6.201239417
+        },
+        {
+          "line": 109,
+          "stage": "cliSuspendedValidationCalled",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332268242708,
+          "value": 88024,
+          "timestamp": "2026-09-09 01:07:52.603197+0800",
+          "seconds_from_ready_start": 6.201247667
+        },
+        {
+          "line": 110,
+          "stage": "cliSuspendedValidationReturned",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332268367416,
+          "value": 88024,
+          "timestamp": "2026-09-09 01:07:52.603321+0800",
+          "seconds_from_ready_start": 6.201372375
+        },
+        {
+          "line": 111,
+          "stage": "cliReapTaskQueued",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332268371875,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.603326+0800",
+          "seconds_from_ready_start": 6.201376834
+        },
+        {
+          "line": 112,
+          "stage": "cliStdoutTaskQueued",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332268379375,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.603333+0800",
+          "seconds_from_ready_start": 6.201384334
+        },
+        {
+          "line": 113,
+          "stage": "cliStderrTaskQueued",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332268382833,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.603337+0800",
+          "seconds_from_ready_start": 6.201387792
+        },
+        {
+          "line": 114,
+          "stage": "cliSIGCONTCalled",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332268386333,
+          "value": 88024,
+          "timestamp": "2026-09-09 01:07:52.603340+0800",
+          "seconds_from_ready_start": 6.201391292
+        },
+        {
+          "line": 120,
+          "stage": "cliSIGCONTReturned",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177332268413541,
+          "value": 88024,
+          "timestamp": "2026-09-09 01:07:52.603367+0800",
+          "seconds_from_ready_start": 6.2014185
+        },
+        {
+          "line": 121,
+          "stage": "cliFixtureConsumerStarted",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177332268485541,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:52.603440+0800",
+          "seconds_from_ready_start": 6.2014905
+        },
+        {
+          "line": 210,
+          "stage": "cliStdoutTaskStarted",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177333254948458,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.589906+0800",
+          "seconds_from_ready_start": 7.187953417
+        },
+        {
+          "line": 211,
+          "stage": "cliStdoutDrainEntered",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177333254955541,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.589909+0800",
+          "seconds_from_ready_start": 7.1879605
+        },
+        {
+          "line": 212,
+          "stage": "cliStderrTaskStarted",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177333254985833,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.589940+0800",
+          "seconds_from_ready_start": 7.187990792
+        },
+        {
+          "line": 213,
+          "stage": "cliFinalizeStarted",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177333255009625,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.589964+0800",
+          "seconds_from_ready_start": 7.188014584
+        },
+        {
+          "line": 214,
+          "stage": "cliStdinFinished",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177333255012750,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.589967+0800",
+          "seconds_from_ready_start": 7.188017709
+        },
+        {
+          "line": 215,
+          "stage": "cliFixtureReadyWaitEnded",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177333255069916,
+          "value": 3,
+          "timestamp": "2026-09-09 01:07:53.590024+0800",
+          "seconds_from_ready_start": 7.188074875
+        },
+        {
+          "line": 216,
+          "stage": "cliReapTaskStarted",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177333255783500,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:53.590739+0800",
+          "seconds_from_ready_start": 7.188788459
+        },
+        {
+          "line": 247,
+          "stage": "cliWaitpidReturned",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177333814351833,
+          "value": 88024,
+          "timestamp": "2026-09-09 01:07:54.149307+0800",
+          "seconds_from_ready_start": 7.747356792
+        },
+        {
+          "line": 264,
+          "stage": "cliReaped",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177334338557791,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.673514+0800",
+          "seconds_from_ready_start": 8.27156275
+        },
+        {
+          "line": 265,
+          "stage": "cliStdoutFinished",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177334338564000,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.673518+0800",
+          "seconds_from_ready_start": 8.271568959
+        },
+        {
+          "line": 266,
+          "stage": "cliStderrFinished",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177334338566416,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.673520+0800",
+          "seconds_from_ready_start": 8.271571375
+        },
+        {
+          "line": 267,
+          "stage": "cliServerStopStarted",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177334338573541,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:54.673527+0800",
+          "seconds_from_ready_start": 8.2715785
+        },
+        {
+          "line": 315,
+          "stage": "cliServerStopFinished",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177334886047125,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:55.221004+0800",
+          "seconds_from_ready_start": 8.819052084
+        },
+        {
+          "line": 316,
+          "stage": "cliFinalizeFinished",
+          "owner": "5D3053F5-4789-4CA4-92CC-9CA56B08D22E",
+          "mono": 177334886059375,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:55.221013+0800",
+          "seconds_from_ready_start": 8.819064334
+        },
+        {
+          "line": 343,
+          "stage": "cliFixtureStreamFinished",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177335914392083,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:56.249349+0800",
+          "seconds_from_ready_start": 9.847397042
+        },
+        {
+          "line": 440,
+          "stage": "cliFixtureConsumerJoined",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177336855593375,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:57.190549+0800",
+          "seconds_from_ready_start": 10.788598334
+        },
+        {
+          "line": 441,
+          "stage": "cliFixtureCancellationPID",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177336855600250,
+          "value": 88024,
+          "timestamp": "2026-09-09 01:07:57.190554+0800",
+          "seconds_from_ready_start": 10.788605209
+        },
+        {
+          "line": 442,
+          "stage": "cliFixtureCancellationGroup",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177336855602166,
+          "value": 88024,
+          "timestamp": "2026-09-09 01:07:57.190556+0800",
+          "seconds_from_ready_start": 10.788607125
+        },
+        {
+          "line": 443,
+          "stage": "cliFixtureCancellationStatus",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177336855603875,
+          "value": 143,
+          "timestamp": "2026-09-09 01:07:57.190558+0800",
+          "seconds_from_ready_start": 10.788608834
+        },
+        {
+          "line": 444,
+          "stage": "cliFixtureTermSent",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177336855606291,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:57.190560+0800",
+          "seconds_from_ready_start": 10.78861125
+        },
+        {
+          "line": 445,
+          "stage": "cliFixtureKillSent",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177336855607916,
+          "value": 0,
+          "timestamp": "2026-09-09 01:07:57.190562+0800",
+          "seconds_from_ready_start": 10.788612875
+        },
+        {
+          "line": 446,
+          "stage": "cliFixtureChildReaped",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177336855609541,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:57.190563+0800",
+          "seconds_from_ready_start": 10.7886145
+        },
+        {
+          "line": 447,
+          "stage": "cliFixtureStdoutEOF",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177336855611208,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:57.190565+0800",
+          "seconds_from_ready_start": 10.788616167
+        },
+        {
+          "line": 448,
+          "stage": "cliFixtureStderrEOF",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177336855612958,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:57.190567+0800",
+          "seconds_from_ready_start": 10.788617917
+        },
+        {
+          "line": 449,
+          "stage": "cliFixtureCancellationState",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177336855615041,
+          "value": 2,
+          "timestamp": "2026-09-09 01:07:57.190569+0800",
+          "seconds_from_ready_start": 10.78862
+        },
+        {
+          "line": 450,
+          "stage": "cliFixtureExitFrameCount",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177336855619666,
+          "value": 1,
+          "timestamp": "2026-09-09 01:07:57.190573+0800",
+          "seconds_from_ready_start": 10.788624625
+        },
+        {
+          "line": 451,
+          "stage": "cliFixtureExitFrameStatus",
+          "owner": "FAE39194-72DD-451E-A587-0C64F73BCA02",
+          "mono": 177336855621708,
+          "value": 143,
+          "timestamp": "2026-09-09 01:07:57.190575+0800",
+          "seconds_from_ready_start": 10.788626667
+        }
+      ]
+    }
+  ]
+}

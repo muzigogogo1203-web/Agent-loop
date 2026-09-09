@@ -40,8 +40,22 @@ struct RootView: View {
                 Divider().overlay(Camp.charcoalRed.opacity(0.35))
             }
 
+            if let failure = store.globalVisibleFailure {
+                applicationBootstrapFailureBanner(failure)
+                Divider().overlay(Camp.charcoalRed.opacity(0.35))
+            }
+
             if let catchup = store.pendingScheduleCatchups.first {
                 scheduleCatchupBanner(catchup)
+                Divider().overlay(Camp.amber.opacity(0.35))
+            }
+
+            ForEach(store.memoryDistillationVisibilityCards) { card in
+                memoryDistillationVisibilityBanner(
+                    cardId: card.id,
+                    message: card.failure.message,
+                    committedRecordCount: card.committedRecordCount
+                )
                 Divider().overlay(Camp.amber.opacity(0.35))
             }
 
@@ -49,8 +63,39 @@ struct RootView: View {
                 VStack(spacing: 0) {
                     List(selection: $selection) {
                     // 营地=频道（M5-0 C1）：每营地一个分区
-                    ForEach(store.camps, id: \.id) { camp in
+                    ForEach(store.camps.filter { !$0.archived }, id: \.id) { camp in
                         campSection(camp)
+                    }
+
+                    if !archivedCamps.isEmpty {
+                        Section("已归档营地") {
+                            ForEach(archivedCamps, id: \.id) { camp in
+                                Button {
+                                    Task {
+                                        let restored = await store.setCampArchived(
+                                            id: camp.id,
+                                            archived: false
+                                        )
+                                        if restored {
+                                            selection = .camp(camp.id)
+                                        }
+                                    }
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "archivebox.fill")
+                                            .foregroundStyle(Camp.stone)
+                                        Text(camp.name)
+                                            .lineLimit(1)
+                                        Spacer()
+                                        Text("恢复")
+                                            .font(.caption)
+                                            .foregroundStyle(Camp.ember)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .help("恢复这个营地")
+                            }
+                        }
                     }
 
                     Section("归营") {
@@ -99,6 +144,7 @@ struct RootView: View {
             .background(Camp.canvas)
             .navigationSplitViewColumnWidth(min: 210, ideal: 240)
             .onAppear {
+                store.activatePostBootstrapDispatchIfReady()
                 store.reload(keychainInteractionPolicy: .failIfInteractionRequired)
                 if let previewMission = AppStore.previewMissionId {
                     selection = .mission(previewMission)
@@ -136,8 +182,13 @@ struct RootView: View {
             }
             .sheet(isPresented: $showNewCampSheet) {
                 NewCampSheet { name, guidePrompt in
-                    if let camp = store.createCamp(name: name, guidePrompt: guidePrompt) {
-                        selection = .camp(camp.id)
+                    Task {
+                        if let camp = await store.createCamp(
+                            name: name,
+                            guidePrompt: guidePrompt
+                        ) {
+                            selection = .camp(camp.id)
+                        }
                     }
                     showNewCampSheet = false
                 } onCancel: {
@@ -175,7 +226,12 @@ struct RootView: View {
                         onStartMission: { selection = .newMission(campId: campId) },
                         onOpenGuide: { selection = .campGuide(campId) },
                         onOpenNotes: { selection = .campNotes(campId) },
-                        onOpenSettings: { selection = .settings }
+                        onOpenSettings: { selection = .settings },
+                        onArchiveCamp: {
+                            archiveTarget = store.camps.first {
+                                $0.id == campId
+                            }
+                        }
                     )
                 case .campGuide(let campId):
                     CampHomeView(
@@ -264,7 +320,18 @@ struct RootView: View {
                         ContentUnavailableView("这只牛不在牛棚里", systemImage: "person.crop.circle.badge.questionmark")
                     }
                 case .editCompanion(let id):
-                    CompanionEditorView(companionId: id) {
+                    CompanionEditorView(
+                        companionId: id,
+                        onRetired: {
+                            if let first = store.camps.first(where: {
+                                !$0.archived
+                            }) {
+                                selection = .camp(first.id)
+                            } else {
+                                selection = nil
+                            }
+                        }
+                    ) {
                         if let id, id == store.guideCompanion?.id, let campId = store.campId {
                             selection = .camp(campId)
                         } else if let id {
@@ -313,6 +380,33 @@ struct RootView: View {
             Text("未完成的小目标会作废，已产出的交付物保留。")
         }
         .confirmationDialog(
+            "归档「\(archiveTarget?.name ?? "")」？",
+            isPresented: Binding(
+                get: { archiveTarget != nil },
+                set: { if !$0 { archiveTarget = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("归档营地", role: .destructive) {
+                guard let camp = archiveTarget else { return }
+                archiveTarget = nil
+                Task {
+                    let archived = await store.setCampArchived(
+                        id: camp.id,
+                        archived: true
+                    )
+                    if archived, selection == .camp(camp.id) {
+                        selection = store.camps.first(where: {
+                            !$0.archived && $0.id != camp.id
+                        }).map { .camp($0.id) }
+                    }
+                }
+            }
+            Button("再想想", role: .cancel) { archiveTarget = nil }
+        } message: {
+            Text("归档后会从当前营地列表隐藏，资料和历史任务都会保留，可在“已归档营地”中恢复。")
+        }
+        .confirmationDialog(
             "恢复全部行动？",
             isPresented: $showResumeConfirmation,
             titleVisibility: .visible
@@ -323,24 +417,6 @@ struct RootView: View {
             Button("继续暂停", role: .cancel) {}
         } message: {
             Text("等待中的规划和小目标可能会立即继续调用模型与工具，并产生新的花销。")
-        }
-        .confirmationDialog(
-            "归档营地「\(archiveTarget?.name ?? "")」?",
-            isPresented: Binding(
-                get: { archiveTarget != nil },
-                set: { if !$0 { archiveTarget = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("归档", role: .destructive) {
-                if let camp = archiveTarget {
-                    store.setCampArchived(id: camp.id, archived: true)
-                }
-                archiveTarget = nil
-            }
-            Button("再想想", role: .cancel) { archiveTarget = nil }
-        } message: {
-            Text("归档后不能发起新的放牛,资料和历史保留;可随时恢复。")
         }
         .onChange(of: haltAccessibilityAnnouncement) { _, announcement in
             AccessibilityNotification.Announcement(announcement).post()
@@ -372,6 +448,72 @@ struct RootView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(Camp.amber.opacity(0.12))
+    }
+
+    private func memoryDistillationVisibilityBanner(
+        cardId: UUID,
+        message: String,
+        committedRecordCount: Int
+    ) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "externaldrive.badge.exclamationmark")
+                .foregroundStyle(Camp.amber)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("记忆已保存，列表尚未刷新")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Camp.ink)
+                Text("\(committedRecordCount) 条记录已提交。\(message)")
+                    .font(.caption2)
+                    .foregroundStyle(Camp.inkSecondary)
+                    .lineLimit(2)
+                    .textSelection(.enabled)
+            }
+            Spacer(minLength: 8)
+            Button("重试刷新") {
+                store.retryMemoryDistillationVisibility(cardId: cardId)
+            }
+            .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Camp.amber.opacity(0.12))
+        .accessibilityElement(children: .contain)
+    }
+
+    private func applicationBootstrapFailureBanner(
+        _ failure: UserVisibleFailure
+    ) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(Camp.charcoalRed)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("启动检查尚未完成")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Camp.ink)
+                Text(failure.message)
+                    .font(.caption2)
+                    .foregroundStyle(Camp.inkSecondary)
+                    .lineLimit(2)
+                    .textSelection(.enabled)
+            }
+            Spacer(minLength: 8)
+            if store.runtimeBootstrapRetryAvailable {
+                Button("重试供给线") {
+                    store.runRuntimeBootstrap()
+                }
+                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+            }
+            if store.codingRanchBootstrapRetryAvailable {
+                Button("重试牧场") {
+                    store.runCodingRanchBootstrap()
+                }
+                .buttonStyle(CampSecondaryButtonStyle(tint: Camp.ember))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Camp.charcoalRed.opacity(0.08))
+        .accessibilityElement(children: .contain)
     }
 
     private func globalHaltBanner(compact: Bool) -> some View {
@@ -495,6 +637,10 @@ struct RootView: View {
 
     // MARK: - 营地分区
 
+    private var archivedCamps: [CampRecord] {
+        store.camps.filter(\.archived)
+    }
+
     @ViewBuilder private func campSection(_ camp: CampRecord) -> some View {
         let active = (store.missionsByCamp[camp.id] ?? [])
             .filter { $0.status != .accepted && $0.status != .failed }
@@ -519,12 +665,8 @@ struct RootView: View {
                     }
                     .disabled(store.missionStartBlocked)
                     Divider()
-                    Button("归档营地") {
+                    Button("归档营地…", role: .destructive) {
                         archiveTarget = camp
-                    }
-                } else {
-                    Button("恢复营地") {
-                        store.setCampArchived(id: camp.id, archived: false)
                     }
                 }
             }

@@ -1,0 +1,76 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.33s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1CInputEnvelopeContractTests started.
+◇ Test captureAndInputParsingWorkCommitAtomically() started.
+✔ Test captureAndInputParsingWorkCommitAtomically() passed after 0.084 seconds.
+◇ Test inputCaptureReplayAndPayloadDriftConflict() started.
+✔ Test inputCaptureReplayAndPayloadDriftConflict() passed after 0.075 seconds.
+◇ Test inputCaptureReplayUsesCallerOwnedIDAndExistingWorkResult() started.
+✔ Test inputCaptureReplayUsesCallerOwnedIDAndExistingWorkResult() passed after 0.076 seconds.
+◇ Test inputParsingCrashIsAdopted() started.
+✔ Test inputParsingCrashIsAdopted() passed after 0.076 seconds.
+◇ Test controlWorkAdoptionRequiresExpiredLeaseAndRecoversSameOwnerAcrossKinds() started.
+✔ Test controlWorkAdoptionRequiresExpiredLeaseAndRecoversSameOwnerAcrossKinds() passed after 0.147 seconds.
+◇ Test inputParsingRenewalHandsLatestClaimToTerminalCommit() started.
+✔ Test inputParsingRenewalHandsLatestClaimToTerminalCommit() passed after 0.082 seconds.
+◇ Test inputParsingTerminalTimeIsMonotonicAndRetryBackoffStartsAtFailure() started.
+✔ Test inputParsingTerminalTimeIsMonotonicAndRetryBackoffStartsAtFailure() passed after 0.087 seconds.
+◇ Test inputParsingRenewalFailureCancelsParserWithoutProjectionCommit() started.
+✔ Test inputParsingRenewalFailureCancelsParserWithoutProjectionCommit() passed after 0.076 seconds.
+◇ Test inputParsingRetriesBoundedlyThenParseFailed() started.
+✔ Test inputParsingRetriesBoundedlyThenParseFailed() passed after 0.107 seconds.
+◇ Test inputParsingCancelRejectsStaleResult() started.
+✔ Test inputParsingCancelRejectsStaleResult() passed after 0.075 seconds.
+◇ Test cancelParsingAndDeleteRejectsNoActiveBranchBeforeMutation() started.
+✔ Test cancelParsingAndDeleteRejectsNoActiveBranchBeforeMutation() passed after 0.001 seconds.
+◇ Test inputParsingTerminalMutationRollbackIsTotal() started.
+✔ Test inputParsingTerminalMutationRollbackIsTotal() passed after 0.077 seconds.
+◇ Test inputTransitionMatrixAcceptsOnlyStageSpecEdges() started.
+✔ Test inputTransitionMatrixAcceptsOnlyStageSpecEdges() passed after 0.001 seconds.
+◇ Test ordinaryInputTransitionsRejectEveryActiveParsingStateWithoutWrites() started.
+✔ Test ordinaryInputTransitionsRejectEveryActiveParsingStateWithoutWrites() passed after 0.238 seconds.
+◇ Test everyInputCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() started.
+✔ Test everyInputCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() passed after 0.065 seconds.
+◇ Test inputParserInterfaceUsesOnePersistedPreAwaitSnapshotAndClosedOutcome() started.
+✔ Test inputParserInterfaceUsesOnePersistedPreAwaitSnapshotAndClosedOutcome() passed after 0.081 seconds.
+◇ Test inputParserInvalidOutputFailsDeterministicallyExactlyOnce() started.
+✔ Test inputParserInvalidOutputFailsDeterministicallyExactlyOnce() passed after 0.084 seconds.
+◇ Test crossCampAmbiguityNeverSelectsDefaultCamp() started.
+✔ Test crossCampAmbiguityNeverSelectsDefaultCamp() passed after 0.080 seconds.
+◇ Test inputCampScopeIsStableFromCaptureThroughAssignment() started.
+✔ Test inputCampScopeIsStableFromCaptureThroughAssignment() passed after 0.088 seconds.
+◇ Test inputRejectsInitialOrAssignedCampDifferentFromAuditCamp() started.
+✔ Test inputRejectsInitialOrAssignedCampDifferentFromAuditCamp() passed after 0.082 seconds.
+◇ Test inputParsingWorkAlwaysUsesAuditCampAndArchivedCampFailsClosed() started.
+✔ Test inputParsingWorkAlwaysUsesAuditCampAndArchivedCampFailsClosed() passed after 0.079 seconds.
+◇ Test inputTombstoneRetainsOnlyExactIdentityHashAndTimes() started.
+✔ Test inputTombstoneRetainsOnlyExactIdentityHashAndTimes() passed after 0.079 seconds.
+◇ Test inputTombstoneNullsDeviceConnectorAuthorBodyRefErrorAndParent() started.
+✔ Test inputTombstoneNullsDeviceConnectorAuthorBodyRefErrorAndParent() passed after 0.079 seconds.
+◇ Test inputTombstoneForcesEmptyCandidatesUnspecifiedIntentLocalOnlyAndEqualDeleteTime() started.
+✔ Test inputTombstoneForcesEmptyCandidatesUnspecifiedIntentLocalOnlyAndEqualDeleteTime() passed after 0.078 seconds.
+◇ Test localCaptureIdentityPersistsOnceAndFailsOnCorruption() started.
+✔ Test localCaptureIdentityPersistsOnceAndFailsOnCorruption() passed after 0.001 seconds.
+◇ Test localCaptureIdentityConcurrentFirstUseAcrossCopiesIsAtomic() started.
+✔ Test localCaptureIdentityConcurrentFirstUseAcrossCopiesIsAtomic() passed after 0.001 seconds.
+◇ Test localCaptureIdentityConcurrentFirstUseAcrossIndependentAdaptersIsAtomic() started.
+✔ Test localCaptureIdentityConcurrentFirstUseAcrossIndependentAdaptersIsAtomic() passed after 0.004 seconds.
+◇ Test localCaptureUsesLocalOwnerAndInstallationDeviceWithoutAccountIdentity() started.
+✔ Test localCaptureUsesLocalOwnerAndInstallationDeviceWithoutAccountIdentity() passed after 0.074 seconds.
+◇ Test localCapturePortAndInitializerRemainSourceCompatible() started.
+✔ Test localCapturePortAndInitializerRemainSourceCompatible() passed after 0.065 seconds.
+◇ Test localCaptureTraceCorrelationAndRequestIDsAreExact() started.
+✔ Test localCaptureTraceCorrelationAndRequestIDsAreExact() passed after 0.068 seconds.
+◇ Test loadInputUsesReadPortAndMapsMissingRecordToFailure() started.
+✔ Test loadInputUsesReadPortAndMapsMissingRecordToFailure() passed after 0.061 seconds.
+◇ Test legacyIngestionAdapterIsDisplayOnlyAndCreatesNoInputOrGoal() started.
+✔ Test legacyIngestionAdapterIsDisplayOnlyAndCreatesNoInputOrGoal() passed after 0.064 seconds.
+◇ Test nilInputCampNeverInfersAuthority() started.
+✔ Test nilInputCampNeverInfersAuthority() passed after 0.087 seconds.
+✔ Suite P1CInputEnvelopeContractTests passed after 2.435 seconds.
+✔ Test run with 33 tests in 1 suite passed after 2.436 seconds.

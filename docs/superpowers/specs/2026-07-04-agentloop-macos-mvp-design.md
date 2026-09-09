@@ -1,5 +1,8 @@
 # AgentLoop for macOS — MVP 设计
 
+> **当前权威状态：Superseded for product direction（2026-07-25）。**
+> 当前方向由 [`2026-07-25-personal-ai-ranch-master-spec.md`](2026-07-25-personal-ai-ranch-master-spec.md) 定义。本文件冻结为历史设计与实现输入；其中的目标用户、路线、范围排除、里程碑或产品表述不再构成当前要求，时点事实只对原记录基线有效。
+
 - 日期：2026-07-04
 - 状态：已经用户两轮确认（架构方案 + 人性化修订），待 spec 评审
 - 前身：Awesome Hermes（/Users/muzi/Projects/awesome-hermes，Electron + TS + Python）——本产品是其验证过的「群聊是房间、看板是事实源」路线的单运行时原生重写

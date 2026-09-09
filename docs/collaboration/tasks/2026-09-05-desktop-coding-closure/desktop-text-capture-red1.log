@@ -1,0 +1,24 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Emitting module AgentLoopTestSuite
+[4/6] Compiling AgentLoopTestSuite DesktopGoalFoundationTests.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (15.95s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite DesktopGoalFoundationTests started.
+◇ Test desktopTextCapturePreservesInteriorFormatting() started.
+✘ Test desktopTextCapturePreservesInteriorFormatting() recorded an issue at DesktopGoalFoundationTests.swift:195:13: Expectation failed: an error was thrown when none was expected: "invalidValue" of type P1ContractValidationError
+✘ Test desktopTextCapturePreservesInteriorFormatting() recorded an issue at DesktopGoalFoundationTests.swift:195:13: Expectation failed: an error was thrown when none was expected: "invalidValue" of type P1ContractValidationError
+✘ Test desktopTextCapturePreservesInteriorFormatting() recorded an issue at DesktopGoalFoundationTests.swift:195:13: Expectation failed: an error was thrown when none was expected: "invalidValue" of type P1ContractValidationError
+✘ Test desktopTextCapturePreservesInteriorFormatting() failed after 0.001 seconds with 3 issues.
+↳ // Catches the identifier validator incorrectly rejecting ordinary text formatting.
+✘ Suite DesktopGoalFoundationTests failed after 0.001 seconds with 3 issues.
+✘ Test run with 1 test in 1 suite failed after 0.002 seconds with 3 issues.

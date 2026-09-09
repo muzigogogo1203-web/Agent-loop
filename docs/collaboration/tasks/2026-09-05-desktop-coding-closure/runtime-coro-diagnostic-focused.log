@@ -1,0 +1,90 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[2/4] Emitting module AgentLoopCore
+[3/5] Emitting module AgentLoopApplication
+[3/6] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[5/8] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7842:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7840 |                 progressSink: P1F1DProgressRecorder(),
+7841 |                 modelLoopDriver: try #require(
+7842 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7843 |                 ),
+7844 |                 cliProcessDriver: nil,
+[6/8] Emitting module AgentLoopTestSuite
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[6/9] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[7/9] Linking RunTests
+[8/9] Applying RunTests
+Build of product 'RunTests' complete! (58.59s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite ExecutionEngineConformanceTests started.
+◇ Test p1f1_069BoardTerminalExactlyOnceMatrix() started.
+P1F1D069_SCENARIO=RoutingWinners
+P1F1D069_SCENARIO=ActiveCancellationRegistry
+P1F1D069_SCENARIO=SharedAdapterCleanup
+P1F1D069_JOIN=model-begin
+P1F1D069_JOIN=model-end
+P1F1D069_JOIN=cli-begin
+P1F1D069_JOIN=cli-end
+P1F1D069_SCENARIO=ModelClaimHandoff
+P1F1D069_SCENARIO=CliHandoffAndImmediateWinners
+P1F1D069_SCENARIO=PrelaunchAndQuarantine
+P1F1D069_SCENARIO=GenerationBoundCleanup
+P1F1D069_SCENARIO=CompletionRegistry
+P1F1D069_SCENARIO=DispatchAdmission
+P1F1D069_SCENARIO=BeginRegistrationLatch
+P1F1D069_SCENARIO=SettledPrimaryRetry
+P1F1D069_SCENARIO=PostGateAndBindCancellation
+P1F1D069_SCENARIO=ObserverAndFinalizerFailure
+P1F1D069_SCENARIO=CompletionRemovalBarriers
+P1F1D069_SCENARIO=ObserverStoreFailure
+P1F1D069_STAGE=terminal-winner
+P1F1D069_STAGE=exact-live-cli-cancellation
+P1F1D069_SCENARIO=ExactLiveCliCancellation
+P1F1D069_CASE=exact-live-cli-false
+P1F1D069_CASE=exact-live-cli-true
+P1F1D069_STAGE=exact-live-model-cancellation
+P1F1D069_STAGE=exact-recovery-owner
+P1F1D069_CASE=exact-owner-cli-false
+P1F1D069_CASE=exact-owner-cli-true
+P1F1D069_CASE=exact-owner-modelLoop-false
+P1F1D069_CASE=exact-owner-modelLoop-true
+P1F1D069_STAGE=mission-cli-recovery
+P1F1D069_SCENARIO=MissionCliRecovery
+P1F1D069_CASE=mission-cli-false
+P1F1D069_CASE=mission-cli-true
+P1F1D069_STAGE=mission-model-recovery
+P1F1D069_SCENARIO=MissionModelRecovery
+P1F1D069_CASE=mission-model-false
+P1F1D069_CASE=mission-model-true
+P1F1D069_STAGE=shared-recovery-owner
+P1F1D069_SCENARIO=SharedRecoveryOwner
+P1F1D069_STAGE=recovery-failure-retry
+P1F1D069_SCENARIO=RecoveryFailureRetry
+P1F1D069_CASE=recovery-retry-transport
+P1F1D069_CASE=recovery-retry-evidence
+P1F1D069_CASE=recovery-retry-store
+P1F1D069_STAGE=shared-recovery-action-matrix
+P1F1D069_SCENARIO=SharedRecoveryActionMatrix
+P1F1D069_CASE=shared-action-prepareAndCommitProposal
+P1F1D069_CASE=shared-action-startPrepared
+P1F1D069_CASE=shared-action-replayExecution
+P1F1D069_CASE=shared-action-resumeSession
+P1F1D069_STAGE=nonreplayable-unknown-outcome
+✔ Test p1f1_069BoardTerminalExactlyOnceMatrix() passed after 10.407 seconds.
+✔ Suite ExecutionEngineConformanceTests passed after 10.407 seconds.
+✔ Test run with 1 test in 1 suite passed after 10.408 seconds.

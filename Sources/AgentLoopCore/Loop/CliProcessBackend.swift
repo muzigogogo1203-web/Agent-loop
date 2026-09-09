@@ -1,190 +1,299 @@
 import Darwin
+import CryptoKit
 import Foundation
+
+protocol CliProcessCodeSignatureRevalidatingV1: Sendable {
+    func revalidateCLI(
+        _ authority: CliExecutableAuthorityV1
+    ) throws
+    func revalidateBoardBridge(
+        _ authority: EngineBoardBridgeExecutableAuthorityV1
+    ) throws
+}
+
+private struct CliProcessLiveCodeSignatureRevalidatorV1:
+    CliProcessCodeSignatureRevalidatingV1
+{
+    func revalidateCLI(
+        _ authority: CliExecutableAuthorityV1
+    ) throws {
+        try authority.revalidateStagedCodeSignature()
+    }
+
+    func revalidateBoardBridge(
+        _ authority: EngineBoardBridgeExecutableAuthorityV1
+    ) throws {
+        try authority.revalidateStagedCodeSignature()
+    }
+}
+
+package enum CliProcessSignalOperationV1 {
+    package static func send(
+        signal: Int32,
+        processGroupId: Int32,
+        using inspector: any EngineRuntimeProcessInspectingV1
+    ) async throws {
+        let operation = BlockingProcessOperation.start {
+            Result<Void, any Error> {
+                try inspector.send(signal: signal, processGroupId: processGroupId)
+            }
+        }
+        try await operation.value.get()
+    }
+}
+
+package struct CliProcessCleanupFailureV1: Error, Sendable, CustomStringConvertible {
+    package enum Phase: String, Sendable {
+        case boardStop
+        case cleanupAuthority
+        case signal
+        case liveness
+        case reap
+        case pipeDrain
+        case descriptor
+    }
+
+    package struct Cause: Error, Sendable, CustomStringConvertible {
+        package let phase: Phase
+        package let underlying: any Error
+
+        package var description: String {
+            "\(phase.rawValue):\(String(reflecting: type(of: underlying)))"
+        }
+    }
+
+    package let executionId: String
+    package let pid: Int32?
+    package let processGroupID: Int32?
+    package let primary: any Error
+    package let causes: [Cause]
+
+    package var description: String {
+        let causeTypes = causes.map {
+            "\($0.phase.rawValue):\(String(reflecting: type(of: $0.underlying)))"
+        }.joined(separator: ",")
+        return "CLI cleanup failed execution=\(executionId) "
+            + "pid=\(pid.map(String.init) ?? "none") "
+            + "group=\(processGroupID.map(String.init) ?? "none") "
+            + "primary=\(String(reflecting: type(of: primary))) "
+            + "causes=[\(causeTypes)]"
+    }
+}
+
+package enum CliAuxiliaryDescriptorFailureV1: Error, Sendable, Equatable {
+    case invalidDescriptor
+    case duplicationFailed
+    case originalCloseFailed
+}
+
+package enum CliAuxiliaryDescriptorV1 {
+    package static func normalizeOwned(
+        _ descriptor: inout Int32
+    ) throws {
+        guard descriptor >= 0 else {
+            throw CliAuxiliaryDescriptorFailureV1.invalidDescriptor
+        }
+        guard descriptor <= STDERR_FILENO else { return }
+        let original = descriptor
+        let duplicate = Darwin.fcntl(
+            original,
+            F_DUPFD_CLOEXEC,
+            STDERR_FILENO + 1
+        )
+        guard duplicate > STDERR_FILENO else {
+            if duplicate >= 0 { _ = Darwin.close(duplicate) }
+            throw CliAuxiliaryDescriptorFailureV1.duplicationFailed
+        }
+        descriptor = duplicate
+        guard Darwin.close(original) == 0 else {
+            throw CliAuxiliaryDescriptorFailureV1.originalCloseFailed
+        }
+    }
+}
 
 public struct CliCommandSpec: Sendable, Equatable {
     public let command: String
     public let arguments: [String]
     public let environment: [String: String]
+    public let stdinBytes: Data
     public let cleanupURLs: [URL]
+    package let cleanupAuthorities: [CliCleanupFileAuthorityV1]
 
-    public init(command: String, arguments: [String], environment: [String: String] = [:], cleanupURLs: [URL] = []) {
+    public init(
+        command: String,
+        arguments: [String],
+        environment: [String: String] = [:],
+        stdinBytes: Data = Data(),
+        cleanupURLs: [URL] = []
+    ) {
         self.command = command
         self.arguments = arguments
         self.environment = environment
+        self.stdinBytes = stdinBytes
         self.cleanupURLs = cleanupURLs
+        cleanupAuthorities = []
+    }
+
+    package init(
+        command: String,
+        arguments: [String],
+        environment: [String: String] = [:],
+        stdinBytes: Data = Data(),
+        cleanupAuthorities: [CliCleanupFileAuthorityV1]
+    ) {
+        self.command = command
+        self.arguments = arguments
+        self.environment = environment
+        self.stdinBytes = stdinBytes
+        self.cleanupAuthorities = cleanupAuthorities
+        cleanupURLs = cleanupAuthorities.map(\.fileURL)
     }
 }
 
-public enum CliBackendPolicy {
-    public static let bannedFlags: [String] = [
-        "--dangerously-bypass-approvals-and-sandbox",
-        "--dangerously-bypass-hook-trust",
-        "--dangerously-skip-permissions",
-        "--allow-dangerously-skip-permissions",
-        "--yolo",
-        "bypassPermissions",
-        "danger-full-access",
-    ]
+package struct CliProcessLaunchRequestV1: Sendable {
+    package let executionId: String
+    package let spec: CliCommandSpec
+    package let cliExecutableAuthority: CliExecutableAuthorityV1
+    package let workspaceURL: URL
+    package let boundCapabilityTools: EngineBoundCapabilityToolsV1
+    package let bridgeExecutableAuthority:
+        EngineBoardBridgeExecutableAuthorityV1
+    package let boardSocketDirectoryAuthority:
+        EngineBoardSocketDirectoryAuthorityV1
+    package let boardSocketBasename: String
+    package let boardToken: String
+    package let boardCardId: String
+    package let boardTerminalSink: any EngineBoardTerminalSink
+    package let progressSink: any EngineProgressSink
 
-    public static func sandbox(for autonomy: MissionAutonomy) -> String {
-        switch autonomy {
-        case .careful:
-            return "read-only"
-        case .standard, .free:
-            return "workspace-write"
+    package init(
+        executionId: String,
+        spec: CliCommandSpec,
+        cliExecutableAuthority: CliExecutableAuthorityV1,
+        workspaceURL: URL,
+        boundCapabilityTools: EngineBoundCapabilityToolsV1,
+        bridgeExecutableAuthority:
+            EngineBoardBridgeExecutableAuthorityV1,
+        boardSocketDirectoryAuthority:
+            EngineBoardSocketDirectoryAuthorityV1,
+        boardSocketBasename: String,
+        boardToken: String,
+        boardCardId: String,
+        boardTerminalSink: any EngineBoardTerminalSink,
+        progressSink: any EngineProgressSink
+    ) throws {
+        try CanonicalContractCodingV1.validateCanonicalUUID(executionId)
+        try cliExecutableAuthority.validateCanonical()
+        try bridgeExecutableAuthority.validateCanonical()
+        let expectedSocket = try BoardToolServer.makeSocketURL(
+            directoryAuthority: boardSocketDirectoryAuthority,
+            executionId: executionId
+        )
+        guard let stdinPrompt = String(
+            data: spec.stdinBytes,
+            encoding: .utf8
+        ) else {
+            throw EngineContextValidationErrorV1()
         }
-    }
-
-    public static func claudePermissionMode(for autonomy: MissionAutonomy) -> String {
-        switch autonomy {
-        case .careful:
-            return "plan"
-        case .standard, .free:
-            return "acceptEdits"
+        guard spec.command == cliExecutableAuthority.stagedPath,
+              (1...4_194_304).contains(spec.stdinBytes.count),
+              !spec.arguments.contains(stdinPrompt),
+              !spec.arguments.contains(boardToken),
+              !spec.arguments.contains(boardCardId),
+              !spec.arguments.contains(expectedSocket.path),
+              spec.cleanupURLs
+                == spec.cleanupAuthorities.map(\.fileURL),
+              Set(spec.cleanupURLs.map(\.path)).count
+                == spec.cleanupURLs.count,
+              workspaceURL.isFileURL,
+              workspaceURL.baseURL == nil,
+              workspaceURL.path.hasPrefix("/"),
+              !workspaceURL.path.isEmpty,
+              workspaceURL.standardizedFileURL.path == workspaceURL.path,
+              !boardSocketBasename.isEmpty,
+              !boardSocketBasename.contains("/"),
+              !boardSocketBasename.utf8.contains(0),
+              boardSocketBasename == expectedSocket.lastPathComponent,
+              boardToken.utf8.count == 64,
+              boardToken.utf8.allSatisfy({ byte in
+                  (UInt8(ascii: "0")...UInt8(ascii: "9")).contains(byte)
+                      || (UInt8(ascii: "a")...UInt8(ascii: "f")).contains(byte)
+              })
+        else {
+            throw EngineContextValidationErrorV1()
         }
+        try CanonicalContractCodingV1.validateCanonicalUUID(boardCardId)
+        self.executionId = executionId
+        self.spec = spec
+        self.cliExecutableAuthority = cliExecutableAuthority
+        self.workspaceURL = workspaceURL
+        self.boundCapabilityTools = boundCapabilityTools
+        self.bridgeExecutableAuthority = bridgeExecutableAuthority
+        self.boardSocketDirectoryAuthority =
+            boardSocketDirectoryAuthority
+        self.boardSocketBasename = boardSocketBasename
+        self.boardToken = boardToken
+        self.boardCardId = boardCardId
+        self.boardTerminalSink = boardTerminalSink
+        self.progressSink = progressSink
     }
+}
 
-    public static func commandSpec(
-        kind: RuntimeProfileKind,
-        commandOverride: String?,
-        workspace: URL?,
-        prompt: String,
-        bridgeExecutablePath: String,
-        socketURL: URL,
-        token: String,
-        cardId: String,
-        toolNames: [String],
-        autonomy: MissionAutonomy
-    ) throws -> CliCommandSpec {
-        let spec: CliCommandSpec
-        switch kind {
-        case .cliCodex:
-            spec = codexSpec(
-                command: commandOverride ?? "codex",
-                workspace: workspace,
-                prompt: prompt,
-                bridgeExecutablePath: bridgeExecutablePath,
-                socketURL: socketURL,
-                token: token,
-                cardId: cardId,
-                toolNames: toolNames,
-                autonomy: autonomy
-            )
-        case .cliClaude:
-            spec = try claudeSpec(
-                command: commandOverride ?? "claude",
-                workspace: workspace,
-                prompt: prompt,
-                bridgeExecutablePath: bridgeExecutablePath,
-                socketURL: socketURL,
-                token: token,
-                cardId: cardId,
-                toolNames: toolNames,
-                autonomy: autonomy
-            )
-        case .anthropicAPI, .openAIAPI, .chatGPTOAuth:
-            preconditionFailure("CliBackendPolicy only supports cli_* runtime profiles")
-        }
-        try assertNoBannedFlags(spec)
-        return spec
+package enum CliProcessFrameV1: Sendable, Equatable {
+    case stdoutLine(String)
+    case stderr(Data)
+    case exited(Int32)
+}
+
+package struct CliProcessExitEvidenceV1: Sendable, Equatable {
+    package let pid: Int32
+    package let processGroupID: Int32
+    package let status: Int32
+    package let termSent: Bool
+    package let killSent: Bool
+    package let stdoutEOF: Bool
+    package let stderrEOF: Bool
+    package let childReaped: Bool
+
+    package init(
+        pid: Int32,
+        processGroupID: Int32,
+        status: Int32,
+        termSent: Bool,
+        killSent: Bool,
+        stdoutEOF: Bool,
+        stderrEOF: Bool,
+        childReaped: Bool
+    ) {
+        self.pid = pid
+        self.processGroupID = processGroupID
+        self.status = status
+        self.termSent = termSent
+        self.killSent = killSent
+        self.stdoutEOF = stdoutEOF
+        self.stderrEOF = stderrEOF
+        self.childReaped = childReaped
     }
+}
 
-    public static func assertNoBannedFlags(_ spec: CliCommandSpec) throws {
-        let haystack = ([spec.command] + spec.arguments).joined(separator: "\n")
-        for banned in bannedFlags where haystack.contains(banned) {
-            throw CliProcessBackendError.bannedFlag(banned)
-        }
-    }
-
-    private static func codexSpec(
-        command: String,
-        workspace: URL?,
-        prompt: String,
-        bridgeExecutablePath: String,
-        socketURL: URL,
-        token: String,
-        cardId: String,
-        toolNames: [String],
-        autonomy: MissionAutonomy
-    ) -> CliCommandSpec {
-        var args = ["exec"]
-        if let workspace {
-            args += ["--cd", workspace.path]
-        }
-        args += [
-            "--sandbox", sandbox(for: autonomy),
-            "-m", KernelDefaults.codexCliDefaultModel,
-            "-c", "model_reasoning_effort=\(tomlString(KernelDefaults.codexCliReasoningEffort))",
-            "-c", "mcp_servers.ranchboard.command=\(tomlString(bridgeExecutablePath))",
-            "-c", "mcp_servers.ranchboard.args=[\(tomlString("--board-server"))]",
-            "-c", "mcp_servers.ranchboard.env.AGENTLOOP_BOARD_SOCKET=\(tomlString(socketURL.path))",
-            "-c", "mcp_servers.ranchboard.env.AGENTLOOP_BOARD_TOKEN=\(tomlString(token))",
-            "-c", "mcp_servers.ranchboard.env.AGENTLOOP_BOARD_CARD_ID=\(tomlString(cardId))",
-            "-c", "mcp_servers.ranchboard.env.AGENTLOOP_BOARD_TOOLS=\(tomlString(toolNames.joined(separator: ",")))",
-            "--json",
-            prompt,
-        ]
-        return CliCommandSpec(command: command, arguments: args)
-    }
-
-    private static func claudeSpec(
-        command: String,
-        workspace: URL?,
-        prompt: String,
-        bridgeExecutablePath: String,
-        socketURL: URL,
-        token: String,
-        cardId: String,
-        toolNames: [String],
-        autonomy: MissionAutonomy
-    ) throws -> CliCommandSpec {
-        let configURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("agentloop-claude-mcp-\(UUID().uuidString).json")
-        let config: JSONValue = [
-            "mcpServers": [
-                "ranchboard": [
-                    "command": .string(bridgeExecutablePath),
-                    "args": ["--board-server"],
-                    "env": [
-                        "AGENTLOOP_BOARD_SOCKET": .string(socketURL.path),
-                        "AGENTLOOP_BOARD_TOKEN": .string(token),
-                        "AGENTLOOP_BOARD_CARD_ID": .string(cardId),
-                        "AGENTLOOP_BOARD_TOOLS": .string(toolNames.joined(separator: ",")),
-                    ],
-                ],
-            ],
-        ]
-        try Data(try config.encodedString().utf8).write(to: configURL, options: .atomic)
-
-        var args = [
-            "-p", prompt,
-            "--output-format", "stream-json",
-            "--verbose",
-            "--mcp-config", configURL.path,
-            "--permission-mode", claudePermissionMode(for: autonomy),
-        ]
-        if let model = KernelDefaults.claudeCliModel, !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            args += ["--model", model]
-        }
-        if let workspace {
-            args += ["--add-dir", workspace.path]
-        }
-        return CliCommandSpec(command: command, arguments: args, cleanupURLs: [configURL])
-    }
-
-    private static func tomlString(_ value: String) -> String {
-        let escaped = value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        return "\"\(escaped)\""
-    }
+package protocol CliProcessDrivingV1: Sendable {
+    var supportsProcessGroupCancellation: Bool { get }
+    func launch(
+        _ request: CliProcessLaunchRequestV1
+    ) -> AsyncThrowingStream<CliProcessFrameV1, Error>
+    func cancel(executionId: String) async throws -> CliProcessExitEvidenceV1
 }
 
 public enum CliProcessBackendError: Error, Sendable, Equatable {
-    case unsupportedKind(RuntimeProfileKind)
-    case bannedFlag(String)
     case pipeSetupFailed(String)
-    case processExitedWithoutTerminator(status: Int32, stderrTail: String)
+    case invalidMechanicsConfiguration(String)
+    case reservedEnvironmentKey(String)
+    case processLaunchFailed(String)
+    case processNotRegistered(String)
+    case processSignalFailed(signal: Int32, detail: String)
+    case processGroupStillAlive(Int32)
+    case processCleanupFailed(String)
+    case pipeDrainIncomplete(String)
 }
 
 public enum CliPipeDrain {
@@ -245,584 +354,2249 @@ public enum CliPipeDrain {
     }
 }
 
-public struct CliProcessBackend: CardExecutionBackend {
-    private let db: AppDatabase
-    private let artifactStoreRoot: URL
-    private let profileKind: RuntimeProfileKind
-    private let commandOverride: String?
-    private let bridgeExecutablePath: String
-    private let timeout: Duration
+public struct CliProcessBackend: CliProcessDrivingV1 {
+    private let terminationGrace: Duration
+    private let killGrace: Duration
     private let pipeDrainGrace: Duration
-    private let socketDirectory: URL?
     private let registry: ShellProcessRegistry
+    private let processInspector: any EngineRuntimeProcessInspectingV1
+    private let codeSignatureRevalidator:
+        any CliProcessCodeSignatureRevalidatingV1
+    private let environmentProvider: @Sendable () async -> [String: String]
+    private let mechanicsState: CliProcessMechanicsState
+    private let spawnCleanupObserved:
+        @Sendable (CliSpawnCleanupReportV1) -> Void
 
-    public init(
-        db: AppDatabase,
-        artifactStoreRoot: URL,
-        profileKind: RuntimeProfileKind,
-        commandOverride: String? = nil,
-        bridgeExecutablePath: String = CommandLine.arguments.first ?? "AgentLoopApp",
-        timeout: Duration = KernelDefaults.cliCardTimeout,
+    package init(
+        terminationGrace: Duration = .seconds(5),
+        killGrace: Duration = .seconds(2),
         pipeDrainGrace: Duration = .seconds(1),
-        socketDirectory: URL? = nil,
-        registry: ShellProcessRegistry = .shared
-    ) {
-        self.db = db
-        self.artifactStoreRoot = artifactStoreRoot
-        self.profileKind = profileKind
-        self.commandOverride = commandOverride
-        self.bridgeExecutablePath = bridgeExecutablePath
-        self.timeout = timeout
-        self.pipeDrainGrace = pipeDrainGrace
-        self.socketDirectory = socketDirectory
-        self.registry = registry
-    }
-
-    public func run(context: CardExecutionContext) throws -> AsyncThrowingStream<AgentEvent, Error> {
-        guard profileKind.isCLI else {
-            throw CliProcessBackendError.unsupportedKind(profileKind)
-        }
-        guard let card = try db.card(id: context.cardId) else {
-            throw RecordNotFoundError(table: "card", id: context.cardId)
-        }
-        let squad = try db.squad(forCard: card.id)
-        let workspaceAccess = WorkspaceScopedAccess(
-            workspacePath: squad?.workspacePath,
-            bookmark: squad?.workspaceBookmark
-        )
-        let workspace = workspaceAccess.url
-        let runId = UUID().uuidString
-        try db.startRun(cardId: card.id, runId: runId)
-
-        let board = BoardToolServer.makeExecutor(
-            db: db,
-            cardId: card.id,
-            runId: runId,
-            workspaceRoot: workspace,
-            artifactStoreRoot: artifactStoreRoot,
-            campId: squad?.campId,
-            toolAccess: context.toolAccess,
-            autonomy: context.autonomy
-        )
-        let socketURL = try BoardToolServer.makeSocketURL(directory: socketDirectory)
-        let processHandle = CliProcessHandle(registry: registry)
-        let server = BoardToolServer(
-            socketURL: socketURL,
-            cardId: card.id,
-            executor: board.executor,
-            toolDefs: board.toolDefs,
-            onTerminal: { _ in processHandle.terminate() }
-        )
-        let packet = ContextPacket(
-            companionName: context.companionName,
-            rolePrompt: context.rolePrompt,
-            cardTitle: card.title,
-            cardDescription: card.descriptionText,
-            expectedOutput: card.expectedOutput,
-            workspacePath: workspace?.path,
-            upstreamHandoffs: context.upstreamHandoffs,
-            answeredRequests: context.answeredRequests,
-            campNotes: context.campNotes,
-            companionNotes: context.companionNotes,
-            toolNames: board.toolDefs.map(\.name)
-        )
-        let prompt = Self.renderPrompt(packet: packet)
-        let spec = try CliBackendPolicy.commandSpec(
-            kind: profileKind,
-            commandOverride: commandOverride,
-            workspace: workspace,
-            prompt: prompt,
-            bridgeExecutablePath: bridgeExecutablePath,
-            socketURL: socketURL,
-            token: server.token,
-            cardId: card.id,
-            toolNames: board.toolDefs.map(\.name),
-            autonomy: context.autonomy
-        )
-
-        return AsyncThrowingStream { continuation in
-            let task = Task {
-                let metrics = CliRunMetrics()
-                do {
-                    try server.start()
-                    try await withTaskCancellationHandler {
-                        try await Self.runProcess(
-                            spec: spec,
-                            workspace: workspace,
-                            processHandle: processHandle,
-                            metrics: metrics,
-                            timeout: timeout,
-                            pipeDrainGrace: pipeDrainGrace,
-                            continuation: continuation
-                        )
-                    } onCancel: {
-                        processHandle.terminate()
-                    }
-                    // 取消使进程被 SIGTERM 后 runProcess 正常返回;必须显式检查,走 canceled 收尾
-                    try Task.checkCancellation()
-                    let snapshot = await metrics.snapshot()
-                    let turns = max(1, snapshot.turns)
-                    if let outcome = server.terminalSnapshot {
-                        switch outcome {
-                        case .completed:
-                            try db.finishRun(
-                                id: runId,
-                                outcome: "completed",
-                                turns: turns,
-                                tokensIn: snapshot.inputTokens,
-                                tokensOut: snapshot.outputTokens
-                            )
-                            continuation.yield(.finished(outcome))
-                        case .blocked:
-                            try db.finishRun(
-                                id: runId,
-                                outcome: "blocked",
-                                turns: turns,
-                                tokensIn: snapshot.inputTokens,
-                                tokensOut: snapshot.outputTokens
-                            )
-                            continuation.yield(.finished(outcome))
-                        }
-                    } else {
-                        let detail = snapshot.timedOut
-                            ? "CLI 执行超过 \(timeout) 后被终止。stderr 尾部：\(snapshot.stderrTail)"
-                            : "CLI 退出但没有调用 complete_card / block_card。退出码 \(snapshot.exitStatus ?? -1)。stderr 尾部：\(snapshot.stderrTail)"
-                        try blockCardIfStillRunning(cardId: card.id, runId: runId, reason: "tool_failure", detail: detail)
-                        try db.finishRun(
-                            id: runId,
-                            outcome: "blocked",
-                            turns: turns,
-                            tokensIn: snapshot.inputTokens,
-                            tokensOut: snapshot.outputTokens
-                        )
-                        let outcome = LoopOutcome.blocked(reason: "tool_failure", detail: detail)
-                        continuation.yield(.finished(outcome))
-                    }
-                    continuation.finish()
-                } catch is CancellationError {
-                    let snapshot = await metrics.snapshot()
-                    try? db.finishRun(
-                        id: runId,
-                        outcome: "canceled",
-                        turns: max(0, snapshot.turns),
-                        tokensIn: snapshot.inputTokens,
-                        tokensOut: snapshot.outputTokens
-                    )
-                    try? interruptCardIfStillRunning(cardId: card.id, runId: runId)
-                    continuation.finish()
-                } catch {
-                    let snapshot = await metrics.snapshot()
-                    try? db.finishRun(
-                        id: runId,
-                        outcome: "failed",
-                        turns: max(0, snapshot.turns),
-                        tokensIn: snapshot.inputTokens,
-                        tokensOut: snapshot.outputTokens
-                    )
-                    let detail = String(describing: error)
-                    try? db.appendDiagnosticEvent(
-                        cardId: card.id,
-                        runId: runId,
-                        kind: EventKind.runError,
-                        payload: ["error": .string(detail)]
-                    )
-                    try? blockCardIfStillRunning(
-                        cardId: card.id,
-                        runId: runId,
-                        reason: "tool_failure",
-                        detail: "CLI 运行错误：\(detail)"
-                    )
-                    continuation.finish(throwing: error)
-                }
-                server.stop()
-                for url in spec.cleanupURLs {
-                    try? FileManager.default.removeItem(at: url)
-                }
-                workspaceAccess.stop()
+        registry: ShellProcessRegistry = .shared,
+        processInspector: any EngineRuntimeProcessInspectingV1
+    ) throws {
+        try self.init(
+            terminationGrace: terminationGrace,
+            killGrace: killGrace,
+            pipeDrainGrace: pipeDrainGrace,
+            registry: registry,
+            processInspector: processInspector,
+            codeSignatureRevalidator:
+                CliProcessLiveCodeSignatureRevalidatorV1(),
+            environmentProvider: {
+                await LoginShellEnvironment.shared.environment()
             }
-            continuation.onTermination = { _ in task.cancel() }
-        }
+        )
     }
 
-    private static func renderPrompt(packet: ContextPacket) -> String {
-        let userText = packet.firstUserMessage.content.compactMap { block -> String? in
-            if case .text(let text) = block { return text }
-            return nil
-        }.joined(separator: "\n")
-        return """
-        \(packet.system)
-
-        # CLI 牧工工具约束
-        你会看到一个名为 ranchboard 的 MCP server。唯一终结方式是调用 ranchboard.complete_card 或 ranchboard.block_card；需要向用户提问时调用 ranchboard.ask_user；阶段进展使用 ranchboard.progress_note。
-        不要用普通文本宣布完成。
-
-        \(userText)
-        """
-    }
-
-    private static func runProcess(
-        spec: CliCommandSpec,
-        workspace: URL?,
-        processHandle: CliProcessHandle,
-        metrics: CliRunMetrics,
-        timeout: Duration,
-        pipeDrainGrace: Duration,
-        continuation: AsyncThrowingStream<AgentEvent, Error>.Continuation
-    ) async throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [spec.command] + spec.arguments
-        var environment = await LoginShellEnvironment.shared.environment()
-        environment.merge(spec.environment) { _, override in override }
-        process.environment = environment
-        process.currentDirectoryURL = workspace
-
-        let stdout = Pipe()
-        let stderr = Pipe()
-        process.standardOutput = stdout
-        process.standardError = stderr
-        let stdoutFD = stdout.fileHandleForReading.fileDescriptor
-        let stderrFD = stderr.fileHandleForReading.fileDescriptor
-        try setNonBlocking(stdoutFD)
-        try setNonBlocking(stderrFD)
-
-        let exitBox = CliExitBox()
-        process.terminationHandler = { process in
-            processHandle.unregister(process.processIdentifier)
-            Task { await exitBox.finish(process.terminationStatus) }
-        }
-
-        try process.run()
-        // 父进程不持有写端，否则子进程退出后读端永远等不到 EOF。
-        try? stdout.fileHandleForWriting.close()
-        try? stderr.fileHandleForWriting.close()
-        processHandle.set(process)
-        continuation.yield(.turnStarted)
-
-        let stdoutTask = Task.detached {
-            await drainStdout(
-                stdoutFD,
-                metrics: metrics,
-                exitBox: exitBox,
-                grace: pipeDrainGrace,
-                continuation: continuation
+    init(
+        terminationGrace: Duration = .seconds(5),
+        killGrace: Duration = .seconds(2),
+        pipeDrainGrace: Duration = .seconds(1),
+        registry: ShellProcessRegistry = .shared,
+        processInspector: any EngineRuntimeProcessInspectingV1,
+        codeSignatureRevalidator:
+            any CliProcessCodeSignatureRevalidatingV1,
+        environmentProvider: @escaping @Sendable () async -> [String: String] = {
+            await LoginShellEnvironment.shared.environment()
+        },
+        spawnCleanupObserved:
+            @escaping @Sendable (CliSpawnCleanupReportV1) -> Void = { _ in }
+    ) throws {
+        guard terminationGrace >= .zero,
+              killGrace > .zero,
+              pipeDrainGrace > .zero else {
+            throw CliProcessBackendError.invalidMechanicsConfiguration(
+                "process grace durations must be nonnegative, with positive kill/drain grace"
             )
         }
-        let stderrTask = Task.detached {
-            await drainStderr(stderrFD, metrics: metrics, exitBox: exitBox, grace: pipeDrainGrace)
-        }
-        let timeoutTask = Task {
-            try? await Task.sleep(for: timeout)
-            guard await exitBox.value == nil else { return }
-            await metrics.markTimedOut()
-            processHandle.terminate()
-            try? await Task.sleep(for: .seconds(5))
-            if await exitBox.value == nil {
-                processHandle.kill()
-            }
-        }
+        self.terminationGrace = terminationGrace
+        self.killGrace = killGrace
+        self.pipeDrainGrace = pipeDrainGrace
+        self.registry = registry
+        self.processInspector = processInspector
+        self.codeSignatureRevalidator = codeSignatureRevalidator
+        self.environmentProvider = environmentProvider
+        self.spawnCleanupObserved = spawnCleanupObserved
+        mechanicsState = CliProcessMechanicsState()
+    }
+}
 
-        let status = await exitBox.wait()
-        await metrics.setExitStatus(status)
-        timeoutTask.cancel()
-        await stdoutTask.value
-        await stderrTask.value
-        try? stdout.fileHandleForReading.close()
-        try? stderr.fileHandleForReading.close()
+extension CliProcessBackend {
+    package var supportsProcessGroupCancellation: Bool { true }
+
+    package func launch(
+        _ request: CliProcessLaunchRequestV1
+    ) -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        AsyncThrowingStream { continuation in
+            let execution = CliProcessExecution(
+                request: request,
+                terminationGrace: terminationGrace,
+                killGrace: killGrace,
+                pipeDrainGrace: pipeDrainGrace,
+                registry: registry,
+                processInspector: processInspector,
+                codeSignatureRevalidator: codeSignatureRevalidator,
+                environmentProvider: environmentProvider,
+                spawnCleanupObserved: spawnCleanupObserved,
+                owner: mechanicsState,
+                continuation: continuation
+            )
+            do {
+                try mechanicsState.register(execution)
+            } catch {
+                continuation.finish(throwing: error)
+                return
+            }
+            continuation.onTermination = { termination in
+                guard case .cancelled = termination else { return }
+                execution.requestStreamCancellation()
+            }
+            execution.start()
+        }
     }
 
-    private static func drainStdout(
-        _ fd: Int32,
-        metrics: CliRunMetrics,
-        exitBox: CliExitBox,
-        grace: Duration,
-        continuation: AsyncThrowingStream<AgentEvent, Error>.Continuation
-    ) async {
-        let clock = ContinuousClock()
-        var lineBuffer = Data()
-        var readBuffer = [UInt8](repeating: 0, count: 4096)
+    package func cancel(
+        executionId: String
+    ) async throws -> CliProcessExitEvidenceV1 {
+        guard let execution = mechanicsState.execution(id: executionId) else {
+            throw CliProcessBackendError.processNotRegistered(executionId)
+        }
+        return try await execution.cancel()
+    }
+}
 
-        func emitLine(_ data: Data) async {
-            guard let text = String(data: data, encoding: .utf8), !text.isEmpty else { return }
-            for event in CliOutputParser.events(from: text) {
-                if case .turnEnded(let usage) = event {
-                    await metrics.addUsage(usage)
+private final class CliProcessMechanicsState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var executions: [String: CliProcessExecution] = [:]
+
+    func register(_ execution: CliProcessExecution) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        let id = execution.executionId
+        guard executions[id] == nil else {
+            throw CliProcessBackendError.processLaunchFailed(
+                "duplicate execution registration"
+            )
+        }
+        executions[id] = execution
+    }
+
+    func execution(id: String) -> CliProcessExecution? {
+        lock.lock()
+        defer { lock.unlock() }
+        return executions[id]
+    }
+
+    func remove(_ execution: CliProcessExecution) {
+        lock.lock()
+        defer { lock.unlock() }
+        if executions[execution.executionId] === execution {
+            executions.removeValue(forKey: execution.executionId)
+        }
+    }
+}
+
+package struct CliProcessReapResult: Sendable {
+    package let status: Int32?
+    package let failure: String?
+
+    package init(status: Int32?, failure: String?) {
+        self.status = status
+        self.failure = failure
+    }
+}
+
+package struct CliSpawnCleanupSignalAttemptV1: Sendable {
+    package let signal: Int32
+    package let result: Result<Void, any Error>?
+}
+
+package struct CliSpawnCleanupReportV1: Sendable {
+    package let executionId: String
+    package let processGroupID: Int32
+    package let signals: [CliSpawnCleanupSignalAttemptV1]
+    package let preJoinProbes: [Result<Bool, any Error>]
+    package let reap: CliProcessReapResult?
+    package let stdoutEOF: Bool?
+    package let stderrEOF: Bool?
+    package let finalGroupExists: Result<Bool, any Error>?
+    package let reconciledFinalCONT: Bool
+    package let causes: [CliProcessCleanupFailureV1.Cause]
+    package let registryRetained: Bool
+}
+
+fileprivate enum CliSpawnCleanupCauseOriginV1: Sendable {
+    case initialProbe
+    case killSignal
+    case killProbe
+    case finalCONTSignal
+    case finalCONTProbe
+    case otherPreJoinProbe
+}
+
+fileprivate struct CliSpawnCleanupTaggedCauseV1: Sendable {
+    let cause: CliProcessCleanupFailureV1.Cause
+    let origin: CliSpawnCleanupCauseOriginV1
+}
+
+package enum CliProcessSpawnCleanupV1 {
+    private static func processSignalErrno(
+        _ error: any Error
+    ) -> Int32? {
+        guard case .processSignal(let errorNumber)? =
+            error as? EngineRuntimeAuthorityErrorV1
+        else { return nil }
+        return errorNumber
+    }
+
+    private static func isFinalCONTReconciliationCause(
+        _ tagged: CliSpawnCleanupTaggedCauseV1
+    ) -> Bool {
+        guard processSignalErrno(tagged.cause.underlying) == EPERM else {
+            return false
+        }
+        switch tagged.origin {
+        case .finalCONTSignal, .finalCONTProbe:
+            return true
+        case .initialProbe, .killSignal, .killProbe, .otherPreJoinProbe:
+            return false
+        }
+    }
+
+    private static func recordSignalDiagnostics(
+        _ outcome: CliProcessExecution.SpawnedGroupSignalOutcome,
+        processGroupID: Int32, owner: UUID
+    ) {
+        for attempt in outcome.signals {
+            RuntimeLifecycleDiagnostics.event(
+                .processSignalTarget, owner: owner,
+                value: -Int(processGroupID)
+            )
+            RuntimeLifecycleDiagnostics.event(
+                .cliCleanupSignalNumber, owner: owner,
+                value: Int(attempt.signal)
+            )
+            switch attempt.result {
+            case .success?:
+                RuntimeLifecycleDiagnostics.event(
+                    .cliCleanupSignalErrno, owner: owner, value: 0
+                )
+            case .failure(let error)?:
+                if let errorNumber = processSignalErrno(error) {
+                    RuntimeLifecycleDiagnostics.event(
+                        .cliCleanupSignalErrno, owner: owner,
+                        value: Int(errorNumber)
+                    )
+                } else {
+                    RuntimeLifecycleDiagnostics.event(
+                        .cliCleanupSignalUntypedFailure, owner: owner
+                    )
                 }
-                continuation.yield(event)
+            case nil:
+                break
+            }
+        }
+        for tagged in outcome.registeredCauses {
+            switch tagged.origin {
+            case .initialProbe, .killProbe, .finalCONTProbe,
+                    .otherPreJoinProbe:
+                if let errorNumber = processSignalErrno(
+                    tagged.cause.underlying
+                ) {
+                    RuntimeLifecycleDiagnostics.event(
+                        .cliCleanupProvisionalProbeErrno, owner: owner,
+                        value: Int(errorNumber)
+                    )
+                } else {
+                    RuntimeLifecycleDiagnostics.event(
+                        .cliCleanupProvisionalProbeUntypedFailure,
+                        owner: owner
+                    )
+                }
+            case .killSignal, .finalCONTSignal:
+                break
+            }
+        }
+    }
+
+    package static func runRegistered(
+        executionId: String, processGroupID: Int32,
+        processInspector: any EngineRuntimeProcessInspectingV1,
+        reapTask: Task<CliProcessReapResult, Never>?,
+        stdoutTask: Task<Bool, Never>?, stderrTask: Task<Bool, Never>?,
+        registry: ShellProcessRegistry, diagnosticOwner: UUID
+    ) async -> CliSpawnCleanupReportV1 {
+        let signalOutcome = CliProcessExecution.signalSpawnedGroupForTermination(
+            processGroupID: processGroupID,
+            processInspector: processInspector, diagnosticOwner: diagnosticOwner
+        )
+        recordSignalDiagnostics(
+            signalOutcome, processGroupID: processGroupID,
+            owner: diagnosticOwner
+        )
+        var joinedCauses: [CliProcessCleanupFailureV1.Cause] = []
+        var finalProbeCauses: [CliProcessCleanupFailureV1.Cause] = []
+        var reap: CliProcessReapResult?
+        var stdoutEOF: Bool?
+        var stderrEOF: Bool?
+        var finalGroupExists: Result<Bool, any Error>?
+        var registryRetained = true
+        let shouldJoin = signalOutcome.killAccepted
+            || signalOutcome.positivelyObservedAbsence
+        if shouldJoin {
+            if let reapTask {
+                let joined = await reapTask.value
+                reap = joined
+                if let failure = joined.failure {
+                    joinedCauses.append(.init(
+                        phase: .reap,
+                        underlying: CliProcessBackendError.processCleanupFailed(
+                            "waitpid: \(failure)"
+                        )
+                    ))
+                } else if joined.status == nil {
+                    joinedCauses.append(.init(
+                        phase: .reap,
+                        underlying: CliProcessBackendError.processCleanupFailed(
+                            "spawned child reap returned no status"
+                        )
+                    ))
+                }
+            } else {
+                joinedCauses.append(.init(
+                    phase: .reap,
+                    underlying: CliProcessBackendError.processCleanupFailed(
+                        "spawned child reap task missing"
+                    )
+                ))
+            }
+            RuntimeLifecycleDiagnostics.event(
+                .cliCleanupReapJoined, owner: diagnosticOwner,
+                value: reap.map {
+                    $0.status != nil && $0.failure == nil ? 0 : 1
+                } ?? -1
+            )
+            if let stdoutTask {
+                let joined = await stdoutTask.value
+                stdoutEOF = joined
+                if !joined {
+                    joinedCauses.append(.init(
+                        phase: .pipeDrain,
+                        underlying: CliProcessBackendError.pipeDrainIncomplete(
+                            "stdout did not reach EOF"
+                        )
+                    ))
+                }
+            } else {
+                joinedCauses.append(.init(
+                    phase: .pipeDrain,
+                    underlying: CliProcessBackendError.pipeDrainIncomplete(
+                        "stdout task missing"
+                    )
+                ))
+            }
+            RuntimeLifecycleDiagnostics.event(
+                .cliCleanupStdoutJoined, owner: diagnosticOwner,
+                value: stdoutEOF.map { $0 ? 0 : 1 } ?? -1
+            )
+            if let stderrTask {
+                let joined = await stderrTask.value
+                stderrEOF = joined
+                if !joined {
+                    joinedCauses.append(.init(
+                        phase: .pipeDrain,
+                        underlying: CliProcessBackendError.pipeDrainIncomplete(
+                            "stderr did not reach EOF"
+                        )
+                    ))
+                }
+            } else {
+                joinedCauses.append(.init(
+                    phase: .pipeDrain,
+                    underlying: CliProcessBackendError.pipeDrainIncomplete(
+                        "stderr task missing"
+                    )
+                ))
+            }
+            RuntimeLifecycleDiagnostics.event(
+                .cliCleanupStderrJoined, owner: diagnosticOwner,
+                value: stderrEOF.map { $0 ? 0 : 1 } ?? -1
+            )
+            do {
+                let exists = try CliProcessExecution.observeCleanupGroupExists(
+                    processGroupID, processInspector: processInspector,
+                    diagnosticOwner: diagnosticOwner
+                )
+                finalGroupExists = .success(exists)
+                if exists {
+                    finalProbeCauses.append(.init(
+                        phase: .liveness,
+                        underlying: CliProcessBackendError
+                            .processGroupStillAlive(processGroupID)
+                    ))
+                }
+            } catch {
+                finalGroupExists = .failure(error)
+                finalProbeCauses.append(.init(
+                    phase: .liveness, underlying: error
+                ))
             }
         }
 
-        await CliPipeDrain.drain(
-            grace: grace,
-            readChunk: { readPipeChunk(fd, into: &readBuffer) },
-            isExited: { await exitBox.value != nil },
-            sleep: { try? await Task.sleep(for: $0) },
-            now: { clock.now },
-            onData: { chunk in
-                lineBuffer.append(chunk)
-                while let newline = lineBuffer.firstIndex(of: UInt8(ascii: "\n")) {
-                    let line = Data(lineBuffer[..<newline])
-                    lineBuffer.removeSubrange(lineBuffer.startIndex...newline)
-                    await emitLine(line)
-                }
-            },
-            onReadFailure: { message in
-                await metrics.appendStderr(Data("stdout read failed: \(message)".utf8))
+        let joinsSucceeded = reap.map {
+            $0.status != nil && $0.failure == nil
+        } == true && stdoutEOF == true && stderrEOF == true
+        let absentAfterJoins: Bool
+        if case .success(false)? = finalGroupExists {
+            absentAfterJoins = true
+        } else {
+            absentAfterJoins = false
+        }
+        let finalCONTFailure = signalOutcome.signals.first(where: {
+            $0.signal == SIGCONT
+        }).flatMap { attempt -> (any Error)? in
+            guard case .failure(let error)? = attempt.result else {
+                return nil
             }
+            return error
+        }
+        let hasUnrelatedCause = signalOutcome.registeredCauses.contains {
+            !isFinalCONTReconciliationCause($0)
+        }
+        let mayReconcileFinalCONT = signalOutcome.killAccepted
+            && joinsSucceeded && absentAfterJoins
+            && finalCONTFailure.map { processSignalErrno($0) == EPERM } == true
+            && !hasUnrelatedCause
+        RuntimeLifecycleDiagnostics.event(
+            .cliCleanupReconciliationDecision, owner: diagnosticOwner,
+            value: mayReconcileFinalCONT ? 1 : 0
+        )
+        let retainedSignalCauses = signalOutcome.registeredCauses.compactMap {
+            tagged in
+            mayReconcileFinalCONT && isFinalCONTReconciliationCause(tagged)
+                ? nil : tagged.cause
+        }
+        let causes = retainedSignalCauses + joinedCauses + finalProbeCauses
+        if joinsSucceeded && absentAfterJoins && causes.isEmpty {
+            registry.unregister(-processGroupID)
+            registryRetained = false
+        }
+        return .init(
+            executionId: executionId, processGroupID: processGroupID,
+            signals: signalOutcome.signals, preJoinProbes: signalOutcome.probes,
+            reap: reap, stdoutEOF: stdoutEOF, stderrEOF: stderrEOF,
+            finalGroupExists: finalGroupExists,
+            reconciledFinalCONT: mayReconcileFinalCONT,
+            causes: causes, registryRetained: registryRetained
+        )
+    }
+}
+
+private final class CliProcessReapState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var didExit = false
+
+    func markExited() {
+        lock.lock()
+        didExit = true
+        lock.unlock()
+    }
+
+    var exited: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return didExit
+    }
+}
+
+private struct CliSpawnCore: @unchecked Sendable {
+    let pid: Int32
+    let processGroupID: Int32
+    let server: BoardToolServer
+    let stdinGate: CliStdinStartGate
+    let stdinTask: Task<Void, Error>
+    let reapTask: Task<CliProcessReapResult, Never>
+    let stdoutTask: Task<Bool, Never>
+    let stderrTask: Task<Bool, Never>
+}
+
+private final class CliStdinStartGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var isOpen = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        await withCheckedContinuation { continuation in
+            let shouldResume = lock.withLock {
+                if isOpen { return true }
+                waiters.append(continuation)
+                return false
+            }
+            if shouldResume { continuation.resume() }
+        }
+    }
+
+    func open() {
+        let pending: [CheckedContinuation<Void, Never>] = lock.withLock {
+            guard !isOpen else { return [] }
+            isOpen = true
+            let pending = waiters
+            waiters.removeAll()
+            return pending
+        }
+        for waiter in pending { waiter.resume() }
+    }
+}
+
+private struct CliRegisteredProcess: @unchecked Sendable {
+    let core: CliSpawnCore
+    let completionTask: Task<CliProcessExitEvidenceV1, Error>
+}
+
+private final class CliProcessExecution: @unchecked Sendable {
+    let executionId: String
+
+    private enum Registration {
+        case pending
+        case ready(CliRegisteredProcess)
+        case failed(any Error)
+    }
+
+    private static let reservedBoardEnvironmentKeys: Set<String> = [
+        "AGENTLOOP_BOARD_SOCKET",
+        "AGENTLOOP_BOARD_TOKEN",
+        "AGENTLOOP_BOARD_CARD_ID",
+        "AGENTLOOP_BOARD_TOOLS",
+    ]
+    private static let reservedClaudeEnvironment: [String: String] = [
+        "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
+        "CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS": "1",
+        "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": "1",
+        "DISABLE_AUTOUPDATER": "1",
+        "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+        "DISABLE_TELEMETRY": "1",
+        "DISABLE_ERROR_REPORTING": "1",
+        "DISABLE_BUG_COMMAND": "1",
+    ]
+
+    private let request: CliProcessLaunchRequestV1
+    private let terminationGrace: Duration
+    private let killGrace: Duration
+    private let pipeDrainGrace: Duration
+    private let registry: ShellProcessRegistry
+    private let processInspector: any EngineRuntimeProcessInspectingV1
+    private let codeSignatureRevalidator:
+        any CliProcessCodeSignatureRevalidatingV1
+    private let environmentProvider: @Sendable () async -> [String: String]
+    private let spawnCleanupObserved:
+        @Sendable (CliSpawnCleanupReportV1) -> Void
+    private let owner: CliProcessMechanicsState
+    private let diagnosticId = UUID()
+    private let continuation:
+        AsyncThrowingStream<CliProcessFrameV1, Error>.Continuation
+    private let lock = NSLock()
+    private var registration: Registration = .pending
+    private var registrationWaiters:
+        [CheckedContinuation<CliRegisteredProcess, Error>] = []
+    private var cancellationTask:
+        Task<CliProcessExitEvidenceV1, Error>?
+    private var cancellationRequested = false
+    private var termSent = false
+    private var killSent = false
+
+    init(
+        request: CliProcessLaunchRequestV1,
+        terminationGrace: Duration,
+        killGrace: Duration,
+        pipeDrainGrace: Duration,
+        registry: ShellProcessRegistry,
+        processInspector: any EngineRuntimeProcessInspectingV1,
+        codeSignatureRevalidator:
+            any CliProcessCodeSignatureRevalidatingV1,
+        environmentProvider: @escaping @Sendable () async -> [String: String],
+        spawnCleanupObserved:
+            @escaping @Sendable (CliSpawnCleanupReportV1) -> Void,
+        owner: CliProcessMechanicsState,
+        continuation:
+            AsyncThrowingStream<CliProcessFrameV1, Error>.Continuation
+    ) {
+        executionId = request.executionId
+        self.request = request
+        self.terminationGrace = terminationGrace
+        self.killGrace = killGrace
+        self.pipeDrainGrace = pipeDrainGrace
+        self.registry = registry
+        self.processInspector = processInspector
+        self.codeSignatureRevalidator = codeSignatureRevalidator
+        self.environmentProvider = environmentProvider
+        self.spawnCleanupObserved = spawnCleanupObserved
+        self.owner = owner
+        self.continuation = continuation
+    }
+
+    func start() {
+        RuntimeLifecycleDiagnostics.event(.cliRunQueued, owner: diagnosticId)
+        Task { [self] in
+            await run()
+        }
+    }
+
+    func requestStreamCancellation() {
+        Task { [self] in
+            do {
+                _ = try await cancel()
+            } catch {
+                // The stream is already canceled. The same mechanics failure
+                // remains observable from an explicit cancel call and from the
+                // shared completion task when a consumer is still attached.
+            }
+        }
+    }
+
+    func cancel() async throws -> CliProcessExitEvidenceV1 {
+        let task: Task<CliProcessExitEvidenceV1, Error> = lock.withLock {
+            if let cancellationTask {
+                return cancellationTask
+            }
+            let created = Task { [self] in
+                try await performCancellation()
+            }
+            cancellationTask = created
+            return created
+        }
+        return try await task.value
+    }
+
+    private func run() async {
+        RuntimeLifecycleDiagnostics.event(.cliRunStarted, owner: diagnosticId)
+        var server: BoardToolServer?
+        var registered = false
+        defer { owner.remove(self) }
+
+        do {
+            try validateLaunchInputs()
+            RuntimeLifecycleDiagnostics.event(
+                .cliLaunchInputsValidated, owner: diagnosticId
+            )
+            RuntimeLifecycleDiagnostics.event(
+                .cliEnvironmentRequested, owner: diagnosticId
+            )
+            var environment = await environmentProvider()
+            RuntimeLifecycleDiagnostics.event(
+                .cliEnvironmentReady, owner: diagnosticId
+            )
+            for key in Self.reservedBoardEnvironmentKeys {
+                environment[key] = nil
+            }
+            for key in Self.reservedClaudeEnvironment.keys {
+                environment[key] = nil
+            }
+            environment.merge(request.spec.environment) { _, override in
+                override
+            }
+            let boardSocketURL = try BoardToolServer.makeSocketURL(
+                directoryAuthority: request.boardSocketDirectoryAuthority,
+                executionId: request.executionId
+            )
+            guard boardSocketURL.lastPathComponent
+                    == request.boardSocketBasename
+            else {
+                throw CliProcessBackendError.invalidMechanicsConfiguration(
+                    "Board socket authority mismatch"
+                )
+            }
+            environment["AGENTLOOP_BOARD_SOCKET"] = boardSocketURL.path
+            environment["AGENTLOOP_BOARD_TOKEN"] = request.boardToken
+            environment["AGENTLOOP_BOARD_CARD_ID"] = request.boardCardId
+            environment["AGENTLOOP_BOARD_TOOLS"] = request
+                .boundCapabilityTools.logicalDefinitions.map(\.name)
+                .sorted().joined(separator: ",")
+            try validateEnvironment(environment)
+            RuntimeLifecycleDiagnostics.event(
+                .cliEnvironmentValidated, owner: diagnosticId
+            )
+
+            let boardServer = try BoardToolServer(
+                directoryAuthority: request.boardSocketDirectoryAuthority,
+                socketBasename: request.boardSocketBasename,
+                token: request.boardToken,
+                cardId: request.boardCardId,
+                boardTerminalSink: request.boardTerminalSink,
+                progressSink: request.progressSink,
+                boundCapabilityTools: request.boundCapabilityTools,
+                validatePeer: { peerPid in
+                    try Self.validateBoardPeer(
+                        peerPid,
+                        authority: self.request.bridgeExecutableAuthority,
+                        processInspector: self.processInspector
+                    )
+                },
+                onTerminalAccepted: { [weak self] in
+                    self?.requestStreamCancellation()
+                }
+            )
+            server = boardServer
+            RuntimeLifecycleDiagnostics.event(
+                .cliBoardStartCalled, owner: diagnosticId
+            )
+            try boardServer.start()
+            RuntimeLifecycleDiagnostics.event(
+                .cliBoardStartReturned, owner: diagnosticId
+            )
+
+            let core = try await spawn(
+                environment: environment,
+                server: boardServer
+            )
+            let completionTask = Task { [self, core] in
+                try await finalize(core)
+            }
+            let process = CliRegisteredProcess(
+                core: core,
+                completionTask: completionTask
+            )
+            registered = true
+            publishRegistration(process)
+            core.stdinGate.open()
+
+            let evidence = try await completionTask.value
+            continuation.yield(.exited(evidence.status))
+            continuation.finish()
+        } catch {
+            var terminalError: any Error = error
+            if !registered {
+                RuntimeLifecycleDiagnostics.event(
+                    .cliRunCleanupEntered, owner: diagnosticId
+                )
+                var causes: [CliProcessCleanupFailureV1.Cause] = []
+                if let server {
+                    do {
+                        try await server.stopAsync()
+                    } catch {
+                        causes.append(.init(phase: .boardStop, underlying: error))
+                    }
+                }
+                do {
+                    try removeCleanupFiles()
+                } catch {
+                    causes.append(error)
+                }
+                if !causes.isEmpty {
+                    let nested = error as? CliProcessCleanupFailureV1
+                    terminalError = CliProcessCleanupFailureV1(
+                        executionId: nested?.executionId ?? request.executionId,
+                        pid: nested?.pid,
+                        processGroupID: nested?.processGroupID,
+                        primary: nested?.primary ?? error,
+                        causes: (nested?.causes ?? []) + causes
+                    )
+                }
+                RuntimeLifecycleDiagnostics.event(
+                    .cliCleanupCauseCount, owner: diagnosticId,
+                    value: (terminalError as? CliProcessCleanupFailureV1)?
+                        .causes.count ?? 0
+                )
+                owner.remove(self)
+                failRegistration(terminalError)
+            }
+            continuation.finish(throwing: terminalError)
+        }
+    }
+
+    private func validateLaunchInputs() throws {
+        let strings = [request.spec.command]
+            + request.spec.arguments
+            + [request.workspaceURL.path]
+        guard !request.spec.command.isEmpty,
+              strings.allSatisfy({ !$0.utf8.contains(0) }),
+              request.spec.command
+                == request.cliExecutableAuthority.stagedPath,
+              (1...4_194_304).contains(request.spec.stdinBytes.count)
+        else {
+            throw CliProcessBackendError.invalidMechanicsConfiguration(
+                "process command contains invalid bytes"
+            )
+        }
+        let workspaceDescriptor = request.workspaceURL.path.withCString {
+            Darwin.open($0, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW)
+        }
+        guard workspaceDescriptor >= 0 else {
+            throw CliProcessBackendError.invalidMechanicsConfiguration(
+                "workspace directory is unavailable"
+            )
+        }
+        var workspaceInfo = stat()
+        let workspaceIsAuthorized =
+            Darwin.fstat(workspaceDescriptor, &workspaceInfo) == 0
+            && workspaceInfo.st_mode & S_IFMT == S_IFDIR
+            && workspaceInfo.st_uid == getuid()
+        let workspaceClosed = Darwin.close(workspaceDescriptor) == 0
+        guard workspaceIsAuthorized, workspaceClosed else {
+            throw CliProcessBackendError.invalidMechanicsConfiguration(
+                "workspace directory identity is unavailable"
+            )
+        }
+        for key in request.spec.environment.keys
+        where Self.reservedBoardEnvironmentKeys.contains(key) {
+            throw CliProcessBackendError.reservedEnvironmentKey(key)
+        }
+        switch request.cliExecutableAuthority.kind {
+        case .cliCodex:
+            guard request.spec.environment.isEmpty else {
+                throw CliProcessBackendError.invalidMechanicsConfiguration(
+                    "Codex child environment must be empty"
+                )
+            }
+        case .cliClaude:
+            guard request.spec.environment
+                    == Self.reservedClaudeEnvironment
+            else {
+                throw CliProcessBackendError.invalidMechanicsConfiguration(
+                    "Claude reserved environment mismatch"
+                )
+            }
+        case .anthropicAPI, .openAIAPI, .chatGPTOAuth:
+            throw CliProcessBackendError.invalidMechanicsConfiguration(
+                "non-CLI executable authority"
+            )
+        }
+        try Self.validateExecutableAuthority(
+            request.cliExecutableAuthority,
+            codeSignatureRevalidator: codeSignatureRevalidator
+        )
+        try Self.validateBridgeAuthority(
+            request.bridgeExecutableAuthority,
+            codeSignatureRevalidator: codeSignatureRevalidator
+        )
+    }
+
+    private func validateEnvironment(
+        _ environment: [String: String]
+    ) throws {
+        for (key, value) in environment {
+            guard !key.isEmpty,
+                  !key.contains("="),
+                  !key.utf8.contains(0),
+                  !value.utf8.contains(0) else {
+                throw CliProcessBackendError.invalidMechanicsConfiguration(
+                    "process environment contains invalid bytes"
+                )
+            }
+        }
+    }
+
+    private func spawn(
+        environment: [String: String],
+        server: BoardToolServer
+    ) async throws -> CliSpawnCore {
+        RuntimeLifecycleDiagnostics.event(
+            .cliSpawnPreparationStarted, owner: diagnosticId
+        )
+        let diagnosticOwner = diagnosticId
+        var stdinRead: Int32 = -1
+        var stdinWrite: Int32 = -1
+        var stdoutRead: Int32 = -1
+        var stdoutWrite: Int32 = -1
+        var stderrRead: Int32 = -1
+        var stderrWrite: Int32 = -1
+        defer {
+            if stdinRead >= 0 { close(stdinRead) }
+            if stdinWrite >= 0 { close(stdinWrite) }
+            if stdoutRead >= 0 { close(stdoutRead) }
+            if stdoutWrite >= 0 { close(stdoutWrite) }
+            if stderrRead >= 0 { close(stderrRead) }
+            if stderrWrite >= 0 { close(stderrWrite) }
+        }
+
+        (stdinRead, stdinWrite) = try Self.makePipe()
+        (stdoutRead, stdoutWrite) = try Self.makePipe()
+        (stderrRead, stderrWrite) = try Self.makePipe()
+        do {
+            try CliAuxiliaryDescriptorV1.normalizeOwned(&stdinRead)
+            try CliAuxiliaryDescriptorV1.normalizeOwned(&stdinWrite)
+            try CliAuxiliaryDescriptorV1.normalizeOwned(&stdoutRead)
+            try CliAuxiliaryDescriptorV1.normalizeOwned(&stdoutWrite)
+            try CliAuxiliaryDescriptorV1.normalizeOwned(&stderrRead)
+            try CliAuxiliaryDescriptorV1.normalizeOwned(&stderrWrite)
+        } catch {
+            throw CliProcessBackendError.pipeSetupFailed(
+                "auxiliary descriptor normalization failed"
+            )
+        }
+        guard fcntl(stdinWrite, F_SETNOSIGPIPE, 1) == 0 else {
+            throw CliProcessBackendError.pipeSetupFailed(
+                "stdin no-SIGPIPE setup failed"
+            )
+        }
+        try Self.setNonBlocking(stdinWrite)
+        try Self.setNonBlocking(stdoutRead)
+        try Self.setNonBlocking(stderrRead)
+
+        var fileActions: posix_spawn_file_actions_t?
+        var code = posix_spawn_file_actions_init(&fileActions)
+        guard code == 0 else {
+            throw CliProcessBackendError.processLaunchFailed(
+                "process file-actions setup failed"
+            )
+        }
+        defer { posix_spawn_file_actions_destroy(&fileActions) }
+
+        try Self.checkSpawnSetup(
+            posix_spawn_file_actions_adddup2(
+                &fileActions,
+                stdinRead,
+                STDIN_FILENO
+            )
+        )
+        try Self.checkSpawnSetup(
+            posix_spawn_file_actions_adddup2(
+                &fileActions,
+                stdoutWrite,
+                STDOUT_FILENO
+            )
+        )
+        try Self.checkSpawnSetup(
+            posix_spawn_file_actions_adddup2(
+                &fileActions,
+                stderrWrite,
+                STDERR_FILENO
+            )
+        )
+        for fd in [
+            stdinRead, stdinWrite, stdoutRead, stdoutWrite,
+            stderrRead, stderrWrite,
+        ] {
+            try Self.checkSpawnSetup(
+                posix_spawn_file_actions_addclose(&fileActions, fd)
+            )
+        }
+        try Self.checkSpawnSetup(
+            posix_spawn_file_actions_addchdir_np(
+                &fileActions,
+                request.workspaceURL.path
+            )
         )
 
-        if !lineBuffer.isEmpty {
-            let line = lineBuffer
-            lineBuffer.removeAll(keepingCapacity: true)
-            await emitLine(line)
+        var attributes: posix_spawnattr_t?
+        code = posix_spawnattr_init(&attributes)
+        guard code == 0 else {
+            throw CliProcessBackendError.processLaunchFailed(
+                "process attributes setup failed"
+            )
+        }
+        defer { posix_spawnattr_destroy(&attributes) }
+        var defaultSignals = sigset_t()
+        var signalMask = sigset_t()
+        guard sigemptyset(&defaultSignals) == 0,
+              sigaddset(&defaultSignals, SIGTERM) == 0,
+              sigemptyset(&signalMask) == 0
+        else {
+            throw CliProcessBackendError.processLaunchFailed(
+                "process signal attributes setup failed"
+            )
+        }
+        try Self.checkSpawnSetup(
+            posix_spawnattr_setsigdefault(&attributes, &defaultSignals)
+        )
+        try Self.checkSpawnSetup(
+            posix_spawnattr_setsigmask(&attributes, &signalMask)
+        )
+        try Self.checkSpawnSetup(
+            posix_spawnattr_setflags(
+                &attributes,
+                Int16(
+                    POSIX_SPAWN_SETPGROUP
+                        | POSIX_SPAWN_CLOEXEC_DEFAULT
+                        | POSIX_SPAWN_START_SUSPENDED
+                        | POSIX_SPAWN_SETSIGDEF
+                        | POSIX_SPAWN_SETSIGMASK
+                )
+            )
+        )
+        try Self.checkSpawnSetup(
+            posix_spawnattr_setpgroup(&attributes, 0)
+        )
+
+        var arguments = try Self.makeCStringVector(
+            [request.spec.command] + request.spec.arguments
+        )
+        defer { Self.freeCStringVector(arguments) }
+        var environmentVector = try Self.makeCStringVector(
+            environment.keys.sorted().map { key in
+                "\(key)=\(environment[key]!)"
+            }
+        )
+        defer { Self.freeCStringVector(environmentVector) }
+
+        var pid: pid_t = 0
+        RuntimeLifecycleDiagnostics.event(
+            .cliPosixSpawnCalled, owner: diagnosticOwner
+        )
+        code = request.spec.command.withCString { executable in
+            arguments.withUnsafeMutableBufferPointer { argv in
+                environmentVector.withUnsafeMutableBufferPointer { envp in
+                    posix_spawn(
+                        &pid,
+                        executable,
+                        &fileActions,
+                        &attributes,
+                        argv.baseAddress,
+                        envp.baseAddress
+                    )
+                }
+            }
+        }
+        guard code == 0 else {
+            RuntimeLifecycleDiagnostics.event(
+                .cliSpawnFailed, owner: diagnosticOwner, value: Int(code)
+            )
+            throw CliProcessBackendError.processLaunchFailed(
+                "staged process spawn failed"
+            )
+        }
+        RuntimeLifecycleDiagnostics.event(
+            .cliSpawned, owner: diagnosticOwner, value: Int(pid)
+        )
+
+        var groupRegistered = false
+        var reapTask: Task<CliProcessReapResult, Never>?
+        var stdoutTask: Task<Bool, Never>?
+        var stderrTask: Task<Bool, Never>?
+        do {
+            try Self.checkedClose(&stdinRead)
+            try Self.checkedClose(&stdoutWrite)
+            try Self.checkedClose(&stderrWrite)
+
+            let processGroupID = getpgid(pid)
+            guard processGroupID == pid else {
+                throw CliProcessBackendError.processLaunchFailed(
+                    "child process group identity mismatch"
+                )
+            }
+            RuntimeLifecycleDiagnostics.event(
+                .cliSuspendedValidationCalled,
+                owner: diagnosticOwner, value: Int(pid)
+            )
+            try Self.validateSuspendedImage(
+                pid: pid,
+                processGroupID: processGroupID,
+                authority: request.cliExecutableAuthority,
+                processInspector: processInspector
+            )
+            RuntimeLifecycleDiagnostics.event(
+                .cliSuspendedValidationReturned,
+                owner: diagnosticOwner, value: Int(pid)
+            )
+
+            registry.register(-processGroupID)
+            groupRegistered = true
+            let childPID = pid
+            let reapState = CliProcessReapState()
+            RuntimeLifecycleDiagnostics.event(
+                .cliReapTaskQueued, owner: diagnosticOwner
+            )
+            let createdReapTask = BlockingProcessOperation.start {
+                RuntimeLifecycleDiagnostics.event(
+                    .cliReapTaskStarted, owner: diagnosticOwner
+                )
+                var rawStatus: Int32 = 0
+                while true {
+                    let result = waitpid(childPID, &rawStatus, 0)
+                    let waitError = result < 0 ? errno : 0
+                    RuntimeLifecycleDiagnostics.event(
+                        .cliWaitpidRawStatus,
+                        owner: diagnosticOwner, value: Int(rawStatus)
+                    )
+                    RuntimeLifecycleDiagnostics.event(
+                        .cliWaitpidErrno,
+                        owner: diagnosticOwner, value: Int(waitError)
+                    )
+                    if result == childPID {
+                        RuntimeLifecycleDiagnostics.event(
+                            .cliWaitpidReturned,
+                            owner: diagnosticOwner, value: Int(result)
+                        )
+                        reapState.markExited()
+                        return CliProcessReapResult(
+                            status: Self.decodeWaitStatus(rawStatus),
+                            failure: nil
+                        )
+                    }
+                    if result < 0, waitError == EINTR { continue }
+                    RuntimeLifecycleDiagnostics.event(
+                        .cliWaitpidReturned,
+                        owner: diagnosticOwner, value: Int(result)
+                    )
+                    if result < 0 {
+                        RuntimeLifecycleDiagnostics.event(
+                            .cliWaitpidError,
+                            owner: diagnosticOwner, value: Int(waitError)
+                        )
+                    }
+                    let detail = result < 0
+                        ? "waitpid failed"
+                        : "waitpid returned an unexpected child"
+                    reapState.markExited()
+                    return CliProcessReapResult(
+                        status: nil,
+                        failure: detail
+                    )
+                }
+            }
+            reapTask = createdReapTask
+            let stdoutFD = stdoutRead
+            stdoutRead = -1
+            let stderrFD = stderrRead
+            stderrRead = -1
+            RuntimeLifecycleDiagnostics.event(
+                .cliStdoutTaskQueued, owner: diagnosticOwner
+            )
+            let createdStdoutTask = Task.detached {
+                [continuation, pipeDrainGrace, diagnosticOwner] in
+                RuntimeLifecycleDiagnostics.event(
+                    .cliStdoutTaskStarted, owner: diagnosticOwner
+                )
+                return await Self.drainStdout(
+                    fd: stdoutFD,
+                    reapState: reapState,
+                    grace: pipeDrainGrace,
+                    continuation: continuation,
+                    diagnosticOwner: diagnosticOwner
+                )
+            }
+            stdoutTask = createdStdoutTask
+            RuntimeLifecycleDiagnostics.event(
+                .cliStderrTaskQueued, owner: diagnosticOwner
+            )
+            let createdStderrTask = Task.detached {
+                [continuation, pipeDrainGrace, diagnosticOwner] in
+                RuntimeLifecycleDiagnostics.event(
+                    .cliStderrTaskStarted, owner: diagnosticOwner
+                )
+                return await Self.drainStderr(
+                    fd: stderrFD,
+                    reapState: reapState,
+                    grace: pipeDrainGrace,
+                    continuation: continuation
+                )
+            }
+            stderrTask = createdStderrTask
+
+            RuntimeLifecycleDiagnostics.event(
+                .cliSIGCONTCalled,
+                owner: diagnosticOwner, value: Int(processGroupID)
+            )
+            try await CliProcessSignalOperationV1.send(
+                signal: SIGCONT,
+                processGroupId: processGroupID,
+                using: processInspector
+            )
+            RuntimeLifecycleDiagnostics.event(
+                .cliSIGCONTReturned,
+                owner: diagnosticOwner, value: Int(processGroupID)
+            )
+            let stdinFD = stdinWrite
+            stdinWrite = -1
+            let stdinGate = CliStdinStartGate()
+            let stdinData = request.spec.stdinBytes
+            let stdinTask = Task.detached {
+                await stdinGate.wait()
+                try await Self.writeAllStdinCancellable(
+                    stdinData,
+                    descriptor: stdinFD
+                )
+            }
+            return CliSpawnCore(
+                pid: childPID,
+                processGroupID: processGroupID,
+                server: server,
+                stdinGate: stdinGate,
+                stdinTask: stdinTask,
+                reapTask: createdReapTask,
+                stdoutTask: createdStdoutTask,
+                stderrTask: createdStderrTask
+            )
+        } catch {
+            let primaryError = error
+            RuntimeLifecycleDiagnostics.event(
+                .cliSpawnCleanupEntered, owner: diagnosticOwner
+            )
+            var causes: [CliProcessCleanupFailureV1.Cause] = []
+            var registryRetained = groupRegistered
+            if groupRegistered {
+                let cleanup = await CliProcessSpawnCleanupV1.runRegistered(
+                    executionId: request.executionId,
+                    processGroupID: pid,
+                    processInspector: processInspector,
+                    reapTask: reapTask, stdoutTask: stdoutTask, stderrTask: stderrTask,
+                    registry: registry,
+                    diagnosticOwner: diagnosticOwner
+                )
+                // Witness only: delivered once after the helper returned,
+                // outside any lock, and cannot change the cleanup decision.
+                spawnCleanupObserved(cleanup)
+                causes.append(contentsOf: cleanup.causes)
+                registryRetained = cleanup.registryRetained
+            } else {
+                causes.append(contentsOf: Self.terminateAndReapSpawnedGroup(
+                    pid: pid,
+                    processGroupID: pid,
+                    processInspector: processInspector,
+                    diagnosticOwner: diagnosticOwner
+                ))
+            }
+            for closeOperation in [
+                { try Self.checkedClose(&stdinRead) },
+                { try Self.checkedClose(&stdinWrite) },
+                { try Self.checkedClose(&stdoutRead) },
+                { try Self.checkedClose(&stdoutWrite) },
+                { try Self.checkedClose(&stderrRead) },
+                { try Self.checkedClose(&stderrWrite) },
+            ] {
+                do {
+                    try closeOperation()
+                } catch {
+                    causes.append(.init(phase: .descriptor, underlying: error))
+                }
+            }
+            RuntimeLifecycleDiagnostics.event(
+                registryRetained ? .cliCleanupRegistryRetained
+                    : (groupRegistered ? .cliCleanupRegistryUnregistered
+                        : .cliCleanupRegistryNotRegistered),
+                owner: diagnosticOwner
+            )
+            RuntimeLifecycleDiagnostics.event(
+                .cliCleanupCauseCount, owner: diagnosticOwner, value: causes.count
+            )
+            if !causes.isEmpty {
+                throw CliProcessCleanupFailureV1(
+                    executionId: request.executionId,
+                    pid: pid,
+                    processGroupID: pid,
+                    primary: primaryError,
+                    causes: causes
+                )
+            }
+            throw primaryError
         }
     }
 
-    private static func drainStderr(
-        _ fd: Int32,
-        metrics: CliRunMetrics,
-        exitBox: CliExitBox,
-        grace: Duration
-    ) async {
-        let clock = ContinuousClock()
-        var readBuffer = [UInt8](repeating: 0, count: 4096)
+    private func performCancellation() async throws
+        -> CliProcessExitEvidenceV1
+    {
+        let process = try await awaitRegistration()
+        markCancellationRequested()
+        process.core.stdinTask.cancel()
+        try await terminateProcessGroup(process.core.processGroupID)
+        return try await Self.awaitCompletion(
+            process.completionTask,
+            timeout: killGrace
+        )
+    }
 
-        await CliPipeDrain.drain(
-            grace: grace,
-            readChunk: { readPipeChunk(fd, into: &readBuffer) },
-            isExited: { await exitBox.value != nil },
-            sleep: { try? await Task.sleep(for: $0) },
-            now: { clock.now },
-            onData: { chunk in
-                await metrics.appendStderr(chunk)
-            },
-            onReadFailure: { message in
-                await metrics.appendStderr(Data("stderr read failed: \(message)".utf8))
+    private func finalize(
+        _ core: CliSpawnCore
+    ) async throws -> CliProcessExitEvidenceV1 {
+        let diagnosticId = diagnosticId
+        var successful = false
+        RuntimeLifecycleDiagnostics.event(
+            .cliFinalizeStarted,
+            owner: diagnosticId
+        )
+        defer {
+            RuntimeLifecycleDiagnostics.event(
+                .cliFinalizeFinished,
+                owner: diagnosticId,
+                value: successful ? 0 : 1
+            )
+        }
+        var firstFailure: (any Error)?
+        do {
+            try await core.stdinTask.value
+            RuntimeLifecycleDiagnostics.event(
+                .cliStdinFinished,
+                owner: diagnosticId,
+                value: 0
+            )
+        } catch {
+            RuntimeLifecycleDiagnostics.event(
+                .cliStdinFinished,
+                owner: diagnosticId,
+                value: 1
+            )
+            if !isCancellationRequested() {
+                firstFailure = error as? CliProcessBackendError
+                    ?? CliProcessBackendError.processLaunchFailed(
+                        "one-shot stdin operation failed"
+                    )
             }
+            do {
+                try await terminateProcessGroup(core.processGroupID)
+            } catch {
+                firstFailure = firstFailure ?? error
+            }
+        }
+
+        let reap = await core.reapTask.value
+        RuntimeLifecycleDiagnostics.event(
+            .cliReaped,
+            owner: diagnosticId,
+            value: reap.status == nil ? 1 : 0
+        )
+        let stdoutEOF = await core.stdoutTask.value
+        RuntimeLifecycleDiagnostics.event(
+            .cliStdoutFinished,
+            owner: diagnosticId,
+            value: stdoutEOF ? 0 : 1
+        )
+        let stderrEOF = await core.stderrTask.value
+        RuntimeLifecycleDiagnostics.event(
+            .cliStderrFinished,
+            owner: diagnosticId,
+            value: stderrEOF ? 0 : 1
+        )
+        if let failure = reap.failure {
+            firstFailure = firstFailure
+                ?? CliProcessBackendError.processCleanupFailed(
+                "waitpid: \(failure)"
+            )
+        }
+        if !stdoutEOF, firstFailure == nil {
+            firstFailure = CliProcessBackendError.pipeDrainIncomplete(
+                "stdout did not reach EOF"
+            )
+        }
+        if !stderrEOF, firstFailure == nil {
+            firstFailure = CliProcessBackendError.pipeDrainIncomplete(
+                "stderr did not reach EOF"
+            )
+        }
+        do {
+            try await terminateProcessGroup(core.processGroupID)
+            registry.unregister(-core.processGroupID)
+        } catch {
+            firstFailure = firstFailure ?? error
+        }
+        RuntimeLifecycleDiagnostics.event(
+            .cliServerStopStarted,
+            owner: diagnosticId
+        )
+        do {
+            try await core.server.stopAsync()
+            RuntimeLifecycleDiagnostics.event(
+                .cliServerStopFinished,
+                owner: diagnosticId,
+                value: 0
+            )
+        } catch {
+            RuntimeLifecycleDiagnostics.event(
+                .cliServerStopFinished,
+                owner: diagnosticId,
+                value: 1
+            )
+            firstFailure = firstFailure ?? error
+        }
+        do {
+            try removeCleanupFiles()
+        } catch {
+            firstFailure = firstFailure ?? error
+        }
+        if let firstFailure { throw firstFailure }
+
+        let flags = currentSignalFlags()
+        let evidence = CliProcessExitEvidenceV1(
+            pid: core.pid,
+            processGroupID: core.processGroupID,
+            status: reap.status ?? -1,
+            termSent: flags.term,
+            killSent: flags.kill,
+            stdoutEOF: stdoutEOF,
+            stderrEOF: stderrEOF,
+            childReaped: reap.status != nil
+        )
+        successful = true
+        return evidence
+    }
+
+    private func removeCleanupFiles() throws(CliProcessCleanupFailureV1.Cause) {
+        for authority in request.spec.cleanupAuthorities {
+            do {
+                try authority.removeExpectedFile()
+            } catch {
+                throw CliProcessCleanupFailureV1.Cause(
+                    phase: .cleanupAuthority, underlying: error
+                )
+            }
+        }
+    }
+
+    // Inside the grace wait loops, treat only the exact typed EPERM probe
+    // error as "still present": while the group's last members are zombies
+    // awaiting our own reap, XNU has no eligible signal target and reports
+    // EPERM. The loop deadlines and the strict final guard are unchanged, so
+    // a genuine persistent authority failure still fails after the full
+    // grace; this only stops a transient reap window from failing a cancel
+    // whose cleanup actually succeeds. EPERM is never treated as absence.
+    private static func processGroupExistsDuringGrace(
+        _ processGroupID: Int32,
+        using processInspector: any EngineRuntimeProcessInspectingV1
+    ) throws -> Bool {
+        do {
+            return try processInspector.processGroupExists(processGroupID)
+        } catch let error as EngineRuntimeAuthorityErrorV1 {
+            guard case .processSignal(EPERM) = error else { throw error }
+            return true
+        }
+    }
+
+    private func terminateProcessGroup(_ processGroupID: Int32) async throws {
+        if try processInspector.processGroupExists(processGroupID) {
+            if claimTermSignal() {
+                do {
+                    try processInspector.send(
+                        signal: SIGTERM,
+                        processGroupId: processGroupID
+                    )
+                } catch {
+                    guard !(try processInspector.processGroupExists(
+                        processGroupID
+                    )) else { throw error }
+                }
+            }
+            if terminationGrace > .zero {
+                let clock = ContinuousClock()
+                let deadline = clock.now.advanced(by: terminationGrace)
+                while clock.now < deadline,
+                      try Self.processGroupExistsDuringGrace(
+                          processGroupID, using: processInspector
+                      )
+                {
+                    do {
+                        try await Task.sleep(for: .milliseconds(10))
+                    } catch is CancellationError {
+                        // Cancellation requests cleanup; they do not cancel it.
+                    } catch {
+                        throw error
+                    }
+                }
+            }
+        }
+        if try processInspector.processGroupExists(processGroupID) {
+            if claimKillSignal() {
+                do {
+                    try processInspector.send(
+                        signal: SIGKILL,
+                        processGroupId: processGroupID
+                    )
+                } catch {
+                    guard !(try processInspector.processGroupExists(
+                        processGroupID
+                    )) else { throw error }
+                }
+            }
+            let clock = ContinuousClock()
+            let deadline = clock.now.advanced(by: killGrace)
+            while clock.now < deadline,
+                  try Self.processGroupExistsDuringGrace(
+                      processGroupID, using: processInspector
+                  )
+            {
+                do {
+                    try await Task.sleep(for: .milliseconds(10))
+                } catch is CancellationError {
+                    // Cancellation requests cleanup; they do not cancel it.
+                } catch {
+                    throw error
+                }
+            }
+        }
+        guard !(try processInspector.processGroupExists(processGroupID)) else {
+            throw CliProcessBackendError.processGroupStillAlive(
+                processGroupID
+            )
+        }
+    }
+
+    private func publishRegistration(_ process: CliRegisteredProcess) {
+        lock.lock()
+        registration = .ready(process)
+        let waiters = registrationWaiters
+        registrationWaiters.removeAll()
+        lock.unlock()
+        for waiter in waiters {
+            waiter.resume(returning: process)
+        }
+    }
+
+    private func failRegistration(_ error: any Error) {
+        lock.lock()
+        guard case .pending = registration else {
+            lock.unlock()
+            return
+        }
+        registration = .failed(error)
+        let waiters = registrationWaiters
+        registrationWaiters.removeAll()
+        lock.unlock()
+        for waiter in waiters {
+            waiter.resume(throwing: error)
+        }
+    }
+
+    private func awaitRegistration() async throws -> CliRegisteredProcess {
+        try await withCheckedThrowingContinuation { waiter in
+            let snapshot: Registration = lock.withLock {
+                switch registration {
+                case .pending:
+                    registrationWaiters.append(waiter)
+                    return .pending
+                case .ready, .failed:
+                    return registration
+                }
+            }
+            switch snapshot {
+            case .pending:
+                break
+            case .ready(let process):
+                waiter.resume(returning: process)
+            case .failed(let error):
+                waiter.resume(throwing: error)
+            }
+        }
+    }
+
+    private func markCancellationRequested() {
+        lock.withLock { cancellationRequested = true }
+    }
+
+    private func isCancellationRequested() -> Bool {
+        lock.withLock { cancellationRequested }
+    }
+
+    private func claimTermSignal() -> Bool {
+        lock.withLock {
+            guard !termSent else { return false }
+            termSent = true
+            return true
+        }
+    }
+
+    private func claimKillSignal() -> Bool {
+        lock.withLock {
+            guard !killSent else { return false }
+            killSent = true
+            return true
+        }
+    }
+
+    private func currentSignalFlags() -> (term: Bool, kill: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (termSent, killSent)
+    }
+
+    private static func makePipe() throws -> (Int32, Int32) {
+        var descriptors = [Int32](repeating: -1, count: 2)
+        let result = descriptors.withUnsafeMutableBufferPointer { buffer in
+            Darwin.pipe(buffer.baseAddress!)
+        }
+        guard result == 0,
+              fcntl(descriptors[0], F_SETFD, FD_CLOEXEC) == 0,
+              fcntl(descriptors[1], F_SETFD, FD_CLOEXEC) == 0
+        else {
+            if descriptors[0] >= 0 { _ = Darwin.close(descriptors[0]) }
+            if descriptors[1] >= 0 { _ = Darwin.close(descriptors[1]) }
+            throw CliProcessBackendError.pipeSetupFailed(
+                "pipe CLOEXEC setup failed"
+            )
+        }
+        return (descriptors[0], descriptors[1])
+    }
+
+    private static func checkedClose(_ descriptor: inout Int32) throws {
+        guard descriptor >= 0 else { return }
+        let value = descriptor
+        descriptor = -1
+        guard Darwin.close(value) == 0 else {
+            throw CliProcessBackendError.processCleanupFailed(
+                "checked descriptor close failed"
+            )
+        }
+    }
+
+    private static func writeAllStdinCancellable(
+        _ data: Data,
+        descriptor ownedDescriptor: Int32
+    ) async throws {
+        var descriptor = ownedDescriptor
+        do {
+            var offset = 0
+            while offset < data.count {
+                try Task.checkCancellation()
+                let written = data.withUnsafeBytes { bytes in
+                    Darwin.write(
+                        descriptor,
+                        bytes.baseAddress?.advanced(by: offset),
+                        bytes.count - offset
+                    )
+                }
+                if written > 0 {
+                    offset += written
+                    continue
+                }
+                if written < 0, errno == EINTR { continue }
+                if written < 0, errno == EAGAIN || errno == EWOULDBLOCK {
+                    do {
+                        try await Task.sleep(for: .milliseconds(10))
+                    } catch {
+                        throw CancellationError()
+                    }
+                    continue
+                }
+                throw CliProcessBackendError.processLaunchFailed(
+                    errno == EPIPE
+                        ? "child closed one-shot stdin"
+                        : "one-shot stdin write failed"
+                )
+            }
+            try checkedClose(&descriptor)
+        } catch {
+            var closeFailure: (any Error)?
+            do {
+                try checkedClose(&descriptor)
+            } catch {
+                closeFailure = error
+            }
+            if let closeFailure { throw closeFailure }
+            throw error
+        }
+    }
+
+    private static func validateSuspendedImage(
+        pid: Int32,
+        processGroupID: Int32,
+        authority: CliExecutableAuthorityV1,
+        processInspector: any EngineRuntimeProcessInspectingV1
+    ) throws {
+        guard let image = try processInspector.snapshots().first(where: {
+            $0.pid == pid
+        }),
+            image.pid == pid,
+            image.processGroupId == processGroupID,
+            image.uid == getuid(),
+            image.startSeconds > 0,
+            image.executablePath == authority.stagedPath,
+            image.executableDevice == authority.stagedDevice,
+            image.executableInode == authority.stagedInode,
+            image.executableHash == authority.executableHash,
+            image.designatedRequirement == authority.designatedRequirement,
+            image.cdHash == authority.cdHash
+        else {
+            throw CliProcessBackendError.processLaunchFailed(
+                "suspended executable image identity mismatch"
+            )
+        }
+    }
+
+    private static func validateBoardPeer(
+        _ pid: Int32,
+        authority: EngineBoardBridgeExecutableAuthorityV1,
+        processInspector: any EngineRuntimeProcessInspectingV1
+    ) throws {
+        guard let image = try processInspector.snapshots().first(where: {
+            $0.pid == pid
+        }),
+            image.pid == pid,
+            image.uid == getuid(),
+            image.startSeconds > 0,
+            image.executablePath == authority.stagedPath,
+            image.executableDevice == authority.stagedDevice,
+            image.executableInode == authority.stagedInode,
+            image.executableHash == authority.executableHash,
+            image.designatedRequirement == authority.designatedRequirement,
+            image.cdHash == authority.cdHash
+        else {
+            throw CliProcessBackendError.processLaunchFailed(
+                "Board bridge peer identity mismatch"
+            )
+        }
+    }
+
+    private static func terminateAndReapSpawnedGroup(
+        pid: Int32,
+        processGroupID: Int32,
+        processInspector: any EngineRuntimeProcessInspectingV1,
+        diagnosticOwner: UUID
+    ) -> [CliProcessCleanupFailureV1.Cause] {
+        let signalOutcome = signalSpawnedGroupForTermination(
+            processGroupID: processGroupID,
+            processInspector: processInspector,
+            diagnosticOwner: diagnosticOwner
+        )
+        var causes = signalOutcome.causes
+        var status: Int32 = 0
+        let options = signalOutcome.groupStillLiveAfterFailure
+            ? WNOHANG : 0
+        while true {
+            let result = waitpid(pid, &status, options)
+            let waitError = result < 0 ? errno : 0
+            RuntimeLifecycleDiagnostics.event(
+                .cliWaitpidReturned, owner: diagnosticOwner, value: Int(result)
+            )
+            RuntimeLifecycleDiagnostics.event(
+                .cliWaitpidRawStatus, owner: diagnosticOwner, value: Int(status)
+            )
+            RuntimeLifecycleDiagnostics.event(
+                .cliWaitpidErrno, owner: diagnosticOwner, value: Int(waitError)
+            )
+            if result == pid || (result < 0 && waitError == ECHILD) { break }
+            if result < 0 && waitError == EINTR { continue }
+            if result == 0 {
+                causes.append(.init(
+                    phase: .reap,
+                    underlying: CliProcessBackendError
+                        .processGroupStillAlive(processGroupID)
+                ))
+                break
+            }
+            if result < 0 {
+                causes.append(.init(
+                    phase: .reap,
+                    underlying: CliProcessBackendError
+                        .processCleanupFailed("spawned child reap failed")
+                ))
+                break
+            }
+        }
+        do {
+            if try observeCleanupGroupExists(
+                processGroupID, processInspector: processInspector,
+                diagnosticOwner: diagnosticOwner
+            ) {
+                causes.append(.init(
+                    phase: .liveness,
+                    underlying: CliProcessBackendError
+                        .processGroupStillAlive(processGroupID)
+                ))
+            }
+        } catch {
+            causes.append(.init(phase: .liveness, underlying: error))
+        }
+        return causes
+    }
+
+    fileprivate struct SpawnedGroupSignalOutcome {
+        let causes: [CliProcessCleanupFailureV1.Cause]
+        let groupStillLiveAfterFailure: Bool
+        let signals: [CliSpawnCleanupSignalAttemptV1]
+        let probes: [Result<Bool, any Error>]
+        let registeredCauses: [CliSpawnCleanupTaggedCauseV1]
+        let killAccepted: Bool
+        let positivelyObservedAbsence: Bool
+    }
+
+    fileprivate static func observeCleanupGroupExists(
+        _ processGroupID: Int32,
+        processInspector: any EngineRuntimeProcessInspectingV1,
+        diagnosticOwner: UUID
+    ) throws -> Bool {
+        do {
+            let exists = try processInspector.processGroupExists(processGroupID)
+            RuntimeLifecycleDiagnostics.event(
+                exists ? .cliCleanupLivenessLive : .cliCleanupLivenessAbsent,
+                owner: diagnosticOwner, value: Int(processGroupID)
+            )
+            return exists
+        } catch {
+            RuntimeLifecycleDiagnostics.event(
+                .cliCleanupLivenessError,
+                owner: diagnosticOwner, value: Int(processGroupID)
+            )
+            throw error
+        }
+    }
+
+    fileprivate static func signalSpawnedGroupForTermination(
+        processGroupID: Int32,
+        processInspector: any EngineRuntimeProcessInspectingV1,
+        diagnosticOwner: UUID
+    ) -> SpawnedGroupSignalOutcome {
+        var signals: [CliSpawnCleanupSignalAttemptV1] = []
+        var probes: [Result<Bool, any Error>] = []
+        var registeredCauses: [CliSpawnCleanupTaggedCauseV1] = []
+        var positivelyObservedAbsence = false
+        var killAccepted = false
+        var finalCONTFailed = false
+        func observeGroup() throws -> Bool {
+            do {
+                let exists = try observeCleanupGroupExists(
+                    processGroupID, processInspector: processInspector,
+                    diagnosticOwner: diagnosticOwner
+                )
+                probes.append(.success(exists))
+                if !exists { positivelyObservedAbsence = true }
+                return exists
+            } catch {
+                probes.append(.failure(error))
+                throw error
+            }
+        }
+        do {
+            guard try observeGroup()
+            else {
+                return SpawnedGroupSignalOutcome(
+                    causes: [], groupStillLiveAfterFailure: false,
+                    signals: signals, probes: probes,
+                    registeredCauses: registeredCauses,
+                    killAccepted: killAccepted,
+                    positivelyObservedAbsence: positivelyObservedAbsence
+                )
+            }
+        } catch {
+            let cause = CliProcessCleanupFailureV1.Cause(
+                phase: .liveness, underlying: error
+            )
+            registeredCauses.append(.init(
+                cause: cause, origin: .initialProbe
+            ))
+            return SpawnedGroupSignalOutcome(
+                causes: [cause], groupStillLiveAfterFailure: true,
+                signals: signals, probes: probes,
+                registeredCauses: registeredCauses,
+                killAccepted: killAccepted,
+                positivelyObservedAbsence: positivelyObservedAbsence
+            )
+        }
+        var causes: [CliProcessCleanupFailureV1.Cause] = []
+        for signal in [SIGKILL, SIGCONT] {
+            do {
+                try processInspector.send(
+                    signal: signal,
+                    processGroupId: processGroupID
+                )
+                signals.append(.init(signal: signal, result: .success(())))
+                if signal == SIGKILL { killAccepted = true }
+            } catch let dispatchFailure {
+                if signal == SIGCONT { finalCONTFailed = true }
+                signals.append(.init(signal: signal, result: .failure(dispatchFailure)))
+                let signalCause = CliProcessCleanupFailureV1.Cause(
+                    phase: .signal, underlying: dispatchFailure
+                )
+                let signalOrigin: CliSpawnCleanupCauseOriginV1 =
+                    signal == SIGKILL ? .killSignal : .finalCONTSignal
+                let probeOrigin: CliSpawnCleanupCauseOriginV1 =
+                    signal == SIGKILL ? .killProbe : .finalCONTProbe
+                do {
+                    if try observeGroup() {
+                        causes.append(signalCause)
+                        registeredCauses.append(.init(
+                            cause: signalCause, origin: signalOrigin
+                        ))
+                    } else {
+                        let isTypedESRCH: Bool
+                        if case .processSignal(ESRCH)? =
+                            dispatchFailure
+                                as? EngineRuntimeAuthorityErrorV1
+                        {
+                            isTypedESRCH = true
+                        } else {
+                            isTypedESRCH = false
+                        }
+                        if !isTypedESRCH {
+                            registeredCauses.append(.init(
+                                cause: signalCause,
+                                origin: signalOrigin
+                            ))
+                        }
+                    }
+                } catch {
+                    let probeCause = CliProcessCleanupFailureV1.Cause(
+                        phase: .liveness, underlying: error
+                    )
+                    causes.append(signalCause)
+                    causes.append(probeCause)
+                    registeredCauses.append(.init(
+                        cause: signalCause, origin: signalOrigin
+                    ))
+                    registeredCauses.append(.init(
+                        cause: probeCause, origin: probeOrigin
+                    ))
+                }
+            }
+        }
+        guard !causes.isEmpty else {
+            return SpawnedGroupSignalOutcome(
+                causes: [], groupStillLiveAfterFailure: false,
+                signals: signals, probes: probes,
+                registeredCauses: registeredCauses,
+                killAccepted: killAccepted,
+                positivelyObservedAbsence: positivelyObservedAbsence
+            )
+        }
+        do {
+            let groupStillLive = try observeGroup()
+            return SpawnedGroupSignalOutcome(
+                causes: causes,
+                groupStillLiveAfterFailure: groupStillLive,
+                signals: signals, probes: probes,
+                registeredCauses: registeredCauses,
+                killAccepted: killAccepted,
+                positivelyObservedAbsence: positivelyObservedAbsence
+            )
+        } catch {
+            let cause = CliProcessCleanupFailureV1.Cause(
+                phase: .liveness, underlying: error
+            )
+            causes.append(cause)
+            registeredCauses.append(.init(
+                cause: cause,
+                origin: finalCONTFailed
+                    ? .finalCONTProbe : .otherPreJoinProbe
+            ))
+            return SpawnedGroupSignalOutcome(
+                causes: causes,
+                groupStillLiveAfterFailure: true,
+                signals: signals, probes: probes,
+                registeredCauses: registeredCauses,
+                killAccepted: killAccepted,
+                positivelyObservedAbsence: positivelyObservedAbsence
+            )
+        }
+    }
+
+    private static func validateExecutableAuthority(
+        _ authority: CliExecutableAuthorityV1,
+        codeSignatureRevalidator:
+            any CliProcessCodeSignatureRevalidatingV1
+    ) throws {
+        try authority.validateCanonical()
+        try codeSignatureRevalidator.revalidateCLI(authority)
+        let identity = try executableFileIdentity(authority.stagedPath)
+        guard identity.hash == authority.executableHash,
+              identity.device == authority.stagedDevice,
+              identity.inode == authority.stagedInode
+        else {
+            throw CliProcessBackendError.processLaunchFailed(
+                "CLI executable authority drift"
+            )
+        }
+    }
+
+    private static func validateBridgeAuthority(
+        _ authority: EngineBoardBridgeExecutableAuthorityV1,
+        codeSignatureRevalidator:
+            any CliProcessCodeSignatureRevalidatingV1
+    ) throws {
+        try authority.validateCanonical()
+        try codeSignatureRevalidator.revalidateBoardBridge(authority)
+        let identity = try executableFileIdentity(authority.stagedPath)
+        guard identity.hash == authority.executableHash,
+              identity.device == authority.stagedDevice,
+              identity.inode == authority.stagedInode
+        else {
+            throw CliProcessBackendError.processLaunchFailed(
+                "Board bridge executable authority drift"
+            )
+        }
+    }
+
+    private static func executableFileIdentity(
+        _ path: String
+    ) throws -> (hash: String, device: UInt64, inode: UInt64) {
+        let descriptor = path.withCString {
+            Darwin.open($0, O_RDONLY | O_CLOEXEC | O_NOFOLLOW)
+        }
+        guard descriptor >= 0 else {
+            throw CliProcessBackendError.processLaunchFailed(
+                "executable authority open failed"
+            )
+        }
+        var descriptorOpen = true
+        defer { if descriptorOpen { Darwin.close(descriptor) } }
+        var before = stat()
+        guard Darwin.fstat(descriptor, &before) == 0,
+              before.st_mode & S_IFMT == S_IFREG,
+              before.st_nlink == 1,
+              before.st_uid == getuid(),
+              before.st_mode & S_IXUSR != 0
+        else {
+            throw CliProcessBackendError.processLaunchFailed(
+                "executable authority stat failed"
+            )
+        }
+        var hasher = SHA256()
+        var buffer = [UInt8](repeating: 0, count: 64 * 1_024)
+        var byteCount: Int64 = 0
+        while true {
+            let count = buffer.withUnsafeMutableBytes {
+                Darwin.read(descriptor, $0.baseAddress, $0.count)
+            }
+            if count > 0 {
+                hasher.update(data: Data(buffer[0..<count]))
+                byteCount += Int64(count)
+                continue
+            }
+            if count == 0 { break }
+            if errno == EINTR { continue }
+            throw CliProcessBackendError.processLaunchFailed(
+                "executable authority read failed"
+            )
+        }
+        var after = stat()
+        guard Darwin.fstat(descriptor, &after) == 0,
+              before.st_dev == after.st_dev,
+              before.st_ino == after.st_ino,
+              before.st_mode == after.st_mode,
+              before.st_uid == after.st_uid,
+              before.st_nlink == after.st_nlink,
+              before.st_size == after.st_size,
+              before.st_mtimespec.tv_sec == after.st_mtimespec.tv_sec,
+              before.st_mtimespec.tv_nsec == after.st_mtimespec.tv_nsec,
+              byteCount == before.st_size,
+              Darwin.close(descriptor) == 0
+        else {
+            descriptorOpen = false
+            throw CliProcessBackendError.processLaunchFailed(
+                "executable authority changed while hashing"
+            )
+        }
+        descriptorOpen = false
+        return (
+            hash: hasher.finalize().map {
+                String(format: "%02x", $0)
+            }.joined(),
+            device: UInt64(before.st_dev),
+            inode: UInt64(before.st_ino)
         )
     }
 
     private static func setNonBlocking(_ fd: Int32) throws {
         let flags = fcntl(fd, F_GETFL)
-        guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else {
-            throw CliProcessBackendError.pipeSetupFailed(String(cString: strerror(errno)))
+        guard flags >= 0,
+              fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0,
+              fcntl(fd, F_SETFD, FD_CLOEXEC) == 0 else {
+            throw CliProcessBackendError.pipeSetupFailed(
+                "nonblocking pipe setup failed"
+            )
         }
     }
 
-    private static func readPipeChunk(_ fd: Int32, into bytes: inout [UInt8]) -> CliPipeDrain.ReadResult {
-        let count = bytes.withUnsafeMutableBytes { Darwin.read(fd, $0.baseAddress, $0.count) }
-        if count > 0 { return .data(Data(bytes[0..<count])) }
-        if count == 0 { return .eof }
-        if errno == EAGAIN || errno == EWOULDBLOCK { return .wouldBlock }
-        if errno == EINTR { return .interrupted }
-        return .failed(String(cString: strerror(errno)))
+    private static func checkSpawnSetup(_ code: Int32) throws {
+        guard code == 0 else {
+            throw CliProcessBackendError.processLaunchFailed(
+                "process spawn setup failed"
+            )
+        }
     }
 
-    private func blockCardIfStillRunning(cardId: String, runId: String, reason: String, detail: String) throws {
-        guard try db.card(id: cardId)?.status == .running else { return }
-        try db.blockCard(id: cardId, runId: runId, reason: reason, detail: detail)
+    private static func makeCStringVector(
+        _ strings: [String]
+    ) throws -> [UnsafeMutablePointer<CChar>?] {
+        var result: [UnsafeMutablePointer<CChar>?] = []
+        result.reserveCapacity(strings.count + 1)
+        for string in strings {
+            guard let duplicate = strdup(string) else {
+                freeCStringVector(result)
+                throw CliProcessBackendError.processLaunchFailed(
+                    "unable to allocate process argument"
+                )
+            }
+            result.append(duplicate)
+        }
+        result.append(nil)
+        return result
     }
 
-    private func interruptCardIfStillRunning(cardId: String, runId: String) throws {
-        guard try db.card(id: cardId)?.status == .running else { return }
-        try db.transitionCard(
-            id: cardId,
-            to: .ready,
-            eventKind: EventKind.cardInterrupted,
-            payload: ["runId": .string(runId), "reason": "canceled"]
+    private static func freeCStringVector(
+        _ vector: [UnsafeMutablePointer<CChar>?]
+    ) {
+        for case let pointer? in vector {
+            free(pointer)
+        }
+    }
+
+    private static func decodeWaitStatus(_ raw: Int32) -> Int32 {
+        let signal = raw & 0x7f
+        if signal == 0 {
+            return (raw >> 8) & 0xff
+        }
+        return 128 + signal
+    }
+
+    private static func awaitCompletion(
+        _ task: Task<CliProcessExitEvidenceV1, Error>,
+        timeout: Duration
+    ) async throws -> CliProcessExitEvidenceV1 {
+        try await withThrowingTaskGroup(
+            of: CliProcessExitEvidenceV1.self
+        ) { group in
+            group.addTask { try await task.value }
+            group.addTask {
+                try await Task.sleep(for: timeout)
+                throw CliProcessBackendError.processCleanupFailed(
+                    "process did not exit within kill grace"
+                )
+            }
+            guard let first = try await group.next() else {
+                throw CliProcessBackendError.processCleanupFailed(
+                    "process completion race produced no result"
+                )
+            }
+            group.cancelAll()
+            return first
+        }
+    }
+
+    private static func drainStdout(
+        fd: Int32,
+        reapState: CliProcessReapState,
+        grace: Duration,
+        continuation:
+            AsyncThrowingStream<CliProcessFrameV1, Error>.Continuation,
+        diagnosticOwner: UUID
+    ) async -> Bool {
+        RuntimeLifecycleDiagnostics.event(
+            .cliStdoutDrainEntered, owner: diagnosticOwner
         )
-    }
-}
-
-public enum CliOutputParser {
-    public static func events(from line: String) -> [AgentEvent] {
-        guard let value = try? JSONValue.decoded(from: line) else { return [] }
-        var events = textCandidates(value).map(AgentEvent.textDelta)
-        if let usage = usageCandidate(value) {
-            events.append(.turnEnded(usage: usage))
-        }
-        return events
-    }
-
-    private static func textCandidates(_ value: JSONValue) -> [String] {
-        switch value {
-        case .object(let object):
-            var found: [String] = []
-            for key in ["delta", "text", "content"] {
-                if let text = object[key]?.stringValue,
-                   !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                   text.count > 1 {
-                    found.append(text)
+        var didLogFirstBytes = false
+        var didLogFirstLine = false
+        var lineBuffer = Data()
+        let reachedEOF = await drainPipe(
+            fd: fd,
+            reapState: reapState,
+            grace: grace,
+            onData: { data in
+                if !didLogFirstBytes {
+                    RuntimeLifecycleDiagnostics.event(
+                        .cliStdoutFirstBytes,
+                        owner: diagnosticOwner, value: data.count
+                    )
+                    didLogFirstBytes = true
+                }
+                lineBuffer.append(data)
+                while let newline = lineBuffer.firstIndex(
+                    of: UInt8(ascii: "\n")
+                ) {
+                    let line = Data(lineBuffer[..<newline])
+                    lineBuffer.removeSubrange(lineBuffer.startIndex...newline)
+                    let yieldResult = continuation.yield(
+                        .stdoutLine(String(decoding: line, as: UTF8.self))
+                    )
+                    if !didLogFirstLine {
+                        didLogFirstLine = true
+                        let outcome: Int
+                        switch yieldResult {
+                        case .enqueued: outcome = 0
+                        case .dropped: outcome = 1
+                        case .terminated: outcome = 2
+                        @unknown default: outcome = 3
+                        }
+                        RuntimeLifecycleDiagnostics.event(
+                            .cliStdoutFirstLineYielded,
+                            owner: diagnosticOwner, value: outcome
+                        )
+                    }
+                }
+            },
+            onFinish: {
+                if !lineBuffer.isEmpty {
+                    let yieldResult = continuation.yield(
+                        .stdoutLine(
+                            String(decoding: lineBuffer, as: UTF8.self)
+                        )
+                    )
+                    lineBuffer.removeAll()
+                    if !didLogFirstLine {
+                        didLogFirstLine = true
+                        let outcome: Int
+                        switch yieldResult {
+                        case .enqueued: outcome = 0
+                        case .dropped: outcome = 1
+                        case .terminated: outcome = 2
+                        @unknown default: outcome = 3
+                        }
+                        RuntimeLifecycleDiagnostics.event(
+                            .cliStdoutFirstLineYielded,
+                            owner: diagnosticOwner, value: outcome
+                        )
+                    }
                 }
             }
-            for child in object.values {
-                found.append(contentsOf: textCandidates(child))
-            }
-            return Array(NSOrderedSet(array: found)) as? [String] ?? found
-        case .array(let values):
-            return values.flatMap(textCandidates)
-        case .string, .number, .bool, .null:
-            return []
-        }
-    }
-
-    private static func usageCandidate(_ value: JSONValue) -> Usage? {
-        switch value {
-        case .object(let object):
-            let input = object["input_tokens"]?.intValue
-                ?? object["prompt_tokens"]?.intValue
-                ?? object["inputTokens"]?.intValue
-            let output = object["output_tokens"]?.intValue
-                ?? object["completion_tokens"]?.intValue
-                ?? object["outputTokens"]?.intValue
-            let cache = object["cache_read_input_tokens"]?.intValue
-                ?? object["cached_tokens"]?.intValue
-                ?? object["cacheReadTokens"]?.intValue
-            if input != nil || output != nil || cache != nil {
-                return Usage(inputTokens: input ?? 0, outputTokens: output ?? 0, cacheReadTokens: cache ?? 0)
-            }
-            for child in object.values {
-                if let usage = usageCandidate(child) {
-                    return usage
-                }
-            }
-            return nil
-        case .array(let values):
-            for value in values {
-                if let usage = usageCandidate(value) {
-                    return usage
-                }
-            }
-            return nil
-        case .string, .number, .bool, .null:
-            return nil
-        }
-    }
-}
-
-private final class CliProcessHandle: @unchecked Sendable {
-    private let lock = NSLock()
-    private let registry: ShellProcessRegistry
-    private var process: Process?
-    /// 取消可能先于进程注册到达;记住意图,set() 时补杀(否则 terminate 变空操作,取消挂到超时)
-    private var terminateRequested = false
-
-    init(registry: ShellProcessRegistry) {
-        self.registry = registry
-    }
-
-    func set(_ process: Process) {
-        lock.lock()
-        self.process = process
-        registry.register(process.processIdentifier)
-        let pendingTerminate = terminateRequested
-        lock.unlock()
-        if pendingTerminate, process.isRunning {
-            process.terminate()
-        }
-    }
-
-    func unregister(_ pid: Int32) {
-        registry.unregister(pid)
-    }
-
-    func terminate() {
-        lock.lock()
-        terminateRequested = true
-        let process = self.process
-        lock.unlock()
-        guard let process, process.isRunning else { return }
-        process.terminate()
-    }
-
-    func kill() {
-        let process = currentProcess()
-        guard let process, process.isRunning else { return }
-        Darwin.kill(process.processIdentifier, SIGKILL)
-    }
-
-    private func currentProcess() -> Process? {
-        lock.lock()
-        defer { lock.unlock() }
-        return process
-    }
-}
-
-private actor CliRunMetrics {
-    struct Snapshot: Sendable {
-        let inputTokens: Int
-        let outputTokens: Int
-        let turns: Int
-        let stderrTail: String
-        let timedOut: Bool
-        let exitStatus: Int32?
-    }
-
-    private var inputTokens = 0
-    private var outputTokens = 0
-    private var turns = 0
-    private var stderrTail = Data()
-    private var timedOut = false
-    private var exitStatus: Int32?
-
-    func addUsage(_ usage: Usage) {
-        turns += 1
-        inputTokens = Self.saturatingAdd(inputTokens, usage.inputTokens)
-        outputTokens = Self.saturatingAdd(outputTokens, usage.outputTokens)
-    }
-
-    func appendStderr(_ data: Data) {
-        stderrTail.append(data)
-        if stderrTail.count > KernelDefaults.cliStderrTailBytes {
-            stderrTail.removeFirst(stderrTail.count - KernelDefaults.cliStderrTailBytes)
-        }
-    }
-
-    func markTimedOut() {
-        timedOut = true
-    }
-
-    func setExitStatus(_ status: Int32) {
-        exitStatus = status
-    }
-
-    func snapshot() -> Snapshot {
-        Snapshot(
-            inputTokens: inputTokens,
-            outputTokens: outputTokens,
-            turns: turns,
-            stderrTail: String(data: stderrTail, encoding: .utf8) ?? "",
-            timedOut: timedOut,
-            exitStatus: exitStatus
         )
+        return Darwin.close(fd) == 0 && reachedEOF
     }
 
-    private static func saturatingAdd(_ lhs: Int, _ rhs: Int) -> Int {
-        let (sum, overflow) = lhs.addingReportingOverflow(max(0, rhs))
-        return overflow ? Int.max : sum
-    }
-}
-
-private actor CliExitBox {
-    private var status: Int32?
-    private var waiters: [CheckedContinuation<Int32, Never>] = []
-
-    var value: Int32? { status }
-
-    func wait() async -> Int32 {
-        if let status { return status }
-        return await withCheckedContinuation { continuation in
-            waiters.append(continuation)
-        }
+    private static func drainStderr(
+        fd: Int32,
+        reapState: CliProcessReapState,
+        grace: Duration,
+        continuation:
+            AsyncThrowingStream<CliProcessFrameV1, Error>.Continuation
+    ) async -> Bool {
+        let reachedEOF = await drainPipe(
+            fd: fd,
+            reapState: reapState,
+            grace: grace,
+            onData: { continuation.yield(.stderr($0)) },
+            onFinish: {}
+        )
+        return Darwin.close(fd) == 0 && reachedEOF
     }
 
-    func finish(_ status: Int32) {
-        guard self.status == nil else { return }
-        self.status = status
-        let waiters = self.waiters
-        self.waiters.removeAll()
-        for waiter in waiters {
-            waiter.resume(returning: status)
+    private static func drainPipe(
+        fd: Int32,
+        reapState: CliProcessReapState,
+        grace: Duration,
+        onData: (Data) -> Void,
+        onFinish: () -> Void
+    ) async -> Bool {
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        var exitObservedAt: ContinuousClock.Instant?
+        var backoff: Duration = .milliseconds(10)
+        while true {
+            if reapState.exited {
+                if exitObservedAt == nil { exitObservedAt = .now }
+                if let exitObservedAt,
+                   exitObservedAt.duration(to: .now) >= grace
+                {
+                    onFinish()
+                    return false
+                }
+            }
+            let count = buffer.withUnsafeMutableBytes {
+                Darwin.read(fd, $0.baseAddress, $0.count)
+            }
+            if count > 0 {
+                onData(Data(buffer[0..<count]))
+                backoff = .milliseconds(10)
+                if reapState.exited {
+                    if exitObservedAt == nil { exitObservedAt = .now }
+                    if let exitObservedAt,
+                       exitObservedAt.duration(to: .now) >= grace
+                    {
+                        onFinish()
+                        return false
+                    }
+                }
+                continue
+            }
+            if count == 0 {
+                onFinish()
+                return true
+            }
+            if errno == EINTR { continue }
+            if errno != EAGAIN, errno != EWOULDBLOCK {
+                onFinish()
+                return false
+            }
+
+            do {
+                try await Task.sleep(for: backoff)
+            } catch {
+                onFinish()
+                return false
+            }
+            backoff = min(backoff * 2, .milliseconds(100))
         }
     }
 }

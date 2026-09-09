@@ -1,0 +1,438 @@
+command=swift run RunTests --filter controlContractMigrationExactDDLAndConstraints|controlContractMigrationReplaysFromFreshAndV11Twice|controlContractMigrationRollbackLeavesV13Untouched|controlContractAppendOnlyTablesRejectNoopUpdateAndDelete|controlContractSchemaHasExactInboxRedactionShape|inputSchemaHasNoParseAttemptColumn|inputSchemaRejectsDeletedStatusWithActiveRetention|activeInputRequiresExactlyOneInlineOrPayloadRef|inputSchemaRejectsTombstoneRetentionWithLiveStatus
+cwd=/Users/muzi/Agent-loop
+branch=codex/personal-ai-ranch-p0
+head=02334ec8d21533be81d93d39191bc7d9b9c24f7f
+started_at_utc=2026-08-25T22:30:20Z
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.30s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1CControlContractMigrationTests started.
+◇ Test controlContractMigrationExactDDLAndConstraints() started.
+✔ Test controlContractMigrationExactDDLAndConstraints() passed after 0.050 seconds.
+◇ Test controlContractMigrationReplaysFromFreshAndV11Twice() started.
+✔ Test controlContractMigrationReplaysFromFreshAndV11Twice() passed after 0.070 seconds.
+◇ Test controlContractMigrationRollbackLeavesV13Untouched() started.
+✔ Test controlContractMigrationRollbackLeavesV13Untouched() passed after 0.028 seconds.
+◇ Test controlContractAppendOnlyTablesRejectNoopUpdateAndDelete() started.
+✔ Test controlContractAppendOnlyTablesRejectNoopUpdateAndDelete() passed after 0.022 seconds.
+◇ Test controlContractSchemaHasExactInboxRedactionShape() started.
+✔ Test controlContractSchemaHasExactInboxRedactionShape() passed after 0.021 seconds.
+◇ Test inputSchemaHasNoParseAttemptColumn() started.
+✔ Test inputSchemaHasNoParseAttemptColumn() passed after 0.020 seconds.
+◇ Test inputSchemaRejectsDeletedStatusWithActiveRetention() started.
+✔ Test inputSchemaRejectsDeletedStatusWithActiveRetention() passed after 0.022 seconds.
+◇ Test activeInputRequiresExactlyOneInlineOrPayloadRef() started.
+✔ Test activeInputRequiresExactlyOneInlineOrPayloadRef() passed after 0.023 seconds.
+◇ Test inputSchemaRejectsTombstoneRetentionWithLiveStatus() started.
+✔ Test inputSchemaRejectsTombstoneRetentionWithLiveStatus() passed after 0.022 seconds.
+✔ Suite P1CControlContractMigrationTests passed after 0.282 seconds.
+✔ Test run with 9 tests in 1 suite passed after 0.282 seconds.
+finished_at_utc=2026-08-25T22:30:23Z
+exit_code=0
+RESULT: PASSED
+BATCH: P1-C C2 command/event focused verification
+COMMAND: swift run RunTests --filter 'persistedControlContractConstantsAndWorkKeyDerivationsAreExact|workerCommandEnvelopeFactoriesAreExactAttemptScopedAndReplayStable|preparedCommandIsPreReceiptAuthorityAndNewResultIsPostMutationOnly|commandEnvelopeWholeHashCoversEveryFieldAndNullability|canonicalContractCodingReusesCanonicalJSONV1GoldenBytes|campSafeJSONRejectsUnknownForbiddenIdentityAndNoncanonicalBytes|campSafeJSONRejectsSemanticallyForbiddenReferenceValues|everyCommandResultAndAuditShapeIsExactAndOrdered|executeCommandCommitsReceiptProjectionEventsAndOutboxAtomically|executeCommandReplayReturnsOldResultWithoutMutation|creationReplayUsesPersistedResultBeforeIDFactoryOrProjectionBranch|replayValidatesCompleteStoredEventAndOutboxGraph|executeCommandRejectsTypeHashOrEventCountDriftTotally|multiAggregateCommandUsesStableOrdinalsAndVersionChains|eventCountOrdinalOrProjectionFailureRollsBackEverything|domainEventCopiesEnvelopeAndOwnsRecordedAt|domainEventRejectsMissingCampBadTimeAndVersionPreSQL|outboxClaimReleaseSentCASAndReplayAreDeterministic|inboxApplyReplayConflictAndTypedRejectionAreDurable|inboxTypedRejectionRollsBackHandlerSavepointBeforeDurableEvidence|inboxSameKeyAndStoredHashButDifferentBytesFailsClosedWithoutHandler|inboxConflictCASPersistsExactRejectedShapeAndThrowsAfterCommit|inboxConflictAgainstRedactedRowIsTerminalWithoutCASOrHandler|inboxRedactedTombstonesPreservePriorHashAndAppliedTimeAcrossOrigins|domainEventsReadInValidatedAggregateOrder'
+CWD: /Users/muzi/Agent-loop
+BRANCH: codex/personal-ai-ranch-p0
+HEAD: 02334ec8d21533be81d93d39191bc7d9b9c24f7f
+START_UTC: 2026-08-25T23:19:41Z
+[0/1] Planning build
+Building for debugging...
+[0/4] Write sources
+[1/4] Write swift-version--1AB21518FC5DEDBE.txt
+[3/6] Compiling AgentLoopCore DomainEvent.swift
+[4/6] Emitting module AgentLoopCore
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (3.41s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1CDomainEventContractTests started.
+◇ Test persistedControlContractConstantsAndWorkKeyDerivationsAreExact() started.
+✔ Test persistedControlContractConstantsAndWorkKeyDerivationsAreExact() passed after 0.001 seconds.
+◇ Test workerCommandEnvelopeFactoriesAreExactAttemptScopedAndReplayStable() started.
+✔ Test workerCommandEnvelopeFactoriesAreExactAttemptScopedAndReplayStable() passed after 0.041 seconds.
+◇ Test preparedCommandIsPreReceiptAuthorityAndNewResultIsPostMutationOnly() started.
+✔ Test preparedCommandIsPreReceiptAuthorityAndNewResultIsPostMutationOnly() passed after 0.001 seconds.
+◇ Test commandEnvelopeWholeHashCoversEveryFieldAndNullability() started.
+✔ Test commandEnvelopeWholeHashCoversEveryFieldAndNullability() passed after 0.001 seconds.
+◇ Test canonicalContractCodingReusesCanonicalJSONV1GoldenBytes() started.
+✔ Test canonicalContractCodingReusesCanonicalJSONV1GoldenBytes() passed after 0.001 seconds.
+◇ Test campSafeJSONRejectsUnknownForbiddenIdentityAndNoncanonicalBytes() started.
+✔ Test campSafeJSONRejectsUnknownForbiddenIdentityAndNoncanonicalBytes() passed after 0.002 seconds.
+◇ Test campSafeJSONRejectsSemanticallyForbiddenReferenceValues() started.
+✔ Test campSafeJSONRejectsSemanticallyForbiddenReferenceValues() passed after 0.001 seconds.
+◇ Test everyCommandResultAndAuditShapeIsExactAndOrdered() started.
+✔ Test everyCommandResultAndAuditShapeIsExactAndOrdered() passed after 0.001 seconds.
+◇ Test executeCommandCommitsReceiptProjectionEventsAndOutboxAtomically() started.
+✔ Test executeCommandCommitsReceiptProjectionEventsAndOutboxAtomically() passed after 0.029 seconds.
+◇ Test executeCommandReplayReturnsOldResultWithoutMutation() started.
+✔ Test executeCommandReplayReturnsOldResultWithoutMutation() passed after 0.029 seconds.
+◇ Test creationReplayUsesPersistedResultBeforeIDFactoryOrProjectionBranch() started.
+✔ Test creationReplayUsesPersistedResultBeforeIDFactoryOrProjectionBranch() passed after 0.030 seconds.
+◇ Test replayValidatesCompleteStoredEventAndOutboxGraph() started.
+✔ Test replayValidatesCompleteStoredEventAndOutboxGraph() passed after 0.089 seconds.
+◇ Test executeCommandRejectsTypeHashOrEventCountDriftTotally() started.
+✔ Test executeCommandRejectsTypeHashOrEventCountDriftTotally() passed after 0.029 seconds.
+◇ Test multiAggregateCommandUsesStableOrdinalsAndVersionChains() started.
+✔ Test multiAggregateCommandUsesStableOrdinalsAndVersionChains() passed after 0.031 seconds.
+◇ Test eventCountOrdinalOrProjectionFailureRollsBackEverything() started.
+✔ Test eventCountOrdinalOrProjectionFailureRollsBackEverything() passed after 0.027 seconds.
+◇ Test domainEventCopiesEnvelopeAndOwnsRecordedAt() started.
+✔ Test domainEventCopiesEnvelopeAndOwnsRecordedAt() passed after 0.029 seconds.
+◇ Test domainEventRejectsMissingCampBadTimeAndVersionPreSQL() started.
+✔ Test domainEventRejectsMissingCampBadTimeAndVersionPreSQL() passed after 0.025 seconds.
+◇ Test outboxClaimReleaseSentCASAndReplayAreDeterministic() started.
+✔ Test outboxClaimReleaseSentCASAndReplayAreDeterministic() passed after 0.029 seconds.
+◇ Test inboxApplyReplayConflictAndTypedRejectionAreDurable() started.
+✔ Test inboxApplyReplayConflictAndTypedRejectionAreDurable() passed after 0.024 seconds.
+◇ Test inboxTypedRejectionRollsBackHandlerSavepointBeforeDurableEvidence() started.
+✔ Test inboxTypedRejectionRollsBackHandlerSavepointBeforeDurableEvidence() passed after 0.024 seconds.
+◇ Test inboxSameKeyAndStoredHashButDifferentBytesFailsClosedWithoutHandler() started.
+✔ Test inboxSameKeyAndStoredHashButDifferentBytesFailsClosedWithoutHandler() passed after 0.024 seconds.
+◇ Test inboxConflictCASPersistsExactRejectedShapeAndThrowsAfterCommit() started.
+✔ Test inboxConflictCASPersistsExactRejectedShapeAndThrowsAfterCommit() passed after 0.027 seconds.
+◇ Test inboxConflictAgainstRedactedRowIsTerminalWithoutCASOrHandler() started.
+✔ Test inboxConflictAgainstRedactedRowIsTerminalWithoutCASOrHandler() passed after 0.025 seconds.
+◇ Test inboxRedactedTombstonesPreservePriorHashAndAppliedTimeAcrossOrigins() started.
+✔ Test inboxRedactedTombstonesPreservePriorHashAndAppliedTimeAcrossOrigins() passed after 0.076 seconds.
+◇ Test domainEventsReadInValidatedAggregateOrder() started.
+✔ Test domainEventsReadInValidatedAggregateOrder() passed after 0.035 seconds.
+✔ Suite P1CDomainEventContractTests passed after 0.639 seconds.
+✔ Test run with 25 tests in 1 suite passed after 0.639 seconds.
+FINISH_UTC: 2026-08-25T23:19:46Z
+ACTUAL_EXIT: 0
+EXPECTED: 25 tests / 1 suite passed
+RESULT: PASSED
+BATCH: P1-C C3 input/parsing focused verification
+COMMAND: swift run RunTests --filter 'captureAndInputParsingWorkCommitAtomically|inputCaptureReplayAndPayloadDriftConflict|inputCaptureReplayUsesCallerOwnedIDAndExistingWorkResult|inputParsingCrashIsAdopted|controlWorkAdoptionRequiresExpiredLeaseAndRecoversSameOwnerAcrossKinds|inputParsingRenewalHandsLatestClaimToTerminalCommit|inputParsingTerminalTimeIsMonotonicAndRetryBackoffStartsAtFailure|inputParsingRenewalFailureCancelsParserWithoutProjectionCommit|inputParsingRetriesBoundedlyThenParseFailed|inputParsingCancelRejectsStaleResult|cancelParsingAndDeleteRejectsNoActiveBranchBeforeMutation|inputParsingTerminalMutationRollbackIsTotal|inputTransitionMatrixAcceptsOnlyStageSpecEdges|ordinaryInputTransitionsRejectEveryActiveParsingStateWithoutWrites|everyInputCommandEnforcesExactActorAndDeviceMatrixBeforeSQL|inputParserInterfaceUsesOnePersistedPreAwaitSnapshotAndClosedOutcome|inputParserInvalidOutputFailsDeterministicallyExactlyOnce|crossCampAmbiguityNeverSelectsDefaultCamp|inputCampScopeIsStableFromCaptureThroughAssignment|inputRejectsInitialOrAssignedCampDifferentFromAuditCamp|inputParsingWorkAlwaysUsesAuditCampAndArchivedCampFailsClosed|inputTombstoneRetainsOnlyExactIdentityHashAndTimes|inputTombstoneNullsDeviceConnectorAuthorBodyRefErrorAndParent|inputTombstoneForcesEmptyCandidatesUnspecifiedIntentLocalOnlyAndEqualDeleteTime|localCaptureIdentityPersistsOnceAndFailsOnCorruption|localCaptureIdentityConcurrentFirstUseAcrossCopiesIsAtomic|localCaptureIdentityConcurrentFirstUseAcrossIndependentAdaptersIsAtomic|localCaptureUsesLocalOwnerAndInstallationDeviceWithoutAccountIdentity|localCapturePortAndInitializerRemainSourceCompatible|localCaptureTraceCorrelationAndRequestIDsAreExact|loadInputUsesReadPortAndMapsMissingRecordToFailure|legacyIngestionAdapterIsDisplayOnlyAndCreatesNoInputOrGoal|nilInputCampNeverInfersAuthority'
+CWD: /Users/muzi/Agent-loop
+BRANCH: codex/personal-ai-ranch-p0
+HEAD: 02334ec8d21533be81d93d39191bc7d9b9c24f7f
+START_UTC: 2026-08-25T23:58:51Z
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.30s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1CInputEnvelopeContractTests started.
+◇ Test captureAndInputParsingWorkCommitAtomically() started.
+✔ Test captureAndInputParsingWorkCommitAtomically() passed after 0.046 seconds.
+◇ Test inputCaptureReplayAndPayloadDriftConflict() started.
+✔ Test inputCaptureReplayAndPayloadDriftConflict() passed after 0.034 seconds.
+◇ Test inputCaptureReplayUsesCallerOwnedIDAndExistingWorkResult() started.
+✔ Test inputCaptureReplayUsesCallerOwnedIDAndExistingWorkResult() passed after 0.034 seconds.
+◇ Test inputParsingCrashIsAdopted() started.
+✔ Test inputParsingCrashIsAdopted() passed after 0.034 seconds.
+◇ Test controlWorkAdoptionRequiresExpiredLeaseAndRecoversSameOwnerAcrossKinds() started.
+✔ Test controlWorkAdoptionRequiresExpiredLeaseAndRecoversSameOwnerAcrossKinds() passed after 0.062 seconds.
+◇ Test inputParsingRenewalHandsLatestClaimToTerminalCommit() started.
+✔ Test inputParsingRenewalHandsLatestClaimToTerminalCommit() passed after 0.039 seconds.
+◇ Test inputParsingTerminalTimeIsMonotonicAndRetryBackoffStartsAtFailure() started.
+✔ Test inputParsingTerminalTimeIsMonotonicAndRetryBackoffStartsAtFailure() passed after 0.041 seconds.
+◇ Test inputParsingRenewalFailureCancelsParserWithoutProjectionCommit() started.
+✔ Test inputParsingRenewalFailureCancelsParserWithoutProjectionCommit() passed after 0.032 seconds.
+◇ Test inputParsingRetriesBoundedlyThenParseFailed() started.
+✔ Test inputParsingRetriesBoundedlyThenParseFailed() passed after 0.063 seconds.
+◇ Test inputParsingCancelRejectsStaleResult() started.
+✔ Test inputParsingCancelRejectsStaleResult() passed after 0.031 seconds.
+◇ Test cancelParsingAndDeleteRejectsNoActiveBranchBeforeMutation() started.
+✔ Test cancelParsingAndDeleteRejectsNoActiveBranchBeforeMutation() passed after 0.001 seconds.
+◇ Test inputParsingTerminalMutationRollbackIsTotal() started.
+✔ Test inputParsingTerminalMutationRollbackIsTotal() passed after 0.033 seconds.
+◇ Test inputTransitionMatrixAcceptsOnlyStageSpecEdges() started.
+✔ Test inputTransitionMatrixAcceptsOnlyStageSpecEdges() passed after 0.001 seconds.
+◇ Test ordinaryInputTransitionsRejectEveryActiveParsingStateWithoutWrites() started.
+✔ Test ordinaryInputTransitionsRejectEveryActiveParsingStateWithoutWrites() passed after 0.110 seconds.
+◇ Test everyInputCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() started.
+✔ Test everyInputCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() passed after 0.024 seconds.
+◇ Test inputParserInterfaceUsesOnePersistedPreAwaitSnapshotAndClosedOutcome() started.
+✔ Test inputParserInterfaceUsesOnePersistedPreAwaitSnapshotAndClosedOutcome() passed after 0.039 seconds.
+◇ Test inputParserInvalidOutputFailsDeterministicallyExactlyOnce() started.
+✔ Test inputParserInvalidOutputFailsDeterministicallyExactlyOnce() passed after 0.041 seconds.
+◇ Test crossCampAmbiguityNeverSelectsDefaultCamp() started.
+✔ Test crossCampAmbiguityNeverSelectsDefaultCamp() passed after 0.040 seconds.
+◇ Test inputCampScopeIsStableFromCaptureThroughAssignment() started.
+✔ Test inputCampScopeIsStableFromCaptureThroughAssignment() passed after 0.040 seconds.
+◇ Test inputRejectsInitialOrAssignedCampDifferentFromAuditCamp() started.
+✔ Test inputRejectsInitialOrAssignedCampDifferentFromAuditCamp() passed after 0.038 seconds.
+◇ Test inputParsingWorkAlwaysUsesAuditCampAndArchivedCampFailsClosed() started.
+✔ Test inputParsingWorkAlwaysUsesAuditCampAndArchivedCampFailsClosed() passed after 0.037 seconds.
+◇ Test inputTombstoneRetainsOnlyExactIdentityHashAndTimes() started.
+✔ Test inputTombstoneRetainsOnlyExactIdentityHashAndTimes() passed after 0.036 seconds.
+◇ Test inputTombstoneNullsDeviceConnectorAuthorBodyRefErrorAndParent() started.
+✔ Test inputTombstoneNullsDeviceConnectorAuthorBodyRefErrorAndParent() passed after 0.035 seconds.
+◇ Test inputTombstoneForcesEmptyCandidatesUnspecifiedIntentLocalOnlyAndEqualDeleteTime() started.
+✔ Test inputTombstoneForcesEmptyCandidatesUnspecifiedIntentLocalOnlyAndEqualDeleteTime() passed after 0.036 seconds.
+◇ Test localCaptureIdentityPersistsOnceAndFailsOnCorruption() started.
+✔ Test localCaptureIdentityPersistsOnceAndFailsOnCorruption() passed after 0.001 seconds.
+◇ Test localCaptureIdentityConcurrentFirstUseAcrossCopiesIsAtomic() started.
+✔ Test localCaptureIdentityConcurrentFirstUseAcrossCopiesIsAtomic() passed after 0.001 seconds.
+◇ Test localCaptureIdentityConcurrentFirstUseAcrossIndependentAdaptersIsAtomic() started.
+✔ Test localCaptureIdentityConcurrentFirstUseAcrossIndependentAdaptersIsAtomic() passed after 0.005 seconds.
+◇ Test localCaptureUsesLocalOwnerAndInstallationDeviceWithoutAccountIdentity() started.
+✔ Test localCaptureUsesLocalOwnerAndInstallationDeviceWithoutAccountIdentity() passed after 0.031 seconds.
+◇ Test localCapturePortAndInitializerRemainSourceCompatible() started.
+✔ Test localCapturePortAndInitializerRemainSourceCompatible() passed after 0.023 seconds.
+◇ Test localCaptureTraceCorrelationAndRequestIDsAreExact() started.
+✔ Test localCaptureTraceCorrelationAndRequestIDsAreExact() passed after 0.028 seconds.
+◇ Test loadInputUsesReadPortAndMapsMissingRecordToFailure() started.
+✔ Test loadInputUsesReadPortAndMapsMissingRecordToFailure() passed after 0.023 seconds.
+◇ Test legacyIngestionAdapterIsDisplayOnlyAndCreatesNoInputOrGoal() started.
+✔ Test legacyIngestionAdapterIsDisplayOnlyAndCreatesNoInputOrGoal() passed after 0.025 seconds.
+◇ Test nilInputCampNeverInfersAuthority() started.
+✔ Test nilInputCampNeverInfersAuthority() passed after 0.042 seconds.
+✔ Suite P1CInputEnvelopeContractTests passed after 1.118 seconds.
+✔ Test run with 33 tests in 1 suite passed after 1.118 seconds.
+FINISH_UTC: 2026-08-25T23:58:53Z
+ACTUAL_EXIT: 0
+EXPECTED: 33 tests / 1 suite passed
+RESULT: PASSED
+
+COMMAND: swift run RunTests --filter 'crossCampAmbiguityBlocksGoalCreationWithoutWrites|convertToGoalCommitsInputGoalEventsAndOutboxesAtomically|convertToGoalReplayUsesCallerOwnedGoalIDAfterProjectionAdvances|goalP1CTransitionsOnlyClarifyingReadyAbandonedAndFailed|openCoachSessionEnqueuesDurableCoachWorkAtomically|openCoachReplayUsesCallerOwnedSessionAndQuestionIDs|oneCoachSessionPerGoalControlsConcurrentOpenResumeAndTerminalBranches|coachSessionAllowsExactlyOneOpenQuestion|coachQuestionAndAnswerEnforceCoachAndUserActors|everyGoalCoachCommandEnforcesExactActorAndDeviceMatrixBeforeSQL|coachSealedDecisionKeyNeverComesFromProvider|coachProviderInterfaceOrdersPersistedHistoryBeforeAwait|coachProviderInvalidOutputFailsDeterministicallyExactlyOnce|coachAnswerEnqueuesNextDurableTurnAtomically|coachAnswerReplayDoesNotEnqueueSecondTurn|coachProposalReplayUsesGoalIDAsUnderstandingID|coachFailureRetriesAtomicallyAndKeepsSessionInterviewing|coachFailureExhaustionFailsSessionAndGoalAtomically|coachReopenedTerminalFailuresAndReplayPreserveReadyGoalAndConfirmedHead|readyRevisionWorkSealsAndValidatesJoinedConfirmedUnderstandingHash|coachWorkerRestartAdoptsInterruptedTurn|coachRenewalHandsLatestClaimToTerminalCommit|coachTerminalTimeIsMonotonicAfterRenewalAndBackoffStartsAtFailure|coachWorkerCancellationLeavesRecoverableRunningWork|coachTerminalMutationRollbackRestoresWorkSessionGoal|understandingEditAlwaysCreatesNewVersion|requestConfirmationDoesNotRewriteUnderstandingBody|requestUnderstandingRevisionWithdrawsOrReopensAndEnqueuesTurn|coachCannotConfirmUnderstanding|confirmUnderstandingSupersedesPriorVersionAndMakesGoalReady|coachRestartRestoresExactlyOneOpenQuestionWithoutChatMemory|goalAbandonAndFailCancelActiveControlWorkAtomically|goalAbandonReplayUsesSealedSessionBranchAfterProjectionChanges|goalFailReplayUsesSealedSessionBranchAfterProjectionChanges|goalReadyDoesNotRequireV15Schema'
+CWD: /Users/muzi/Agent-loop
+BRANCH: codex/personal-ai-ranch-p0
+HEAD: 02334ec8d21533be81d93d39191bc7d9b9c24f7f
+START_UTC: 2026-08-26T00:34:43Z
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.30s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1CGoalCoachContractTests started.
+◇ Test coachRestartRestoresExactlyOneOpenQuestionWithoutChatMemory() started.
+◇ Test goalFailReplayUsesSealedSessionBranchAfterProjectionChanges() started.
+◇ Test coachReopenedTerminalFailuresAndReplayPreserveReadyGoalAndConfirmedHead() started.
+◇ Test coachProviderInterfaceOrdersPersistedHistoryBeforeAwait() started.
+◇ Test convertToGoalReplayUsesCallerOwnedGoalIDAfterProjectionAdvances() started.
+◇ Test coachSessionAllowsExactlyOneOpenQuestion() started.
+◇ Test coachAnswerReplayDoesNotEnqueueSecondTurn() started.
+◇ Test coachTerminalMutationRollbackRestoresWorkSessionGoal() started.
+◇ Test readyRevisionWorkSealsAndValidatesJoinedConfirmedUnderstandingHash() started.
+◇ Test convertToGoalCommitsInputGoalEventsAndOutboxesAtomically() started.
+◇ Test coachFailureRetriesAtomicallyAndKeepsSessionInterviewing() started.
+◇ Test crossCampAmbiguityBlocksGoalCreationWithoutWrites() started.
+◇ Test coachWorkerRestartAdoptsInterruptedTurn() started.
+◇ Test coachCannotConfirmUnderstanding() started.
+◇ Test goalP1CTransitionsOnlyClarifyingReadyAbandonedAndFailed() started.
+◇ Test goalReadyDoesNotRequireV15Schema() started.
+◇ Test openCoachSessionEnqueuesDurableCoachWorkAtomically() started.
+◇ Test openCoachReplayUsesCallerOwnedSessionAndQuestionIDs() started.
+◇ Test confirmUnderstandingSupersedesPriorVersionAndMakesGoalReady() started.
+◇ Test coachFailureExhaustionFailsSessionAndGoalAtomically() started.
+◇ Test coachProviderInvalidOutputFailsDeterministicallyExactlyOnce() started.
+◇ Test requestConfirmationDoesNotRewriteUnderstandingBody() started.
+◇ Test coachProposalReplayUsesGoalIDAsUnderstandingID() started.
+◇ Test coachTerminalTimeIsMonotonicAfterRenewalAndBackoffStartsAtFailure() started.
+◇ Test coachQuestionAndAnswerEnforceCoachAndUserActors() started.
+◇ Test coachWorkerCancellationLeavesRecoverableRunningWork() started.
+◇ Test coachAnswerEnqueuesNextDurableTurnAtomically() started.
+◇ Test goalAbandonReplayUsesSealedSessionBranchAfterProjectionChanges() started.
+◇ Test understandingEditAlwaysCreatesNewVersion() started.
+◇ Test coachSealedDecisionKeyNeverComesFromProvider() started.
+◇ Test everyGoalCoachCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() started.
+◇ Test oneCoachSessionPerGoalControlsConcurrentOpenResumeAndTerminalBranches() started.
+◇ Test goalAbandonAndFailCancelActiveControlWorkAtomically() started.
+◇ Test coachRenewalHandsLatestClaimToTerminalCommit() started.
+◇ Test requestUnderstandingRevisionWithdrawsOrReopensAndEnqueuesTurn() started.
+✔ Test convertToGoalCommitsInputGoalEventsAndOutboxesAtomically() passed after 0.386 seconds.
+✔ Test convertToGoalReplayUsesCallerOwnedGoalIDAfterProjectionAdvances() passed after 0.386 seconds.
+✔ Test coachCannotConfirmUnderstanding() passed after 0.386 seconds.
+✔ Test goalP1CTransitionsOnlyClarifyingReadyAbandonedAndFailed() passed after 0.388 seconds.
+✔ Test goalFailReplayUsesSealedSessionBranchAfterProjectionChanges() passed after 0.389 seconds.
+✔ Test coachRestartRestoresExactlyOneOpenQuestionWithoutChatMemory() passed after 0.389 seconds.
+✔ Test coachAnswerReplayDoesNotEnqueueSecondTurn() passed after 0.389 seconds.
+✔ Test coachTerminalMutationRollbackRestoresWorkSessionGoal() passed after 0.389 seconds.
+✔ Test readyRevisionWorkSealsAndValidatesJoinedConfirmedUnderstandingHash() passed after 0.389 seconds.
+✔ Test crossCampAmbiguityBlocksGoalCreationWithoutWrites() passed after 0.389 seconds.
+✔ Test coachQuestionAndAnswerEnforceCoachAndUserActors() passed after 0.388 seconds.
+✔ Test openCoachReplayUsesCallerOwnedSessionAndQuestionIDs() passed after 0.389 seconds.
+✔ Test coachSessionAllowsExactlyOneOpenQuestion() passed after 0.389 seconds.
+✔ Test openCoachSessionEnqueuesDurableCoachWorkAtomically() passed after 0.389 seconds.
+✔ Test goalReadyDoesNotRequireV15Schema() passed after 0.389 seconds.
+✔ Test requestConfirmationDoesNotRewriteUnderstandingBody() passed after 0.389 seconds.
+✔ Test everyGoalCoachCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() passed after 0.388 seconds.
+✔ Test coachProposalReplayUsesGoalIDAsUnderstandingID() passed after 0.389 seconds.
+✔ Test confirmUnderstandingSupersedesPriorVersionAndMakesGoalReady() passed after 0.389 seconds.
+✔ Test coachTerminalTimeIsMonotonicAfterRenewalAndBackoffStartsAtFailure() passed after 0.419 seconds.
+✔ Test goalAbandonReplayUsesSealedSessionBranchAfterProjectionChanges() passed after 0.419 seconds.
+✔ Test coachProviderInterfaceOrdersPersistedHistoryBeforeAwait() passed after 0.420 seconds.
+✔ Test coachAnswerEnqueuesNextDurableTurnAtomically() passed after 0.419 seconds.
+✔ Test coachWorkerRestartAdoptsInterruptedTurn() passed after 0.420 seconds.
+✔ Test coachFailureRetriesAtomicallyAndKeepsSessionInterviewing() passed after 0.432 seconds.
+✔ Test coachReopenedTerminalFailuresAndReplayPreserveReadyGoalAndConfirmedHead() passed after 0.432 seconds.
+✔ Test coachWorkerCancellationLeavesRecoverableRunningWork() passed after 0.434 seconds.
+✔ Test coachProviderInvalidOutputFailsDeterministicallyExactlyOnce() passed after 0.440 seconds.
+✔ Test coachRenewalHandsLatestClaimToTerminalCommit() passed after 0.458 seconds.
+✔ Test coachSealedDecisionKeyNeverComesFromProvider() passed after 0.458 seconds.
+✔ Test oneCoachSessionPerGoalControlsConcurrentOpenResumeAndTerminalBranches() passed after 0.460 seconds.
+✔ Test coachFailureExhaustionFailsSessionAndGoalAtomically() passed after 0.476 seconds.
+✔ Test understandingEditAlwaysCreatesNewVersion() passed after 0.511 seconds.
+✔ Test goalAbandonAndFailCancelActiveControlWorkAtomically() passed after 0.546 seconds.
+✔ Test requestUnderstandingRevisionWithdrawsOrReopensAndEnqueuesTurn() passed after 0.655 seconds.
+✔ Suite P1CGoalCoachContractTests passed after 0.656 seconds.
+✔ Test run with 35 tests in 1 suite passed after 0.656 seconds.
+FINISH_UTC: 2026-08-26T00:34:45Z
+ACTUAL_EXIT: 0
+RESULT: PASSED
+
+COMMAND: swift run RunTests --filter 'crossCampAmbiguityBlocksGoalCreationWithoutWrites|convertToGoalCommitsInputGoalEventsAndOutboxesAtomically|convertToGoalReplayUsesCallerOwnedGoalIDAfterProjectionAdvances|goalP1CTransitionsOnlyClarifyingReadyAbandonedAndFailed|openCoachSessionEnqueuesDurableCoachWorkAtomically|openCoachReplayUsesCallerOwnedSessionAndQuestionIDs|oneCoachSessionPerGoalControlsConcurrentOpenResumeAndTerminalBranches|coachSessionAllowsExactlyOneOpenQuestion|coachQuestionAndAnswerEnforceCoachAndUserActors|everyGoalCoachCommandEnforcesExactActorAndDeviceMatrixBeforeSQL|coachSealedDecisionKeyNeverComesFromProvider|coachProviderInterfaceOrdersPersistedHistoryBeforeAwait|coachProviderInvalidOutputFailsDeterministicallyExactlyOnce|coachAnswerEnqueuesNextDurableTurnAtomically|coachAnswerReplayDoesNotEnqueueSecondTurn|coachProposalReplayUsesGoalIDAsUnderstandingID|coachFailureRetriesAtomicallyAndKeepsSessionInterviewing|coachFailureExhaustionFailsSessionAndGoalAtomically|coachReopenedTerminalFailuresAndReplayPreserveReadyGoalAndConfirmedHead|readyRevisionWorkSealsAndValidatesJoinedConfirmedUnderstandingHash|coachWorkerRestartAdoptsInterruptedTurn|coachRenewalHandsLatestClaimToTerminalCommit|coachTerminalTimeIsMonotonicAfterRenewalAndBackoffStartsAtFailure|coachWorkerCancellationLeavesRecoverableRunningWork|coachTerminalMutationRollbackRestoresWorkSessionGoal|understandingEditAlwaysCreatesNewVersion|requestConfirmationDoesNotRewriteUnderstandingBody|requestUnderstandingRevisionWithdrawsOrReopensAndEnqueuesTurn|coachCannotConfirmUnderstanding|confirmUnderstandingSupersedesPriorVersionAndMakesGoalReady|coachRestartRestoresExactlyOneOpenQuestionWithoutChatMemory|goalAbandonAndFailCancelActiveControlWorkAtomically|goalAbandonReplayUsesSealedSessionBranchAfterProjectionChanges|goalFailReplayUsesSealedSessionBranchAfterProjectionChanges|goalReadyDoesNotRequireV15Schema'
+CWD: /Users/muzi/Agent-loop
+BRANCH: codex/personal-ai-ranch-p0
+HEAD: 02334ec8d21533be81d93d39191bc7d9b9c24f7f
+START_UTC: 2026-08-26T00:48:36Z
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.30s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1CGoalCoachContractTests started.
+◇ Test crossCampAmbiguityBlocksGoalCreationWithoutWrites() started.
+✔ Test crossCampAmbiguityBlocksGoalCreationWithoutWrites() passed after 0.056 seconds.
+◇ Test convertToGoalCommitsInputGoalEventsAndOutboxesAtomically() started.
+✔ Test convertToGoalCommitsInputGoalEventsAndOutboxesAtomically() passed after 0.047 seconds.
+◇ Test convertToGoalReplayUsesCallerOwnedGoalIDAfterProjectionAdvances() started.
+✔ Test convertToGoalReplayUsesCallerOwnedGoalIDAfterProjectionAdvances() passed after 0.053 seconds.
+◇ Test goalP1CTransitionsOnlyClarifyingReadyAbandonedAndFailed() started.
+✔ Test goalP1CTransitionsOnlyClarifyingReadyAbandonedAndFailed() passed after 0.001 seconds.
+◇ Test openCoachSessionEnqueuesDurableCoachWorkAtomically() started.
+✔ Test openCoachSessionEnqueuesDurableCoachWorkAtomically() passed after 0.053 seconds.
+◇ Test openCoachReplayUsesCallerOwnedSessionAndQuestionIDs() started.
+✔ Test openCoachReplayUsesCallerOwnedSessionAndQuestionIDs() passed after 0.055 seconds.
+◇ Test oneCoachSessionPerGoalControlsConcurrentOpenResumeAndTerminalBranches() started.
+✔ Test oneCoachSessionPerGoalControlsConcurrentOpenResumeAndTerminalBranches() passed after 0.053 seconds.
+◇ Test coachSessionAllowsExactlyOneOpenQuestion() started.
+✔ Test coachSessionAllowsExactlyOneOpenQuestion() passed after 0.060 seconds.
+◇ Test coachQuestionAndAnswerEnforceCoachAndUserActors() started.
+✔ Test coachQuestionAndAnswerEnforceCoachAndUserActors() passed after 0.001 seconds.
+◇ Test everyGoalCoachCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() started.
+✔ Test everyGoalCoachCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() passed after 0.001 seconds.
+◇ Test coachSealedDecisionKeyNeverComesFromProvider() started.
+✔ Test coachSealedDecisionKeyNeverComesFromProvider() passed after 0.060 seconds.
+◇ Test coachProviderInterfaceOrdersPersistedHistoryBeforeAwait() started.
+✔ Test coachProviderInterfaceOrdersPersistedHistoryBeforeAwait() passed after 0.079 seconds.
+◇ Test coachProviderInvalidOutputFailsDeterministicallyExactlyOnce() started.
+✔ Test coachProviderInvalidOutputFailsDeterministicallyExactlyOnce() passed after 0.061 seconds.
+◇ Test coachAnswerEnqueuesNextDurableTurnAtomically() started.
+✔ Test coachAnswerEnqueuesNextDurableTurnAtomically() passed after 0.066 seconds.
+◇ Test coachAnswerReplayDoesNotEnqueueSecondTurn() started.
+✔ Test coachAnswerReplayDoesNotEnqueueSecondTurn() passed after 0.070 seconds.
+◇ Test coachProposalReplayUsesGoalIDAsUnderstandingID() started.
+✔ Test coachProposalReplayUsesGoalIDAsUnderstandingID() passed after 0.070 seconds.
+◇ Test coachFailureRetriesAtomicallyAndKeepsSessionInterviewing() started.
+✔ Test coachFailureRetriesAtomicallyAndKeepsSessionInterviewing() passed after 0.059 seconds.
+◇ Test coachFailureExhaustionFailsSessionAndGoalAtomically() started.
+✔ Test coachFailureExhaustionFailsSessionAndGoalAtomically() passed after 0.089 seconds.
+◇ Test coachReopenedTerminalFailuresAndReplayPreserveReadyGoalAndConfirmedHead() started.
+✔ Test coachReopenedTerminalFailuresAndReplayPreserveReadyGoalAndConfirmedHead() passed after 0.110 seconds.
+◇ Test readyRevisionWorkSealsAndValidatesJoinedConfirmedUnderstandingHash() started.
+✔ Test readyRevisionWorkSealsAndValidatesJoinedConfirmedUnderstandingHash() passed after 0.083 seconds.
+◇ Test coachWorkerRestartAdoptsInterruptedTurn() started.
+✔ Test coachWorkerRestartAdoptsInterruptedTurn() passed after 0.062 seconds.
+◇ Test coachRenewalHandsLatestClaimToTerminalCommit() started.
+✔ Test coachRenewalHandsLatestClaimToTerminalCommit() passed after 0.060 seconds.
+◇ Test coachTerminalTimeIsMonotonicAfterRenewalAndBackoffStartsAtFailure() started.
+✔ Test coachTerminalTimeIsMonotonicAfterRenewalAndBackoffStartsAtFailure() passed after 0.060 seconds.
+◇ Test coachWorkerCancellationLeavesRecoverableRunningWork() started.
+✔ Test coachWorkerCancellationLeavesRecoverableRunningWork() passed after 0.054 seconds.
+◇ Test coachTerminalMutationRollbackRestoresWorkSessionGoal() started.
+✔ Test coachTerminalMutationRollbackRestoresWorkSessionGoal() passed after 0.059 seconds.
+◇ Test understandingEditAlwaysCreatesNewVersion() started.
+✔ Test understandingEditAlwaysCreatesNewVersion() passed after 0.100 seconds.
+◇ Test requestConfirmationDoesNotRewriteUnderstandingBody() started.
+✔ Test requestConfirmationDoesNotRewriteUnderstandingBody() passed after 0.071 seconds.
+◇ Test requestUnderstandingRevisionWithdrawsOrReopensAndEnqueuesTurn() started.
+✔ Test requestUnderstandingRevisionWithdrawsOrReopensAndEnqueuesTurn() passed after 0.243 seconds.
+◇ Test coachCannotConfirmUnderstanding() started.
+✔ Test coachCannotConfirmUnderstanding() passed after 0.001 seconds.
+◇ Test confirmUnderstandingSupersedesPriorVersionAndMakesGoalReady() started.
+✔ Test confirmUnderstandingSupersedesPriorVersionAndMakesGoalReady() passed after 0.118 seconds.
+◇ Test coachRestartRestoresExactlyOneOpenQuestionWithoutChatMemory() started.
+✔ Test coachRestartRestoresExactlyOneOpenQuestionWithoutChatMemory() passed after 0.062 seconds.
+◇ Test goalAbandonAndFailCancelActiveControlWorkAtomically() started.
+✔ Test goalAbandonAndFailCancelActiveControlWorkAtomically() passed after 0.121 seconds.
+◇ Test goalAbandonReplayUsesSealedSessionBranchAfterProjectionChanges() started.
+✔ Test goalAbandonReplayUsesSealedSessionBranchAfterProjectionChanges() passed after 0.063 seconds.
+◇ Test goalFailReplayUsesSealedSessionBranchAfterProjectionChanges() started.
+✔ Test goalFailReplayUsesSealedSessionBranchAfterProjectionChanges() passed after 0.064 seconds.
+◇ Test goalReadyDoesNotRequireV15Schema() started.
+✔ Test goalReadyDoesNotRequireV15Schema() passed after 0.083 seconds.
+✔ Suite P1CGoalCoachContractTests passed after 2.363 seconds.
+✔ Test run with 35 tests in 1 suite passed after 2.363 seconds.
+FINISH_UTC: 2026-08-26T00:48:39Z
+ACTUAL_EXIT: 0
+EXPECTED: 35 tests / 1 suite passed
+RESULT: PASSED
+
+COMMAND: swift run RunTests --filter 'a3Revision02EntryBoundaryRemainsByteExact|observabilityMigrationRollbackLeavesV12ScheduleUntouched|observabilityMigrationExactDDLAndConstraints|broadcastFailureDoesNotRewriteStartedFire|boardServerFramingForwardsToolCallsWhenSocketsAreAllowed'
+CWD: /Users/muzi/Agent-loop
+BRANCH: codex/personal-ai-ranch-p0
+HEAD: 02334ec8d21533be81d93d39191bc7d9b9c24f7f
+START_UTC: 2026-08-26T01:26:59Z
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/8] Compiling AgentLoopTestSuite FailureVisibilityTests.swift
+[4/8] Emitting module AgentLoopTestSuite
+[5/8] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+[6/8] Compiling AgentLoopTestSuite BoardServerTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[6/9] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[7/9] Linking RunTests
+[8/9] Applying RunTests
+Build of product 'RunTests' complete! (27.59s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test observabilityMigrationExactDDLAndConstraints() started.
+◇ Test a3Revision02EntryBoundaryRemainsByteExact() started.
+◇ Suite BoardServerTests started.
+◇ Test broadcastFailureDoesNotRewriteStartedFire() started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+◇ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() started.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.056 seconds.
+✔ Suite BoardServerTests passed after 0.056 seconds.
+✔ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() passed after 0.057 seconds.
+✘ Test a3Revision02EntryBoundaryRemainsByteExact() recorded an issue at DurablePlanningTests.swift:5312:9: Expectation failed: try a3SHA256(at: url) == entry.hash
+✘ Test a3Revision02EntryBoundaryRemainsByteExact() failed after 0.071 seconds with 1 issue.
+✔ Test observabilityMigrationExactDDLAndConstraints() passed after 0.425 seconds.
+✘ Test broadcastFailureDoesNotRewriteStartedFire() recorded an issue at DurablePlanningTests.swift:4588:9: Expectation failed: try a3SHA256(at: url) == entry.hash
+✘ Test broadcastFailureDoesNotRewriteStartedFire() failed after 0.788 seconds with 1 issue.
+✘ Test run with 5 tests in 1 suite failed after 0.788 seconds with 2 issues.
+FINISH_UTC: 2026-08-26T01:27:29Z
+ACTUAL_EXIT: 1
+EXPECTED: 5 tests pass
+RESULT: FAILED

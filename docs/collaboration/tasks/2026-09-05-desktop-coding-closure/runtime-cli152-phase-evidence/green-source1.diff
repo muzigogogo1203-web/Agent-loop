@@ -1,0 +1,256 @@
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-cli152-phase-20260909-20260909-63825-fbmhoe/CliBackendTests.swift.before b/Sources/AgentLoopTestSuite/CliBackendTests.swift
+index ca68e84..8e30cd4 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-cli152-phase-20260909-20260909-63825-fbmhoe/CliBackendTests.swift.before
++++ b/Sources/AgentLoopTestSuite/CliBackendTests.swift
+@@ -275,51 +275,25 @@ import Testing
+         expectedBoardBridge: request.bridgeExecutableAuthority
+     )
+     let backend = try CliProcessBackend(
+         pipeDrainGrace: .milliseconds(50),
+         registry: harness.registry,
+         processInspector: harness.processInspector,
+         codeSignatureRevalidator: signatureRevalidator,
+         environmentProvider: { harness.fixtureEnvironment }
+     )
+     removalAllowed = false
+     let report = await cliMechanicsRunOwned(backend: backend, request: request) {
+         frames, _ in
+-        var result: Result<[CliProcessFrameV1], any Error>?
+-        var sawParentMarker = false
+-        for _ in 0..<200 {
+-            sawParentMarker = await frames.containsStdout("parent-exited")
+-            if let value = await frames.completedResult() {
+-                result = value
+-                break
+-            }
+-            try await Task.sleep(for: .milliseconds(10))
+-        }
+-        guard let result else {
+-            throw CliMechanicsFixtureFailure.watchdog
+-        }
+-        let recordedParentMarker = await frames.containsStdout("parent-exited")
+-        guard sawParentMarker || recordedParentMarker else {
+-            throw CliMechanicsFixtureFailure.missingParentMarker
+-        }
+-        switch result {
+-        case .success:
+-            throw CliMechanicsFixtureFailure.heldPipeCleanupReportedCertain
+-        case let .failure(error):
+-            guard let backendError = error as? CliProcessBackendError,
+-                  case .pipeDrainIncomplete = backendError
+-            else {
+-                throw error
+-            }
+-        }
++        try await cliMechanicsWaitForHeldPipeResult(frames)
+     }
+     let failures = cliMechanicsAssessCleanup(
+         report, harness: harness, expected: .pipeDrainIncomplete,
+         removalAllowed: &removalAllowed
+     )
+     if failures.primary != nil || !failures.cleanupFailures.isEmpty {
+         throw failures
+     }
+     switch report.stream {
+     case .success:
+         throw CliMechanicsFixtureFailure.heldPipeCleanupReportedCertain
+     case let .failure(error):
+@@ -327,24 +301,44 @@ import Testing
+               case .pipeDrainIncomplete = backendError
+         else {
+             throw error
+         }
+     }
+     #expect(
+         !FileManager.default.fileExists(atPath: harness.socketURL.path)
+     )
+     #expect(signatureRevalidator.snapshot() == [.cli, .boardBridge])
+     #expect(report.recordedFrames == [.stdoutLine("parent-exited")])
+ }
+ 
++@Test func cliHeldPipeCompletionWatchdogStartsAfterParentMarker()
++    async throws
++{
++    let frames = CliMechanicsFrameRecorder(diagnosticId: UUID())
++    await frames.append(.stdoutLine("parent-exited"))
++    await frames.finish(result: .failure(
++        CliProcessBackendError.pipeDrainIncomplete("stderr did not reach EOF")
++    ))
++
++    try await cliMechanicsWaitForHeldPipeResult(frames)
++
++    try #require(await frames.snapshot() == [.stdoutLine("parent-exited")])
++    let audit = await frames.readinessAudit()
++    try #require(audit == .init(
++        readyWaitStarted: true,
++        readyWaitSatisfied: true,
++        completedResultRequestedBeforeReadyWaitSatisfied: false
++    ))
++}
++
+ @Test func cliProcessBackendCapturesFinalLineWithoutNewline() async throws {
+     guard agentLoopCanBindListenerSocket() else { return }
+     let harness = try CliMechanicsHarness(identity: "213")
+     defer { harness.remove() }
+     let request = try harness.fixtureRequest(mode: .printFinalLine)
+     let signatureRevalidator = CliMechanicsSignatureRevalidator(
+         expectedCLI: request.cliExecutableAuthority,
+         expectedBoardBridge: request.bridgeExecutableAuthority
+     )
+     let backend = try CliProcessBackend(
+         registry: harness.registry,
+         processInspector: harness.processInspector,
+@@ -1123,31 +1117,78 @@ private struct CliMechanicsHarness: @unchecked Sendable {
+                 operation: "remove fixture \(base.path)", error: error
+             ))
+         }
+         if !failures.isEmpty {
+             throw CliMechanicsCleanupError(
+                 primary: nil, cleanupFailures: failures,
+                 retainedFixturePath: retainedFixturePath
+             )
+         }
+     }
+ }
+ 
++private func cliMechanicsWaitForHeldPipeResult(
++    _ frames: CliMechanicsFrameRecorder
++) async throws {
++    try await frames.waitForStdout("parent-exited")
++    var result: Result<[CliProcessFrameV1], any Error>?
++    var sawParentMarker = false
++    for _ in 0..<200 {
++        sawParentMarker = await frames.containsStdout("parent-exited")
++        if let value = await frames.completedResult() {
++            result = value
++            break
++        }
++        try await Task.sleep(for: .milliseconds(10))
++    }
++    guard let result else {
++        throw CliMechanicsFixtureFailure.watchdog
++    }
++    let recordedParentMarker = await frames.containsStdout("parent-exited")
++    guard sawParentMarker || recordedParentMarker else {
++        throw CliMechanicsFixtureFailure.missingParentMarker
++    }
++    switch result {
++    case .success:
++        throw CliMechanicsFixtureFailure.heldPipeCleanupReportedCertain
++    case let .failure(error):
++        guard let backendError = error as? CliProcessBackendError,
++              case .pipeDrainIncomplete = backendError
++        else {
++            throw error
++        }
++    }
++}
++
+ private actor CliMechanicsFrameRecorder {
++    struct ReadinessAudit: Equatable, Sendable {
++        let readyWaitStarted: Bool
++        let readyWaitSatisfied: Bool
++        let completedResultRequestedBeforeReadyWaitSatisfied: Bool
++    }
++
++    private enum ReadyWaitPhase: Equatable, Sendable {
++        case notStarted
++        case waiting
++        case satisfied
++    }
++
+     nonisolated let diagnosticId: UUID
+     private var frames: [CliProcessFrameV1] = []
+     private var storedError: (any Error)?
+     private var didFinish = false
+     private var storedResult: Result<[CliProcessFrameV1], any Error>?
+     private var didLogFirstStdout = false
++    private var readyWaitPhase: ReadyWaitPhase = .notStarted
++    private var completedResultRequestedBeforeReadyWaitSatisfied = false
+ 
+     init(diagnosticId: UUID) {
+         self.diagnosticId = diagnosticId
+     }
+ 
+     func append(_ frame: CliProcessFrameV1) {
+         frames.append(frame)
+         if !didLogFirstStdout, case .stdoutLine = frame {
+             RuntimeLifecycleDiagnostics.event(
+                 .cliFixtureFirstStdoutRecorded, owner: diagnosticId
+             )
+             didLogFirstStdout = true
+@@ -1164,34 +1205,47 @@ private actor CliMechanicsFrameRecorder {
+         let diagnosticOutcome: Int
+         switch result {
+         case .success: diagnosticOutcome = 0
+         case .failure: diagnosticOutcome = 1
+         }
+         RuntimeLifecycleDiagnostics.event(
+             .cliFixtureStreamFinished,
+             owner: diagnosticId, value: diagnosticOutcome
+         )
+     }
+ 
+     func completedResult() -> Result<[CliProcessFrameV1], any Error>? {
+-        storedResult
++        if readyWaitPhase != .satisfied {
++            completedResultRequestedBeforeReadyWaitSatisfied = true
++        }
++        return storedResult
+     }
+ 
+     func containsStdout(_ expected: String) -> Bool {
+         frames.contains(.stdoutLine(expected))
+     }
+ 
+     func snapshot() -> [CliProcessFrameV1] { frames }
+ 
++    func readinessAudit() -> ReadinessAudit {
++        ReadinessAudit(
++            readyWaitStarted: readyWaitPhase != .notStarted,
++            readyWaitSatisfied: readyWaitPhase == .satisfied,
++            completedResultRequestedBeforeReadyWaitSatisfied:
++                completedResultRequestedBeforeReadyWaitSatisfied
++        )
++    }
++
+     func waitForStdout(_ expected: String) async throws {
++        readyWaitPhase = .waiting
+         let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+         RuntimeLifecycleDiagnostics.event(
+             .cliFixtureReadyWaitStarted, owner: diagnosticId, value: 3000
+         )
+         var diagnosticOutcome = 4
+         defer {
+             RuntimeLifecycleDiagnostics.event(
+                 .cliFixtureReadyWaitEnded,
+                 owner: diagnosticId, value: diagnosticOutcome
+             )
+         }
+         while !frames.contains(.stdoutLine(expected)),
+@@ -1201,24 +1255,25 @@ private actor CliMechanicsFrameRecorder {
+             try await Task.sleep(for: .milliseconds(20))
+         }
+         guard frames.contains(.stdoutLine(expected)) else {
+             if let storedError {
+                 diagnosticOutcome = 1
+                 throw storedError
+             }
+             diagnosticOutcome = didFinish ? 2 : 3
+             throw CliProcessBackendError.processLaunchFailed(
+                 "process did not become ready"
+             )
+         }
++        readyWaitPhase = .satisfied
+         diagnosticOutcome = 0
+     }
+ }
+ 
+ private actor CliMechanicsCancellationOwner {
+     private let backend: CliProcessBackend
+     private let executionId: String
+     private var task: Task<Result<CliProcessExitEvidenceV1, any Error>, Never>?
+ 
+     init(backend: CliProcessBackend, executionId: String) {
+         self.backend = backend
+         self.executionId = executionId

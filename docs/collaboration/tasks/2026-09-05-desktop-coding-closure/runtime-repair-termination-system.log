@@ -1,0 +1,37 @@
+Timestamp               Ty Process[PID:TID]
+2026-09-05 23:44:55.168 Df ScopedBookmarkAgent[95874:1a18a1] [com.apple.xpc:connection] [0x9f4cc9380] activating connection: mach=false listener=false peer=true name=com.apple.scopedbookmarksagent.xpc.peer[95860].0x9f4cc9380
+2026-09-05 23:44:58.530 Df ScopedBookmarkAgent[95874:1a18a1] [com.apple.xpc:connection] [0x9f4cc9500] activating connection: mach=false listener=false peer=true name=com.apple.scopedbookmarksagent.xpc.peer[95860].0x9f4cc9500
+2026-09-05 23:44:58.801 Df ScopedBookmarkAgent[95874:1a18a1] [com.apple.xpc:connection] [0x9f4cc9680] activating connection: mach=false listener=false peer=true name=com.apple.scopedbookmarksagent.xpc.peer[95860].0x9f4cc9680
+2026-09-05 23:44:58.909 E  kernel[0:1a19e0] ERROR: [RunTests:95860] EXC_GUARD AST: type=0x2 flavor=0x1 target=0x130 code=0x4000000100000130 subcode=0x8fd4dbfade2dead
+2026-09-05 23:44:58.910 E  kernel[0:1a19e0] ERROR: [RunTests:95860] FATAL exception: type=0xc reason=0x17 code=0x4000000100000130 subcode=0x8fd4dbfade2dead
+2026-09-05 23:44:58.910 Df kernel[0:1a19e0] [RunTests: killed] exiting with signal 9, force exiting the process
+2026-09-05 23:44:59.057 Df kernel[0:1a19e0] RunTests[95860] Corpse allowed 1 of 5
+2026-09-05 23:44:59.059 Df cfprefsd[623:1a1a00] [com.apple.xpc:connection] [0x72ae4f300] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.059 Df cfprefsd[170:1a0746] [com.apple.xpc:connection] [0xaa4e05c80] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.059 Df secd[621:1a06f0] [com.apple.xpc:connection] [0xac77e5f80] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.059 Df analyticsd[178:1a18c7] [com.apple.xpc:connection] [0xc3091cf00] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.061 Df coreauthd[17050:1a18dd] [com.apple.xpc:connection] [0xb22ce8480] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.064 Df coreauthd[17050:1a18dd] [com.apple.LocalAuthentication:Server,LAContext] ContextProxy[95860:1:292:681] deallocated
+2026-09-05 23:44:59.065 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x101646f30] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.065 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x101651440] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.065 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc8480] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.065 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc8300] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.067 Df coreauthd[17050:1a18dd] [com.apple.LocalAuthentication:Context] Untracking proxy:ContextProxy[95860:1:292:681] from plugin:<ContextPluginACM: 0xb22cec240>[681] (ContextProxy[95860:1:292:681] deallocated)
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc9500] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc8f00] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc9380] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc8780] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc8a80] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc9680] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc8180] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc8000] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc9200] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc9080] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc8900] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc8d80] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc8600] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.072 Df ScopedBookmarkAgent[95874:1a18a0] [com.apple.xpc:connection] [0x9f4cc8c00] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.168 Df coreauthd[17050:1a18dd] [com.apple.xpc:connection] [0xb22ce8300] invalidated because the client process (pid 95860) either cancelled the connection or exited
+2026-09-05 23:44:59.169 Df coreauthd[17050:1a18dd] [com.apple.LocalAuthentication:Server,LAContext] ContextProxy[95860:2:293:682] deallocated
+2026-09-05 23:44:59.169 Df coreauthd[17050:1a18dd] [com.apple.LocalAuthentication:Context] Untracking proxy:ContextProxy[95860:2:293:682] from plugin:<ContextPluginACM: 0xb22cec300>[682] (ContextProxy[95860:2:293:682] deallocated)
+2026-09-05 23:44:59.242 Df ReportCrash[95981:1a1c56] Parsing corpse data for pid 95860

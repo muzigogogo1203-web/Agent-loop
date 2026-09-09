@@ -1,0 +1,479 @@
+diff --git a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-fd-fixture-before/Sources/AgentLoopTestSuite/CliBackendTests.swift b/Sources/AgentLoopTestSuite/CliBackendTests.swift
+index c13124c..2ca33de 100644
+--- a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-fd-fixture-before/Sources/AgentLoopTestSuite/CliBackendTests.swift
++++ b/Sources/AgentLoopTestSuite/CliBackendTests.swift
+@@ -3168,6 +3168,349 @@ private func p1f1d075ContainsProcessGroupSurvived(
+         }
+ }
+ 
++private enum P1F1D075FDChildMode: String, Sendable {
++    case drain = "drain"
++    case expectedFailure = "expected-failure"
++}
++
++private enum P1F1D075FDFixtureError: Error, Equatable {
++    case invalidMode
++    case invalidEvidence
++    case descriptorOccupied(Int32)
++    case systemCall(String, Int32)
++    case childStatus(Int32, URL)
++    case childTimeout
++    case deliberateChildFailure
++    case unresolvedChild(pid_t, String, URL)
++}
++
++private struct P1F1D075FDCleanupError: Error {
++    let primary: any Error
++    let cleanupFailures: [any Error]
++}
++
++private func p1f1d075ClaimVacantDescriptor(
++    source: Int32, target: Int32
++) throws -> Int32 {
++    let acquired = Darwin.fcntl(source, F_DUPFD_CLOEXEC, target)
++    guard acquired >= 0 else {
++        throw P1F1D075FDFixtureError.systemCall("fcntl F_DUPFD_CLOEXEC", errno)
++    }
++    guard acquired == target else {
++        let primary = P1F1D075FDFixtureError.descriptorOccupied(target)
++        guard Darwin.close(acquired) == 0 else {
++            throw P1F1D075FDCleanupError(
++                primary: primary,
++                cleanupFailures: [P1F1D075FDFixtureError.systemCall(
++                    "close collision allocation", errno
++                )]
++            )
++        }
++        throw primary
++    }
++    return acquired
++}
++
++@Test func p1f1d075FDClaimRejectsOccupiedTargetWithoutClosingIt() throws {
++    let source = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
++    guard source >= 0 else {
++        throw P1F1D075FDFixtureError.systemCall("open occupied-test source", errno)
++    }
++    defer { #expect(Darwin.close(source) == 0) }
++    let target = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
++    guard target >= 0 else {
++        throw P1F1D075FDFixtureError.systemCall("open occupied-test target", errno)
++    }
++    defer { #expect(Darwin.close(target) == 0) }
++    #expect(throws: P1F1D075FDFixtureError.descriptorOccupied(target)) {
++        _ = try p1f1d075ClaimVacantDescriptor(source: source, target: target)
++    }
++    #expect(Darwin.fcntl(target, F_GETFD) >= 0)
++    #expect(Darwin.fcntl(source, F_GETFD) >= 0)
++}
++
++private let p1f1d075FDOutputLock = NSLock()
++
++private func p1f1d075EmitFDChildEvidence(
++    mode: P1F1D075FDChildMode,
++    pid: pid_t,
++    status: Int32?,
++    log: URL,
++    evidence: URL,
++    requireEvidence: Bool
++) throws {
++    // Read both files independently so a missing file cannot hide the other log.
++    var failures: [any Error] = []
++    var logData = Data()
++    var evidenceData = Data()
++    do { logData = try Data(contentsOf: log) }
++    catch { failures.append(error) }
++    if requireEvidence || FileManager.default.fileExists(atPath: evidence.path) {
++        do { evidenceData = try Data(contentsOf: evidence) }
++        catch { failures.append(error) }
++    }
++    let context = "mode=\(mode.rawValue) pid=\(pid) raw-status=\(status.map { String($0) } ?? "unreaped") log=\(log.path) evidence=\(evidence.path)"
++    var output = Data("\n=== FD CHILD BEGIN \(context) ===\n".utf8)
++    output.append(logData)
++    output.append(Data("\n=== FD CHILD PHASE EVIDENCE \(context) ===\n".utf8))
++    output.append(evidenceData)
++    output.append(Data("\n=== FD CHILD END \(context) read-errors=\(failures) ===\n".utf8))
++    do {
++        try p1f1d075FDOutputLock.withLock {
++            try FileHandle.standardOutput.write(contentsOf: output)
++        }
++    } catch { failures.append(error) }
++    if let primary = failures.first {
++        throw P1F1D075FDCleanupError(
++            primary: primary, cleanupFailures: Array(failures.dropFirst())
++        )
++    }
++}
++
++private func p1f1d075RunFDChild(mode: P1F1D075FDChildMode) async throws {
++    try await withCheckedThrowingContinuation {
++        (continuation: CheckedContinuation<Void, any Error>) in
++        let worker = Thread {
++            let result: Result<Void, any Error>
++            do {
++                try p1f1d075RunFDChildBlocking(mode: mode)
++                result = .success(())
++            } catch {
++                result = .failure(error)
++            }
++            continuation.resume(with: result)
++        }
++        worker.name = "AgentLoop.test.fd-child"
++        worker.qualityOfService = .utility
++        worker.start()
++    }
++}
++
++private func p1f1d075RunFDChildBlocking(mode: P1F1D075FDChildMode) throws {
++    let executable = URL(
++        fileURLWithPath: CommandLine.arguments[0],
++        relativeTo: URL(fileURLWithPath: FileManager.default.currentDirectoryPath,
++                        isDirectory: true)
++    ).standardizedFileURL.path
++    guard executable.hasPrefix("/"),
++          FileManager.default.isExecutableFile(atPath: executable)
++    else { throw P1F1D075ClosedStdioFixtureError.invalidExecutable }
++    let base = FileManager.default.temporaryDirectory
++        .appendingPathComponent("p1f1d-075-fd-child-\(UUID().uuidString)")
++    try FileManager.default.createDirectory(at: base, withIntermediateDirectories: false)
++    let log = base.appendingPathComponent("child.log")
++    let evidence = base.appendingPathComponent("phases.evidence")
++    var logFD: Int32 = -1
++    var actions: posix_spawn_file_actions_t?
++    var attributes: posix_spawnattr_t?
++    var actionsInitialized = false
++    var attributesInitialized = false
++    var pid: pid_t = 0
++    var ownsChild = false
++    var status: Int32?
++
++    func check(_ code: Int32, _ operation: String) throws {
++        guard code == 0 else {
++            throw P1F1D075FDFixtureError.systemCall(operation, code)
++        }
++    }
++    // Mark ownership consumed before close/destroy: never retry a numeric FD.
++    func releaseSpawnResources() -> [any Error] {
++        var failures: [any Error] = []
++        if logFD >= 0 {
++            let ownedFD = logFD
++            logFD = -1
++            if Darwin.close(ownedFD) != 0 {
++                failures.append(P1F1D075FDFixtureError.systemCall("close parent log", errno))
++            }
++        }
++        if actionsInitialized {
++            actionsInitialized = false
++            let code = posix_spawn_file_actions_destroy(&actions)
++            if code != 0 {
++                failures.append(P1F1D075FDFixtureError.systemCall("destroy file actions", code))
++            }
++        }
++        if attributesInitialized {
++            attributesInitialized = false
++            let code = posix_spawnattr_destroy(&attributes)
++            if code != 0 {
++                failures.append(P1F1D075FDFixtureError.systemCall("destroy spawn attributes", code))
++            }
++        }
++        return failures
++    }
++    func pollChild() throws -> Bool {
++        var observed: Int32 = 0
++        while true {
++            let result = Darwin.waitpid(pid, &observed, WNOHANG)
++            if result == pid {
++                ownsChild = false
++                status = observed
++                return true
++            }
++            if result == 0 { return false }
++            let failure = errno
++            if failure == EINTR { continue }
++            if failure == ECHILD {
++                ownsChild = false
++                throw P1F1D075FDFixtureError.unresolvedChild(
++                    pid, "waitpid ECHILD: ownership lost, reap unconfirmed", log
++                )
++            }
++            throw P1F1D075FDFixtureError.systemCall("waitpid pid=\(pid) log=\(log.path)", failure)
++        }
++    }
++    func terminateAndReapOwnedChild() throws {
++        guard ownsChild else { return }
++        // Reconfirm an unreaped direct child before sending any signal.
++        do { if try pollChild() { return } }
++        catch {
++            throw P1F1D075FDFixtureError.unresolvedChild(
++                pid, "cleanup cannot confirm ownership: \(error)", log
++            )
++        }
++        if Darwin.kill(pid, SIGKILL) != 0 {
++            let failure = errno
++            if failure != ESRCH {
++                // A concurrent exit can still establish a completed reap.
++                let reaped: Bool
++                do { reaped = try pollChild() }
++                catch {
++                    throw P1F1D075FDCleanupError(
++                        primary: P1F1D075FDFixtureError.systemCall("kill owned child \(pid)", failure),
++                        cleanupFailures: [P1F1D075FDFixtureError.unresolvedChild(
++                            pid, "post-kill-error wait could not confirm reap: \(error)", log
++                        )]
++                    )
++                }
++                if reaped {
++                    throw P1F1D075FDFixtureError.systemCall("kill owned child \(pid)", failure)
++                }
++                throw P1F1D075FDFixtureError.unresolvedChild(
++                    pid, "SIGKILL failed errno=\(failure); termination/reap unconfirmed", log
++                )
++            }
++        }
++        var observed: Int32 = 0
++        while true {
++            let result = Darwin.waitpid(pid, &observed, 0)
++            if result == pid {
++                ownsChild = false
++                status = observed
++                return
++            }
++            let failure = errno
++            if failure == EINTR { continue }
++            if failure == ECHILD { ownsChild = false }
++            throw P1F1D075FDFixtureError.unresolvedChild(
++                pid, "cleanup waitpid errno=\(failure); reap unconfirmed", log
++            )
++        }
++    }
++
++    do {
++        logFD = Darwin.open(log.path, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0o600)
++        guard logFD >= 0 else {
++            throw P1F1D075FDFixtureError.systemCall("create exclusive child log", errno)
++        }
++        if logFD < 3 {
++            let normalized = Darwin.fcntl(logFD, F_DUPFD_CLOEXEC, 3)
++            guard normalized >= 3 else {
++                throw P1F1D075FDFixtureError.systemCall("normalize child log", errno)
++            }
++            let original = logFD
++            logFD = normalized
++            guard Darwin.close(original) == 0 else {
++                throw P1F1D075FDFixtureError.systemCall("close original child log", errno)
++            }
++        }
++        try check(posix_spawn_file_actions_init(&actions), "initialize file actions")
++        actionsInitialized = true
++        try check(posix_spawnattr_init(&attributes), "initialize spawn attributes")
++        attributesInitialized = true
++        try check(posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT)),
++                  "set CLOEXEC_DEFAULT")
++        try check("/dev/null".withCString {
++            posix_spawn_file_actions_addopen(&actions, STDIN_FILENO, $0, O_RDONLY, 0)
++        }, "open child stdin")
++        try check(posix_spawn_file_actions_adddup2(&actions, logFD, STDOUT_FILENO), "duplicate child stdout")
++        try check(posix_spawn_file_actions_adddup2(&actions, logFD, STDERR_FILENO), "duplicate child stderr")
++        try check(posix_spawn_file_actions_addclose(&actions, logFD), "close child auxiliary log")
++        var arguments = try p1f1d075CStringVector([
++            "/usr/bin/env",
++            "AGENTLOOP_075_FD_CHILD_MODE=\(mode.rawValue)",
++            "AGENTLOOP_075_FD_CHILD_EVIDENCE=\(evidence.path)",
++            executable, "--filter", "p1f1_075CLIHelpCapabilityMismatchIsUnsupported",
++        ])
++        defer { p1f1d075FreeCStringVector(arguments) }
++        let started = ContinuousClock.now
++        try check("/usr/bin/env".withCString { path in
++            arguments.withUnsafeMutableBufferPointer { buffer in
++                posix_spawn(&pid, path, &actions, &attributes, buffer.baseAddress, environ)
++            }
++        }, "spawn FD child")
++        ownsChild = true
++        let setupCleanup = releaseSpawnResources()
++        if let primary = setupCleanup.first {
++            throw P1F1D075FDCleanupError(primary: primary, cleanupFailures: Array(setupCleanup.dropFirst()))
++        }
++        while try !pollChild() {
++            if started.duration(to: .now) >= .seconds(15) {
++                throw P1F1D075FDFixtureError.childTimeout
++            }
++            Thread.sleep(forTimeInterval: 0.01)
++        }
++        guard let status else {
++            throw P1F1D075FDFixtureError.unresolvedChild(pid, "missing reaped status", log)
++        }
++        guard status == 0 else {
++            throw P1F1D075FDFixtureError.childStatus(status, log)
++        }
++        let completion: Data
++        do { completion = try Data(contentsOf: evidence) }
++        catch {
++            throw P1F1D075FDCleanupError(
++                primary: P1F1D075FDFixtureError.invalidEvidence,
++                cleanupFailures: [error]
++            )
++        }
++        guard mode == .drain,
++              completion == Data("live-drain\nsurviving-run\nsurviving-abort\n".utf8)
++        else { throw P1F1D075FDFixtureError.invalidEvidence }
++        try p1f1d075EmitFDChildEvidence(
++            mode: mode, pid: pid, status: status, log: log,
++            evidence: evidence, requireEvidence: true
++        )
++        try FileManager.default.removeItem(at: base)
++    } catch {
++        let primary = error
++        var failures = releaseSpawnResources()
++        do { try terminateAndReapOwnedChild() }
++        catch { failures.append(error) }
++        do {
++            try p1f1d075EmitFDChildEvidence(
++                mode: mode, pid: pid, status: status, log: log,
++                evidence: evidence, requireEvidence: false
++            )
++        } catch { failures.append(error) }
++        if failures.isEmpty { throw primary }
++        throw P1F1D075FDCleanupError(primary: primary, cleanupFailures: failures)
++    }
++}
++
++@Test func p1f1d075FDChildFailureReachesParent() async throws {
++    do {
++        try await p1f1d075RunFDChild(mode: .expectedFailure)
++        Issue.record("deliberately failing FD child must fail its parent invocation")
++    } catch P1F1D075FDFixtureError.childStatus(let status, let log) {
++        try #require(status != 0)
++        let contents = try String(contentsOf: log, encoding: .utf8)
++        try #require(contents.contains("deliberateChildFailure"))
++        try FileManager.default.removeItem(at: log.deletingLastPathComponent())
++    }
++}
++
+ private func p1f1d075AssertNoSecondDrainClose(
+     process: P1F1D075LiveDrainManagedProcess,
+     closedDescriptors: [Int32]
+@@ -3187,14 +3530,22 @@ private func p1f1d075AssertNoSecondDrainClose(
+             sentinels.append(target)
+             continue
+         }
+-        let duplicated = Darwin.dup2(source, target)
+-        let duplicateFailure = errno
+-        #expect(Darwin.close(source) == 0)
+-        guard duplicated == target else {
+-            throw EngineRuntimeAuthorityErrorV1
+-                .descriptorFailure(duplicateFailure)
++        do {
++            let acquired = try p1f1d075ClaimVacantDescriptor(source: source, target: target)
++            sentinels.append(acquired)
++        } catch {
++            let primary = error
++            guard Darwin.close(source) == 0 else {
++                throw P1F1D075FDCleanupError(
++                    primary: primary,
++                    cleanupFailures: [P1F1D075FDFixtureError.systemCall("close sentinel source", errno)]
++                )
++            }
++            throw primary
++        }
++        guard Darwin.close(source) == 0 else {
++            throw P1F1D075FDFixtureError.systemCall("close sentinel source", errno)
+         }
+-        sentinels.append(target)
+     }
+ 
+     #expect(throws: EngineRuntimeAuthorityErrorV1.managedPolicy) {
+@@ -3463,6 +3814,46 @@ private func p1f1d075AssertManagedProbeCleanup() throws {
+     #expect(abortKill < abortJoin)
+ }
+ 
++private func p1f1d075RunFDChildBody(mode: P1F1D075FDChildMode) throws {
++    guard let path = ProcessInfo.processInfo.environment["AGENTLOOP_075_FD_CHILD_EVIDENCE"],
++          path.hasPrefix("/"), !path.utf8.contains(0)
++    else { throw P1F1D075FDFixtureError.invalidEvidence }
++    if mode == .expectedFailure {
++        throw P1F1D075FDFixtureError.deliberateChildFailure
++    }
++    let diagnosticId = UUID()
++    var phases: [String] = []
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 6
++    )
++    try p1f1d075AssertLiveDrainOwnership()
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 6
++    )
++    phases.append("live-drain")
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 7
++    )
++    try p1f1d075AssertSurvivingGroupStopsLiveDrain(entry: .run)
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 7
++    )
++    phases.append("surviving-run")
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 8
++    )
++    try p1f1d075AssertSurvivingGroupStopsLiveDrain(
++        entry: .abortSuspended
++    )
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 8
++    )
++    phases.append("surviving-abort")
++    try Data((phases.joined(separator: "\n") + "\n").utf8).write(
++        to: URL(fileURLWithPath: path), options: .withoutOverwriting
++    )
++}
++
+ private func p1f1d075AssertR9DCompositionContract() async throws {
+     let diagnosticId = UUID()
+     RuntimeLifecycleDiagnostics.event(
+@@ -3507,29 +3898,7 @@ private func p1f1d075AssertR9DCompositionContract() async throws {
+     RuntimeLifecycleDiagnostics.event(
+         .probeCompositionCompleted, owner: diagnosticId, value: 5
+     )
+-    RuntimeLifecycleDiagnostics.event(
+-        .probeCompositionStarted, owner: diagnosticId, value: 6
+-    )
+-    try p1f1d075AssertLiveDrainOwnership()
+-    RuntimeLifecycleDiagnostics.event(
+-        .probeCompositionCompleted, owner: diagnosticId, value: 6
+-    )
+-    RuntimeLifecycleDiagnostics.event(
+-        .probeCompositionStarted, owner: diagnosticId, value: 7
+-    )
+-    try p1f1d075AssertSurvivingGroupStopsLiveDrain(entry: .run)
+-    RuntimeLifecycleDiagnostics.event(
+-        .probeCompositionCompleted, owner: diagnosticId, value: 7
+-    )
+-    RuntimeLifecycleDiagnostics.event(
+-        .probeCompositionStarted, owner: diagnosticId, value: 8
+-    )
+-    try p1f1d075AssertSurvivingGroupStopsLiveDrain(
+-        entry: .abortSuspended
+-    )
+-    RuntimeLifecycleDiagnostics.event(
+-        .probeCompositionCompleted, owner: diagnosticId, value: 8
+-    )
++    try await p1f1d075RunFDChild(mode: .drain)
+     RuntimeLifecycleDiagnostics.event(
+         .probeCompositionStarted, owner: diagnosticId, value: 9
+     )
+@@ -3540,8 +3909,15 @@ private func p1f1d075AssertR9DCompositionContract() async throws {
+ }
+ 
+ @Test func p1f1_075CLIHelpCapabilityMismatchIsUnsupported() async throws {
+-    try await p1f1d075AssertR9DCompositionContract()
+     let environment = ProcessInfo.processInfo.environment
++    if let rawMode = environment["AGENTLOOP_075_FD_CHILD_MODE"] {
++        guard let mode = P1F1D075FDChildMode(rawValue: rawMode) else {
++            throw P1F1D075FDFixtureError.invalidMode
++        }
++        try p1f1d075RunFDChildBody(mode: mode)
++        return
++    }
++    try await p1f1d075AssertR9DCompositionContract()
+     let closedStdioFixture =
+         environment["AGENTLOOP_R9C_CLOSED_STDIO"] == "help"
+     let base: URL

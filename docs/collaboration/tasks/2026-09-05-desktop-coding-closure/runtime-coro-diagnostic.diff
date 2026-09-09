@@ -1,0 +1,191 @@
+diff --git a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-coro-diagnostic-before/ExecutionEngineConformanceTests.swift b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+index 59f00c0..6526ee0 100644
+--- a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-coro-diagnostic-before/ExecutionEngineConformanceTests.swift
++++ b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+@@ -4628,6 +4628,7 @@ private func p1f1dRequirePredecessorRejected(
+ }
+ 
+ private func p1f1d069ExerciseRoutingWinners() async throws {
++    print("P1F1D069_SCENARIO=RoutingWinners")
+     let initialRouter = p1f1dRouter(80)
+     let initialEvents = P1F1DEventRecorder()
+     let initialManifestCount = P1F1DLockedCounter()
+@@ -4762,6 +4763,7 @@ private func p1f1d069ExerciseRoutingWinners() async throws {
+ }
+ 
+ private func p1f1d069ExerciseActiveCancellationRegistry() async throws {
++    print("P1F1D069_SCENARIO=ActiveCancellationRegistry")
+     let activeExecutionID =
+         "00000000-0000-4000-8000-000000000692"
+     let activeReceipt = try p1f1d069Receipt(
+@@ -4978,6 +4980,7 @@ private func p1f1d069ExerciseActiveCancellationRegistry() async throws {
+ }
+ 
+ private func p1f1d069ExerciseSharedAdapterCleanup() async throws {
++    print("P1F1D069_SCENARIO=SharedAdapterCleanup")
+     let modelCleanupCell = P1F1D069ModelCleanupCell()
+     let modelCleanupGate = P1F1D069CleanupProbe(blocked: true)
+     let modelConstructionGate = P1F1D069SynchronousGate()
+@@ -5048,7 +5051,9 @@ private func p1f1d069ExerciseSharedAdapterCleanup() async throws {
+     await modelCleanupGate.release()
+     #expect(await firstModelCancel.value)
+     #expect(await secondModelCancel.value)
++    print("P1F1D069_JOIN=model-begin")
+     try await modelConsumer.value
++    print("P1F1D069_JOIN=model-end")
+     #expect(modelCleanupCell.cancellationCount() == 1)
+     #expect(await modelTerminal.snapshot().isEmpty)
+     #expect(await modelBoard.snapshot().isEmpty)
+@@ -5117,13 +5122,16 @@ private func p1f1d069ExerciseSharedAdapterCleanup() async throws {
+     await cliCleanupGate.release()
+     #expect(await firstCliCancel.value)
+     #expect(await secondCliCancel.value)
++    print("P1F1D069_JOIN=cli-begin")
+     try await cliConsumer.value
++    print("P1F1D069_JOIN=cli-end")
+     #expect(cliCleanupCell.cancellationCount() == 1)
+     #expect(await cliTerminal.snapshot().isEmpty)
+     #expect(await cliBoard.snapshot().isEmpty)
+ }
+ 
+ private func p1f1d069ExerciseModelClaimHandoff() async throws {
++    print("P1F1D069_SCENARIO=ModelClaimHandoff")
+     let modelHandoffCell = P1F1D069ModelCleanupCell()
+     let modelHandoffLifecycle = P1F1D069LifecycleProbe<
+         EngineAdapterCancellationLifecycleEventV1
+@@ -5260,6 +5268,7 @@ private func p1f1d069ExerciseModelClaimHandoff() async throws {
+ }
+ 
+ private func p1f1d069ExerciseCliHandoffAndImmediateWinners() async throws {
++    print("P1F1D069_SCENARIO=CliHandoffAndImmediateWinners")
+     let stubbornCliCell = P1F1D069StubbornCliCell()
+     let stubbornCliLifecycle = P1F1D069LifecycleProbe<
+         CliEngineAdapterCancellationLifecycleEventV1
+@@ -5394,6 +5403,7 @@ private func p1f1d069ExerciseCliHandoffAndImmediateWinners() async throws {
+ }
+ 
+ private func p1f1d069ExercisePrelaunchAndQuarantine() async throws {
++    print("P1F1D069_SCENARIO=PrelaunchAndQuarantine")
+     let prelaunchCliCell = P1F1D069PrelaunchCliCell()
+     let prelaunchCliTerminal = P1F1DTerminalRecorder()
+     let prelaunchCliBoard = P1F1DBoardTerminalRecorder()
+@@ -5542,6 +5552,7 @@ private func p1f1d069ExercisePrelaunchAndQuarantine() async throws {
+ }
+ 
+ private func p1f1d069ExerciseGenerationBoundCleanup() async throws {
++    print("P1F1D069_SCENARIO=GenerationBoundCleanup")
+     let generationModelGates = [
+         P1F1D069CleanupProbe(blocked: true),
+         P1F1D069CleanupProbe(blocked: true),
+@@ -5640,6 +5651,7 @@ private func p1f1d069ExerciseGenerationBoundCleanup() async throws {
+ }
+ 
+ private func p1f1d069ExerciseCompletionRegistry() async throws {
++    print("P1F1D069_SCENARIO=CompletionRegistry")
+     let completionExecutionID =
+         "00000000-0000-4000-8000-000000000694"
+     let completionReceipt = try p1f1d069Receipt(
+@@ -5761,6 +5773,7 @@ private func p1f1d069ExerciseCompletionRegistry() async throws {
+ }
+ 
+ private func p1f1d069ExerciseDispatchAdmission() async throws {
++    print("P1F1D069_SCENARIO=DispatchAdmission")
+     let duplicateFixture = try P1F1DCanonicalExecutionFixture(
+         profileKind: .openAIAPI
+     )
+@@ -5910,6 +5923,7 @@ private func p1f1d069ExerciseDispatchAdmission() async throws {
+ }
+ 
+ private func p1f1d069ExerciseBeginRegistrationLatch() async throws {
++    print("P1F1D069_SCENARIO=BeginRegistrationLatch")
+     let latchFixture = try P1F1DCanonicalExecutionFixture(
+         profileKind: .openAIAPI
+     )
+@@ -6041,6 +6055,7 @@ private func p1f1d069ExerciseBeginRegistrationLatch() async throws {
+ }
+ 
+ private func p1f1d069ExerciseSettledPrimaryRetry() async throws {
++    print("P1F1D069_SCENARIO=SettledPrimaryRetry")
+     let settledChildFixture = try P1F1DCanonicalExecutionFixture(
+         profileKind: .openAIAPI
+     )
+@@ -6237,6 +6252,7 @@ private func p1f1d069ExerciseSettledPrimaryRetry() async throws {
+ }
+ 
+ private func p1f1d069ExercisePostGateAndBindCancellation() async throws {
++    print("P1F1D069_SCENARIO=PostGateAndBindCancellation")
+     let postGateFixture = try P1F1DCanonicalExecutionFixture(
+         profileKind: .openAIAPI
+     )
+@@ -6407,6 +6423,7 @@ private func p1f1d069ExercisePostGateAndBindCancellation() async throws {
+ }
+ 
+ private func p1f1d069ExerciseObserverAndFinalizerFailure() async throws {
++    print("P1F1D069_SCENARIO=ObserverAndFinalizerFailure")
+     let observerFixture = try P1F1DCanonicalExecutionFixture(
+         profileKind: .openAIAPI
+     )
+@@ -6561,6 +6578,7 @@ private func p1f1d069ExerciseObserverAndFinalizerFailure() async throws {
+ }
+ 
+ private func p1f1d069ExerciseCompletionRemovalBarriers() async throws {
++    print("P1F1D069_SCENARIO=CompletionRemovalBarriers")
+     let removalBarrierFixture = try P1F1DCanonicalExecutionFixture()
+     let removalBarrierProbe = P1F1D069CleanupProbe(blocked: true)
+     let removalBarrierFinalizer = P1F1D069FinalizerProbe()
+@@ -6717,6 +6735,7 @@ private func p1f1d069ExerciseCompletionRemovalBarriers() async throws {
+ }
+ 
+ private func p1f1d069ExerciseObserverStoreFailure() async throws {
++    print("P1F1D069_SCENARIO=ObserverStoreFailure")
+     let observerFailureFixture = try P1F1DCanonicalExecutionFixture()
+     try await observerFailureFixture.db.pool.write { database in
+         try database.execute(sql: """
+@@ -6762,6 +6781,7 @@ private func p1f1d069ExerciseObserverStoreFailure() async throws {
+ }
+ 
+ private func p1f1d069ExerciseExactLiveCliCancellation() async throws {
++    print("P1F1D069_SCENARIO=ExactLiveCliCancellation")
+     for bindSession in [false, true] {
+         print("P1F1D069_CASE=exact-live-cli-\(bindSession)")
+         let exactFixture = try P1F1DCanonicalExecutionFixture()
+@@ -6901,6 +6921,7 @@ private func p1f1d069ExerciseExactLiveCliCancellation() async throws {
+ }
+ 
+ private func p1f1d069ExerciseMissionCliRecovery() async throws {
++    print("P1F1D069_SCENARIO=MissionCliRecovery")
+     for bindSession in [false, true] {
+         print("P1F1D069_CASE=mission-cli-\(bindSession)")
+         let missionCLI = try P1F1DCanonicalExecutionFixture()
+@@ -7011,6 +7032,7 @@ private func p1f1d069ExerciseMissionCliRecovery() async throws {
+ }
+ 
+ private func p1f1d069ExerciseMissionModelRecovery() async throws {
++    print("P1F1D069_SCENARIO=MissionModelRecovery")
+     for bindSession in [false, true] {
+         print("P1F1D069_CASE=mission-model-\(bindSession)")
+         let missionModel = try P1F1DCanonicalExecutionFixture(
+@@ -7115,6 +7137,7 @@ private func p1f1d069ExerciseMissionModelRecovery() async throws {
+ }
+ 
+ private func p1f1d069ExerciseSharedRecoveryOwner() async throws {
++    print("P1F1D069_SCENARIO=SharedRecoveryOwner")
+     let sharedRecoveryFixture = try P1F1DCanonicalExecutionFixture()
+     let sharedRecoveryFields = try sharedRecoveryFixture.fields()
+     let sharedRecoveryRequest = try p1f1d069RequestCancellation(
+@@ -7192,6 +7215,7 @@ private func p1f1d069ExerciseSharedRecoveryOwner() async throws {
+ }
+ 
+ private func p1f1d069ExerciseRecoveryFailureRetry() async throws {
++    print("P1F1D069_SCENARIO=RecoveryFailureRetry")
+     for failurePhase in [
+         P1F1D069RecoveryFailureCell.Phase.transport,
+         .evidence,
+@@ -7305,6 +7329,7 @@ private func p1f1d069ExerciseRecoveryFailureRetry() async throws {
+ }
+ 
+ private func p1f1d069ExerciseSharedRecoveryActionMatrix() async throws {
++    print("P1F1D069_SCENARIO=SharedRecoveryActionMatrix")
+     for recoveryCase in P1F1D069SharedRecoveryCase.allCases {
+         print("P1F1D069_CASE=shared-action-\(recoveryCase.rawValue)")
+         let replayClass: EngineExecutionReplayClassV1

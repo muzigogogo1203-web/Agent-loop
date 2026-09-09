@@ -1,0 +1,814 @@
+import Foundation
+import GRDB
+import Testing
+import AgentLoopCore
+
+private struct DesktopGoalCarrierSchemaSnapshot: Equatable {
+    let contextDDL: String
+    let operationDDL: String
+    let pendingIndexDDL: String
+    let contextColumns: [String]
+    let operationColumns: [String]
+    let contextForeignKeys: [String]
+    let operationForeignKeys: [String]
+    let pendingIndexColumns: [String]
+    let pendingIndexIsUnique: Int
+    let pendingIndexIsPartial: Int
+}
+
+private func desktopGoalMigrationQueue(_ label: String) throws -> DatabaseQueue {
+    var configuration = Configuration()
+    configuration.foreignKeysEnabled = true
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "agentloop-desktop-goal-migration-\(label)-\(UUID().uuidString).sqlite"
+    )
+    return try DatabaseQueue(path: url.path, configuration: configuration)
+}
+
+private func desktopGoalNormalizedSQL(_ sql: String) -> String {
+    sql.components(separatedBy: .whitespacesAndNewlines)
+        .filter { !$0.isEmpty }
+        .joined(separator: " ")
+}
+
+private func desktopGoalColumnShapes(
+    _ database: Database,
+    table: String
+) throws -> [String] {
+    try Row.fetchAll(
+        database,
+        sql: "PRAGMA table_info(\"\(table)\")"
+    ).map { row in
+        let name: String = row["name"]
+        let type: String = row["type"]
+        let notNull: Int = row["notnull"]
+        let defaultValue: String? = row["dflt_value"]
+        let primaryKey: Int = row["pk"]
+        return "\(name)|\(type)|\(notNull)|\(defaultValue ?? "NULL")|\(primaryKey)"
+    }
+}
+
+private func desktopGoalForeignKeyShapes(
+    _ database: Database,
+    table: String
+) throws -> [String] {
+    try Row.fetchAll(
+        database,
+        sql: "PRAGMA foreign_key_list(\"\(table)\")"
+    ).map { row in
+        let from: String = row["from"]
+        let referencedTable: String = row["table"]
+        let to: String = row["to"]
+        let onUpdate: String = row["on_update"]
+        let onDelete: String = row["on_delete"]
+        return "\(from)|\(referencedTable)|\(to)|\(onUpdate)|\(onDelete)"
+    }.sorted()
+}
+
+private func desktopGoalCarrierSchema(
+    _ database: Database
+) throws -> DesktopGoalCarrierSchemaSnapshot {
+    let objects = Set(try String.fetchAll(
+        database,
+        sql: """
+            SELECT type || ':' || name
+            FROM sqlite_master
+            WHERE name IN (
+              'desktop_goal_context',
+              'desktop_goal_operation',
+              'desktop_goal_one_pending'
+            )
+            ORDER BY type,name
+            """
+    ))
+    try #require(objects == Set([
+        "table:desktop_goal_context",
+        "table:desktop_goal_operation",
+        "index:desktop_goal_one_pending",
+    ]))
+
+    let contextDDL = try #require(try String.fetchOne(
+        database,
+        sql: """
+            SELECT sql FROM sqlite_master
+            WHERE type='table' AND name='desktop_goal_context'
+            """
+    ))
+    let operationDDL = try #require(try String.fetchOne(
+        database,
+        sql: """
+            SELECT sql FROM sqlite_master
+            WHERE type='table' AND name='desktop_goal_operation'
+            """
+    ))
+    let pendingIndexDDL = try #require(try String.fetchOne(
+        database,
+        sql: """
+            SELECT sql FROM sqlite_master
+            WHERE type='index' AND name='desktop_goal_one_pending'
+            """
+    ))
+    let indexRows = try Row.fetchAll(
+        database,
+        sql: "PRAGMA index_list(\"desktop_goal_operation\")"
+    )
+    let pendingIndex = try #require(indexRows.first { row in
+        let name: String = row["name"]
+        return name == "desktop_goal_one_pending"
+    })
+    let pendingIndexColumns = try Row.fetchAll(
+        database,
+        sql: "PRAGMA index_info(\"desktop_goal_one_pending\")"
+    ).map { row -> String in
+        row["name"]
+    }
+
+    return DesktopGoalCarrierSchemaSnapshot(
+        contextDDL: desktopGoalNormalizedSQL(contextDDL),
+        operationDDL: desktopGoalNormalizedSQL(operationDDL),
+        pendingIndexDDL: desktopGoalNormalizedSQL(pendingIndexDDL),
+        contextColumns: try desktopGoalColumnShapes(
+            database,
+            table: "desktop_goal_context"
+        ),
+        operationColumns: try desktopGoalColumnShapes(
+            database,
+            table: "desktop_goal_operation"
+        ),
+        contextForeignKeys: try desktopGoalForeignKeyShapes(
+            database,
+            table: "desktop_goal_context"
+        ),
+        operationForeignKeys: try desktopGoalForeignKeyShapes(
+            database,
+            table: "desktop_goal_operation"
+        ),
+        pendingIndexColumns: pendingIndexColumns,
+        pendingIndexIsUnique: pendingIndex["unique"],
+        pendingIndexIsPartial: pendingIndex["partial"]
+    )
+}
+
+private struct DesktopGoalSchemaCheckpoint: Equatable {
+    let tables: Int
+    let indexes: Int
+    let triggers: Int
+}
+
+private struct DesktopGoalDatabaseSnapshot: Equatable {
+    let schemaObjects: [String]
+    let rows: [String]
+    let migrations: [String]
+    let checkpoint: DesktopGoalSchemaCheckpoint
+}
+
+private func desktopGoalQuotedIdentifier(_ value: String) -> String {
+    "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
+}
+
+private func desktopGoalUserTableNames(_ database: Database) throws -> [String] {
+    try String.fetchAll(
+        database,
+        sql: """
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name NOT LIKE 'sqlite_%'
+            ORDER BY name
+            """
+    )
+}
+
+private func desktopGoalRowsSnapshot(
+    _ database: Database,
+    tables: [String]
+) throws -> [String] {
+    var result: [String] = []
+    for table in tables {
+        let columns = try database.columns(in: table).map(\.name)
+        let projection = columns.map {
+            "quote(\(desktopGoalQuotedIdentifier($0)))"
+        }.joined(separator: " || char(31) || ")
+        let rows = try String.fetchAll(
+            database,
+            sql: "SELECT \(projection) FROM \(desktopGoalQuotedIdentifier(table)) ORDER BY 1"
+        )
+        result.append(contentsOf: rows.map { "row:\(table):\($0)" })
+    }
+    return result
+}
+
+private func desktopGoalExpectConstraintFailureWithoutMutation(
+    _ label: String,
+    database: Database,
+    operation: () throws -> Void
+) throws {
+    let before = try desktopGoalRowsSnapshot(
+        database,
+        tables: ["desktop_goal_context", "desktop_goal_operation"]
+    )
+    do {
+        try operation()
+    } catch let error as DatabaseError {
+        guard error.extendedResultCode == .SQLITE_CONSTRAINT_CHECK else {
+            throw error
+        }
+        let after = try desktopGoalRowsSnapshot(
+            database,
+            tables: ["desktop_goal_context", "desktop_goal_operation"]
+        )
+        #expect(after == before)
+        return
+    }
+    Issue.record("Expected CHECK rejection for \(label)")
+}
+
+private func desktopGoalSchemaCheckpoint(
+    _ database: Database
+) throws -> DesktopGoalSchemaCheckpoint {
+    DesktopGoalSchemaCheckpoint(
+        tables: try Int.fetchOne(
+            database,
+            sql: "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+        ) ?? -1,
+        indexes: try Int.fetchOne(
+            database,
+            sql: "SELECT COUNT(*) FROM sqlite_master WHERE type='index'"
+        ) ?? -1,
+        triggers: try Int.fetchOne(
+            database,
+            sql: "SELECT COUNT(*) FROM sqlite_master WHERE type='trigger'"
+        ) ?? -1
+    )
+}
+
+private func desktopGoalDatabaseSnapshot(
+    _ database: Database
+) throws -> DesktopGoalDatabaseSnapshot {
+    let schemaObjects = try Row.fetchAll(
+        database,
+        sql: """
+            SELECT type,name,tbl_name,sql FROM sqlite_master
+            WHERE name NOT LIKE 'sqlite_%'
+            ORDER BY type,name
+            """
+    ).map { row in
+        let type: String = row["type"]
+        let name: String = row["name"]
+        let table: String = row["tbl_name"]
+        let sql: String? = row["sql"]
+        return [type, name, table, sql ?? "NULL"].joined(separator: "\u{1f}")
+    }
+    let tables = try desktopGoalUserTableNames(database)
+    return DesktopGoalDatabaseSnapshot(
+        schemaObjects: schemaObjects,
+        rows: try desktopGoalRowsSnapshot(database, tables: tables),
+        migrations: try String.fetchAll(
+            database,
+            sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid"
+        ),
+        checkpoint: try desktopGoalSchemaCheckpoint(database)
+    )
+}
+
+private func desktopGoalInsertLegacyRows(_ database: Database) throws {
+    try database.execute(
+        sql: "INSERT INTO camp(id,name,createdAt) VALUES (?,?,?)",
+        arguments: ["desktop-goal-legacy-camp", "Legacy camp", 1_700_000_000.0]
+    )
+    try database.execute(
+        sql: """
+            INSERT INTO input_envelope(
+              id,idempotencyKey,sourceType,sourceDeviceId,connectorId,authorId,
+              capturedAt,inlineText,payloadRef,contentHash,candidateCampIdsJson,
+              campId,explicitIntent,privacyLevel,status,errorCode,errorMessage,
+              parentInputId,retentionState,createdAt,updatedAt,deletedAt
+            ) VALUES (
+              ?,?,'text',NULL,NULL,NULL,?, ?,NULL,?,'[]',?,'createGoal',
+              'localOnly','captured',NULL,NULL,NULL,'active',?,?,NULL
+            )
+            """,
+        arguments: [
+            "30000000-0000-4000-8000-000000000001",
+            "desktop-goal-legacy-input",
+            1_700_000_001.0,
+            "legacy input must survive migration",
+            String(repeating: "a", count: 64),
+            "desktop-goal-legacy-camp",
+            1_700_000_001.0,
+            1_700_000_001.0,
+        ]
+    )
+    try GoalControllerRecord(
+        id: "30000000-0000-4000-8000-000000000002",
+        campId: "desktop-goal-legacy-camp",
+        sourceInputId: "30000000-0000-4000-8000-000000000001",
+        title: "Legacy linked goal",
+        rawIntent: "legacy input must survive migration",
+        status: .clarifying,
+        currentUnderstandingId: nil,
+        currentUnderstandingVersion: nil,
+        currentOutcomeContractId: nil,
+        currentOutcomeContractVersion: nil,
+        aggregateVersion: 1,
+        createdByActorId: "user:migration-test",
+        createdAt: Date(timeIntervalSince1970: 1_700_000_002.0),
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_002.0)
+    ).insert(database)
+}
+
+private func desktopGoalValidSafeReceipt() throws -> DesktopGoalCaptureReceiptV1 {
+    let captureReceipt = try CampSafeCommandResultV1.make(
+        branch: .captureInput,
+        values: CampSafeResultValuesV1(
+            commandPayloadHash: String(repeating: "b", count: 64),
+            domainEventCount: 1,
+            outboxCount: 1,
+            occurredAt: Date(timeIntervalSince1970: 1_700_000_010.0),
+            inputId: "20000000-0000-4000-8000-000000000001",
+            durableWorkId: "20000000-0000-4000-8000-000000000005",
+            inputContentHash: String(repeating: "c", count: 64),
+            durableWorkInputHash: String(repeating: "d", count: 64),
+            inputProjectionVersion: 1,
+            durableWorkVersion: 1,
+            inputEventVersion: 1,
+            candidateCampCount: 0,
+            attemptCount: 0,
+            capturedAt: Date(timeIntervalSince1970: 1_700_000_009.0)
+        )
+    )
+    return try DesktopGoalCaptureReceiptV1(
+        inputId: "20000000-0000-4000-8000-000000000001",
+        goalId: "20000000-0000-4000-8000-000000000002",
+        sessionId: "20000000-0000-4000-8000-000000000003",
+        operationId: "20000000-0000-4000-8000-000000000004",
+        captureReceipt: captureReceipt
+    )
+}
+
+@Suite(.serialized)
+struct DesktopGoalMigrationTests {
+    @Test func freshAndV17UpgradeProduceSameDesktopCarrierSchema() throws {
+        let freshQueue = try desktopGoalMigrationQueue("fresh")
+        let upgradeQueue = try desktopGoalMigrationQueue("v17-upgrade")
+
+        try AppDatabase.migrator.migrate(freshQueue)
+        try AppDatabase.migrator.migrate(
+            upgradeQueue,
+            upTo: "v17-p1-engine-coordination"
+        )
+        try AppDatabase.migrator.migrate(upgradeQueue)
+
+        let registeredHead = try #require(
+            AppDatabase.migrator.migrations.last
+        )
+        let freshMigrations = try freshQueue.read { database in
+            try String.fetchAll(
+                database,
+                sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid"
+            )
+        }
+        let upgradeMigrations = try upgradeQueue.read { database in
+            try String.fetchAll(
+                database,
+                sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid"
+            )
+        }
+        let freshHead = try #require(freshMigrations.last)
+        let upgradeHead = try #require(upgradeMigrations.last)
+        try #require(registeredHead == "desktop-goal-workflow-v1")
+        try #require(freshHead == "desktop-goal-workflow-v1")
+        try #require(upgradeHead == "desktop-goal-workflow-v1")
+        #expect(freshMigrations == upgradeMigrations)
+
+        let freshSchema = try freshQueue.read(desktopGoalCarrierSchema)
+        let upgradeSchema = try upgradeQueue.read(desktopGoalCarrierSchema)
+        #expect(freshSchema == upgradeSchema)
+
+        let expectedContextDDL = desktopGoalNormalizedSQL("""
+            CREATE TABLE desktop_goal_context (
+              inputId TEXT PRIMARY KEY NOT NULL,
+              goalId TEXT NOT NULL UNIQUE,
+              campId TEXT NOT NULL,
+              version INTEGER NOT NULL CHECK(version > 0),
+              contextJson TEXT,
+              contextHash TEXT NOT NULL,
+              retentionState TEXT NOT NULL CHECK(retentionState IN ('live','redacted')),
+              createdAt DATETIME NOT NULL,
+              updatedAt DATETIME NOT NULL,
+              CHECK((retentionState='live' AND contextJson IS NOT NULL)
+                 OR (retentionState='redacted' AND contextJson IS NULL))
+            )
+            """)
+        let expectedOperationDDL = desktopGoalNormalizedSQL("""
+            CREATE TABLE desktop_goal_operation (
+              id TEXT PRIMARY KEY NOT NULL,
+              inputId TEXT NOT NULL,
+              kind TEXT NOT NULL,
+              ownerKind TEXT NOT NULL CHECK(ownerKind IN ('userMutation','system','coachAttempt','verificationAttempt')),
+              version INTEGER NOT NULL CHECK(version > 0),
+              requestJson TEXT,
+              requestHash TEXT NOT NULL,
+              phase TEXT NOT NULL CHECK(phase IN ('prepared','committed','failed','redacted')),
+              resultJson TEXT,
+              safeReceiptJson TEXT,
+              safeErrorCode TEXT,
+              createdAt DATETIME NOT NULL,
+              updatedAt DATETIME NOT NULL,
+              FOREIGN KEY(inputId) REFERENCES desktop_goal_context(inputId),
+              CHECK((phase='redacted' AND requestJson IS NULL AND resultJson IS NULL)
+                 OR (phase<>'redacted' AND requestJson IS NOT NULL))
+            )
+            """)
+        let expectedPendingIndexDDL = desktopGoalNormalizedSQL("""
+            CREATE UNIQUE INDEX desktop_goal_one_pending
+              ON desktop_goal_operation(inputId)
+              WHERE phase='prepared' AND ownerKind='userMutation'
+            """)
+
+        #expect(freshSchema.contextDDL == expectedContextDDL)
+        #expect(freshSchema.operationDDL == expectedOperationDDL)
+        #expect(freshSchema.pendingIndexDDL == expectedPendingIndexDDL)
+        #expect(freshSchema.contextColumns == [
+            "inputId|TEXT|1|NULL|1",
+            "goalId|TEXT|1|NULL|0",
+            "campId|TEXT|1|NULL|0",
+            "version|INTEGER|1|NULL|0",
+            "contextJson|TEXT|0|NULL|0",
+            "contextHash|TEXT|1|NULL|0",
+            "retentionState|TEXT|1|NULL|0",
+            "createdAt|DATETIME|1|NULL|0",
+            "updatedAt|DATETIME|1|NULL|0",
+        ])
+        #expect(freshSchema.operationColumns == [
+            "id|TEXT|1|NULL|1",
+            "inputId|TEXT|1|NULL|0",
+            "kind|TEXT|1|NULL|0",
+            "ownerKind|TEXT|1|NULL|0",
+            "version|INTEGER|1|NULL|0",
+            "requestJson|TEXT|0|NULL|0",
+            "requestHash|TEXT|1|NULL|0",
+            "phase|TEXT|1|NULL|0",
+            "resultJson|TEXT|0|NULL|0",
+            "safeReceiptJson|TEXT|0|NULL|0",
+            "safeErrorCode|TEXT|0|NULL|0",
+            "createdAt|DATETIME|1|NULL|0",
+            "updatedAt|DATETIME|1|NULL|0",
+        ])
+        #expect(freshSchema.contextForeignKeys.isEmpty)
+        #expect(freshSchema.operationForeignKeys == [
+            "inputId|desktop_goal_context|inputId|NO ACTION|NO ACTION",
+        ])
+        #expect(freshSchema.pendingIndexColumns == ["inputId"])
+        #expect(freshSchema.pendingIndexIsUnique == 1)
+        #expect(freshSchema.pendingIndexIsPartial == 1)
+
+        for queue in [freshQueue, upgradeQueue] {
+            try queue.read { database in
+                let foreignKeyViolations = try Row.fetchAll(
+                    database,
+                    sql: "PRAGMA foreign_key_check"
+                )
+                let integrityResult = try String.fetchAll(
+                    database,
+                    sql: "PRAGMA integrity_check"
+                )
+                #expect(foreignKeyViolations.isEmpty)
+                #expect(integrityResult == ["ok"])
+            }
+        }
+    }
+
+    @Test func desktopMigrationIsIdempotentAndLegacyRowsUnchanged() throws {
+        let queue = try desktopGoalMigrationQueue("idempotent-legacy")
+        try AppDatabase.migrator.migrate(
+            queue,
+            upTo: "v17-p1-engine-coordination"
+        )
+        try queue.write(desktopGoalInsertLegacyRows)
+
+        let predecessorMigrations = try queue.read { database in
+            try String.fetchAll(
+                database,
+                sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid"
+            )
+        }
+        let predecessorTables = try queue.read(desktopGoalUserTableNames).filter {
+            $0 != "grdb_migrations"
+        }
+        let predecessorRows = try queue.read { database in
+            try desktopGoalRowsSnapshot(database, tables: predecessorTables)
+        }
+
+        try AppDatabase.migrator.migrate(queue)
+        let firstSnapshot = try queue.read(desktopGoalDatabaseSnapshot)
+        let migratedPredecessorRows = try queue.read { database in
+            try desktopGoalRowsSnapshot(database, tables: predecessorTables)
+        }
+        let firstCarrierCounts = try queue.read { database in
+            try Int.fetchAll(
+                database,
+                sql: """
+                    SELECT COUNT(*) FROM desktop_goal_context
+                    UNION ALL
+                    SELECT COUNT(*) FROM desktop_goal_operation
+                    """
+            )
+        }
+        let firstMigrationCount = try queue.read { database in
+            try Int.fetchOne(
+                database,
+                sql: "SELECT COUNT(*) FROM grdb_migrations WHERE identifier='desktop-goal-workflow-v1'"
+            ) ?? -1
+        }
+
+        try AppDatabase.migrator.migrate(queue)
+        let secondSnapshot = try queue.read(desktopGoalDatabaseSnapshot)
+        let foreignKeyViolations = try queue.read { database in
+            try Row.fetchAll(database, sql: "PRAGMA foreign_key_check")
+        }
+        let integrityResult = try queue.read { database in
+            try String.fetchAll(database, sql: "PRAGMA integrity_check")
+        }
+
+        #expect(migratedPredecessorRows == predecessorRows)
+        #expect(firstCarrierCounts == [0, 0])
+        #expect(firstMigrationCount == 1)
+        #expect(predecessorMigrations.last == "v17-p1-engine-coordination")
+        #expect(firstSnapshot.migrations == predecessorMigrations + [
+            "desktop-goal-workflow-v1",
+        ])
+        #expect(secondSnapshot == firstSnapshot)
+        #expect(foreignKeyViolations.isEmpty)
+        #expect(integrityResult == ["ok"])
+    }
+
+    @Test func redactedCarrierNullAndSafeReceiptConstraintsFailClosed() throws {
+        let queue = try desktopGoalMigrationQueue("redacted-safe-receipt")
+        try AppDatabase.migrator.migrate(queue)
+        let safeReceipt = try desktopGoalValidSafeReceipt()
+        let safeReceiptJSON = try CanonicalContractCodingV1.string(safeReceipt)
+
+        try queue.write { database in
+            try desktopGoalExpectConstraintFailureWithoutMutation(
+                "live context with null contextJson",
+                database: database
+            ) {
+                try database.execute(sql: """
+                    INSERT INTO desktop_goal_context(
+                      inputId,goalId,campId,version,contextJson,contextHash,
+                      retentionState,createdAt,updatedAt
+                    ) VALUES (
+                      '21000000-0000-4000-8000-000000000001',
+                      '21000000-0000-4000-8000-000000000002','camp',1,NULL,
+                      'hash','live',1,1
+                    )
+                    """)
+            }
+            try database.execute(sql: """
+                INSERT INTO desktop_goal_context(
+                  inputId,goalId,campId,version,contextJson,contextHash,
+                  retentionState,createdAt,updatedAt
+                ) VALUES (
+                  '22000000-0000-4000-8000-000000000001',
+                  '22000000-0000-4000-8000-000000000002','camp',1,'{}',
+                  'hash','live',1,1
+                )
+                """)
+            try desktopGoalExpectConstraintFailureWithoutMutation(
+                "redacted context with retained contextJson",
+                database: database
+            ) {
+                try database.execute(sql: """
+                    INSERT INTO desktop_goal_context(
+                      inputId,goalId,campId,version,contextJson,contextHash,
+                      retentionState,createdAt,updatedAt
+                    ) VALUES (
+                      '23000000-0000-4000-8000-000000000001',
+                      '23000000-0000-4000-8000-000000000002','camp',1,'{}',
+                      'hash','redacted',1,1
+                    )
+                    """)
+            }
+            try database.execute(sql: """
+                INSERT INTO desktop_goal_context(
+                  inputId,goalId,campId,version,contextJson,contextHash,
+                  retentionState,createdAt,updatedAt
+                ) VALUES (
+                  '20000000-0000-4000-8000-000000000001',
+                  '20000000-0000-4000-8000-000000000002','camp',1,NULL,
+                  'hash','redacted',1,1
+                )
+                """)
+
+            try desktopGoalExpectConstraintFailureWithoutMutation(
+                "prepared operation with null requestJson",
+                database: database
+            ) {
+                try database.execute(sql: """
+                    INSERT INTO desktop_goal_operation(
+                      id,inputId,kind,ownerKind,version,requestJson,requestHash,
+                      phase,resultJson,safeReceiptJson,safeErrorCode,createdAt,updatedAt
+                    ) VALUES (
+                      '24000000-0000-4000-8000-000000000001',
+                      '22000000-0000-4000-8000-000000000001','submit',
+                      'userMutation',1,NULL,'hash','prepared',NULL,NULL,NULL,1,1
+                    )
+                    """)
+            }
+            try desktopGoalExpectConstraintFailureWithoutMutation(
+                "redacted operation with retained requestJson",
+                database: database
+            ) {
+                try database.execute(sql: """
+                    INSERT INTO desktop_goal_operation(
+                      id,inputId,kind,ownerKind,version,requestJson,requestHash,
+                      phase,resultJson,safeReceiptJson,safeErrorCode,createdAt,updatedAt
+                    ) VALUES (
+                      '24000000-0000-4000-8000-000000000002',
+                      '20000000-0000-4000-8000-000000000001','submit',
+                      'system',1,'{}','hash','redacted',NULL,NULL,NULL,1,1
+                    )
+                    """)
+            }
+            try desktopGoalExpectConstraintFailureWithoutMutation(
+                "redacted operation with retained resultJson",
+                database: database
+            ) {
+                try database.execute(sql: """
+                    INSERT INTO desktop_goal_operation(
+                      id,inputId,kind,ownerKind,version,requestJson,requestHash,
+                      phase,resultJson,safeReceiptJson,safeErrorCode,createdAt,updatedAt
+                    ) VALUES (
+                      '24000000-0000-4000-8000-000000000003',
+                      '20000000-0000-4000-8000-000000000001','submit',
+                      'system',1,NULL,'hash','redacted','[]',NULL,NULL,1,1
+                    )
+                    """)
+            }
+            try database.execute(
+                sql: """
+                    INSERT INTO desktop_goal_operation(
+                      id,inputId,kind,ownerKind,version,requestJson,requestHash,
+                      phase,resultJson,safeReceiptJson,safeErrorCode,createdAt,updatedAt
+                    ) VALUES (
+                      '20000000-0000-4000-8000-000000000004',
+                      '20000000-0000-4000-8000-000000000001','submit',
+                      'system',1,NULL,'hash','redacted',NULL,?,NULL,1,1
+                    )
+                    """,
+                arguments: [safeReceiptJSON]
+            )
+
+            let rowValue = try Row.fetchOne(
+                database,
+                sql: """
+                    SELECT requestJson,resultJson,safeReceiptJson
+                    FROM desktop_goal_operation
+                    WHERE id='20000000-0000-4000-8000-000000000004'
+                    """
+            )
+            let row = try #require(rowValue)
+            let requestJSON: String? = row["requestJson"]
+            let resultJSON: String? = row["resultJson"]
+            let storedSafeJSON: String? = row["safeReceiptJson"]
+            let requiredSafeJSON = try #require(storedSafeJSON)
+            let decoded = try CanonicalContractCodingV1.decode(
+                DesktopGoalCaptureReceiptV1.self,
+                from: Data(requiredSafeJSON.utf8)
+            )
+            #expect(requestJSON == nil)
+            #expect(resultJSON == nil)
+            #expect(decoded == safeReceipt)
+
+            // SQL owns carrier null/redaction shape. Receipt meaning is a strict
+            // application decode boundary; store read/redaction is checkpoint 5.
+            try database.execute(
+                sql: """
+                    UPDATE desktop_goal_operation
+                    SET safeReceiptJson='{"schemaVersion":1}'
+                    WHERE id='20000000-0000-4000-8000-000000000004'
+                    """
+            )
+            let invalidSafeValue = try String.fetchOne(
+                database,
+                sql: """
+                    SELECT safeReceiptJson FROM desktop_goal_operation
+                    WHERE id='20000000-0000-4000-8000-000000000004'
+                    """
+            )
+            let invalidSafeJSON = try #require(invalidSafeValue)
+            #expect(throws: Error.self) {
+                _ = try CanonicalContractCodingV1.decode(
+                    DesktopGoalCaptureReceiptV1.self,
+                    from: Data(invalidSafeJSON.utf8)
+                )
+            }
+        }
+
+        let foreignKeyViolations = try queue.read { database in
+            try Row.fetchAll(database, sql: "PRAGMA foreign_key_check")
+        }
+        let integrityResult = try queue.read { database in
+            try String.fetchAll(database, sql: "PRAGMA integrity_check")
+        }
+        #expect(foreignKeyViolations.isEmpty)
+        #expect(integrityResult == ["ok"])
+    }
+
+    @Test func desktopMigrationFailureDoesNotRewriteHistoricalCheckpoint() throws {
+        let queue = try desktopGoalMigrationQueue("rollback-v17")
+        try AppDatabase.migrator.migrate(
+            queue,
+            upTo: "v17-p1-engine-coordination"
+        )
+        try queue.write(desktopGoalInsertLegacyRows)
+        let before = try queue.read(desktopGoalDatabaseSnapshot)
+
+        #expect(before.checkpoint == DesktopGoalSchemaCheckpoint(
+            tables: 79,
+            indexes: 208,
+            triggers: 84
+        ))
+        #expect(before.migrations.last == "v17-p1-engine-coordination")
+
+        try queue.write { database in
+            try database.execute(sql: """
+                CREATE TABLE desktop_goal_operation (
+                  fixtureProbe TEXT PRIMARY KEY NOT NULL
+                )
+                """)
+            try database.execute(
+                sql: "INSERT INTO desktop_goal_operation(fixtureProbe) VALUES (?)",
+                arguments: ["late-operation-conflict"]
+            )
+        }
+
+        let migrationResult = Result {
+            try AppDatabase.migrator.migrate(queue)
+        }
+        switch migrationResult {
+        case .success:
+            Issue.record("Conflicting desktop_goal_operation did not fail migration")
+            return
+        case let .failure(error):
+            let databaseErrorValue = error as? DatabaseError
+            let databaseError = try #require(databaseErrorValue)
+            #expect(databaseError.resultCode == .SQLITE_ERROR)
+            #expect(databaseError.message == "table desktop_goal_operation already exists")
+        }
+
+        try queue.read { database in
+            let contextCount = try Int.fetchOne(
+                database,
+                sql: """
+                    SELECT COUNT(*) FROM sqlite_master
+                    WHERE type='table' AND name='desktop_goal_context'
+                    """
+            ) ?? -1
+            let pendingIndexCount = try Int.fetchOne(
+                database,
+                sql: """
+                    SELECT COUNT(*) FROM sqlite_master
+                    WHERE type='index' AND name='desktop_goal_one_pending'
+                    """
+            ) ?? -1
+            let migrationCount = try Int.fetchOne(
+                database,
+                sql: """
+                    SELECT COUNT(*) FROM grdb_migrations
+                    WHERE identifier='desktop-goal-workflow-v1'
+                    """
+            ) ?? -1
+            let fixtureRows = try String.fetchAll(
+                database,
+                sql: "SELECT fixtureProbe FROM desktop_goal_operation ORDER BY fixtureProbe"
+            )
+            let foreignKeyViolations = try Row.fetchAll(
+                database,
+                sql: "PRAGMA foreign_key_check"
+            )
+            let integrityResult = try String.fetchAll(
+                database,
+                sql: "PRAGMA integrity_check"
+            )
+            #expect(contextCount == 0)
+            #expect(pendingIndexCount == 0)
+            #expect(migrationCount == 0)
+            #expect(fixtureRows == ["late-operation-conflict"])
+            #expect(foreignKeyViolations.isEmpty)
+            #expect(integrityResult == ["ok"])
+        }
+
+        // Remove only the deliberate fixture, then require the exact original
+        // V17 logical schema, every original table row, and migration receipts.
+        try queue.write { database in
+            try database.execute(sql: "DROP TABLE desktop_goal_operation")
+        }
+        let after = try queue.read(desktopGoalDatabaseSnapshot)
+        #expect(after == before)
+        #expect(after.checkpoint == DesktopGoalSchemaCheckpoint(
+            tables: 79,
+            indexes: 208,
+            triggers: 84
+        ))
+    }
+}

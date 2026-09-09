@@ -1,0 +1,38 @@
+{
+  "at": "2026-09-08T22:35:30.182457+08:00",
+  "raw_directory": "/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-runtime-halt-gate-red-20260908-32449-r5gg2q",
+  "input_hashes": {
+    "docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-halt-gate-evidence-check.rb": "d4c882c2290b772dd7df7f8a4f7310c561860ce8ed8c92010e67164e4c4e6a8c",
+    "/private/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-admin-goal-foundation-runtime-admin-observed2-20260907-34931-1glsvj9/test.log": "eab1a8e32ed85991b16661d58eac8c579a582a7a3a15f0410c5c58b48dabf4ea",
+    "/private/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-admin-goal-foundation-runtime-admin-observed2-20260907-34931-1glsvj9/events-admitted.ndjson": "cb5c21ddbd28706643e56af5b650749b0921abd13f8815d9e3f9f0051a8f5dec"
+  },
+  "checks": [
+    {
+      "name": "syntax",
+      "command": [
+        "ruby",
+        "-c",
+        "docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-halt-gate-evidence-check.rb"
+      ],
+      "exit": 0,
+      "signal": null,
+      "stdout": "Syntax OK\n",
+      "stderr": ""
+    },
+    {
+      "name": "red",
+      "command": [
+        "ruby",
+        "docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-halt-gate-evidence-check.rb",
+        "/private/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-admin-goal-foundation-runtime-admin-observed2-20260907-34931-1glsvj9/test.log",
+        "/private/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-admin-goal-foundation-runtime-admin-observed2-20260907-34931-1glsvj9/events-admitted.ndjson",
+        "34975"
+      ],
+      "exit": 1,
+      "signal": null,
+      "stdout": "",
+      "stderr": "missing gate observations: haltGateActorWaitEntered,haltGateStateWaitEntered,haltGateWaitContinuationEntered,haltGateWaitLockReturned,haltGateStateWaitSucceeded,haltGateActorWaitSucceeded,haltGateActorOpenEntered,haltGateStateOpenEntered,haltGateOpenLockReturned,haltGateOpenResumeAttempt,haltGateOpenResumeReturned,haltGateActorOpenSucceeded\n"
+    }
+  ],
+  "meaningful_red": true
+}

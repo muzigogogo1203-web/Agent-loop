@@ -1,0 +1,20 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Compiling AgentLoopTestSuite CliBackendTests.swift
+[4/6] Emitting module AgentLoopTestSuite
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (85.33s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test cliProcessBackendFixtureFailureStillJoinsRealCleanup() started.
+CLI fixture cleanup execution=00000000-0000-4000-8000-000000000347 continuedPIDs=[18710] fixture=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/c-347-CDCA
+CLI fixture resource observations execution=00000000-0000-4000-8000-000000000347 failures=0
+✔ Test cliProcessBackendFixtureFailureStillJoinsRealCleanup() passed after 1.776 seconds.
+✔ Test run with 1 test in 0 suites passed after 1.861 seconds.

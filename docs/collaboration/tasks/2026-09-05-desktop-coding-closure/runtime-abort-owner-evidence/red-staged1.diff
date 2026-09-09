@@ -1,0 +1,1270 @@
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-abort-owner-20260909-20260909-65719-3iq67q/ExecutionEngineConformanceTests.swift.before b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+index 61f2d17..c30bd08 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-abort-owner-20260909-20260909-65719-3iq67q/ExecutionEngineConformanceTests.swift.before
++++ b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+@@ -290,122 +290,179 @@ private struct P1F1D065ColdCleanupError: Error, CustomStringConvertible {
+     var description: String {
+         let primaryLabel = primary.map(p1f1d065ColdErrorCategory) ?? "none"
+         let failures = cleanupFailures.map { failure in
+             if let observation = failure.error as? P1F1D065ColdObservationError {
+                 return "operation=\(failure.operation) result=\(observation.result) errno=\(observation.errorNumber)"
+             }
+             return "operation=\(failure.operation) category=\(p1f1d065ColdErrorCategory(failure.error))"
+         }.joined(separator: "; ")
+         return "065 cold cleanup primary=\(primaryLabel) failures=[\(failures)] retainedFixturePath=\(retainedFixturePath ?? "none")"
+     }
+ }
+ 
+-private enum P1F1D065GateCompletion: Sendable {
++private enum P1F1D065GateCompletion: Sendable, Equatable {
+     case stream
+     case cancellation
+     case reader
+ }
+ 
+ private enum P1F1D065GateWaitOutcome: Sendable {
+     case entered
+     case completed(P1F1D065GateCompletion)
++    case aborted
++}
++
++private struct P1F1D065GateAbortObservation: Sendable, Equatable {
++    let firstAbort: Bool
++    let hadEntered: Bool
++    let pendingAsyncWaiters: Int
++    let entries: Int
++    let releases: Int
++}
++
++private enum P1F1D065AbortSafetyError: Error, Sendable, Equatable {
++    case gateAborted
++    case gateCompleted(P1F1D065GateCompletion)
++    case clientAlreadyInstalled
++    case unexpectedOperation
+ }
+ 
+ private final class P1F1D065SynchronousGate: @unchecked Sendable {
+     private let condition = NSCondition()
+     private var entered = false
+     private var released = false
++    private var aborted = false
+     private var entryCount = 0
+     private var releaseCount = 0
+     private var completed: P1F1D065GateCompletion?
+     private var enteredWaiters: [
+         CheckedContinuation<P1F1D065GateWaitOutcome, Never>
+     ] = []
+ 
+-    func enterAndWait() {
++    @discardableResult
++    func enterAndWait() -> Bool {
+         condition.lock()
+         entryCount += 1
+         entered = true
++        let outcome: P1F1D065GateWaitOutcome = aborted ? .aborted : .entered
+         let waiters = enteredWaiters
+         enteredWaiters.removeAll()
+         condition.broadcast()
+         condition.unlock()
+-        waiters.forEach { $0.resume(returning: .entered) }
++        waiters.forEach { $0.resume(returning: outcome) }
+         condition.lock()
+-        while !released {
++        while !released && !aborted {
+             condition.wait()
+         }
++        let ordinarilyReleased = released && !aborted
+         condition.unlock()
++        return ordinarilyReleased
+     }
+ 
+     func waitUntilEnteredOrCompleted() async -> P1F1D065GateWaitOutcome {
+         await withCheckedContinuation { continuation in
+             condition.lock()
+-            if entered {
++            if aborted {
++                condition.unlock()
++                continuation.resume(returning: .aborted)
++            } else if entered {
+                 condition.unlock()
+                 continuation.resume(returning: .entered)
+             } else if let completed {
+                 condition.unlock()
+                 continuation.resume(returning: .completed(completed))
+             } else {
+                 enteredWaiters.append(continuation)
+                 condition.unlock()
+             }
+         }
+     }
+ 
+     func complete(_ completion: P1F1D065GateCompletion) {
+         condition.lock()
+-        guard !entered, completed == nil else {
++        guard !aborted, !entered, completed == nil else {
+             condition.unlock()
+             return
+         }
+         completed = completion
+         let waiters = enteredWaiters
+         enteredWaiters.removeAll()
+         condition.unlock()
+         waiters.forEach { $0.resume(returning: .completed(completion)) }
+     }
+ 
+     func release() {
+         condition.lock()
+         releaseCount += 1
+         released = true
+         condition.broadcast()
+         condition.unlock()
+     }
+ 
+     var controlledWaitCounts: (entries: Int, releases: Int) {
+         condition.lock()
+         defer { condition.unlock() }
+         return (entryCount, releaseCount)
+     }
+ 
++    @discardableResult
++    func releaseOwnedOnce() -> Bool {
++        condition.lock()
++        let firstRelease = !released && !aborted
++        if firstRelease {
++            released = true
++            releaseCount += 1
++            condition.broadcast()
++        }
++        condition.unlock()
++        return firstRelease
++    }
++
++    func abortWake() -> P1F1D065GateAbortObservation {
++        condition.lock()
++        let observation = P1F1D065GateAbortObservation(
++            firstAbort: !aborted,
++            hadEntered: entered,
++            pendingAsyncWaiters: enteredWaiters.count,
++            entries: entryCount,
++            releases: releaseCount
++        )
++        aborted = true
++        let waiters = enteredWaiters
++        enteredWaiters.removeAll()
++        condition.broadcast()
++        condition.unlock()
++        waiters.forEach { $0.resume(returning: .aborted) }
++        return observation
++    }
++
+ }
+ 
+ private func p1f1d065AwaitSynchronousBoundary<Value: Sendable>(
+     _ operation: @escaping @Sendable () throws -> Value
+ ) async throws -> Value {
+     try await BlockingProcessOperation.start {
+         Result { try operation() }
+     }.value.get()
+ }
+ 
+ private struct P1F1D065BlockingProgressSink: EngineProgressSink {
+     let gate: P1F1D065SynchronousGate
+ 
+     func submit(_ payload: EngineExecutionEventPayloadV1) async throws {
+         _ = payload
+         try await p1f1d065AwaitSynchronousBoundary { [gate] in
+-            gate.enterAndWait()
++            guard gate.enterAndWait() else {
++                throw P1F1D065AbortSafetyError.gateAborted
++            }
+         }
+     }
+ }
+ 
+ private enum P1F1D065DirectoryCloseObservation: Sendable, Equatable {
+     case closed
+     case notAttempted
+     case failed(String)
+ }
+ 
+ private struct P1F1D065CleanupPublicationObservation: Sendable, Equatable {
+     let cleanupRemoved: Bool
+@@ -611,25 +668,27 @@ private final class P1F1D065ProcessInspector:
+ 
+     func send(signal: Int32, processGroupId: Int32) throws {
+         let shouldInjectResumeFailure = lock.withLock {
+             signals.append((signal, processGroupId))
+             guard signal == SIGCONT,
+                   missingImageGate != nil,
+                   !injectedResumeFailure
+             else { return false }
+             injectedResumeFailure = true
+             return true
+         }
+         if shouldInjectResumeFailure {
+-            missingImageGate?.enterAndWait()
++            if let missingImageGate, !missingImageGate.enterAndWait() {
++                throw P1F1D065AbortSafetyError.gateAborted
++            }
+             let result = Darwin.kill(-processGroupId, signal)
+             let errorNumber = result == 0 ? 0 : errno
+             recordSignal(P1F1D065SignalObservation(
+                 signal: signal, group: processGroupId, target: -processGroupId,
+                 result: result, errorNumber: errorNumber
+             ))
+             guard result == 0 || errorNumber == ESRCH else {
+                 throw EngineContextValidationErrorV1()
+             }
+             let clock = ContinuousClock()
+             let readinessStarted = clock.now
+             let pollBudget = 3_000
+@@ -1090,24 +1149,240 @@ private final class P1F1D065SocketClient: @unchecked Sendable {
+                 else { return nil }
+                 return line
+             }
+             buffer.append(byte)
+         }
+     }
+ 
+     func interruptRead() {
+         let owned = lock.withLock { descriptor }
+         if owned >= 0 { _ = Darwin.shutdown(owned, SHUT_RDWR) }
+     }
+ 
++    func interruptReadChecked() -> Result<Void, any Error> {
++        lock.withLock {
++            Result {
++                guard descriptor >= 0 else {
++                    throw P1F1D065SocketClientError.closed
++                }
++                let result = Darwin.shutdown(descriptor, SHUT_RDWR)
++                let errorNumber = result == 0 ? 0 : errno
++                guard result == 0 else {
++                    throw P1F1D065ColdObservationError(
++                        operation: "abort-client-shutdown",
++                        result: result, errorNumber: errorNumber
++                    )
++                }
++            }
++        }
++    }
++
++    static func makeUnconnectedAbortClient() throws -> P1F1D065SocketClient {
++        let opened = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
++        guard opened >= 0 else {
++            throw P1F1D065ColdObservationError(
++                operation: "abort-client-socket", result: opened,
++                errorNumber: errno
++            )
++        }
++        do {
++            guard PosixSockets.disableSIGPIPE(opened) else {
++                throw P1F1D065ColdObservationError(
++                    operation: "abort-client-nosigpipe", result: -1,
++                    errorNumber: errno
++                )
++            }
++            let flags = fcntl(opened, F_GETFL)
++            guard flags >= 0 else {
++                throw P1F1D065ColdObservationError(
++                    operation: "abort-client-getfl", result: flags,
++                    errorNumber: errno
++                )
++            }
++            let configured = fcntl(opened, F_SETFL, flags | O_NONBLOCK)
++            guard configured == 0 else {
++                throw P1F1D065ColdObservationError(
++                    operation: "abort-client-setfl", result: configured,
++                    errorNumber: errno
++                )
++            }
++            return P1F1D065SocketClient(ownedDescriptor: opened)
++        } catch {
++            let closed = Darwin.close(opened)
++            let closeErrno = closed == 0 ? 0 : errno
++            guard closed == 0 else {
++                throw P1F1D065ColdCleanupError(
++                    primary: error,
++                    cleanupFailures: [.init(
++                        operation: "abort-client-setup-close",
++                        error: P1F1D065ColdObservationError(
++                            operation: "close", result: closed,
++                            errorNumber: closeErrno
++                        )
++                    )],
++                    retainedFixturePath: nil
++                )
++            }
++            throw error
++        }
++    }
++
++    private func waitForAbortSocket(
++        _ events: Int16, control: P1F1D065AbortSafetyControl
++    ) throws {
++        let owned = try ownedDescriptor()
++        while true {
++            guard !control.isAborted else {
++                throw P1F1D065AbortSafetyError.gateAborted
++            }
++            var item = pollfd(fd: owned, events: events, revents: 0)
++            let result = Darwin.poll(&item, 1, 25)
++            let errorNumber = result < 0 ? errno : 0
++            if result < 0 && errorNumber == EINTR { continue }
++            guard result >= 0 else {
++                throw P1F1D065ColdObservationError(
++                    operation: "abort-client-poll", result: result,
++                    errorNumber: errorNumber
++                )
++            }
++            if result == 0 { continue }
++            guard item.revents & Int16(POLLNVAL) == 0 else {
++                throw P1F1D065ColdObservationError(
++                    operation: "abort-client-poll-invalid", result: result,
++                    errorNumber: EBADF
++                )
++            }
++            return
++        }
++    }
++
++    func connectAbort(path: String, control: P1F1D065AbortSafetyControl) throws {
++        let owned = try ownedDescriptor()
++        var address = sockaddr_un()
++        address.sun_family = sa_family_t(AF_UNIX)
++        let bytes = Array(path.utf8) + [0]
++        guard bytes.count <= MemoryLayout.size(ofValue: address.sun_path) else {
++            throw BoardToolServerError.socketPathTooLong(path)
++        }
++        withUnsafeMutableBytes(of: &address.sun_path) { $0.copyBytes(from: bytes) }
++        let length = socklen_t(
++            MemoryLayout<sockaddr_un>.offset(of: \.sun_path)! + bytes.count
++        )
++        address.sun_len = UInt8(length)
++        while true {
++            guard !control.isAborted else {
++                throw P1F1D065AbortSafetyError.gateAborted
++            }
++            let result = withUnsafePointer(to: &address) { pointer in
++                pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
++                    Darwin.connect(owned, $0, length)
++                }
++            }
++            let errorNumber = result == 0 ? 0 : errno
++            if result == 0 || errorNumber == EISCONN { return }
++            if errorNumber == EINTR { continue }
++            guard errorNumber == EINPROGRESS || errorNumber == EALREADY
++                    || errorNumber == EAGAIN || errorNumber == EWOULDBLOCK
++            else {
++                throw P1F1D065ColdObservationError(
++                    operation: "abort-client-connect", result: result,
++                    errorNumber: errorNumber
++                )
++            }
++            try waitForAbortSocket(Int16(POLLOUT), control: control)
++            var pendingError: Int32 = 0
++            var pendingSize = socklen_t(MemoryLayout<Int32>.size)
++            let inspected = getsockopt(
++                owned, SOL_SOCKET, SO_ERROR, &pendingError, &pendingSize
++            )
++            let inspectErrno = inspected == 0 ? 0 : errno
++            guard inspected == 0, pendingSize == socklen_t(MemoryLayout<Int32>.size),
++                  pendingError == 0
++            else {
++                throw P1F1D065ColdObservationError(
++                    operation: "abort-client-connect-so-error", result: inspected,
++                    errorNumber: inspected == 0 ? pendingError : inspectErrno
++                )
++            }
++            guard !control.isAborted else {
++                throw P1F1D065AbortSafetyError.gateAborted
++            }
++            // AF_UNIX EAGAIN means the connection did not start; writable
++            // readiness alone must not be mistaken for a completed connect.
++            if errorNumber == EAGAIN || errorNumber == EWOULDBLOCK { continue }
++            return
++        }
++    }
++
++    func sendAbort(_ value: JSONValue, control: P1F1D065AbortSafetyControl) throws {
++        let owned = try ownedDescriptor()
++        var data = Data(try value.encodedString().utf8)
++        data.append(UInt8(ascii: "\n"))
++        try data.withUnsafeBytes { bytes in
++            guard let base = bytes.baseAddress else { return }
++            var offset = 0
++            while offset < bytes.count {
++                guard !control.isAborted else {
++                    throw P1F1D065AbortSafetyError.gateAborted
++                }
++                let count = Darwin.write(owned, base.advanced(by: offset), bytes.count - offset)
++                let errorNumber = count < 0 ? errno : 0
++                if count < 0 && errorNumber == EINTR { continue }
++                if count < 0 && (errorNumber == EAGAIN || errorNumber == EWOULDBLOCK) {
++                    try waitForAbortSocket(Int16(POLLOUT), control: control)
++                    continue
++                }
++                guard count > 0 else {
++                    throw P1F1D065ColdObservationError(
++                        operation: "abort-client-write", result: Int32(count),
++                        errorNumber: errorNumber
++                    )
++                }
++                offset += count
++            }
++        }
++    }
++
++    func readLineAbort(control: P1F1D065AbortSafetyControl) throws -> String? {
++        let owned = try ownedDescriptor()
++        var buffer = Data()
++        var byte = UInt8()
++        while true {
++            guard !control.isAborted else {
++                throw P1F1D065AbortSafetyError.gateAborted
++            }
++            let count = Darwin.read(owned, &byte, 1)
++            let errorNumber = count < 0 ? errno : 0
++            if count == 0 { return nil }
++            if count < 0 {
++                if errorNumber == EINTR { continue }
++                if errorNumber == ECONNRESET || errorNumber == ENOTCONN { return nil }
++                if errorNumber == EAGAIN || errorNumber == EWOULDBLOCK {
++                    try waitForAbortSocket(Int16(POLLIN), control: control)
++                    continue
++                }
++                throw P1F1D065ColdObservationError(
++                    operation: "abort-client-read", result: Int32(count),
++                    errorNumber: errorNumber
++                )
++            }
++            if byte == UInt8(ascii: "\n") {
++                guard let line = String(data: buffer, encoding: .utf8), !line.isEmpty
++                else { return nil }
++                return line
++            }
++            buffer.append(byte)
++        }
++    }
++
+     // Used only after the socketpair reader has joined. The existing client's
+     // interrupt/close lifetime is unchanged; this reports the new fixture's FD
+     // close result instead of letting deinit hide a cleanup error.
+     func closeChecked() throws {
+         let owned = try lock.withLock { () throws -> Int32 in
+             guard descriptor >= 0 else {
+                 throw P1F1D065SocketClientError.closed
+             }
+             let value = descriptor
+             descriptor = -1
+             return value
+         }
+@@ -7660,32 +7935,700 @@ private func p1f1d069ExerciseSharedRecoveryActionMatrix() async throws {
+         )
+         #expect(
+             ledger.count("makeAdapter")
+                 == (recoveryCase == .prepareAndCommitProposal ? 0 : 1)
+         )
+         #expect(await completions.snapshotCount() == 0)
+         #expect(await active.snapshotCounts().live == 0)
+         #expect(await active.snapshotCounts().pending == 0)
+         #expect(await active.snapshotCounts().inFlight == 0)
+     }
+ }
+ 
++private struct P1F1D065AbortGuardReport: Sendable {
++    let expired: Bool
++    let missingImageAbort: P1F1D065GateAbortObservation?
++    let publicationAbort: P1F1D065GateAbortObservation?
++    let clientShutdown: Result<Void, any Error>?
++}
++
++private struct P1F1D065AbortSafetySnapshot: Sendable {
++    let guardStarted: Bool
++    let guardFinished: Bool
++    let expiryCount: Int
++    let clientInstalled: Bool
++    let lateClientShutdown: Result<Void, any Error>?
++}
++
++// Task 1 owns only test gates and a client. Process identity and containment
++// are intentionally not implemented or admitted by this no-child unit.
++private final class P1F1D065AbortSafetyControl: @unchecked Sendable {
++    let missingImageGate: P1F1D065SynchronousGate
++    let publicationGate: P1F1D065SynchronousGate
++    private let lock = NSLock()
++    private let disarmSignal = DispatchSemaphore(value: 0)
++    private var client: P1F1D065SocketClient?
++    private var lateClientShutdown: Result<Void, any Error>?
++    private var started = false
++    private var finished = false
++    private var disarmed = false
++    private var expiryCount = 0
++    private var startWaiters: [CheckedContinuation<Void, Never>] = []
++
++    init(
++        missingImageGate: P1F1D065SynchronousGate,
++        publicationGate: P1F1D065SynchronousGate
++    ) {
++        self.missingImageGate = missingImageGate
++        self.publicationGate = publicationGate
++    }
++
++    var isAborted: Bool { lock.withLock { expiryCount != 0 } }
++
++    var snapshot: P1F1D065AbortSafetySnapshot {
++        lock.withLock {
++            .init(
++                guardStarted: started, guardFinished: finished,
++                expiryCount: expiryCount, clientInstalled: client != nil,
++                lateClientShutdown: lateClientShutdown
++            )
++        }
++    }
++
++    func installClient(_ installed: P1F1D065SocketClient) -> Result<Void, any Error> {
++        let installedResult: Result<Bool, any Error> = lock.withLock {
++            guard client == nil else {
++                return .failure(P1F1D065AbortSafetyError.clientAlreadyInstalled)
++            }
++            client = installed
++            return .success(expiryCount != 0)
++        }
++        switch installedResult {
++        case .failure(let error): return .failure(error)
++        case .success(false): return .success(())
++        case .success(true):
++            let shutdown = installed.interruptReadChecked()
++            lock.withLock { lateClientShutdown = shutdown }
++            return .failure(P1F1D065AbortSafetyError.gateAborted)
++        }
++    }
++
++    func waitUntilGuardStarted() async {
++        await withCheckedContinuation { continuation in
++            let alreadyStarted = lock.withLock {
++                if started { return true }
++                startWaiters.append(continuation)
++                return false
++            }
++            if alreadyStarted { continuation.resume() }
++        }
++    }
++
++    func disarm() -> Bool {
++        let first = lock.withLock {
++            let first = !disarmed
++            disarmed = true
++            return first
++        }
++        disarmSignal.signal()
++        return first
++    }
++
++    func waitAndExpire(after budget: Duration) -> P1F1D065AbortGuardReport {
++        let waiters = lock.withLock {
++            precondition(!started)
++            started = true
++            let waiters = startWaiters
++            startWaiters.removeAll()
++            return waiters
++        }
++        waiters.forEach { $0.resume() }
++        let deadline = ContinuousClock.now.advanced(by: budget)
++        while !lock.withLock({ disarmed }), ContinuousClock.now < deadline {
++            // Dispatch deadlines are monotonic. Wall-clock jumps cannot
++            // extend the guard, unlike an NSCondition Date-based wait.
++            _ = disarmSignal.wait(timeout: .now() + .milliseconds(25))
++        }
++        let expiry: (claimed: Bool, client: P1F1D065SocketClient?) = lock.withLock {
++            guard !disarmed else { return (false, nil) }
++            precondition(expiryCount == 0)
++            expiryCount = 1
++            return (true, client)
++        }
++        let missing = expiry.claimed ? missingImageGate.abortWake() : nil
++        let publication = expiry.claimed ? publicationGate.abortWake() : nil
++        let shutdown = expiry.client?.interruptReadChecked()
++        lock.withLock { finished = true }
++        return .init(
++            expired: expiry.claimed,
++            missingImageAbort: missing, publicationAbort: publication,
++            clientShutdown: shutdown
++        )
++    }
++}
++
++private func p1f1d065StartAbortGuard(
++    control: P1F1D065AbortSafetyControl, budget: Duration
++) -> Task<P1F1D065AbortGuardReport, Never> {
++    BlockingProcessOperation.start { control.waitAndExpire(after: budget) }
++}
++
++private enum P1F1D065AbortCleanupClaimant: Sendable, Equatable {
++    case owner
++    case testRescue
++}
++
++private enum P1F1D065AbortGateCleanup: Sendable {
++    case aborted(P1F1D065GateAbortObservation)
++    case ordinaryRelease(first: Bool)
++
++    var abortObservation: P1F1D065GateAbortObservation? {
++        if case .aborted(let observation) = self { return observation }
++        return nil
++    }
++}
++
++private struct P1F1D065AbortOwnerOperations: Sendable {
++    let startStreamWaiter: @Sendable () -> Task<P1F1D065ControlledStreamReport, Never>
++    let startCancellationWaiter: @Sendable () -> Task<P1F1D065CleanupPublicationReport, Never>
++    let makeClient: @Sendable () throws -> P1F1D065SocketClient
++    let connect: @Sendable (P1F1D065SocketClient) async throws -> Void
++    let performHello: @Sendable (P1F1D065SocketClient) async throws -> Void
++    let sendToolCall: @Sendable (P1F1D065SocketClient) async throws -> Void
++    let startReader: @Sendable (P1F1D065SocketClient) -> Task<Result<Void, any Error>, Never>
++}
++
++private final class P1F1D065AbortLifetime: @unchecked Sendable {
++    let control: P1F1D065AbortSafetyControl
++    let guardTask: Task<P1F1D065AbortGuardReport, Never>
++    let stream: Task<P1F1D065ControlledStreamReport, Never>
++    let cancellation: Task<P1F1D065CleanupPublicationReport, Never>
++    // The body alone writes these slots; the epilogue reads them only after
++    // body capture. The guard uses its separate synchronized client slot.
++    var client: P1F1D065SocketClient?
++    var reader: Task<Result<Void, any Error>, Never>?
++    private let claimLock = NSLock()
++    private var cleanupClaimant: P1F1D065AbortCleanupClaimant?
++
++    init(
++        control: P1F1D065AbortSafetyControl,
++        guardTask: Task<P1F1D065AbortGuardReport, Never>,
++        operations: P1F1D065AbortOwnerOperations
++    ) {
++        self.control = control
++        self.guardTask = guardTask
++        stream = operations.startStreamWaiter()
++        cancellation = operations.startCancellationWaiter()
++    }
++
++    func claim(_ claimant: P1F1D065AbortCleanupClaimant) -> Bool {
++        claimLock.withLock {
++            guard cleanupClaimant == nil else { return false }
++            cleanupClaimant = claimant
++            return true
++        }
++    }
++}
++
++private struct P1F1D065AbortBodyObservation: Sendable {
++    let publishedBeforeCleanup: Bool
++}
++
++private struct P1F1D065AbortEpilogueReport: Sendable {
++    let claimant: P1F1D065AbortCleanupClaimant
++    let claimAccepted: Bool
++    var missingImage: P1F1D065AbortGateCleanup?
++    var publication: P1F1D065AbortGateCleanup?
++    var clientShutdown: Result<Void, any Error>?
++    var reader: Result<Void, any Error>?
++    var cancellation: P1F1D065CleanupPublicationReport?
++    var stream: P1F1D065ControlledStreamReport?
++    var guardDisarmed = false
++    var guardReport: P1F1D065AbortGuardReport?
++    var clientClose: Result<Void, any Error>?
++}
++
++private struct P1F1D065AbortOwnerReport: Sendable {
++    let body: Result<P1F1D065AbortBodyObservation, any Error>
++    let epilogue: P1F1D065AbortEpilogueReport?
++    let lifetime: P1F1D065AbortLifetime
++}
++
++private func p1f1d065RequireAbortGateEntry(
++    _ gate: P1F1D065SynchronousGate
++) async throws {
++    switch await gate.waitUntilEnteredOrCompleted() {
++    case .entered: return
++    case .aborted: throw P1F1D065AbortSafetyError.gateAborted
++    case .completed(let completion):
++        throw P1F1D065AbortSafetyError.gateCompleted(completion)
++    }
++}
++
++private func p1f1d065RunAbortBody(
++    operations: P1F1D065AbortOwnerOperations,
++    lifetime: P1F1D065AbortLifetime,
++    publicationObserved: @Sendable () -> Bool
++) async -> Result<P1F1D065AbortBodyObservation, any Error> {
++    do {
++        let control = lifetime.control
++        try await p1f1d065RequireAbortGateEntry(control.missingImageGate)
++        let client = try await p1f1d065AwaitSynchronousBoundary {
++            try operations.makeClient()
++        }
++        lifetime.client = client
++        try control.installClient(client).get()
++        try await operations.connect(client)
++        try await operations.performHello(client)
++        try await operations.sendToolCall(client)
++        lifetime.reader = operations.startReader(client)
++        try await p1f1d065RequireAbortGateEntry(control.publicationGate)
++        control.missingImageGate.releaseOwnedOnce()
++        let published = publicationObserved()
++        control.publicationGate.releaseOwnedOnce()
++        return .success(.init(publishedBeforeCleanup: published))
++    } catch {
++        return .failure(error)
++    }
++}
++
++private func p1f1d065RunAbortEpilogue(
++    claimant: P1F1D065AbortCleanupClaimant,
++    bodySucceeded: Bool,
++    lifetime: P1F1D065AbortLifetime
++) async -> P1F1D065AbortEpilogueReport {
++    let claimed = lifetime.claim(claimant)
++    var report = P1F1D065AbortEpilogueReport(
++        claimant: claimant, claimAccepted: claimed
++    )
++    guard claimed else { return report }
++    let control = lifetime.control
++    if bodySucceeded {
++        report.missingImage = .ordinaryRelease(
++            first: control.missingImageGate.releaseOwnedOnce()
++        )
++        report.publication = .ordinaryRelease(
++            first: control.publicationGate.releaseOwnedOnce()
++        )
++    } else {
++        report.missingImage = .aborted(control.missingImageGate.abortWake())
++        report.publication = .aborted(control.publicationGate.abortWake())
++    }
++    report.clientShutdown = lifetime.client?.interruptReadChecked()
++    if let reader = lifetime.reader { report.reader = await reader.value }
++    report.cancellation = await lifetime.cancellation.value
++    report.stream = await lifetime.stream.value
++    report.guardDisarmed = control.disarm()
++    report.guardReport = await lifetime.guardTask.value
++    if let client = lifetime.client {
++        report.clientClose = Result { try client.closeChecked() }
++    }
++    return report
++}
++
++private func p1f1d065RunAbortOwner(
++    control: P1F1D065AbortSafetyControl,
++    budget: Duration,
++    operations: P1F1D065AbortOwnerOperations,
++    publicationObserved: @Sendable () -> Bool
++) async -> P1F1D065AbortOwnerReport {
++    let guardTask = p1f1d065StartAbortGuard(control: control, budget: budget)
++    await control.waitUntilGuardStarted()
++    let lifetime = P1F1D065AbortLifetime(
++        control: control, guardTask: guardTask, operations: operations
++    )
++    let body = await p1f1d065RunAbortBody(
++        operations: operations, lifetime: lifetime,
++        publicationObserved: publicationObserved
++    )
++    // PRE-RED: retain the old success-only cleanup boundary. The no-child
++    // tests rescue this exact lifetime before asserting desired ownership.
++    let epilogue: P1F1D065AbortEpilogueReport?
++    if case .success = body {
++        epilogue = await p1f1d065RunAbortEpilogue(
++            claimant: .owner, bodySucceeded: true, lifetime: lifetime
++        )
++    } else {
++        epilogue = nil
++    }
++    return .init(body: body, epilogue: epilogue, lifetime: lifetime)
++}
++
++private enum P1F1D065AbortOwnerTestError: Error, Sendable, Equatable {
++    case hello
++    case clientConstruction
++}
++
++private enum P1F1D065AbortOwnerTestCase: Sendable {
++    case hello
++    case clientConstruction
++    case expiry
++    case readerStarted
++}
++
++private final class P1F1D065AbortOwnerTestProbe: @unchecked Sendable {
++    private let lock = NSLock()
++    private var startAcknowledgements: [Bool] = []
++    private var outcomes: [String: String] = [:]
++    private var readerEntries = 0
++
++    func start(_ acknowledged: Bool) {
++        lock.withLock { startAcknowledgements.append(acknowledged) }
++    }
++
++    func finish(_ label: String, outcome: String) {
++        lock.withLock { outcomes[label] = outcome }
++    }
++
++    func enterReader() { lock.withLock { readerEntries += 1 } }
++
++    var snapshot: (starts: [Bool], outcomes: [String: String], readerEntries: Int) {
++        lock.withLock { (startAcknowledgements, outcomes, readerEntries) }
++    }
++}
++
++private func p1f1d065AbortOwnerTestWait(
++    gate: P1F1D065SynchronousGate,
++    testCase: P1F1D065AbortOwnerTestCase,
++    probe: P1F1D065AbortOwnerTestProbe,
++    label: String
++) async -> (any Error)? {
++    do {
++        if case .readerStarted = testCase, label == "cancellation" {
++            switch await gate.waitUntilEnteredOrCompleted() {
++            case .completed(.reader):
++                probe.finish(label, outcome: "completed-reader")
++                throw P1F1D065AbortSafetyError.gateCompleted(.reader)
++            case .aborted:
++                probe.finish(label, outcome: "aborted")
++                throw P1F1D065AbortSafetyError.gateAborted
++            case .entered, .completed:
++                probe.finish(label, outcome: "unexpected")
++                throw P1F1D065AbortSafetyError.unexpectedOperation
++            }
++        }
++        if case .expiry = testCase {
++            switch await gate.waitUntilEnteredOrCompleted() {
++            case .aborted:
++                probe.finish(label, outcome: "aborted")
++                throw P1F1D065AbortSafetyError.gateAborted
++            case .entered, .completed:
++                probe.finish(label, outcome: "unexpected")
++                throw P1F1D065AbortSafetyError.unexpectedOperation
++            }
++        }
++        let ordinarilyReleased = try await p1f1d065AwaitSynchronousBoundary {
++            gate.enterAndWait()
++        }
++        probe.finish(label, outcome: ordinarilyReleased ? "released" : "aborted")
++        guard ordinarilyReleased else {
++            throw P1F1D065AbortSafetyError.gateAborted
++        }
++        return nil
++    } catch {
++        return error
++    }
++}
++
++private func p1f1d065AbortOwnerTestOperations(
++    testCase: P1F1D065AbortOwnerTestCase,
++    client: P1F1D065SocketClient?,
++    control: P1F1D065AbortSafetyControl,
++    probe: P1F1D065AbortOwnerTestProbe
++) -> P1F1D065AbortOwnerOperations {
++    .init(
++        startStreamWaiter: {
++            probe.start(control.snapshot.guardStarted)
++            return Task {
++                switch testCase {
++                case .expiry, .readerStarted:
++                    break
++                case .hello, .clientConstruction:
++                    // Publication enters first; observing missing-image entry
++                    // therefore proves BOTH native waiters are controlled.
++                    _ = await control.publicationGate.waitUntilEnteredOrCompleted()
++                }
++                let error = await p1f1d065AbortOwnerTestWait(
++                    gate: control.missingImageGate, testCase: testCase,
++                    probe: probe, label: "stream"
++                )
++                return P1F1D065ControlledStreamReport(frames: [], terminalError: error)
++            }
++        },
++        startCancellationWaiter: {
++            probe.start(control.snapshot.guardStarted)
++            return Task {
++                let error = await p1f1d065AbortOwnerTestWait(
++                    gate: control.publicationGate, testCase: testCase,
++                    probe: probe, label: "cancellation"
++                )
++                return P1F1D065CleanupPublicationReport(
++                    terminalError: error,
++                    // No fixture, registry, or process exists in this unit.
++                    resources: .init(
++                        cleanupRemoved: false, socketRemoved: false,
++                        registryEmpty: false, directoryClose: .notAttempted
++                    )
++                )
++            }
++        },
++        makeClient: {
++            if case .clientConstruction = testCase {
++                throw P1F1D065AbortOwnerTestError.clientConstruction
++            }
++            guard let client else {
++                throw P1F1D065AbortSafetyError.unexpectedOperation
++            }
++            return client
++        },
++        connect: { _ in
++            // socketpair already supplies the connection; preserve the same
++            // asynchronous POSIX boundary used by the real owner operations.
++            try await p1f1d065AwaitSynchronousBoundary {}
++        },
++        performHello: { _ in
++            try await p1f1d065AwaitSynchronousBoundary {
++                if case .readerStarted = testCase { return }
++                throw P1F1D065AbortOwnerTestError.hello
++            }
++        },
++        sendToolCall: { _ in
++            try await p1f1d065AwaitSynchronousBoundary {
++                guard case .readerStarted = testCase else {
++                    throw P1F1D065AbortSafetyError.unexpectedOperation
++                }
++            }
++        },
++        startReader: { client in
++            Task {
++                do {
++                    guard case .readerStarted = testCase else {
++                        throw P1F1D065AbortSafetyError.unexpectedOperation
++                    }
++                    try await p1f1d065ReadResultLinesUntilEOF(
++                        client, abortControl: control,
++                        onReadEntered: {
++                            probe.enterReader()
++                            control.publicationGate.complete(.reader)
++                        }
++                    )
++                    return .success(())
++                } catch {
++                    return .failure(error)
++                }
++            }
++        }
++    )
++}
++
++private struct P1F1D065AbortOwnerTestReport: Sendable {
++    let owner: P1F1D065AbortOwnerReport
++    let epilogue: P1F1D065AbortEpilogueReport
++    let peerClose: Result<Void, any Error>?
++    let unadoptedClientClose: Result<Void, any Error>?
++    let repeatedMissingAbort: P1F1D065GateAbortObservation
++    let repeatedPublicationAbort: P1F1D065GateAbortObservation
++    let starts: [Bool]
++    let outcomes: [String: String]
++    let readerEntries: Int
++}
++
++private func p1f1d065RunAbortOwnerTestCase(
++    _ testCase: P1F1D065AbortOwnerTestCase
++) async throws -> P1F1D065AbortOwnerTestReport {
++    let missing = P1F1D065SynchronousGate()
++    let publication = P1F1D065SynchronousGate()
++    let control = P1F1D065AbortSafetyControl(
++        missingImageGate: missing, publicationGate: publication
++    )
++    let probe = P1F1D065AbortOwnerTestProbe()
++    let client: P1F1D065SocketClient?
++    let peer: Int32?
++    switch testCase {
++    case .hello, .readerStarted:
++        var pair = [Int32](repeating: -1, count: 2)
++        guard Darwin.socketpair(AF_UNIX, SOCK_STREAM, 0, &pair) == 0 else {
++            throw P1F1D065ColdObservationError(
++                operation: "abort-owner-test-socketpair", result: -1,
++                errorNumber: errno
++            )
++        }
++        client = P1F1D065SocketClient(ownedDescriptor: pair[0])
++        peer = pair[1]
++    case .clientConstruction, .expiry:
++        client = nil
++        peer = nil
++    }
++    let budget: Duration
++    if case .expiry = testCase { budget = .milliseconds(25) }
++    else { budget = .seconds(30) }
++    let owner = await p1f1d065RunAbortOwner(
++        control: control, budget: budget,
++        operations: p1f1d065AbortOwnerTestOperations(
++            testCase: testCase, client: client, control: control, probe: probe
++        ),
++        publicationObserved: { false }
++    )
++    // No assertion or throw may skip this PRE-RED rescue. GREEN must use
++    // the owner's epilogue, never this rescue, with the same test bodies.
++    let epilogue: P1F1D065AbortEpilogueReport
++    if let owned = owner.epilogue {
++        epilogue = owned
++    } else {
++        epilogue = await p1f1d065RunAbortEpilogue(
++            claimant: .testRescue, bodySucceeded: false,
++            lifetime: owner.lifetime
++        )
++    }
++    let unadoptedClose: Result<Void, any Error>?
++    if let client, owner.lifetime.client == nil {
++        unadoptedClose = Result { try client.closeChecked() }
++    } else {
++        unadoptedClose = nil
++    }
++    let peerClose: Result<Void, any Error>? = peer.map { descriptor in
++        Result {
++            let result = Darwin.close(descriptor)
++            let errorNumber = result == 0 ? 0 : errno
++            guard result == 0 else {
++                throw P1F1D065ColdObservationError(
++                    operation: "abort-owner-test-peer-close", result: result,
++                    errorNumber: errorNumber
++                )
++            }
++        }
++    }
++    let observed = probe.snapshot
++    return .init(
++        owner: owner, epilogue: epilogue,
++        peerClose: peerClose, unadoptedClientClose: unadoptedClose,
++        repeatedMissingAbort: missing.abortWake(),
++        repeatedPublicationAbort: publication.abortWake(),
++        starts: observed.starts, outcomes: observed.outcomes,
++        readerEntries: observed.readerEntries
++    )
++}
++
++private func p1f1d065RequireAbortOwnerTestResources(
++    _ result: P1F1D065AbortOwnerTestReport,
++    testCase: P1F1D065AbortOwnerTestCase
++) throws {
++    let epilogue = result.epilogue
++    // All tasks and descriptors have been joined/closed before any throwing
++    // assertion. A failed cleanup remains an explicit stored Result.
++    if let unadopted = result.unadoptedClientClose { try unadopted.get() }
++    if let peerClose = result.peerClose { try peerClose.get() }
++    if let shutdown = epilogue.clientShutdown { try shutdown.get() }
++    if let close = epilogue.clientClose { try close.get() }
++    try #require(result.unadoptedClientClose == nil)
++    try #require(epilogue.claimAccepted)
++    try #require(result.starts == [true, true])
++    let stream = try #require(epilogue.stream)
++    let cancellation = try #require(epilogue.cancellation)
++    try #require(stream.frames.isEmpty)
++    try #require((stream.terminalError as? P1F1D065AbortSafetyError) == .gateAborted)
++    if case .readerStarted = testCase {
++        let cancellationError = try #require(
++            cancellation.terminalError as? P1F1D065AbortSafetyError
++        )
++        switch cancellationError {
++        case .gateCompleted(.reader):
++            try #require(result.outcomes == ["stream": "aborted", "cancellation": "completed-reader"])
++        case .gateAborted:
++            try #require(result.outcomes == ["stream": "aborted", "cancellation": "aborted"])
++        default:
++            try #require(Bool(false), "unexpected typed cancellation outcome")
++        }
++        let reader = try #require(epilogue.reader)
++        try reader.get()
++        try #require(result.owner.lifetime.reader != nil && result.readerEntries == 1)
++    } else {
++        try #require(result.outcomes == ["stream": "aborted", "cancellation": "aborted"])
++        try #require((cancellation.terminalError as? P1F1D065AbortSafetyError) == .gateAborted)
++        try #require(epilogue.reader == nil && result.owner.lifetime.reader == nil)
++        try #require(result.readerEntries == 0)
++    }
++    let guardReport = try #require(epilogue.guardReport)
++    try #require(epilogue.guardDisarmed)
++    let control = result.owner.lifetime.control
++    try #require(control.snapshot.guardStarted && control.snapshot.guardFinished)
++    try #require(control.snapshot.lateClientShutdown == nil)
++    let missing = try #require(epilogue.missingImage?.abortObservation)
++    let publication = try #require(epilogue.publication?.abortObservation)
++    let missingFirsts = (missing.firstAbort ? 1 : 0)
++        + (guardReport.missingImageAbort?.firstAbort == true ? 1 : 0)
++    let publicationFirsts = (publication.firstAbort ? 1 : 0)
++        + (guardReport.publicationAbort?.firstAbort == true ? 1 : 0)
++    try #require(missingFirsts == 1 && publicationFirsts == 1)
++    try #require(!result.repeatedMissingAbort.firstAbort)
++    try #require(!result.repeatedPublicationAbort.firstAbort)
++    let missingCounts = control.missingImageGate.controlledWaitCounts
++    let publicationCounts = control.publicationGate.controlledWaitCounts
++    try #require(missingCounts.releases == 0 && publicationCounts.releases == 0)
++    var bodyError: (any Error)?
++    if case .failure(let error) = result.owner.body { bodyError = error }
++    switch testCase {
++    case .hello:
++        try #require((bodyError as? P1F1D065AbortOwnerTestError) == .hello)
++        try #require(epilogue.clientShutdown != nil && epilogue.clientClose != nil)
++        try #require(result.peerClose != nil && control.snapshot.clientInstalled)
++    case .clientConstruction:
++        try #require((bodyError as? P1F1D065AbortOwnerTestError) == .clientConstruction)
++        try #require(epilogue.clientShutdown == nil && epilogue.clientClose == nil)
++        try #require(result.peerClose == nil && !control.snapshot.clientInstalled)
++    case .expiry:
++        try #require((bodyError as? P1F1D065AbortSafetyError) == .gateAborted)
++        try #require(epilogue.clientShutdown == nil && epilogue.clientClose == nil)
++        try #require(result.peerClose == nil && !control.snapshot.clientInstalled)
++    case .readerStarted:
++        try #require((bodyError as? P1F1D065AbortSafetyError) == .gateCompleted(.reader))
++        try #require(epilogue.clientShutdown != nil && epilogue.clientClose != nil)
++        try #require(result.peerClose != nil && control.snapshot.clientInstalled)
++    }
++    if case .expiry = testCase {
++        try #require(guardReport.expired && control.snapshot.expiryCount == 1)
++        try #require(missingCounts.entries == 0 && publicationCounts.entries == 0)
++        try #require(guardReport.missingImageAbort != nil && guardReport.publicationAbort != nil)
++        try #require(guardReport.clientShutdown == nil)
++    } else {
++        try #require(!guardReport.expired && control.snapshot.expiryCount == 0)
++        try #require(missingCounts.entries == 1 && missing.hadEntered)
++        if case .readerStarted = testCase {
++            try #require(publicationCounts.entries == 0 && !publication.hadEntered)
++        } else {
++            try #require(publicationCounts.entries == 1 && publication.hadEntered)
++        }
++        try #require(guardReport.missingImageAbort == nil && guardReport.publicationAbort == nil)
++        try #require(guardReport.clientShutdown == nil)
++    }
++}
++
+ private func p1f1d065ReadResultLinesUntilEOF(
+     _ client: P1F1D065SocketClient,
++    abortControl: P1F1D065AbortSafetyControl? = nil,
+     onReadEntered: @escaping @Sendable () -> Void = {},
+     onLine: @escaping @Sendable (String) -> Void = { _ in }
+ ) async throws {
+     try await p1f1d065AwaitSynchronousBoundary {
+         onReadEntered()
+-        while let line = try client.readLine() { onLine(line) }
++        while true {
++            let line: String?
++            if let abortControl {
++                line = try client.readLineAbort(control: abortControl)
++            } else {
++                line = try client.readLine()
++            }
++            guard let line else { return }
++            onLine(line)
++        }
+     }
+ }
+ 
+ private let p1f1d065ControlledWaitEvidenceKey =
+     "AGENTLOOP_065_CONTROLLED_WAIT_EVIDENCE"
+ private let p1f1d065ControlledWaitLabel = "065-controlled-wait-child"
+ 
+ private enum P1F1D065ControlledWaitError: Error {
+     case invalidChildEnvironment
+     case invalidEvidencePath
+     case setup([String])
+ }
+@@ -8585,24 +9528,52 @@ struct ExecutionEngineConformanceTests {
+         else { throw P1F1D065ControlledWaitError.invalidChildEnvironment }
+         try await runOwnedSelfExecTest(OwnedSelfExecTestRequest(
+             label: p1f1d065ControlledWaitLabel,
+             filter: "p1f1_065ControlledWaitsPreserveCooperativeProgress",
+             modeEnvironmentKey: "LIBDISPATCH_COOPERATIVE_POOL_STRICT",
+             mode: "1",
+             evidenceEnvironmentKey: p1f1d065ControlledWaitEvidenceKey,
+             expectedEvidence: Data("065-controlled-waits-ok\n".utf8),
+             containment: .seconds(15)
+         ))
+     }
+ 
++    @Test func p1f1_065AbortOwnerJoinsAfterHelloFailure() async throws {
++        let result = try await p1f1d065RunAbortOwnerTestCase(.hello)
++        try p1f1d065RequireAbortOwnerTestResources(result, testCase: .hello)
++        print("065 ABORT OWNER HELLO: body=hello gates=aborted waiters=joined guard=joined-not-expired client=shutdown-closed peer=closed reader=absent no-child=true")
++        try #require(result.owner.epilogue != nil && result.epilogue.claimant == .owner)
++    }
++
++    @Test func p1f1_065AbortOwnerJoinsAfterClientConstructionFailure() async throws {
++        let result = try await p1f1d065RunAbortOwnerTestCase(.clientConstruction)
++        try p1f1d065RequireAbortOwnerTestResources(result, testCase: .clientConstruction)
++        print("065 ABORT OWNER CONSTRUCTION: body=clientConstruction gates=aborted waiters=joined guard=joined-not-expired client=absent reader=absent no-child=true")
++        try #require(result.owner.epilogue != nil && result.epilogue.claimant == .owner)
++    }
++
++    @Test func p1f1_065AbortGuardExpiryWakesPendingWaiters() async throws {
++        let result = try await p1f1d065RunAbortOwnerTestCase(.expiry)
++        try p1f1d065RequireAbortOwnerTestResources(result, testCase: .expiry)
++        print("065 ABORT OWNER EXPIRY: body=gateAborted async-waiters=aborted-joined first-aborts=one-per-gate releases=zero guard=joined-expired-once client=absent reader=absent no-child=true")
++        try #require(result.owner.epilogue != nil && result.epilogue.claimant == .owner)
++    }
++
++    @Test func p1f1_065AbortOwnerJoinsStartedReaderAfterBodyFailure() async throws {
++        let result = try await p1f1d065RunAbortOwnerTestCase(.readerStarted)
++        try p1f1d065RequireAbortOwnerTestResources(result, testCase: .readerStarted)
++        print("065 ABORT OWNER READER: body=gateCompleted.reader reader-entry=one reader=joined-eof waiters=joined guard=joined-not-expired client=shutdown-closed peer=closed no-child=true")
++        try #require(result.owner.epilogue != nil && result.epilogue.claimant == .owner)
++    }
++
+     @Test func p1f1_065CleanupFailurePreservesPrimaryAndAuthorityCause() async throws {
+         let harness = try P1F1D065MechanicsHarness(label: "cleanup-cause")
+         defer {
+             do { try harness.removeChecked() }
+             catch { Issue.record(error) }
+         }
+         let executionId = "00000000-0000-4000-8000-000000000765"
+         let cleanup = try harness.makeCleanupAuthority("cleanup.json")
+         let retainedOriginalURL = harness.root.appendingPathComponent(
+             "cleanup-original.json"
+         )
+         try FileManager.default.moveItem(
+@@ -8836,24 +9807,26 @@ struct ExecutionEngineConformanceTests {
+             let report = p1f1d065ObserveCleanupPublication(
+                 error: failure,
+                 harness: abortHarness,
+                 cleanupURL: abortCleanup.url,
+                 socketURL: abortSocketURL,
+                 registry: abortRegistry
+             )
+             publicationProbe.record(report)
+             return report
+         }
+ 
+         switch await missingImageGate.waitUntilEnteredOrCompleted() {
++        case .aborted:
++            throw P1F1D065AbortSafetyError.gateAborted
+         case .entered:
+             break
+         case .completed(.stream):
+             let report = await streamWaiter.value
+             if let error = report.terminalError { throw error }
+             throw EngineContextValidationErrorV1()
+         case .completed(.cancellation):
+             let report = await cancellationWaiter.value
+             if let error = report.terminalError { throw error }
+             throw EngineContextValidationErrorV1()
+         case .completed(.reader):
+             throw EngineContextValidationErrorV1()
+@@ -8878,24 +9851,26 @@ struct ExecutionEngineConformanceTests {
+         try abortClient.send([
+             "arguments": ["text": "hold cleanup publication"],
+             "cardId": .string(p1f1EngineCardID),
+             "id": "p1f1d-065-cleanup-publication",
+             "name": "add_progress_note",
+             "type": "tool_call",
+         ])
+         let resultReader = Task { () throws -> Void in
+             defer { cleanupPublicationGate.complete(.reader) }
+             try await p1f1d065ReadResultLinesUntilEOF(abortClient)
+         }
+         switch await cleanupPublicationGate.waitUntilEnteredOrCompleted() {
++        case .aborted:
++            throw P1F1D065AbortSafetyError.gateAborted
+         case .entered:
+             break
+         case .completed(.stream):
+             abortClient.interruptRead()
+             try await resultReader.value
+             let report = await streamWaiter.value
+             if let error = report.terminalError { throw error }
+             throw EngineContextValidationErrorV1()
+         case .completed(.cancellation):
+             abortClient.interruptRead()
+             try await resultReader.value
+             let report = await cancellationWaiter.value

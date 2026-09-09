@@ -9,33 +9,37 @@ public enum BoardServerBridgeMain {
         guard arguments.contains("--board-server") else { return }
         do {
             guard let socketPath = environment["AGENTLOOP_BOARD_SOCKET"],
-                  let token = environment["AGENTLOOP_BOARD_TOKEN"] else {
+                  let token = environment["AGENTLOOP_BOARD_TOKEN"],
+                  let cardId = environment["AGENTLOOP_BOARD_CARD_ID"] else {
                 throw BoardToolServerError.invalidFrame("missing board socket environment")
             }
-            let cardId = environment["AGENTLOOP_BOARD_CARD_ID"]
-            let toolNames = Set(
-                (environment["AGENTLOOP_BOARD_TOOLS"] ?? defaultToolNames.joined(separator: ","))
-                    .split(separator: ",")
-                    .map { String($0) }
+            let bridge = try BoardSocketBridgeClient(
+                socketPath: socketPath,
+                token: token,
+                cardId: cardId
             )
-            let bridge = try BoardSocketBridgeClient(socketPath: socketPath, token: token, cardId: cardId)
-            try run(bridge: bridge, toolNames: toolNames)
+            do {
+                try run(bridge: bridge)
+            } catch {
+                let primary = error
+                do {
+                    try bridge.close()
+                } catch {
+                    throw BoardToolServerError.socketSetupFailed(
+                        "board bridge close failed"
+                    )
+                }
+                throw primary
+            }
+            try bridge.close()
             Foundation.exit(0)
         } catch {
-            FileHandle.standardError.write(Data("board-server failed: \(error)\n".utf8))
+            FileHandle.standardError.write(Data("board-server failed\n".utf8))
             Foundation.exit(1)
         }
     }
 
-    private static let defaultToolNames = [
-        "complete_card",
-        "block_card",
-        "ask_user",
-        "progress_note",
-        "search_camp_notes",
-    ]
-
-    private static func run(bridge: BoardSocketBridgeClient, toolNames: Set<String>) throws {
+    private static func run(bridge: BoardSocketBridgeClient) throws {
         var buffer = Data()
         while true {
             let chunk = FileHandle.standardInput.availableData
@@ -47,8 +51,8 @@ public enum BoardServerBridgeMain {
                 guard let raw = String(data: line, encoding: .utf8), !raw.isEmpty else {
                     continue
                 }
-                if let response = try handle(raw: raw, bridge: bridge, toolNames: toolNames) {
-                    writeStdout(response)
+                if let response = try handle(raw: raw, bridge: bridge) {
+                    try writeStdout(response)
                 }
             }
         }
@@ -56,8 +60,7 @@ public enum BoardServerBridgeMain {
 
     private static func handle(
         raw: String,
-        bridge: BoardSocketBridgeClient,
-        toolNames: Set<String>
+        bridge: BoardSocketBridgeClient
     ) throws -> JSONValue? {
         guard let message = try? JSONValue.decoded(from: raw),
               let method = message["method"]?.stringValue else {
@@ -83,12 +86,21 @@ public enum BoardServerBridgeMain {
             return [
                 "jsonrpc": "2.0",
                 "id": id,
-                "result": ["tools": .array(toolDefinitions(names: toolNames).map(toolInfo))],
+                "result": [
+                    "tools": .array(bridge.definitions.map(toolInfo)),
+                ],
             ]
         case "tools/call":
             guard let id else { return nil }
             guard let name = message["params"]?["name"]?.stringValue else {
                 return rpcError(id: id, code: -32602, message: "tools/call missing name")
+            }
+            guard bridge.contains(name: name) else {
+                return rpcError(
+                    id: id,
+                    code: -32602,
+                    message: "tools/call name is not listed"
+                )
             }
             let arguments = message["params"]?["arguments"] ?? .object([:])
             let result = try bridge.callTool(name: name, arguments: arguments)
@@ -110,6 +122,41 @@ public enum BoardServerBridgeMain {
         }
     }
 
+    package static func processJSONRPCFrameForTesting(
+        raw: String,
+        socketPath: String,
+        token: String,
+        cardId: String
+    ) throws -> JSONValue? {
+        let bridge = try BoardSocketBridgeClient(
+            socketPath: socketPath,
+            token: token,
+            cardId: cardId
+        )
+        let response: JSONValue?
+        do {
+            response = try handle(raw: raw, bridge: bridge)
+        } catch {
+            let primary = error
+            do {
+                try bridge.close()
+            } catch {
+                throw BoardToolServerError.socketSetupFailed(
+                    "board bridge close failed"
+                )
+            }
+            throw primary
+        }
+        do {
+            try bridge.close()
+        } catch {
+            throw BoardToolServerError.socketSetupFailed(
+                "board bridge close failed"
+            )
+        }
+        return response
+    }
+
     private static func rpcError(id: JSONValue?, code: Int, message: String) -> JSONValue {
         [
             "jsonrpc": "2.0",
@@ -121,17 +168,6 @@ public enum BoardServerBridgeMain {
         ]
     }
 
-    private static func toolDefinitions(names: Set<String>) -> [ToolDef] {
-        let all = [
-            ToolDef.completeCard,
-            ToolDef.blockCard,
-            ToolDef.askUser,
-            ToolDef(name: "progress_note", description: ToolDef.addProgressNote.description, inputSchema: ToolDef.addProgressNote.inputSchema),
-            ToolDef.searchCampNotes,
-        ]
-        return all.filter { names.contains($0.name) }
-    }
-
     private static func toolInfo(_ def: ToolDef) -> JSONValue {
         [
             "name": .string(def.name),
@@ -140,23 +176,51 @@ public enum BoardServerBridgeMain {
         ]
     }
 
-    private static func writeStdout(_ value: JSONValue) {
-        guard let encoded = try? value.encodedString() else { return }
+    private static func writeStdout(_ value: JSONValue) throws {
+        let encoded = try value.encodedString()
         var data = Data(encoded.utf8)
         data.append(UInt8(ascii: "\n"))
-        FileHandle.standardOutput.write(data)
+        try FileHandle.standardOutput.write(contentsOf: data)
     }
 }
 
-private struct BoardSocketBridgeClient {
+private final class BoardSocketBridgeClient {
     struct ToolResult {
         let text: String
         let isError: Bool
     }
 
+    private static let maximumFrameBytes = 256 * 1_024
     private let handle: FileHandle
+    private let cardId: String
+    private(set) var definitions: [ToolDef] = []
+    private var listedNames = Set<String>()
+    private var readBuffer = Data()
+    private var closed = false
 
-    init(socketPath: String, token: String, cardId: String?) throws {
+    init(socketPath: String, token: String, cardId: String) throws {
+        try CanonicalContractCodingV1.validateCanonicalUUID(cardId)
+        var resolvedPathBytes = [CChar](
+            repeating: 0,
+            count: Int(MAXPATHLEN)
+        )
+        let resolvedPathResult = socketPath.withCString {
+            Darwin.realpath($0, &resolvedPathBytes)
+        }
+        guard socketPath.hasPrefix("/"),
+              !socketPath.utf8.contains(0),
+              resolvedPathResult != nil,
+              String(
+                  decoding: resolvedPathBytes.prefix { $0 != 0 }
+                      .map { UInt8(bitPattern: $0) },
+                  as: UTF8.self
+              ) == socketPath,
+              Self.isLowercaseHex(token, count: 64)
+        else {
+            throw BoardToolServerError.invalidFrame(
+                "invalid board socket environment"
+            )
+        }
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else {
             throw BoardToolServerError.socketSetupFailed(String(cString: strerror(errno)))
@@ -167,40 +231,79 @@ private struct BoardSocketBridgeClient {
             }
             try Self.connect(fd: fd, path: socketPath)
         } catch {
-            close(fd)
+            guard Darwin.close(fd) == 0 else {
+                throw BoardToolServerError.socketSetupFailed(
+                    "board bridge socket close failed"
+                )
+            }
             throw error
         }
         handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
-        var hello: [String: JSONValue] = [
-            "type": "hello",
-            "token": .string(token),
-        ]
-        if let cardId {
-            hello["cardId"] = .string(cardId)
-        }
-        try write(.object(hello))
-        guard let response = try read(),
-              response["type"]?.stringValue == "hello_ok" else {
-            throw BoardToolServerError.unauthorized
+        self.cardId = cardId
+        do {
+            try write([
+                "cardId": .string(cardId),
+                "token": .string(token),
+                "type": "hello",
+            ])
+            guard let response = try readCanonicalFrame() else {
+                throw BoardToolServerError.unauthorized
+            }
+            definitions = try Self.validateHello(response)
+            listedNames = Set(definitions.map(\.name))
+        } catch {
+            let primary = error
+            do {
+                try close()
+            } catch {
+                throw BoardToolServerError.socketSetupFailed(
+                    "board bridge socket close failed"
+                )
+            }
+            throw primary
         }
     }
 
+    func contains(name: String) -> Bool {
+        listedNames.contains(name)
+    }
+
     func callTool(name: String, arguments: JSONValue) throws -> ToolResult {
+        guard listedNames.contains(name) else {
+            throw BoardToolServerError.unknownTool(name)
+        }
         let id = UUID().uuidString
         try write([
-            "type": "tool_call",
+            "arguments": arguments,
+            "cardId": .string(cardId),
             "id": .string(id),
             "name": .string(name),
-            "arguments": arguments,
+            "type": "tool_call",
         ])
-        guard let response = try read(),
-              response["type"]?.stringValue == "tool_result" else {
+        guard let response = try readCanonicalFrame(),
+              let object = response.objectValue,
+              object["type"]?.stringValue == "tool_result",
+              object["id"]?.stringValue == id,
+              object["kind"]?.stringValue != nil,
+              let text = object["text"]?.stringValue,
+              let isError = object["isError"]?.boolValue,
+              Set(object.keys).isSubset(of: Set([
+                  "detail", "id", "isError", "kind", "reason", "text",
+                  "type",
+              ]))
+        else {
             throw BoardToolServerError.invalidFrame("missing tool_result")
         }
         return ToolResult(
-            text: response["text"]?.stringValue ?? "",
-            isError: response["isError"]?.boolValue ?? false
+            text: text,
+            isError: isError
         )
+    }
+
+    func close() throws {
+        guard !closed else { return }
+        try handle.close()
+        closed = true
     }
 
     private static func connect(fd: Int32, path: String) throws {
@@ -229,22 +332,107 @@ private struct BoardSocketBridgeClient {
     private func write(_ value: JSONValue) throws {
         var data = Data(try value.encodedString().utf8)
         data.append(UInt8(ascii: "\n"))
+        guard data.count <= Self.maximumFrameBytes else {
+            throw BoardToolServerError.invalidFrame(
+                "board bridge frame is too large"
+            )
+        }
         try handle.write(contentsOf: data)
     }
 
-    private func read() throws -> JSONValue? {
-        var buffer = Data()
+    private func readCanonicalFrame() throws -> JSONValue? {
         while true {
+            if let newline = readBuffer.firstIndex(of: UInt8(ascii: "\n")) {
+                let line = readBuffer[..<newline]
+                readBuffer.removeSubrange(readBuffer.startIndex...newline)
+                guard line.count + 1 <= Self.maximumFrameBytes,
+                      let text = String(data: line, encoding: .utf8),
+                      !text.isEmpty
+                else {
+                    throw BoardToolServerError.invalidFrame(
+                        "invalid board parent frame"
+                    )
+                }
+                let value = try JSONValue.decoded(from: text)
+                guard try value.encodedString() == text else {
+                    throw BoardToolServerError.invalidFrame(
+                        "noncanonical board parent frame"
+                    )
+                }
+                return value
+            }
             let chunk = handle.availableData
             if chunk.isEmpty { return nil }
-            buffer.append(chunk)
-            if let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
-                let line = buffer[..<newline]
-                guard let text = String(data: line, encoding: .utf8), !text.isEmpty else {
-                    return nil
-                }
-                return try JSONValue.decoded(from: text)
+            readBuffer.append(chunk)
+            guard readBuffer.count <= Self.maximumFrameBytes else {
+                throw BoardToolServerError.invalidFrame(
+                    "board parent frame is too large"
+                )
             }
+        }
+    }
+
+    private static func validateHello(_ value: JSONValue) throws -> [ToolDef] {
+        guard let object = value.objectValue,
+              Set(object.keys) == Set(["tools", "type"]),
+              object["type"]?.stringValue == "hello_ok",
+              let tools = object["tools"]?.arrayValue,
+              (1...256).contains(tools.count)
+        else {
+            throw BoardToolServerError.invalidFrame(
+                "invalid board hello response"
+            )
+        }
+        var definitions: [ToolDef] = []
+        var seen = Set<String>()
+        for value in tools {
+            guard let tool = value.objectValue,
+                  Set(tool.keys)
+                    == Set(["description", "inputSchema", "name"]),
+                  let name = tool["name"]?.stringValue,
+                  let description = tool["description"]?.stringValue,
+                  let schema = tool["inputSchema"],
+                  schema.objectValue != nil,
+                  seen.insert(name).inserted
+            else {
+                throw BoardToolServerError.invalidFrame(
+                    "invalid board tool definition"
+                )
+            }
+            do {
+                try EngineContractValidationV1.validateToolName(name)
+                try CanonicalContractCodingV1.validateNonempty(description)
+            } catch {
+                throw BoardToolServerError.invalidFrame(
+                    "invalid board tool definition"
+                )
+            }
+            definitions.append(
+                ToolDef(
+                    name: name,
+                    description: description,
+                    inputSchema: schema
+                )
+            )
+        }
+        guard definitions.map(\.name) == definitions.map(\.name).sorted(by: {
+            $0.utf8.lexicographicallyPrecedes($1.utf8)
+        }) else {
+            throw BoardToolServerError.invalidFrame(
+                "unsorted board tool definitions"
+            )
+        }
+        return definitions
+    }
+
+    private static func isLowercaseHex(
+        _ value: String,
+        count: Int
+    ) -> Bool {
+        value.utf8.count == count && value.utf8.allSatisfy { byte in
+            (UInt8(ascii: "0")...UInt8(ascii: "9")).contains(byte)
+                || (UInt8(ascii: "a")...UInt8(ascii: "f"))
+                    .contains(byte)
         }
     }
 }

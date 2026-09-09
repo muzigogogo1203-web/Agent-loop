@@ -1,0 +1,36 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+[3/7] Compiling AgentLoopCore RuntimeLifecycleDiagnostics.swift
+[4/7] Compiling AgentLoopCore CliProcessBackend.swift
+[5/7] Emitting module AgentLoopCore
+[6/9] Compiling AgentLoopCore BoardToolServer.swift
+[7/9] Compiling AgentLoopCore Orchestrator.swift
+[8/10] Emitting module AgentLoopApplication
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[9/14] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1588:12: warning: no calls to throwing functions occur within 'try' expression
+ 1586 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+ 1587 |     }
+ 1588 |     return try CliEngineAdapter(
+      |            `- warning: no calls to throwing functions occur within 'try' expression
+ 1589 |         profile: profile,
+ 1590 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7912:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+ 7910 |                 progressSink: P1F1DProgressRecorder(),
+ 7911 |                 modelLoopDriver: try #require(
+ 7912 |                     selectedTransport.modelLoopDriver
+      |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+ 7913 |                 ),
+ 7914 |                 cliProcessDriver: nil,
+[10/14] Compiling AgentLoopTestSuite HaltAndCooldownTests.swift
+[11/14] Emitting module AgentLoopTestSuite
+[12/14] Compiling AgentLoopTestSuite CliBackendTests.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[13/16] Emitting module RunTests
+[13/16] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[14/16] Linking RunTests
+[15/16] Applying RunTests
+Build of product 'RunTests' complete! (29.26s)

@@ -1,0 +1,24 @@
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/goal-foundation-v17-checkpoint-amendment-before.swift	2026-09-06 22:40:17
++++ Sources/AgentLoopTestSuite/CampLifecycleMigrationTests.swift	2026-09-06 22:45:16
+@@ -275,17 +275,20 @@
+     "action_candidate_converted", "cow_unlocked", "mcp_server_down",
+     "card_returned", "card_review_cleared", "camp_archived",
+     "schedule_fired", "schedule_missed",
+ ]
+ 
+ @Suite(.serialized)
+ struct P1ECampLifecycleMigrationTests {
+     @Test func p1e01V16MigrationIsImmediateSuccessor() throws {
+-        let migrations = AppDatabase.migrator.migrations
++        // 2026-09-06: preserve the V17 checkpoint before its reviewed desktop successor.
++        let allMigrations = AppDatabase.migrator.migrations
++        let desktop = try #require(allMigrations.firstIndex(of: "desktop-goal-workflow-v1"))
++        let migrations = Array(allMigrations.prefix(desktop))
+         let v15 = try #require(migrations.firstIndex(of: p1eV15Migration))
+         let v16 = try #require(migrations.firstIndex(of: p1eV16Migration))
+         let v17 = try #require(migrations.firstIndex(of: p1eV17Migration))
+         #expect(v16 == v15 + 1)
+         #expect(v17 == v16 + 1)
+         #expect(v17 == migrations.count - 1)
+     }
+ 

@@ -9,6 +9,7 @@ struct RuminationInboxView: View {
     var onClose: (() -> Void)?
     var onFeed: (() -> Void)?
     var actionError: String? = nil
+    var startingIds: Set<String> = []
     var onClearActionError: () -> Void = {}
 
     var body: some View {
@@ -86,7 +87,8 @@ struct RuminationInboxView: View {
                                 onOpen: { onOpen(item.id) },
                                 onStart: { Task { await onStart(item.id) } },
                                 onRetry: { Task { await onRetry(item.id) } },
-                                onRestore: { onRestore(item.id) }
+                                onRestore: { onRestore(item.id) },
+                                isStarting: startingIds.contains(item.id)
                             )
                         }
                     }
@@ -156,6 +158,7 @@ private struct RuminationInboxCard: View {
     var onStart: () -> Void
     var onRetry: () -> Void
     var onRestore: () -> Void
+    let isStarting: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -195,8 +198,17 @@ private struct RuminationInboxCard: View {
     @ViewBuilder private var actions: some View {
         switch item.status {
         case .queued:
-            Button("开始反刍", action: onStart)
+            Button(action: onStart) {
+                HStack(spacing: 6) {
+                    if isStarting {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                    Text(isStarting ? "正在开始…" : "开始反刍")
+                }
+            }
                 .buttonStyle(CampPrimaryButtonStyle(size: .small))
+                .disabled(isStarting)
         case .ruminating:
             Button("查看进度", action: onOpen)
                 .buttonStyle(CampSecondaryButtonStyle(tint: Camp.creek))
@@ -208,8 +220,17 @@ private struct RuminationInboxCard: View {
                 .buttonStyle(CampSecondaryButtonStyle(tint: Camp.moss))
         case .failed(_, let retryable):
             if retryable {
-                Button("重试", action: onRetry)
+                Button(action: onRetry) {
+                    HStack(spacing: 6) {
+                        if isStarting {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Text(isStarting ? "正在开始…" : "重试")
+                    }
+                }
                     .buttonStyle(CampSecondaryButtonStyle(tint: Camp.charcoalRed))
+                    .disabled(isStarting)
             } else {
                 Button("查看原文", action: onOpen)
                     .buttonStyle(CampSecondaryButtonStyle())
@@ -273,9 +294,12 @@ struct RuminationProgressView: View {
                     .foregroundStyle(Camp.inkSecondary)
             }
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(RuminationStage.allCasesForUI.enumerated()), id: \.offset) { index, stage in
+                ForEach(
+                    Array(visibleStages.enumerated()),
+                    id: \.offset
+                ) { index, stage in
                     RuminationStageRow(stage: stage, position: stagePosition(stage))
-                    if index < RuminationStage.allCasesForUI.count - 1 {
+                    if index < visibleStages.count - 1 {
                         Rectangle()
                             .fill(stageLineColor(after: stage))
                             .frame(width: 2, height: 18)
@@ -320,8 +344,14 @@ struct RuminationProgressView: View {
         return .saved
     }
 
+    private var visibleStages: [RuminationStage] {
+        currentStage == .recovering
+            ? [.saved, .recovering]
+            : [.saved, .reading, .extracting, .organizing]
+    }
+
     private func stagePosition(_ stage: RuminationStage) -> RuminationStagePosition {
-        let stages = RuminationStage.allCasesForUI
+        let stages = visibleStages
         let current = stages.firstIndex(of: currentStage) ?? 0
         let index = stages.firstIndex(of: stage) ?? 0
         if index < current { return .completed }
@@ -340,7 +370,13 @@ struct RuminationProgressView: View {
             cancelState = .idle
             onClose()
         } catch {
-            cancelState = .failed(error.localizedDescription)
+            cancelState = .failed(
+                codingRanchUserFacingMessage(
+                    for: error,
+                    fallback:
+                        "暂时无法推迟这次反刍，请稍后重试。"
+                )
+            )
         }
     }
 }
@@ -431,10 +467,10 @@ private struct RuminationStageRow: View {
 }
 
 private extension RuminationStage {
-    static let allCasesForUI: [RuminationStage] = [.saved, .reading, .extracting, .organizing]
     var displayText: String {
         switch self {
         case .saved: "保存原文"
+        case .recovering: "正在恢复"
         case .reading: "提炼要点"
         case .extracting: "识别需求和待办"
         case .organizing: "准备确认"
@@ -446,26 +482,49 @@ struct RuminationReviewView: View {
     @State private var review: RuminationReviewViewState
     var onSave: (RuminationReviewViewState) async throws -> Void
     var onMaterialize: (RuminationReviewViewState, MaterializationMode) async throws -> MaterializationResult
-    var onDelete: (IngestionDeletionScope) async throws -> Void
+    var pendingDeletion: PendingIngestionDeletionViewState?
+    var onPrepareDeletion: (IngestionDeletionScope) async throws -> Void
+    var onExecuteDeletion: () async -> Bool
+    var onResolveDeletion: () async -> Bool
+    var onCancelDeletion: () async -> Bool
+    var onRetryDeletionRefresh: () async -> Bool
+    var onAbandonDeletionConflict: () async -> Bool
+    var onDismissCommittedDeletion: () async -> Bool
     var onMissionDraft: (MissionDraftViewState) -> Void
     var onClose: () -> Void
 
     @State private var actionState: CodingRanchActionState = .idle
     @State private var sourceVisible = true
     @State private var showDeleteConfirmation = false
+    @State private var deletionSelection:
+        IngestionDeletionScope = .sourceAndResult
 
     init(
         review: RuminationReviewViewState,
         onSave: @escaping (RuminationReviewViewState) async throws -> Void = { _ in },
         onMaterialize: @escaping (RuminationReviewViewState, MaterializationMode) async throws -> MaterializationResult,
-        onDelete: @escaping (IngestionDeletionScope) async throws -> Void = { _ in },
+        pendingDeletion: PendingIngestionDeletionViewState? = nil,
+        onPrepareDeletion: @escaping (IngestionDeletionScope) async throws -> Void = { _ in },
+        onExecuteDeletion: @escaping () async -> Bool = { false },
+        onResolveDeletion: @escaping () async -> Bool = { false },
+        onCancelDeletion: @escaping () async -> Bool = { false },
+        onRetryDeletionRefresh: @escaping () async -> Bool = { false },
+        onAbandonDeletionConflict: @escaping () async -> Bool = { false },
+        onDismissCommittedDeletion: @escaping () async -> Bool = { false },
         onMissionDraft: @escaping (MissionDraftViewState) -> Void = { _ in },
         onClose: @escaping () -> Void = {}
     ) {
         _review = State(initialValue: review)
         self.onSave = onSave
         self.onMaterialize = onMaterialize
-        self.onDelete = onDelete
+        self.pendingDeletion = pendingDeletion
+        self.onPrepareDeletion = onPrepareDeletion
+        self.onExecuteDeletion = onExecuteDeletion
+        self.onResolveDeletion = onResolveDeletion
+        self.onCancelDeletion = onCancelDeletion
+        self.onRetryDeletionRefresh = onRetryDeletionRefresh
+        self.onAbandonDeletionConflict = onAbandonDeletionConflict
+        self.onDismissCommittedDeletion = onDismissCommittedDeletion
         self.onMissionDraft = onMissionDraft
         self.onClose = onClose
     }
@@ -505,13 +564,39 @@ struct RuminationReviewView: View {
             }
         }
         .background(Camp.canvas)
-        .confirmationDialog("删除这次喂牛？", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
-            Button("删除原文和反刍结果", role: .destructive) {
-                Task { await delete() }
+        .sheet(isPresented: $showDeleteConfirmation) {
+            IngestionDeletionConfirmationView(
+                selection: $deletionSelection,
+                pending: pendingDeletion,
+                onPrepare: onPrepareDeletion,
+                onExecute: onExecuteDeletion,
+                onResolve: onResolveDeletion,
+                onCancel: onCancelDeletion,
+                onRetryRefresh: onRetryDeletionRefresh,
+                onAbandonConflict: onAbandonDeletionConflict,
+                onDismissCommitted: onDismissCommittedDeletion,
+                onDeletionFinished: onClose
+            )
+            .frame(
+                minWidth: 430,
+                idealWidth: 520,
+                maxWidth: 620,
+                minHeight: 420,
+                idealHeight: 520,
+                maxHeight: 640
+            )
+        }
+        .onAppear {
+            if pendingDeletion?.ingestionId == review.ingestionId {
+                deletionSelection = pendingDeletion?.scope
+                    ?? .sourceAndResult
+                showDeleteConfirmation = true
             }
-            Button("取消", role: .cancel) {}
-        } message: {
-            Text("这会删除原始材料和尚未收进营地的结果。已经形成的营地笔记不会被静默删除。")
+        }
+        .onChange(of: pendingDeletion) { _, pending in
+            guard pending?.ingestionId == review.ingestionId else { return }
+            deletionSelection = pending?.scope ?? deletionSelection
+            showDeleteConfirmation = true
         }
     }
 
@@ -555,6 +640,7 @@ struct RuminationReviewView: View {
         Button("关闭", action: onClose)
             .buttonStyle(CampSecondaryButtonStyle())
             .keyboardShortcut(.cancelAction)
+            .disabled(pendingDeletion != nil)
     }
 
     private var resultScroll: some View {
@@ -704,18 +790,261 @@ struct RuminationReviewView: View {
                 onClose()
             }
         } catch {
-            actionState = .failed(error.localizedDescription)
+            actionState = .failed(
+                codingRanchUserFacingMessage(
+                    for: error,
+                    fallback:
+                        "反刍结果暂时无法保存，请稍后重试。"
+                )
+            )
         }
     }
 
-    @MainActor private func delete() async {
-        actionState = .running
-        do {
-            try await onDelete(.sourceAndResult)
-            actionState = .idle
-            onClose()
-        } catch {
-            actionState = .failed(error.localizedDescription)
+}
+
+struct IngestionDeletionConfirmationView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selection: IngestionDeletionScope
+    let pending: PendingIngestionDeletionViewState?
+    var onPrepare: (IngestionDeletionScope) async throws -> Void
+    var onExecute: () async -> Bool
+    var onResolve: () async -> Bool
+    var onCancel: () async -> Bool
+    var onRetryRefresh: () async -> Bool
+    var onAbandonConflict: () async -> Bool
+    var onDismissCommitted: () async -> Bool
+    var onDeletionFinished: () -> Void
+
+    @State private var actionInFlight = false
+    @State private var localFailure: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 6) {
+                Label("删除这次喂牛", systemImage: "trash.fill")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(Camp.charcoalRed)
+                Text("只会按你的选择删除尚未物化的资料；已经形成的营地成果不会被删除。")
+                    .font(.callout)
+                    .foregroundStyle(Camp.inkSecondary)
+            }
+
+            Picker("删除范围", selection: $selection) {
+                Text("只删除反刍结果")
+                    .tag(IngestionDeletionScope.resultOnly)
+                Text("删除原文和反刍结果")
+                    .tag(IngestionDeletionScope.sourceAndResult)
+            }
+            .pickerStyle(.radioGroup)
+            .disabled(pending != nil || actionInFlight)
+
+            if let pending {
+                deletionStatus(pending)
+            } else {
+                Text("确认后会先生成安全预览，再使用同一个操作句柄执行。")
+                    .font(.caption)
+                    .foregroundStyle(Camp.inkSecondary)
+            }
+
+            if let failure = pending?.failureMessage ?? localFailure {
+                Label(failure, systemImage: "exclamationmark.triangle.fill")
+                    .font(.callout)
+                    .foregroundStyle(Camp.charcoalRed)
+                    .textSelection(.enabled)
+                    .campStatusPanel(Camp.charcoalRed)
+            }
+
+            Spacer(minLength: 0)
+            actionButtons
+        }
+        .padding(22)
+        .background(Camp.canvas)
+        .interactiveDismissDisabled(pending != nil || actionInFlight)
+    }
+
+    private func deletionStatus(
+        _ state: PendingIngestionDeletionViewState
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label(
+                    phaseText(state.phase),
+                    systemImage: phaseIcon(state.phase)
+                )
+                .font(.callout.weight(.semibold))
+                Spacer()
+                if actionInFlight || state.phase == .executing {
+                    ProgressView().controlSize(.small)
+                }
+            }
+            Text(
+                "预计删除反刍结果 \(state.deletedResultCount) 条、原文 \(state.deletedSourceCount) 条。"
+            )
+            .font(.caption)
+            .foregroundStyle(Camp.inkSecondary)
+            if state.campResultsAreRetained {
+                Text("营地笔记、行动成果和已物化知识保持不变。")
+                    .font(.caption)
+                    .foregroundStyle(Camp.moss)
+            }
+            Text("追踪 ID：\(state.traceId)")
+                .font(.caption.monospaced())
+                .foregroundStyle(Camp.inkSecondary)
+                .textSelection(.enabled)
+        }
+        .campCard()
+    }
+
+    @ViewBuilder private var actionButtons: some View {
+        HStack(spacing: 10) {
+            switch pending?.phase {
+            case nil:
+                Button("取消") { dismiss() }
+                    .buttonStyle(CampSecondaryButtonStyle())
+                Spacer()
+                Button("确认删除", role: .destructive) {
+                    runPrepareAndExecute()
+                }
+                .buttonStyle(CampPrimaryButtonStyle())
+                .disabled(actionInFlight)
+            case .prepared:
+                Button("取消本次删除") { runCancel() }
+                    .buttonStyle(CampSecondaryButtonStyle())
+                    .disabled(actionInFlight)
+                Spacer()
+                Button("重试执行", role: .destructive) {
+                    runFinishingAction(onExecute)
+                }
+                .buttonStyle(CampPrimaryButtonStyle())
+                .disabled(actionInFlight)
+            case .executing:
+                Text("删除正在提交，当前不能取消或关闭。")
+                    .font(.caption)
+                    .foregroundStyle(Camp.inkSecondary)
+                Spacer()
+                ProgressView().controlSize(.small)
+            case .executionResolutionPending:
+                resolutionButtons
+            case .committedRefreshPending:
+                Button("关闭并稍后重载") {
+                    runFinishingAction(onDismissCommitted)
+                }
+                .buttonStyle(CampSecondaryButtonStyle())
+                .disabled(actionInFlight)
+                Spacer()
+                Button("重新载入并关闭") {
+                    runFinishingAction(onRetryRefresh)
+                }
+                .buttonStyle(CampPrimaryButtonStyle())
+                .disabled(actionInFlight)
+            }
+        }
+    }
+
+    @ViewBuilder private var resolutionButtons: some View {
+        if pending?.resolution == .terminalConflict {
+            Button("保留当前句柄") {}
+                .buttonStyle(CampSecondaryButtonStyle())
+                .disabled(true)
+            Spacer()
+            Button("放弃句柄并重新载入") { runAbandon() }
+                .buttonStyle(CampPrimaryButtonStyle())
+                .disabled(actionInFlight)
+        } else {
+            Text(
+                pending?.resolution == .integrityBlocked
+                    ? "完整性修复后才能重新确认。"
+                    : "只会读取同一个操作句柄的提交结果。"
+            )
+            .font(.caption)
+            .foregroundStyle(Camp.inkSecondary)
+            Spacer()
+            Button("重新确认提交结果") {
+                runFinishingAction(onResolve)
+            }
+            .buttonStyle(CampPrimaryButtonStyle())
+            .disabled(actionInFlight)
+        }
+    }
+
+    private func phaseText(
+        _ phase: IngestionDeletionPhaseViewState
+    ) -> String {
+        switch phase {
+        case .prepared: "已准备，等待执行"
+        case .executing: "正在提交删除"
+        case .executionResolutionPending: "正在确认提交结果"
+        case .committedRefreshPending: "删除已提交，等待重新载入"
+        }
+    }
+
+    private func phaseIcon(
+        _ phase: IngestionDeletionPhaseViewState
+    ) -> String {
+        switch phase {
+        case .prepared: "checkmark.shield"
+        case .executing: "arrow.triangle.2.circlepath"
+        case .executionResolutionPending: "questionmark.diamond"
+        case .committedRefreshPending: "checkmark.circle"
+        }
+    }
+
+    private func runPrepareAndExecute() {
+        guard !actionInFlight else { return }
+        actionInFlight = true
+        localFailure = nil
+        Task { @MainActor in
+            do {
+                try await onPrepare(selection)
+                let finished = await onExecute()
+                actionInFlight = false
+                if finished {
+                    dismiss()
+                    onDeletionFinished()
+                }
+            } catch {
+                actionInFlight = false
+                localFailure = codingRanchUserFacingMessage(
+                    for: error,
+                    fallback: "暂时无法准备删除，请稍后重试。"
+                )
+            }
+        }
+    }
+
+    private func runFinishingAction(
+        _ action: @escaping () async -> Bool
+    ) {
+        guard !actionInFlight else { return }
+        actionInFlight = true
+        localFailure = nil
+        Task { @MainActor in
+            let finished = await action()
+            actionInFlight = false
+            if finished {
+                dismiss()
+                onDeletionFinished()
+            }
+        }
+    }
+
+    private func runCancel() {
+        guard !actionInFlight else { return }
+        actionInFlight = true
+        Task { @MainActor in
+            let canceled = await onCancel()
+            actionInFlight = false
+            if canceled { dismiss() }
+        }
+    }
+
+    private func runAbandon() {
+        guard !actionInFlight else { return }
+        actionInFlight = true
+        Task { @MainActor in
+            let abandoned = await onAbandonConflict()
+            actionInFlight = false
+            if abandoned { dismiss() }
         }
     }
 }

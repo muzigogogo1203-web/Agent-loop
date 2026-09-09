@@ -1,0 +1,174 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[3/6] Emitting module AgentLoopTestSuite
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:599:24: error: cannot find type 'A3CandidatePostCommitObservationForTesting' in scope
+ 597 | 
+ 598 |     func record(
+ 599 |         _ observation: A3CandidatePostCommitObservationForTesting,
+     |                        `- error: cannot find type 'A3CandidatePostCommitObservationForTesting' in scope
+ 600 |         evidence: A3PreDispatchEvidence?,
+ 601 |         captureFailure: String?
+[4/6] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:599:24: error: cannot find type 'A3CandidatePostCommitObservationForTesting' in scope
+ 597 | 
+ 598 |     func record(
+ 599 |         _ observation: A3CandidatePostCommitObservationForTesting,
+     |                        `- error: cannot find type 'A3CandidatePostCommitObservationForTesting' in scope
+ 600 |         evidence: A3PreDispatchEvidence?,
+ 601 |         captureFailure: String?
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:945:5: warning: no calls to throwing functions occur within 'try' expression
+ 943 |     _ fixture: R01FailureFirstFixture
+ 944 | ) throws -> Int {
+ 945 |     try fixture.database.pool.writeWithoutTransaction { database in
+     |     `- warning: no calls to throwing functions occur within 'try' expression
+ 946 |         database.totalChangesCount
+ 947 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:964:28: error: value of type 'Orchestrator' has no member 'armA3CandidatePostCommitObserverForTesting'
+ 962 |         tickInterval: nil
+ 963 |     )
+ 964 |     try await orchestrator.armA3CandidatePostCommitObserverForTesting {
+     |                            `- error: value of type 'Orchestrator' has no member 'armA3CandidatePostCommitObserverForTesting'
+ 965 |         observation in
+ 966 |         var evidence: A3PreDispatchEvidence?
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1005:24: error: value of type 'Orchestrator' has no member 'clearA3CandidatePostCommitObserverForTesting'
+1003 | 
+1004 | private func shutdownA3Orchestrator(_ orchestrator: Orchestrator) async {
+1005 |     await orchestrator.clearA3CandidatePostCommitObserverForTesting()
+     |                        `- error: value of type 'Orchestrator' has no member 'clearA3CandidatePostCommitObserverForTesting'
+1006 |     _ = await orchestrator.shutdown()
+1007 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2476:32: error: value of type 'Orchestrator' has no member 'armA3CandidatePostCommitObserverForTesting'
+2474 |             tickInterval: nil
+2475 |         )
+2476 |         try await orchestrator.armA3CandidatePostCommitObserverForTesting {
+     |                                `- error: value of type 'Orchestrator' has no member 'armA3CandidatePostCommitObserverForTesting'
+2477 |             observation in
+2478 |             await probe.record(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2480:27: error: 'nil' requires a contextual type
+2478 |             await probe.record(
+2479 |                 observation,
+2480 |                 evidence: nil,
+     |                           `- error: 'nil' requires a contextual type
+2481 |                 captureFailure: nil
+2482 |             )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2481:33: error: 'nil' requires a contextual type
+2479 |                 observation,
+2480 |                 evidence: nil,
+2481 |                 captureFailure: nil
+     |                                 `- error: 'nil' requires a contextual type
+2482 |             )
+2483 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2049:9: error: expression is 'async' but is not marked with 'await'
+2047 |             candidateId: draft.candidateId
+2048 |         )
+2049 |         try fixture.database.pool.write { database in
+     |         |   `- note: call is 'async'
+     |         `- error: expression is 'async' but is not marked with 'await'
+2050 |             try database.execute(sql: """
+2051 |                 CREATE TRIGGER a3_fail_candidate_work_insert
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2062:9: error: expression is 'async' but is not marked with 'await'
+2060 |             _ = try a3Convert(fixture, command: command)
+2061 |         }
+2062 |         try fixture.database.pool.write { database in
+     |         |   `- note: call is 'async'
+     |         `- error: expression is 'async' but is not marked with 'await'
+2063 |             try database.execute(
+2064 |                 sql: "DROP TRIGGER a3_fail_candidate_work_insert"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2289:9: error: expression is 'async' but is not marked with 'await'
+2287 |             probe: probe
+2288 |         )
+2289 |         try fixture.database.pool.write { database in
+     |         |   `- note: call is 'async'
+     |         `- error: expression is 'async' but is not marked with 'await'
+2290 |             try database.execute(sql: """
+2291 |                 CREATE TRIGGER a3_fail_orchestrated_candidate_work_insert
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2324:9: error: expression is 'async' but is not marked with 'await'
+2322 |             await probe.snapshot().counts == A3ObservationCounts()
+2323 |         )
+2324 |         try fixture.database.pool.write { database in
+     |         |   `- note: call is 'async'
+     |         `- error: expression is 'async' but is not marked with 'await'
+2325 |             try database.execute(
+2326 |                 sql: "DROP TRIGGER a3_fail_orchestrated_candidate_work_insert"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2613:9: error: expression is 'async' but is not marked with 'await'
+2611 |             workId: inserted.workId
+2612 |         )
+2613 |         try fixture.database.pool.write { database in
+     |         |   `- note: call is 'async'
+     |         `- error: expression is 'async' but is not marked with 'await'
+2614 |             try AppDatabase.appendEvent(
+2615 |                 database,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2738:9: error: expression is 'async' but is not marked with 'await'
+2736 |             workId: inserted.workId
+2737 |         )
+2738 |         try fixture.database.pool.write { database in
+     |         |   `- note: call is 'async'
+     |         `- error: expression is 'async' but is not marked with 'await'
+2739 |             try AppDatabase.appendEvent(
+2740 |                 database,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2821:18: error: actor-isolated instance method 'release()' cannot be called from outside of the actor
+2819 |             )
+2820 |             #expect(evidence.snapshot.work?.state == state)
+2821 |             gate.release()
+     |                  `- error: actor-isolated instance method 'release()' cannot be called from outside of the actor
+2822 |             replayed = try await replayTask.value
+2823 |             #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2897:9: error: expression is 'async' but is not marked with 'await'
+2895 |             resolver: winnerResolver
+2896 |         )
+2897 |         try fixture.database.pool.write { database in
+     |         |   `- note: call is 'async'
+     |         `- error: expression is 'async' but is not marked with 'await'
+2898 |             switch drift {
+2899 |             case "delete":
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2950:25: error: actor-isolated instance method 'release()' cannot be called from outside of the actor
+2948 |         #expect(loserResolver.resolveCount == 1)
+2949 |         #expect(winnerResolver.resolveCount == 1)
+2950 |         dispatchBarrier.release()
+     |                         `- error: actor-isolated instance method 'release()' cannot be called from outside of the actor
+2951 |         let replayed = try await loserTask.value
+2952 |         #expect(replayed.disposition == .replayed)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:3209:25: error: actor-isolated instance method 'release()' cannot be called from outside of the actor
+3207 |         #expect(secondResolver.resolveCount == 1)
+3208 | 
+3209 |         dispatchBarrier.release()
+     |                         `- error: actor-isolated instance method 'release()' cannot be called from outside of the actor
+3210 |         let firstResult = try await firstTask.value
+3211 |         let secondResult = try await secondTask.value
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:3253:9: error: expression is 'async' but is not marked with 'await'
+3251 |             candidateId: "a3-wrong-cow-\(cowCampId ?? "nil")"
+3252 |         )
+3253 |         try fixture.database.pool.write { database in
+     |         |   `- note: call is 'async'
+     |         `- error: expression is 'async' but is not marked with 'await'
+3254 |             if let cowCampId {
+3255 |                 try CampRecord(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:3306:9: error: expression is 'async' but is not marked with 'await'
+3304 |                 "a3-orchestrated-wrong-cow-\(cowCampId ?? "nil")"
+3305 |         )
+3306 |         try orchestratedFixture.database.pool.write { database in
+     |         |   `- note: call is 'async'
+     |         `- error: expression is 'async' but is not marked with 'await'
+3307 |             if let cowCampId {
+3308 |                 try CampRecord(

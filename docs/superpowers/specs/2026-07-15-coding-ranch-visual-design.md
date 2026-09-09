@@ -1,5 +1,8 @@
 # Coding 牧场视觉设计 V1（小剧场牧场化）
 
+> **当前权威状态：Superseded for product direction（2026-07-25）。**
+> 当前方向由 [`2026-07-25-personal-ai-ranch-master-spec.md`](2026-07-25-personal-ai-ranch-master-spec.md) 定义。本文件冻结为历史设计与实现输入；其中的视觉方向、路线、范围排除或产品表述不再构成当前要求，时点事实只对原记录基线有效。
+
 - 日期：2026-07-15
 - 状态：方向已定稿并完成首轮 App 落地（静态氛围资产 + 动态 Coding 草原）
 - 前置：`2026-07-04-agentloop-macos-mvp-design.md` §11.2/§11.3（小剧场与动效体系）、Coding 牧场产品化改造（2026-07-14，见 `docs/collaboration/tasks/2026-07-14-coding-ranch-mvp/`）

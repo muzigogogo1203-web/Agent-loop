@@ -1,0 +1,2734 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[3/8] Emitting module AgentLoopTestSuite
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1452:13: error: cannot find type 'ScheduleSlotContextV1' in scope
+1450 |     _ schedule: ScheduleRecord,
+1451 |     scheduledAt: Date
+1452 | ) throws -> ScheduleSlotContextV1 {
+     |             `- error: cannot find type 'ScheduleSlotContextV1' in scope
+1453 |     let timeZone = try #require(
+1454 |         TimeZone(identifier: "America/Los_Angeles")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1478:13: error: cannot find type 'SchedulePlanningStartCommand' in scope
+1476 |     ),
+1477 |     traceId: String
+1478 | ) throws -> SchedulePlanningStartCommand {
+     |             `- error: cannot find type 'SchedulePlanningStartCommand' in scope
+1479 |     SchedulePlanningStartCommand(
+1480 |         scheduleId: schedule.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1473:18: error: cannot find type 'ScheduleFirePreparation' in scope
+1471 |     _ schedule: ScheduleRecord,
+1472 |     scheduledAt: Date,
+1473 |     preparation: ScheduleFirePreparation = .selected(
+     |                  `- error: cannot find type 'ScheduleFirePreparation' in scope
+1474 |         runtimeProfileId: "planning-profile",
+1475 |         plannerModel: "planner-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1492:17: error: cannot find type 'ScheduleFireCommitResult' in scope
+1490 | private struct A4RestartSetup: Sendable {
+1491 |     let scheduleId: String
+1492 |     let result: ScheduleFireCommitResult
+     |                 `- error: cannot find type 'ScheduleFireCommitResult' in scope
+1493 | }
+1494 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1564:17: error: cannot find type 'ScheduleFireRecord' in scope
+1562 | 
+1563 | private struct A4ScheduleGraphSnapshot: Equatable {
+1564 |     let fires: [ScheduleFireRecord]
+     |                 `- error: cannot find type 'ScheduleFireRecord' in scope
+1565 |     let cursor: ScheduleEvaluationCursorRecord?
+1566 |     let lastFiredAtBits: UInt64?
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1565:17: error: cannot find type 'ScheduleEvaluationCursorRecord' in scope
+1563 | private struct A4ScheduleGraphSnapshot: Equatable {
+1564 |     let fires: [ScheduleFireRecord]
+1565 |     let cursor: ScheduleEvaluationCursorRecord?
+     |                 `- error: cannot find type 'ScheduleEvaluationCursorRecord' in scope
+1566 |     let lastFiredAtBits: UInt64?
+1567 |     let squadCount: Int
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1563:16: error: type 'A4ScheduleGraphSnapshot' does not conform to protocol 'Equatable'
+1561 | }
+1562 | 
+1563 | private struct A4ScheduleGraphSnapshot: Equatable {
+     |                |- error: type 'A4ScheduleGraphSnapshot' does not conform to protocol 'Equatable'
+     |                `- note: add stubs for conformance
+1564 |     let fires: [ScheduleFireRecord]
+     |         `- note: stored property type '<<error type>>' does not conform to protocol 'Equatable', preventing synthesized conformance of 'A4ScheduleGraphSnapshot' to 'Equatable'
+1565 |     let cursor: ScheduleEvaluationCursorRecord?
+     |         `- note: stored property type '<<error type>>' does not conform to protocol 'Equatable', preventing synthesized conformance of 'A4ScheduleGraphSnapshot' to 'Equatable'
+1566 |     let lastFiredAtBits: UInt64?
+1567 |     let squadCount: Int
+
+Swift.==:1:24: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'RawRepresentable'
+1 | @inlinable public func == <T>(lhs: T, rhs: T) -> Bool where T : RawRepresentable, T.RawValue : Equatable
+  |                        `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'RawRepresentable'
+
+Swift.FloatingPoint.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'FloatingPoint'
+1 | protocol FloatingPoint {
+2 | public static func == (lhs: Self, rhs: Self) -> Bool}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'FloatingPoint'
+3 | 
+
+Swift.BinaryInteger.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'BinaryInteger'
+1 | protocol BinaryInteger {
+2 | public static func == <Other>(lhs: Self, rhs: Other) -> Bool where Other : BinaryInteger}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'BinaryInteger'
+3 | 
+
+Swift._Pointer.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_Pointer'
+1 | protocol _Pointer {
+2 | public static func == (lhs: Self, rhs: Self) -> Bool}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_Pointer'
+3 | 
+
+Swift._Pointer.==:2:31: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_Pointer'
+1 | protocol _Pointer {
+2 | @inlinable public static func == <Other>(lhs: Self, rhs: Other) -> Bool where Other : _Pointer}
+  |                               `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_Pointer'
+3 | 
+
+Swift.Strideable.==:2:31: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'Strideable'
+1 | protocol Strideable {
+2 | @inlinable public static func == (x: Self, y: Self) -> Bool}
+  |                               `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'Strideable'
+3 | 
+
+Swift.StringProtocol.==:2:31: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'StringProtocol'
+1 | protocol StringProtocol {
+2 | @inlinable public static func == <RHS>(lhs: Self, rhs: RHS) -> Bool where RHS : StringProtocol}
+  |                               `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'StringProtocol'
+3 | 
+
+Swift.SIMD.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'SIMD'
+1 | protocol SIMD {
+2 | public static func == (a: Self, b: Self) -> Bool}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'SIMD'
+3 | 
+
+Foundation.AttributedStringProtocol.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'AttributedStringProtocol'
+1 | protocol AttributedStringProtocol {
+2 | public static func == <RHS>(lhs: Self, rhs: RHS) -> Bool where RHS : AttributedStringProtocol}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'AttributedStringProtocol'
+3 | 
+
+Foundation._BridgedStoredNSError.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_BridgedStoredNSError'
+1 | protocol _BridgedStoredNSError {
+2 | public static func == (lhs: Self, rhs: Self) -> Bool}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_BridgedStoredNSError'
+3 | 
+
+/Users/muzi/Agent-loop/.build/checkouts/GRDB.swift/GRDB/QueryInterface/SQL/SQLOperators.swift:20:24: note: candidate has non-matching type '<Self> (Self, (any SQLExpressible)?) -> SQLExpression'
+ 18 |     /// Column("name") == nil
+ 19 |     /// ```
+ 20 |     public static func == (lhs: Self, rhs: (any SQLExpressible)?) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Self, (any SQLExpressible)?) -> SQLExpression'
+ 21 |         .equal(lhs.sqlExpression, rhs?.sqlExpression ?? .null)
+ 22 |     }
+ 23 |     
+ 24 |     /// The `=` SQL operator.
+ 25 |     public static func == (lhs: Self, rhs: Bool) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Self, Bool) -> SQLExpression'
+ 26 |         if rhs {
+ 27 |             return lhs.sqlExpression.is(.true)
+    :
+ 47 |     /// nil == Column("name")
+ 48 |     /// ```
+ 49 |     public static func == (lhs: (any SQLExpressible)?, rhs: Self) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> ((any SQLExpressible)?, Self) -> SQLExpression'
+ 50 |         .equal(lhs?.sqlExpression ?? .null, rhs.sqlExpression)
+ 51 |     }
+ 52 |     
+ 53 |     /// The `=` SQL operator.
+ 54 |     public static func == (lhs: Bool, rhs: Self) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Bool, Self) -> SQLExpression'
+ 55 |         if lhs {
+ 56 |             return rhs.sqlExpression.is(.true)
+    :
+ 61 |     
+ 62 |     /// The `=` SQL operator.
+ 63 |     public static func == (lhs: Self, rhs: some SQLSpecificExpressible) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Self, some SQLSpecificExpressible) -> SQLExpression'
+ 64 |         .equal(lhs.sqlExpression, rhs.sqlExpression)
+ 65 |     }
+
+CoreFoundation._CFObject.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_CFObject'
+1 | protocol _CFObject {
+2 | public static func == (left: Self, right: Self) -> Bool}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_CFObject'
+3 | 
+
+Swift.Equatable.==:2:13: note: protocol requires function '==' with type '(A4ScheduleGraphSnapshot, A4ScheduleGraphSnapshot) -> Bool'
+1 | protocol Equatable {
+2 | static func == (lhs: Self, rhs: Self) -> Bool}
+  |             `- note: protocol requires function '==' with type '(A4ScheduleGraphSnapshot, A4ScheduleGraphSnapshot) -> Bool'
+3 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1621:18: error: cannot find type 'ScheduleFireCommitResult' in scope
+1619 | 
+1620 | private enum A4ScheduleRaceOutcome: @unchecked Sendable {
+1621 |     case success(ScheduleFireCommitResult)
+     |                  `- error: cannot find type 'ScheduleFireCommitResult' in scope
+1622 |     case failure(any Error)
+1623 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1690:19: error: cannot find type 'ScheduleFireCommitResult' in scope
+1688 | 
+1689 | private struct A4ScheduleRaceResult: Sendable {
+1690 |     let results: [ScheduleFireCommitResult]
+     |                   `- error: cannot find type 'ScheduleFireCommitResult' in scope
+1691 |     let resolverCounts: [Int]
+1692 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1696:19: error: cannot find type 'SchedulePlanningStartCommand' in scope
+1694 | private func a4RunScheduleRace(
+1695 |     database: AppDatabase,
+1696 |     firstCommand: SchedulePlanningStartCommand,
+     |                   `- error: cannot find type 'SchedulePlanningStartCommand' in scope
+1697 |     secondCommand: SchedulePlanningStartCommand
+1698 | ) async throws -> A4ScheduleRaceResult {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1697:20: error: cannot find type 'SchedulePlanningStartCommand' in scope
+1695 |     database: AppDatabase,
+1696 |     firstCommand: SchedulePlanningStartCommand,
+1697 |     secondCommand: SchedulePlanningStartCommand
+     |                    `- error: cannot find type 'SchedulePlanningStartCommand' in scope
+1698 | ) async throws -> A4ScheduleRaceResult {
+1699 |     let state = A4ScheduleRaceState()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:177:17: error: cannot find type 'ScheduleEvaluationCursorRecord' in scope
+ 175 |     let planningWorkCount: Int
+ 176 |     let scheduleEventCount: Int
+ 177 |     let cursor: ScheduleEvaluationCursorRecord?
+     |                 `- error: cannot find type 'ScheduleEvaluationCursorRecord' in scope
+ 178 |     let lastFiredAt: Date?
+ 179 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:172:16: error: type 'ScheduleMutationSnapshot' does not conform to protocol 'Equatable'
+ 170 | }
+ 171 | 
+ 172 | private struct ScheduleMutationSnapshot: Equatable {
+     |                |- error: type 'ScheduleMutationSnapshot' does not conform to protocol 'Equatable'
+     |                `- note: add stubs for conformance
+ 173 |     let fireCount: Int
+ 174 |     let missionCount: Int
+ 175 |     let planningWorkCount: Int
+ 176 |     let scheduleEventCount: Int
+ 177 |     let cursor: ScheduleEvaluationCursorRecord?
+     |         `- note: stored property type '<<error type>>' does not conform to protocol 'Equatable', preventing synthesized conformance of 'ScheduleMutationSnapshot' to 'Equatable'
+ 178 |     let lastFiredAt: Date?
+ 179 | }
+
+Swift.==:1:24: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'RawRepresentable'
+1 | @inlinable public func == <T>(lhs: T, rhs: T) -> Bool where T : RawRepresentable, T.RawValue : Equatable
+  |                        `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'RawRepresentable'
+
+Swift.FloatingPoint.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'FloatingPoint'
+1 | protocol FloatingPoint {
+2 | public static func == (lhs: Self, rhs: Self) -> Bool}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'FloatingPoint'
+3 | 
+
+Swift.BinaryInteger.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'BinaryInteger'
+1 | protocol BinaryInteger {
+2 | public static func == <Other>(lhs: Self, rhs: Other) -> Bool where Other : BinaryInteger}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'BinaryInteger'
+3 | 
+
+Swift._Pointer.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_Pointer'
+1 | protocol _Pointer {
+2 | public static func == (lhs: Self, rhs: Self) -> Bool}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_Pointer'
+3 | 
+
+Swift._Pointer.==:2:31: note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_Pointer'
+1 | protocol _Pointer {
+2 | @inlinable public static func == <Other>(lhs: Self, rhs: Other) -> Bool where Other : _Pointer}
+  |                               `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_Pointer'
+3 | 
+
+Swift.Strideable.==:2:31: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'Strideable'
+1 | protocol Strideable {
+2 | @inlinable public static func == (x: Self, y: Self) -> Bool}
+  |                               `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'Strideable'
+3 | 
+
+Swift.StringProtocol.==:2:31: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'StringProtocol'
+1 | protocol StringProtocol {
+2 | @inlinable public static func == <RHS>(lhs: Self, rhs: RHS) -> Bool where RHS : StringProtocol}
+  |                               `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'StringProtocol'
+3 | 
+
+Swift.SIMD.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'SIMD'
+1 | protocol SIMD {
+2 | public static func == (a: Self, b: Self) -> Bool}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'SIMD'
+3 | 
+
+Foundation.AttributedStringProtocol.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'AttributedStringProtocol'
+1 | protocol AttributedStringProtocol {
+2 | public static func == <RHS>(lhs: Self, rhs: RHS) -> Bool where RHS : AttributedStringProtocol}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'AttributedStringProtocol'
+3 | 
+
+Foundation._BridgedStoredNSError.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_BridgedStoredNSError'
+1 | protocol _BridgedStoredNSError {
+2 | public static func == (lhs: Self, rhs: Self) -> Bool}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_BridgedStoredNSError'
+3 | 
+
+/Users/muzi/Agent-loop/.build/checkouts/GRDB.swift/GRDB/QueryInterface/SQL/SQLOperators.swift:20:24: note: candidate has non-matching type '<Self> (Self, (any SQLExpressible)?) -> SQLExpression'
+ 18 |     /// Column("name") == nil
+ 19 |     /// ```
+ 20 |     public static func == (lhs: Self, rhs: (any SQLExpressible)?) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Self, (any SQLExpressible)?) -> SQLExpression'
+ 21 |         .equal(lhs.sqlExpression, rhs?.sqlExpression ?? .null)
+ 22 |     }
+ 23 |     
+ 24 |     /// The `=` SQL operator.
+ 25 |     public static func == (lhs: Self, rhs: Bool) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Self, Bool) -> SQLExpression'
+ 26 |         if rhs {
+ 27 |             return lhs.sqlExpression.is(.true)
+    :
+ 47 |     /// nil == Column("name")
+ 48 |     /// ```
+ 49 |     public static func == (lhs: (any SQLExpressible)?, rhs: Self) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> ((any SQLExpressible)?, Self) -> SQLExpression'
+ 50 |         .equal(lhs?.sqlExpression ?? .null, rhs.sqlExpression)
+ 51 |     }
+ 52 |     
+ 53 |     /// The `=` SQL operator.
+ 54 |     public static func == (lhs: Bool, rhs: Self) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Bool, Self) -> SQLExpression'
+ 55 |         if lhs {
+ 56 |             return rhs.sqlExpression.is(.true)
+    :
+ 61 |     
+ 62 |     /// The `=` SQL operator.
+ 63 |     public static func == (lhs: Self, rhs: some SQLSpecificExpressible) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Self, some SQLSpecificExpressible) -> SQLExpression'
+ 64 |         .equal(lhs.sqlExpression, rhs.sqlExpression)
+ 65 |     }
+
+CoreFoundation._CFObject.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_CFObject'
+1 | protocol _CFObject {
+2 | public static func == (left: Self, right: Self) -> Bool}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_CFObject'
+3 | 
+
+Swift.Equatable.==:2:13: note: protocol requires function '==' with type '(ScheduleMutationSnapshot, ScheduleMutationSnapshot) -> Bool'
+1 | protocol Equatable {
+2 | static func == (lhs: Self, rhs: Self) -> Bool}
+  |             `- note: protocol requires function '==' with type '(ScheduleMutationSnapshot, ScheduleMutationSnapshot) -> Bool'
+3 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:230:13: error: cannot find type 'ScheduleSlotContextV1' in scope
+ 228 |     _ fixture: ScheduleFireTestFixture,
+ 229 |     at date: Date
+ 230 | ) throws -> ScheduleSlotContextV1 {
+     |             `- error: cannot find type 'ScheduleSlotContextV1' in scope
+ 231 |     let (calendar, timeZone) = scheduleCalendar("America/Los_Angeles")
+ 232 |     return try ScheduleMath.slotContext(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:248:6: error: cannot find type 'SchedulePlanningStartCommand' in scope
+ 246 |     preparation: ScheduleFirePreparation,
+ 247 |     traceId: String
+ 248 | ) -> SchedulePlanningStartCommand {
+     |      `- error: cannot find type 'SchedulePlanningStartCommand' in scope
+ 249 |     SchedulePlanningStartCommand(
+ 250 |         scheduleId: fixture.schedule.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:245:14: error: cannot find type 'ScheduleSlotContextV1' in scope
+ 243 | private func scheduleStartCommand(
+ 244 |     _ fixture: ScheduleFireTestFixture,
+ 245 |     context: ScheduleSlotContextV1,
+     |              `- error: cannot find type 'ScheduleSlotContextV1' in scope
+ 246 |     preparation: ScheduleFirePreparation,
+ 247 |     traceId: String
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:246:18: error: cannot find type 'ScheduleFirePreparation' in scope
+ 244 |     _ fixture: ScheduleFireTestFixture,
+ 245 |     context: ScheduleSlotContextV1,
+ 246 |     preparation: ScheduleFirePreparation,
+     |                  `- error: cannot find type 'ScheduleFirePreparation' in scope
+ 247 |     traceId: String
+ 248 | ) -> SchedulePlanningStartCommand {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:259:6: error: cannot find type 'ScheduleFirePreparation' in scope
+ 257 | private func scheduleSelectedPreparation(
+ 258 |     _ fixture: ScheduleFireTestFixture
+ 259 | ) -> ScheduleFirePreparation {
+     |      `- error: cannot find type 'ScheduleFirePreparation' in scope
+ 260 |     .selected(
+ 261 |         runtimeProfileId: fixture.runtimeProfileId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:272:13: error: cannot find type 'ScheduleReplayStartCommand' in scope
+ 270 |     replayIdempotencyKey: String,
+ 271 |     traceId: String
+ 272 | ) throws -> ScheduleReplayStartCommand {
+     |             `- error: cannot find type 'ScheduleReplayStartCommand' in scope
+ 273 |     let payload = try ScheduleReplayPayloadV1(
+ 274 |         originalFire: original,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:267:15: error: cannot find type 'ScheduleFireRecord' in scope
+ 265 | 
+ 266 | private func scheduleReplayCommand(
+ 267 |     original: ScheduleFireRecord,
+     |               `- error: cannot find type 'ScheduleFireRecord' in scope
+ 268 |     effectiveTemplateId: String,
+ 269 |     preparation: ScheduleFirePreparation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:269:18: error: cannot find type 'ScheduleFirePreparation' in scope
+ 267 |     original: ScheduleFireRecord,
+ 268 |     effectiveTemplateId: String,
+ 269 |     preparation: ScheduleFirePreparation,
+     |                  `- error: cannot find type 'ScheduleFirePreparation' in scope
+ 270 |     replayIdempotencyKey: String,
+ 271 |     traceId: String
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:338:18: error: cannot find type 'ScheduleFireCommitResult' in scope
+ 336 | 
+ 337 | private enum ScheduleReplayRaceOutcome: @unchecked Sendable {
+ 338 |     case success(ScheduleFireCommitResult)
+     |                  `- error: cannot find type 'ScheduleFireCommitResult' in scope
+ 339 |     case failure(any Error)
+ 340 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:425:19: error: cannot find type 'ScheduleFireCommitResult' in scope
+ 423 | 
+ 424 | private struct ScheduleReplayRaceResult: Sendable {
+ 425 |     let results: [ScheduleFireCommitResult]
+     |                   `- error: cannot find type 'ScheduleFireCommitResult' in scope
+ 426 |     let resolverCounts: [Int]
+ 427 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:431:19: error: cannot find type 'ScheduleReplayStartCommand' in scope
+ 429 | private func runScheduleReplayRace(
+ 430 |     database: AppDatabase,
+ 431 |     firstCommand: ScheduleReplayStartCommand,
+     |                   `- error: cannot find type 'ScheduleReplayStartCommand' in scope
+ 432 |     secondCommand: ScheduleReplayStartCommand
+ 433 | ) async throws -> ScheduleReplayRaceResult {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:432:20: error: cannot find type 'ScheduleReplayStartCommand' in scope
+ 430 |     database: AppDatabase,
+ 431 |     firstCommand: ScheduleReplayStartCommand,
+ 432 |     secondCommand: ScheduleReplayStartCommand
+     |                    `- error: cannot find type 'ScheduleReplayStartCommand' in scope
+ 433 | ) async throws -> ScheduleReplayRaceResult {
+ 434 |     let state = ScheduleReplayRaceState()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:906:22: error: cannot find type 'ScheduleFirePreparation' in scope
+ 904 |     func requireTerminalFailure(
+ 905 |         label: String,
+ 906 |         preparation: ScheduleFirePreparation,
+     |                      `- error: cannot find type 'ScheduleFirePreparation' in scope
+ 907 |         expectedCode: String,
+ 908 |         expectedMessage: String,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:969:23: error: cannot infer contextual base in reference to member 'selected'
+ 967 |     try requireTerminalFailure(
+ 968 |         label: "disabled",
+ 969 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+ 970 |             runtimeProfileId: "schedule-a4-runtime",
+ 971 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:986:23: error: cannot infer contextual base in reference to member 'selected'
+ 984 |     try requireTerminalFailure(
+ 985 |         label: "configuration",
+ 986 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+ 987 |             runtimeProfileId: "schedule-a4-runtime",
+ 988 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1004:23: error: cannot infer contextual base in reference to member 'selected'
+1002 |     try requireTerminalFailure(
+1003 |         label: "archived",
+1004 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1005 |             runtimeProfileId: "schedule-a4-runtime",
+1006 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1021:23: error: cannot infer contextual base in reference to member 'selected'
+1019 |     try requireTerminalFailure(
+1020 |         label: "template",
+1021 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1022 |             runtimeProfileId: "schedule-a4-runtime",
+1023 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1038:23: error: cannot infer contextual base in reference to member 'selected'
+1036 |     try requireTerminalFailure(
+1037 |         label: "missing-cow",
+1038 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1039 |             runtimeProfileId: "schedule-a4-runtime",
+1040 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1055:23: error: cannot infer contextual base in reference to member 'selected'
+1053 |     try requireTerminalFailure(
+1054 |         label: "wrong-camp-cow",
+1055 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1056 |             runtimeProfileId: "schedule-a4-runtime",
+1057 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1072:23: error: cannot infer contextual base in reference to member 'unavailable'
+1070 |     try requireTerminalFailure(
+1071 |         label: "runtime-unavailable",
+1072 |         preparation: .unavailable,
+     |                       `- error: cannot infer contextual base in reference to member 'unavailable'
+1073 |         expectedCode: "schedule_runtime_unavailable",
+1074 |         expectedMessage: "定时行动的运行配置不可用。",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1081:23: error: cannot infer contextual base in reference to member 'selected'
+1079 |     try requireTerminalFailure(
+1080 |         label: "profile-missing",
+1081 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1082 |             runtimeProfileId: "schedule-a4-runtime",
+1083 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1100:23: error: cannot infer contextual base in reference to member 'selected'
+1098 |     try requireTerminalFailure(
+1099 |         label: "profile-cli",
+1100 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1101 |             runtimeProfileId: "schedule-a4-runtime",
+1102 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1119:23: error: cannot infer contextual base in reference to member 'selected'
+1117 |     try requireTerminalFailure(
+1118 |         label: "provider",
+1119 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1120 |             runtimeProfileId: "schedule-a4-runtime",
+1121 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1129:23: error: cannot infer contextual base in reference to member 'forcedFailure'
+1127 |     try requireTerminalFailure(
+1128 |         label: "offline",
+1129 |         preparation: .forcedFailure,
+     |                       `- error: cannot infer contextual base in reference to member 'forcedFailure'
+1130 |         expectedCode: "schedule_missed_while_offline",
+1131 |         expectedMessage: "定时行动在应用离线期间错过了触发时间。",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1166:38: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1164 |         let before = try scheduleMutationSnapshot(fixture)
+1165 |         #expect(throws: DatabaseError.self) {
+1166 |             _ = try fixture.database.startScheduledMission(
+     |                                      `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1167 |                 scheduleStartCommand(
+1168 |                     fixture,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1189:33: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1187 |     let haltedBefore = try scheduleMutationSnapshot(halted)
+1188 |     #expect(throws: PlanningDurableDispatchNotRunningError.self) {
+1189 |         _ = try halted.database.startScheduledMission(
+     |                                 `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1190 |             scheduleStartCommand(
+1191 |                 halted,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1208:34: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1206 |     enum UnknownScheduleResolverError: Error { case injected }
+1207 |     #expect(throws: UnknownScheduleResolverError.injected) {
+1208 |         _ = try unknown.database.startScheduledMission(
+     |                                  `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1209 |             scheduleStartCommand(
+1210 |                 unknown,
+[4/8] Compiling AgentLoopTestSuite ScheduleTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:177:17: error: cannot find type 'ScheduleEvaluationCursorRecord' in scope
+ 175 |     let planningWorkCount: Int
+ 176 |     let scheduleEventCount: Int
+ 177 |     let cursor: ScheduleEvaluationCursorRecord?
+     |                 `- error: cannot find type 'ScheduleEvaluationCursorRecord' in scope
+ 178 |     let lastFiredAt: Date?
+ 179 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:172:16: error: type 'ScheduleMutationSnapshot' does not conform to protocol 'Equatable'
+ 170 | }
+ 171 | 
+ 172 | private struct ScheduleMutationSnapshot: Equatable {
+     |                |- error: type 'ScheduleMutationSnapshot' does not conform to protocol 'Equatable'
+     |                `- note: add stubs for conformance
+ 173 |     let fireCount: Int
+ 174 |     let missionCount: Int
+ 175 |     let planningWorkCount: Int
+ 176 |     let scheduleEventCount: Int
+ 177 |     let cursor: ScheduleEvaluationCursorRecord?
+     |         `- note: stored property type '<<error type>>' does not conform to protocol 'Equatable', preventing synthesized conformance of 'ScheduleMutationSnapshot' to 'Equatable'
+ 178 |     let lastFiredAt: Date?
+ 179 | }
+
+Swift.==:1:24: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'RawRepresentable'
+1 | @inlinable public func == <T>(lhs: T, rhs: T) -> Bool where T : RawRepresentable, T.RawValue : Equatable
+  |                        `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'RawRepresentable'
+
+Swift.FloatingPoint.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'FloatingPoint'
+1 | protocol FloatingPoint {
+2 | public static func == (lhs: Self, rhs: Self) -> Bool}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'FloatingPoint'
+3 | 
+
+Swift.BinaryInteger.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'BinaryInteger'
+1 | protocol BinaryInteger {
+2 | public static func == <Other>(lhs: Self, rhs: Other) -> Bool where Other : BinaryInteger}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'BinaryInteger'
+3 | 
+
+Swift._Pointer.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_Pointer'
+1 | protocol _Pointer {
+2 | public static func == (lhs: Self, rhs: Self) -> Bool}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_Pointer'
+3 | 
+
+Swift._Pointer.==:2:31: note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_Pointer'
+1 | protocol _Pointer {
+2 | @inlinable public static func == <Other>(lhs: Self, rhs: Other) -> Bool where Other : _Pointer}
+  |                               `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_Pointer'
+3 | 
+
+Swift.Strideable.==:2:31: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'Strideable'
+1 | protocol Strideable {
+2 | @inlinable public static func == (x: Self, y: Self) -> Bool}
+  |                               `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'Strideable'
+3 | 
+
+Swift.StringProtocol.==:2:31: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'StringProtocol'
+1 | protocol StringProtocol {
+2 | @inlinable public static func == <RHS>(lhs: Self, rhs: RHS) -> Bool where RHS : StringProtocol}
+  |                               `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'StringProtocol'
+3 | 
+
+Swift.SIMD.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'SIMD'
+1 | protocol SIMD {
+2 | public static func == (a: Self, b: Self) -> Bool}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'SIMD'
+3 | 
+
+Foundation.AttributedStringProtocol.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'AttributedStringProtocol'
+1 | protocol AttributedStringProtocol {
+2 | public static func == <RHS>(lhs: Self, rhs: RHS) -> Bool where RHS : AttributedStringProtocol}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to 'AttributedStringProtocol'
+3 | 
+
+Foundation._BridgedStoredNSError.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_BridgedStoredNSError'
+1 | protocol _BridgedStoredNSError {
+2 | public static func == (lhs: Self, rhs: Self) -> Bool}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_BridgedStoredNSError'
+3 | 
+
+/Users/muzi/Agent-loop/.build/checkouts/GRDB.swift/GRDB/QueryInterface/SQL/SQLOperators.swift:20:24: note: candidate has non-matching type '<Self> (Self, (any SQLExpressible)?) -> SQLExpression'
+ 18 |     /// Column("name") == nil
+ 19 |     /// ```
+ 20 |     public static func == (lhs: Self, rhs: (any SQLExpressible)?) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Self, (any SQLExpressible)?) -> SQLExpression'
+ 21 |         .equal(lhs.sqlExpression, rhs?.sqlExpression ?? .null)
+ 22 |     }
+ 23 |     
+ 24 |     /// The `=` SQL operator.
+ 25 |     public static func == (lhs: Self, rhs: Bool) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Self, Bool) -> SQLExpression'
+ 26 |         if rhs {
+ 27 |             return lhs.sqlExpression.is(.true)
+    :
+ 47 |     /// nil == Column("name")
+ 48 |     /// ```
+ 49 |     public static func == (lhs: (any SQLExpressible)?, rhs: Self) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> ((any SQLExpressible)?, Self) -> SQLExpression'
+ 50 |         .equal(lhs?.sqlExpression ?? .null, rhs.sqlExpression)
+ 51 |     }
+ 52 |     
+ 53 |     /// The `=` SQL operator.
+ 54 |     public static func == (lhs: Bool, rhs: Self) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Bool, Self) -> SQLExpression'
+ 55 |         if lhs {
+ 56 |             return rhs.sqlExpression.is(.true)
+    :
+ 61 |     
+ 62 |     /// The `=` SQL operator.
+ 63 |     public static func == (lhs: Self, rhs: some SQLSpecificExpressible) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Self, some SQLSpecificExpressible) -> SQLExpression'
+ 64 |         .equal(lhs.sqlExpression, rhs.sqlExpression)
+ 65 |     }
+
+CoreFoundation._CFObject.==:2:20: note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_CFObject'
+1 | protocol _CFObject {
+2 | public static func == (left: Self, right: Self) -> Bool}
+  |                    `- note: candidate would match if 'ScheduleMutationSnapshot' conformed to '_CFObject'
+3 | 
+
+Swift.Equatable.==:2:13: note: protocol requires function '==' with type '(ScheduleMutationSnapshot, ScheduleMutationSnapshot) -> Bool'
+1 | protocol Equatable {
+2 | static func == (lhs: Self, rhs: Self) -> Bool}
+  |             `- note: protocol requires function '==' with type '(ScheduleMutationSnapshot, ScheduleMutationSnapshot) -> Bool'
+3 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:230:13: error: cannot find type 'ScheduleSlotContextV1' in scope
+ 228 |     _ fixture: ScheduleFireTestFixture,
+ 229 |     at date: Date
+ 230 | ) throws -> ScheduleSlotContextV1 {
+     |             `- error: cannot find type 'ScheduleSlotContextV1' in scope
+ 231 |     let (calendar, timeZone) = scheduleCalendar("America/Los_Angeles")
+ 232 |     return try ScheduleMath.slotContext(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:248:6: error: cannot find type 'SchedulePlanningStartCommand' in scope
+ 246 |     preparation: ScheduleFirePreparation,
+ 247 |     traceId: String
+ 248 | ) -> SchedulePlanningStartCommand {
+     |      `- error: cannot find type 'SchedulePlanningStartCommand' in scope
+ 249 |     SchedulePlanningStartCommand(
+ 250 |         scheduleId: fixture.schedule.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:245:14: error: cannot find type 'ScheduleSlotContextV1' in scope
+ 243 | private func scheduleStartCommand(
+ 244 |     _ fixture: ScheduleFireTestFixture,
+ 245 |     context: ScheduleSlotContextV1,
+     |              `- error: cannot find type 'ScheduleSlotContextV1' in scope
+ 246 |     preparation: ScheduleFirePreparation,
+ 247 |     traceId: String
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:246:18: error: cannot find type 'ScheduleFirePreparation' in scope
+ 244 |     _ fixture: ScheduleFireTestFixture,
+ 245 |     context: ScheduleSlotContextV1,
+ 246 |     preparation: ScheduleFirePreparation,
+     |                  `- error: cannot find type 'ScheduleFirePreparation' in scope
+ 247 |     traceId: String
+ 248 | ) -> SchedulePlanningStartCommand {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:259:6: error: cannot find type 'ScheduleFirePreparation' in scope
+ 257 | private func scheduleSelectedPreparation(
+ 258 |     _ fixture: ScheduleFireTestFixture
+ 259 | ) -> ScheduleFirePreparation {
+     |      `- error: cannot find type 'ScheduleFirePreparation' in scope
+ 260 |     .selected(
+ 261 |         runtimeProfileId: fixture.runtimeProfileId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:272:13: error: cannot find type 'ScheduleReplayStartCommand' in scope
+ 270 |     replayIdempotencyKey: String,
+ 271 |     traceId: String
+ 272 | ) throws -> ScheduleReplayStartCommand {
+     |             `- error: cannot find type 'ScheduleReplayStartCommand' in scope
+ 273 |     let payload = try ScheduleReplayPayloadV1(
+ 274 |         originalFire: original,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:267:15: error: cannot find type 'ScheduleFireRecord' in scope
+ 265 | 
+ 266 | private func scheduleReplayCommand(
+ 267 |     original: ScheduleFireRecord,
+     |               `- error: cannot find type 'ScheduleFireRecord' in scope
+ 268 |     effectiveTemplateId: String,
+ 269 |     preparation: ScheduleFirePreparation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:269:18: error: cannot find type 'ScheduleFirePreparation' in scope
+ 267 |     original: ScheduleFireRecord,
+ 268 |     effectiveTemplateId: String,
+ 269 |     preparation: ScheduleFirePreparation,
+     |                  `- error: cannot find type 'ScheduleFirePreparation' in scope
+ 270 |     replayIdempotencyKey: String,
+ 271 |     traceId: String
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:338:18: error: cannot find type 'ScheduleFireCommitResult' in scope
+ 336 | 
+ 337 | private enum ScheduleReplayRaceOutcome: @unchecked Sendable {
+ 338 |     case success(ScheduleFireCommitResult)
+     |                  `- error: cannot find type 'ScheduleFireCommitResult' in scope
+ 339 |     case failure(any Error)
+ 340 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:425:19: error: cannot find type 'ScheduleFireCommitResult' in scope
+ 423 | 
+ 424 | private struct ScheduleReplayRaceResult: Sendable {
+ 425 |     let results: [ScheduleFireCommitResult]
+     |                   `- error: cannot find type 'ScheduleFireCommitResult' in scope
+ 426 |     let resolverCounts: [Int]
+ 427 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:431:19: error: cannot find type 'ScheduleReplayStartCommand' in scope
+ 429 | private func runScheduleReplayRace(
+ 430 |     database: AppDatabase,
+ 431 |     firstCommand: ScheduleReplayStartCommand,
+     |                   `- error: cannot find type 'ScheduleReplayStartCommand' in scope
+ 432 |     secondCommand: ScheduleReplayStartCommand
+ 433 | ) async throws -> ScheduleReplayRaceResult {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:432:20: error: cannot find type 'ScheduleReplayStartCommand' in scope
+ 430 |     database: AppDatabase,
+ 431 |     firstCommand: ScheduleReplayStartCommand,
+ 432 |     secondCommand: ScheduleReplayStartCommand
+     |                    `- error: cannot find type 'ScheduleReplayStartCommand' in scope
+ 433 | ) async throws -> ScheduleReplayRaceResult {
+ 434 |     let state = ScheduleReplayRaceState()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:273:23: error: cannot find 'ScheduleReplayPayloadV1' in scope
+ 271 |     traceId: String
+ 272 | ) throws -> ScheduleReplayStartCommand {
+ 273 |     let payload = try ScheduleReplayPayloadV1(
+     |                       `- error: cannot find 'ScheduleReplayPayloadV1' in scope
+ 274 |         originalFire: original,
+ 275 |         effectiveTemplateId: effectiveTemplateId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:324:25: error: cannot find 'ScheduleEvaluationCursorRecord' in scope
+ 322 |                     """
+ 323 |             ) ?? 0,
+ 324 |             cursor: try ScheduleEvaluationCursorRecord.fetchOne(
+     |                         `- error: cannot find 'ScheduleEvaluationCursorRecord' in scope
+ 325 |                 db,
+ 326 |                 key: fixture.schedule.id
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:300:12: error: the compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+ 298 | ) throws -> ScheduleMutationSnapshot {
+ 299 |     let database = fixture.database
+ 300 |     return try database.pool.read { db in
+     |            `- error: the compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+ 301 |         ScheduleMutationSnapshot(
+ 302 |             fireCount: try Int.fetchOne(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:451:34: error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+ 449 |                 index: 0,
+ 450 |                 outcome: .success(
+ 451 |                     try database.replayMissedScheduleFire(
+     |                                  `- error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+ 452 |                         firstCommand,
+ 453 |                         planningProviderResolver: firstResolver
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:468:34: error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+ 466 |                 index: 1,
+ 467 |                 outcome: .success(
+ 468 |                     try database.replayMissedScheduleFire(
+     |                                  `- error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+ 469 |                         secondCommand,
+ 470 |                         planningProviderResolver: secondResolver
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:491:19: error: cannot find type 'ScheduleFireCommitResult' in scope
+ 489 |             }
+ 490 |         }
+ 491 |     var results: [ScheduleFireCommitResult] = []
+     |                   `- error: cannot find type 'ScheduleFireCommitResult' in scope
+ 492 |     for (index, outcome) in outcomes.enumerated() {
+ 493 |         switch outcome {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:494:15: error: expression pattern of type 'ResultCode' cannot match values of type 'ScheduleReplayRaceOutcome'
+ 492 |     for (index, outcome) in outcomes.enumerated() {
+ 493 |         switch outcome {
+ 494 |         case .success(let result):
+     |               |- error: expression pattern of type 'ResultCode' cannot match values of type 'ScheduleReplayRaceOutcome'
+     |               `- note: overloads for '~=' exist with these partially matching parameter lists: (ResultCode, any Error)
+ 495 |             results.append(result)
+ 496 |         case .failure(let error):
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:494:15: error: reference to member 'success' cannot be resolved without a contextual type
+ 492 |     for (index, outcome) in outcomes.enumerated() {
+ 493 |         switch outcome {
+ 494 |         case .success(let result):
+     |               `- error: reference to member 'success' cannot be resolved without a contextual type
+ 495 |             results.append(result)
+ 496 |         case .failure(let error):
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:617:48: error: type 'ScheduleMath' has no member 'latestUnevaluatedSlot'
+ 615 |     let now = scheduleDate(2026, 7, 14, 10, 0, timeZoneID: "America/Los_Angeles")
+ 616 |     let createdAt = scheduleDate(2026, 7, 13, 8, 0, timeZoneID: "America/Los_Angeles")
+ 617 |     let missed = try #require(try ScheduleMath.latestUnevaluatedSlot(
+     |                                                `- error: type 'ScheduleMath' has no member 'latestUnevaluatedSlot'
+ 618 |         now: now,
+ 619 |         createdAt: createdAt,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:620:17: error: 'nil' requires a contextual type
+ 618 |         now: now,
+ 619 |         createdAt: createdAt,
+ 620 |         cursor: nil,
+     |                 `- error: 'nil' requires a contextual type
+ 621 |         frequency: .daily,
+ 622 |         hour: 9,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:621:21: error: cannot infer contextual base in reference to member 'daily'
+ 619 |         createdAt: createdAt,
+ 620 |         cursor: nil,
+ 621 |         frequency: .daily,
+     |                     `- error: cannot infer contextual base in reference to member 'daily'
+ 622 |         hour: 9,
+ 623 |         minute: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:617:18: warning: no calls to throwing functions occur within 'try' expression
+ 615 |     let now = scheduleDate(2026, 7, 14, 10, 0, timeZoneID: "America/Los_Angeles")
+ 616 |     let createdAt = scheduleDate(2026, 7, 13, 8, 0, timeZoneID: "America/Los_Angeles")
+ 617 |     let missed = try #require(try ScheduleMath.latestUnevaluatedSlot(
+     |                  `- warning: no calls to throwing functions occur within 'try' expression
+ 618 |         now: now,
+ 619 |         createdAt: createdAt,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:641:35: error: type 'ScheduleMath' has no member 'latestUnevaluatedSlot'
+ 639 |     let now = scheduleDate(2026, 7, 14, 10, 0, timeZoneID: "America/Los_Angeles")
+ 640 |     let createdAt = scheduleDate(2026, 7, 14, 9, 45, timeZoneID: "America/Los_Angeles")
+ 641 |     let missed = try ScheduleMath.latestUnevaluatedSlot(
+     |                                   `- error: type 'ScheduleMath' has no member 'latestUnevaluatedSlot'
+ 642 |         now: now,
+ 643 |         createdAt: createdAt,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:644:17: error: 'nil' requires a contextual type
+ 642 |         now: now,
+ 643 |         createdAt: createdAt,
+ 644 |         cursor: nil,
+     |                 `- error: 'nil' requires a contextual type
+ 645 |         frequency: .daily,
+ 646 |         hour: 9,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:645:21: error: cannot infer contextual base in reference to member 'daily'
+ 643 |         createdAt: createdAt,
+ 644 |         cursor: nil,
+ 645 |         frequency: .daily,
+     |                     `- error: cannot infer contextual base in reference to member 'daily'
+ 646 |         hour: 9,
+ 647 |         minute: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:657:34: error: type 'ScheduleMath' has no member 'slotContext'
+ 655 |     let (calendar, timeZone) = scheduleCalendar("America/Los_Angeles")
+ 656 |     let fire = scheduleDate(2026, 7, 14, 9, 0, timeZoneID: "America/Los_Angeles")
+ 657 |     let first = try ScheduleMath.slotContext(
+     |                                  `- error: type 'ScheduleMath' has no member 'slotContext'
+ 658 |         for: fire,
+ 659 |         frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:659:21: error: cannot infer contextual base in reference to member 'daily'
+ 657 |     let first = try ScheduleMath.slotContext(
+ 658 |         for: fire,
+ 659 |         frequency: .daily,
+     |                     `- error: cannot infer contextual base in reference to member 'daily'
+ 660 |         hour: 9,
+ 661 |         minute: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:662:18: error: 'nil' requires a contextual type
+ 660 |         hour: 9,
+ 661 |         minute: 0,
+ 662 |         weekday: nil,
+     |                  `- error: 'nil' requires a contextual type
+ 663 |         calendar: calendar,
+ 664 |         timeZone: timeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:666:37: error: type 'ScheduleMath' has no member 'slotContext'
+ 664 |         timeZone: timeZone
+ 665 |     )
+ 666 |     let repeated = try ScheduleMath.slotContext(
+     |                                     `- error: type 'ScheduleMath' has no member 'slotContext'
+ 667 |         for: fire,
+ 668 |         frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:668:21: error: cannot infer contextual base in reference to member 'daily'
+ 666 |     let repeated = try ScheduleMath.slotContext(
+ 667 |         for: fire,
+ 668 |         frequency: .daily,
+     |                     `- error: cannot infer contextual base in reference to member 'daily'
+ 669 |         hour: 9,
+ 670 |         minute: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:671:18: error: 'nil' requires a contextual type
+ 669 |         hour: 9,
+ 670 |         minute: 0,
+ 671 |         weekday: nil,
+     |                  `- error: 'nil' requires a contextual type
+ 672 |         calendar: calendar,
+ 673 |         timeZone: timeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:685:34: error: type 'ScheduleMath' has no member 'slotContext'
+ 683 |         timeZoneID: "America/Los_Angeles"
+ 684 |     )
+ 685 |     let later = try ScheduleMath.slotContext(
+     |                                  `- error: type 'ScheduleMath' has no member 'slotContext'
+ 686 |         for: nextDay,
+ 687 |         frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:687:21: error: cannot infer contextual base in reference to member 'daily'
+ 685 |     let later = try ScheduleMath.slotContext(
+ 686 |         for: nextDay,
+ 687 |         frequency: .daily,
+     |                     `- error: cannot infer contextual base in reference to member 'daily'
+ 688 |         hour: 9,
+ 689 |         minute: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:690:18: error: 'nil' requires a contextual type
+ 688 |         hour: 9,
+ 689 |         minute: 0,
+ 690 |         weekday: nil,
+     |                  `- error: 'nil' requires a contextual type
+ 691 |         calendar: calendar,
+ 692 |         timeZone: timeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:696:35: error: type 'ScheduleMath' has no member 'slotContext'
+ 694 |     #expect(later.slotKey != first.slotKey)
+ 695 | 
+ 696 |     let weekly = try ScheduleMath.slotContext(
+     |                                   `- error: type 'ScheduleMath' has no member 'slotContext'
+ 697 |         for: fire,
+ 698 |         frequency: .weekly,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:698:21: error: cannot infer contextual base in reference to member 'weekly'
+ 696 |     let weekly = try ScheduleMath.slotContext(
+ 697 |         for: fire,
+ 698 |         frequency: .weekly,
+     |                     `- error: cannot infer contextual base in reference to member 'weekly'
+ 699 |         hour: 9,
+ 700 |         minute: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:728:35: error: type 'ScheduleMath' has no member 'slotContext'
+ 726 |         timeZone: timeZone
+ 727 |     ))
+ 728 |     let spring = try ScheduleMath.slotContext(
+     |                                   `- error: type 'ScheduleMath' has no member 'slotContext'
+ 729 |         for: springFire,
+ 730 |         frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:730:21: error: cannot infer contextual base in reference to member 'daily'
+ 728 |     let spring = try ScheduleMath.slotContext(
+ 729 |         for: springFire,
+ 730 |         frequency: .daily,
+     |                     `- error: cannot infer contextual base in reference to member 'daily'
+ 731 |         hour: 2,
+ 732 |         minute: 30,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:733:18: error: 'nil' requires a contextual type
+ 731 |         hour: 2,
+ 732 |         minute: 30,
+ 733 |         weekday: nil,
+     |                  `- error: 'nil' requires a contextual type
+ 734 |         calendar: calendar,
+ 735 |         timeZone: timeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:745:26: error: type 'ScheduleMath' has no member 'slotContext'
+ 743 |     )
+ 744 |     #expect(
+ 745 |         try ScheduleMath.slotContext(
+     |                          `- error: type 'ScheduleMath' has no member 'slotContext'
+ 746 |             for: springFire,
+ 747 |             frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:747:25: error: cannot infer contextual base in reference to member 'daily'
+ 745 |         try ScheduleMath.slotContext(
+ 746 |             for: springFire,
+ 747 |             frequency: .daily,
+     |                         `- error: cannot infer contextual base in reference to member 'daily'
+ 748 |             hour: 2,
+ 749 |             minute: 30,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:750:22: error: 'nil' requires a contextual type
+ 748 |             hour: 2,
+ 749 |             minute: 30,
+ 750 |             weekday: nil,
+     |                      `- error: 'nil' requires a contextual type
+ 751 |             calendar: calendar,
+ 752 |             timeZone: timeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:758:38: error: type 'ScheduleMath' has no member 'slotContext'
+ 756 |     let firstFallDate = Date(timeIntervalSince1970: 1_793_521_800)
+ 757 |     let secondFallDate = Date(timeIntervalSince1970: 1_793_525_400)
+ 758 |     let firstFall = try ScheduleMath.slotContext(
+     |                                      `- error: type 'ScheduleMath' has no member 'slotContext'
+ 759 |         for: firstFallDate,
+ 760 |         frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:760:21: error: cannot infer contextual base in reference to member 'daily'
+ 758 |     let firstFall = try ScheduleMath.slotContext(
+ 759 |         for: firstFallDate,
+ 760 |         frequency: .daily,
+     |                     `- error: cannot infer contextual base in reference to member 'daily'
+ 761 |         hour: 1,
+ 762 |         minute: 30,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:763:18: error: 'nil' requires a contextual type
+ 761 |         hour: 1,
+ 762 |         minute: 30,
+ 763 |         weekday: nil,
+     |                  `- error: 'nil' requires a contextual type
+ 764 |         calendar: calendar,
+ 765 |         timeZone: timeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:767:39: error: type 'ScheduleMath' has no member 'slotContext'
+ 765 |         timeZone: timeZone
+ 766 |     )
+ 767 |     let secondFall = try ScheduleMath.slotContext(
+     |                                       `- error: type 'ScheduleMath' has no member 'slotContext'
+ 768 |         for: secondFallDate,
+ 769 |         frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:769:21: error: cannot infer contextual base in reference to member 'daily'
+ 767 |     let secondFall = try ScheduleMath.slotContext(
+ 768 |         for: secondFallDate,
+ 769 |         frequency: .daily,
+     |                     `- error: cannot infer contextual base in reference to member 'daily'
+ 770 |         hour: 1,
+ 771 |         minute: 30,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:772:18: error: 'nil' requires a contextual type
+ 770 |         hour: 1,
+ 771 |         minute: 30,
+ 772 |         weekday: nil,
+     |                  `- error: 'nil' requires a contextual type
+ 773 |         calendar: calendar,
+ 774 |         timeZone: timeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:791:35: error: type 'ScheduleMath' has no member 'slotContext'
+ 789 |     )
+ 790 |     #expect(firstFall.slotKey != secondFall.slotKey)
+ 791 |     let weekly = try ScheduleMath.slotContext(
+     |                                   `- error: type 'ScheduleMath' has no member 'slotContext'
+ 792 |         for: firstFallDate,
+ 793 |         frequency: .weekly,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:793:21: error: cannot infer contextual base in reference to member 'weekly'
+ 791 |     let weekly = try ScheduleMath.slotContext(
+ 792 |         for: firstFallDate,
+ 793 |         frequency: .weekly,
+     |                     `- error: cannot infer contextual base in reference to member 'weekly'
+ 794 |         hour: 1,
+ 795 |         minute: 30,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:802:32: error: type 'ScheduleMath' has no member 'slotContext'
+ 800 |     #expect(weekly.slotKey != firstFall.slotKey)
+ 801 |     let (utcCalendar, utcTimeZone) = scheduleCalendar("UTC")
+ 802 |     let utc = try ScheduleMath.slotContext(
+     |                                `- error: type 'ScheduleMath' has no member 'slotContext'
+ 803 |         for: firstFallDate,
+ 804 |         frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:804:21: error: cannot infer contextual base in reference to member 'daily'
+ 802 |     let utc = try ScheduleMath.slotContext(
+ 803 |         for: firstFallDate,
+ 804 |         frequency: .daily,
+     |                     `- error: cannot infer contextual base in reference to member 'daily'
+ 805 |         hour: 1,
+ 806 |         minute: 30,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:807:18: error: 'nil' requires a contextual type
+ 805 |         hour: 1,
+ 806 |         minute: 30,
+ 807 |         weekday: nil,
+     |                  `- error: 'nil' requires a contextual type
+ 808 |         calendar: utcCalendar,
+ 809 |         timeZone: utcTimeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:813:21: error: cannot find 'ScheduleSlotComponentsUnavailableError' in scope
+ 811 |     #expect(utc.slotKey != firstFall.slotKey)
+ 812 | 
+ 813 |     #expect(throws: ScheduleSlotComponentsUnavailableError.self) {
+     |                     `- error: cannot find 'ScheduleSlotComponentsUnavailableError' in scope
+ 814 |         _ = try ScheduleSlotComponentsV1(
+ 815 |             validating: DateComponents(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:814:17: error: cannot find 'ScheduleSlotComponentsV1' in scope
+ 812 | 
+ 813 |     #expect(throws: ScheduleSlotComponentsUnavailableError.self) {
+ 814 |         _ = try ScheduleSlotComponentsV1(
+     |                 `- error: cannot find 'ScheduleSlotComponentsV1' in scope
+ 815 |             validating: DateComponents(
+ 816 |                 era: 1,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:826:21: error: cannot find 'UnsupportedScheduleCalendarError' in scope
+ 824 |         )
+ 825 |     }
+ 826 |     #expect(throws: UnsupportedScheduleCalendarError.self) {
+     |                     `- error: cannot find 'UnsupportedScheduleCalendarError' in scope
+ 827 |         _ = try ScheduleMath.slotContext(
+ 828 |             for: firstFallDate,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:827:30: error: type 'ScheduleMath' has no member 'slotContext'
+ 825 |     }
+ 826 |     #expect(throws: UnsupportedScheduleCalendarError.self) {
+ 827 |         _ = try ScheduleMath.slotContext(
+     |                              `- error: type 'ScheduleMath' has no member 'slotContext'
+ 828 |             for: firstFallDate,
+ 829 |             frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:829:25: error: cannot infer contextual base in reference to member 'daily'
+ 827 |         _ = try ScheduleMath.slotContext(
+ 828 |             for: firstFallDate,
+ 829 |             frequency: .daily,
+     |                         `- error: cannot infer contextual base in reference to member 'daily'
+ 830 |             hour: 1,
+ 831 |             minute: 30,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:832:22: error: 'nil' requires a contextual type
+ 830 |             hour: 1,
+ 831 |             minute: 30,
+ 832 |             weekday: nil,
+     |                      `- error: 'nil' requires a contextual type
+ 833 |             calendar: Calendar(identifier: .buddhist),
+ 834 |             timeZone: timeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:837:41: error: type 'ScheduleMath' has no member 'slotContext'
+ 835 |         )
+ 836 |     }
+ 837 |     let negativeZero = try ScheduleMath.slotContext(
+     |                                         `- error: type 'ScheduleMath' has no member 'slotContext'
+ 838 |         for: Date(timeIntervalSince1970: -0.0),
+ 839 |         frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:839:21: error: cannot infer contextual base in reference to member 'daily'
+ 837 |     let negativeZero = try ScheduleMath.slotContext(
+ 838 |         for: Date(timeIntervalSince1970: -0.0),
+ 839 |         frequency: .daily,
+     |                     `- error: cannot infer contextual base in reference to member 'daily'
+ 840 |         hour: 0,
+ 841 |         minute: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:842:18: error: 'nil' requires a contextual type
+ 840 |         hour: 0,
+ 841 |         minute: 0,
+ 842 |         weekday: nil,
+     |                  `- error: 'nil' requires a contextual type
+ 843 |         calendar: utcCalendar,
+ 844 |         timeZone: utcTimeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:850:26: error: type 'ScheduleMath' has no member 'slotContext'
+ 848 |         negativeZero.scheduledAt.timeIntervalSince1970.bitPattern == 0
+ 849 |     )
+ 850 |     _ = try ScheduleMath.slotContext(
+     |                          `- error: type 'ScheduleMath' has no member 'slotContext'
+ 851 |         for: Date(timeIntervalSince1970: -62_135_596_800),
+ 852 |         frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:852:21: error: cannot infer contextual base in reference to member 'daily'
+ 850 |     _ = try ScheduleMath.slotContext(
+ 851 |         for: Date(timeIntervalSince1970: -62_135_596_800),
+ 852 |         frequency: .daily,
+     |                     `- error: cannot infer contextual base in reference to member 'daily'
+ 853 |         hour: 0,
+ 854 |         minute: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:855:18: error: 'nil' requires a contextual type
+ 853 |         hour: 0,
+ 854 |         minute: 0,
+ 855 |         weekday: nil,
+     |                  `- error: 'nil' requires a contextual type
+ 856 |         calendar: utcCalendar,
+ 857 |         timeZone: utcTimeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:865:25: error: cannot find 'ScheduleSlotComponentsUnavailableError' in scope
+ 863 |         -Double.greatestFiniteMagnitude,
+ 864 |     ] {
+ 865 |         #expect(throws: ScheduleSlotComponentsUnavailableError.self) {
+     |                         `- error: cannot find 'ScheduleSlotComponentsUnavailableError' in scope
+ 866 |             _ = try ScheduleMath.slotContext(
+ 867 |                 for: Date(timeIntervalSince1970: seconds),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:866:34: error: type 'ScheduleMath' has no member 'slotContext'
+ 864 |     ] {
+ 865 |         #expect(throws: ScheduleSlotComponentsUnavailableError.self) {
+ 866 |             _ = try ScheduleMath.slotContext(
+     |                                  `- error: type 'ScheduleMath' has no member 'slotContext'
+ 867 |                 for: Date(timeIntervalSince1970: seconds),
+ 868 |                 frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:868:29: error: cannot infer contextual base in reference to member 'daily'
+ 866 |             _ = try ScheduleMath.slotContext(
+ 867 |                 for: Date(timeIntervalSince1970: seconds),
+ 868 |                 frequency: .daily,
+     |                             `- error: cannot infer contextual base in reference to member 'daily'
+ 869 |                 hour: 0,
+ 870 |                 minute: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:871:26: error: 'nil' requires a contextual type
+ 869 |                 hour: 0,
+ 870 |                 minute: 0,
+ 871 |                 weekday: nil,
+     |                          `- error: 'nil' requires a contextual type
+ 872 |                 calendar: utcCalendar,
+ 873 |                 timeZone: utcTimeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:879:34: error: type 'ScheduleMath' has no member 'slotContext'
+ 877 |     for seconds in [Double.nan, Double.infinity, -Double.infinity] {
+ 878 |         #expect(throws: InvalidSchedulePlanningFireTimeError.self) {
+ 879 |             _ = try ScheduleMath.slotContext(
+     |                                  `- error: type 'ScheduleMath' has no member 'slotContext'
+ 880 |                 for: Date(timeIntervalSince1970: seconds),
+ 881 |                 frequency: .daily,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:881:29: error: cannot infer contextual base in reference to member 'daily'
+ 879 |             _ = try ScheduleMath.slotContext(
+ 880 |                 for: Date(timeIntervalSince1970: seconds),
+ 881 |                 frequency: .daily,
+     |                             `- error: cannot infer contextual base in reference to member 'daily'
+ 882 |                 hour: 0,
+ 883 |                 minute: 0,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:884:26: error: 'nil' requires a contextual type
+ 882 |                 hour: 0,
+ 883 |                 minute: 0,
+ 884 |                 weekday: nil,
+     |                          `- error: 'nil' requires a contextual type
+ 885 |                 calendar: utcCalendar,
+ 886 |                 timeZone: utcTimeZone
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:906:22: error: cannot find type 'ScheduleFirePreparation' in scope
+ 904 |     func requireTerminalFailure(
+ 905 |         label: String,
+ 906 |         preparation: ScheduleFirePreparation,
+     |                      `- error: cannot find type 'ScheduleFirePreparation' in scope
+ 907 |         expectedCode: String,
+ 908 |         expectedMessage: String,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:920:40: error: type 'ScheduleMath' has no member 'slotContext'
+ 918 |             "America/Los_Angeles"
+ 919 |         )
+ 920 |         let context = try ScheduleMath.slotContext(
+     |                                        `- error: type 'ScheduleMath' has no member 'slotContext'
+ 921 |             for: scheduledAt,
+ 922 |             frequency: capturedSchedule.frequency,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:930:13: error: cannot find 'SchedulePlanningStartCommand' in scope
+ 928 |         )
+ 929 |         let result = try fixture.database.startScheduledMission(
+ 930 |             SchedulePlanningStartCommand(
+     |             `- error: cannot find 'SchedulePlanningStartCommand' in scope
+ 931 |                 scheduleId: capturedSchedule.id,
+ 932 |                 context: context,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:929:43: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+ 927 |             timeZone: timeZone
+ 928 |         )
+ 929 |         let result = try fixture.database.startScheduledMission(
+     |                                           `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+ 930 |             SchedulePlanningStartCommand(
+ 931 |                 scheduleId: capturedSchedule.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:940:40: error: cannot infer contextual base in reference to member 'inserted'
+ 938 |         let snapshot = try scheduleMutationSnapshot(fixture)
+ 939 | 
+ 940 |         #expect(result.disposition == .inserted)
+     |                                        `- error: cannot infer contextual base in reference to member 'inserted'
+ 941 |         #expect(result.fire.state == .failed)
+ 942 |         #expect(result.fire.errorCode == expectedCode)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:941:39: error: cannot infer contextual base in reference to member 'failed'
+ 939 | 
+ 940 |         #expect(result.disposition == .inserted)
+ 941 |         #expect(result.fire.state == .failed)
+     |                                       `- error: cannot infer contextual base in reference to member 'failed'
+ 942 |         #expect(result.fire.errorCode == expectedCode)
+ 943 |         #expect(result.fire.errorMessage == expectedMessage)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:969:23: error: cannot infer contextual base in reference to member 'selected'
+ 967 |     try requireTerminalFailure(
+ 968 |         label: "disabled",
+ 969 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+ 970 |             runtimeProfileId: "schedule-a4-runtime",
+ 971 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:986:23: error: cannot infer contextual base in reference to member 'selected'
+ 984 |     try requireTerminalFailure(
+ 985 |         label: "configuration",
+ 986 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+ 987 |             runtimeProfileId: "schedule-a4-runtime",
+ 988 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1004:23: error: cannot infer contextual base in reference to member 'selected'
+1002 |     try requireTerminalFailure(
+1003 |         label: "archived",
+1004 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1005 |             runtimeProfileId: "schedule-a4-runtime",
+1006 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1021:23: error: cannot infer contextual base in reference to member 'selected'
+1019 |     try requireTerminalFailure(
+1020 |         label: "template",
+1021 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1022 |             runtimeProfileId: "schedule-a4-runtime",
+1023 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1038:23: error: cannot infer contextual base in reference to member 'selected'
+1036 |     try requireTerminalFailure(
+1037 |         label: "missing-cow",
+1038 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1039 |             runtimeProfileId: "schedule-a4-runtime",
+1040 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1055:23: error: cannot infer contextual base in reference to member 'selected'
+1053 |     try requireTerminalFailure(
+1054 |         label: "wrong-camp-cow",
+1055 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1056 |             runtimeProfileId: "schedule-a4-runtime",
+1057 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1072:23: error: cannot infer contextual base in reference to member 'unavailable'
+1070 |     try requireTerminalFailure(
+1071 |         label: "runtime-unavailable",
+1072 |         preparation: .unavailable,
+     |                       `- error: cannot infer contextual base in reference to member 'unavailable'
+1073 |         expectedCode: "schedule_runtime_unavailable",
+1074 |         expectedMessage: "定时行动的运行配置不可用。",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1081:23: error: cannot infer contextual base in reference to member 'selected'
+1079 |     try requireTerminalFailure(
+1080 |         label: "profile-missing",
+1081 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1082 |             runtimeProfileId: "schedule-a4-runtime",
+1083 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1100:23: error: cannot infer contextual base in reference to member 'selected'
+1098 |     try requireTerminalFailure(
+1099 |         label: "profile-cli",
+1100 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1101 |             runtimeProfileId: "schedule-a4-runtime",
+1102 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1119:23: error: cannot infer contextual base in reference to member 'selected'
+1117 |     try requireTerminalFailure(
+1118 |         label: "provider",
+1119 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1120 |             runtimeProfileId: "schedule-a4-runtime",
+1121 |             plannerModel: "schedule-a4-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1129:23: error: cannot infer contextual base in reference to member 'forcedFailure'
+1127 |     try requireTerminalFailure(
+1128 |         label: "offline",
+1129 |         preparation: .forcedFailure,
+     |                       `- error: cannot infer contextual base in reference to member 'forcedFailure'
+1130 |         expectedCode: "schedule_missed_while_offline",
+1131 |         expectedMessage: "定时行动在应用离线期间错过了触发时间。",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1166:38: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1164 |         let before = try scheduleMutationSnapshot(fixture)
+1165 |         #expect(throws: DatabaseError.self) {
+1166 |             _ = try fixture.database.startScheduledMission(
+     |                                      `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1167 |                 scheduleStartCommand(
+1168 |                     fixture,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1189:33: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1187 |     let haltedBefore = try scheduleMutationSnapshot(halted)
+1188 |     #expect(throws: PlanningDurableDispatchNotRunningError.self) {
+1189 |         _ = try halted.database.startScheduledMission(
+     |                                 `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1190 |             scheduleStartCommand(
+1191 |                 halted,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1208:34: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1206 |     enum UnknownScheduleResolverError: Error { case injected }
+1207 |     #expect(throws: UnknownScheduleResolverError.injected) {
+1208 |         _ = try unknown.database.startScheduledMission(
+     |                                  `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1209 |             scheduleStartCommand(
+1210 |                 unknown,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1248:43: error: type 'ScheduleMath' has no member 'slotContext'
+1246 |         "America/Los_Angeles"
+1247 |     )
+1248 |     let invalidContext = try ScheduleMath.slotContext(
+     |                                           `- error: type 'ScheduleMath' has no member 'slotContext'
+1249 |         for: scheduledAt,
+1250 |         frequency: invalidSchedule.frequency,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1258:27: error: cannot find 'SchedulePlanningStartCommand' in scope
+1256 |     )
+1257 |     let firstResolver = ScheduleTestResolverRecorder()
+1258 |     let originalCommand = SchedulePlanningStartCommand(
+     |                           `- error: cannot find 'SchedulePlanningStartCommand' in scope
+1259 |         scheduleId: fixture.schedule.id,
+1260 |         context: invalidContext,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1264:39: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1262 |         traceId: "trace-no-spin-original"
+1263 |     )
+1264 |     let failed = try fixture.database.startScheduledMission(
+     |                                       `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1265 |         originalCommand,
+1266 |         planningProviderResolver: firstResolver
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1268:36: error: cannot infer contextual base in reference to member 'inserted'
+1266 |         planningProviderResolver: firstResolver
+1267 |     )
+1268 |     #expect(failed.disposition == .inserted)
+     |                                    `- error: cannot infer contextual base in reference to member 'inserted'
+1269 |     #expect(failed.fire.state == .failed)
+1270 |     #expect(failed.fire.errorCode == "schedule_configuration_invalid")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1269:35: error: cannot infer contextual base in reference to member 'failed'
+1267 |     )
+1268 |     #expect(failed.disposition == .inserted)
+1269 |     #expect(failed.fire.state == .failed)
+     |                                   `- error: cannot infer contextual base in reference to member 'failed'
+1270 |     #expect(failed.fire.errorCode == "schedule_configuration_invalid")
+1271 |     #expect(firstResolver.callCount == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1284:9: error: cannot find 'SchedulePlanningStartCommand' in scope
+1282 |     })
+1283 |     let duplicate = try fixture.database.startScheduledMission(
+1284 |         SchedulePlanningStartCommand(
+     |         `- error: cannot find 'SchedulePlanningStartCommand' in scope
+1285 |             scheduleId: originalCommand.scheduleId,
+1286 |             context: originalCommand.context,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1283:42: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1281 |         Issue.record("consumed original slot must not resolve again")
+1282 |     })
+1283 |     let duplicate = try fixture.database.startScheduledMission(
+     |                                          `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1284 |         SchedulePlanningStartCommand(
+1285 |             scheduleId: originalCommand.scheduleId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1292:39: error: cannot infer contextual base in reference to member 'replayed'
+1290 |         planningProviderResolver: replayResolver
+1291 |     )
+1292 |     #expect(duplicate.disposition == .replayed)
+     |                                       `- error: cannot infer contextual base in reference to member 'replayed'
+1293 |     #expect(duplicate.fire == failed.fire)
+1294 |     #expect(replayResolver.callCount == 0)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1300:32: error: type 'ScheduleMath' has no member 'latestUnevaluatedSlot'
+1298 |         try fixture.database.schedule(id: fixture.schedule.id)
+1299 |     )
+1300 |     let due = try ScheduleMath.latestUnevaluatedSlot(
+     |                                `- error: type 'ScheduleMath' has no member 'latestUnevaluatedSlot'
+1301 |         now: scheduledAt.addingTimeInterval(60),
+1302 |         createdAt: repairedSchedule.createdAt,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1321:41: error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1319 |         traceId: "trace-no-spin-explicit-replay"
+1320 |     )
+1321 |     let explicit = try fixture.database.replayMissedScheduleFire(
+     |                                         `- error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1322 |         replayCommand,
+1323 |         planningProviderResolver: ScheduleTestResolverRecorder()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1325:38: error: cannot infer contextual base in reference to member 'inserted'
+1323 |         planningProviderResolver: ScheduleTestResolverRecorder()
+1324 |     )
+1325 |     #expect(explicit.disposition == .inserted)
+     |                                      `- error: cannot infer contextual base in reference to member 'inserted'
+1326 |     #expect(explicit.fire.state == .started)
+1327 |     #expect(explicit.fire.replayOfFireId == failed.fire.id)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1326:37: error: cannot infer contextual base in reference to member 'started'
+1324 |     )
+1325 |     #expect(explicit.disposition == .inserted)
+1326 |     #expect(explicit.fire.state == .started)
+     |                                     `- error: cannot infer contextual base in reference to member 'started'
+1327 |     #expect(explicit.fire.replayOfFireId == failed.fire.id)
+1328 |     #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1329:30: error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1327 |     #expect(explicit.fire.replayOfFireId == failed.fire.id)
+1328 |     #expect(
+1329 |         try fixture.database.scheduleEvaluationCursor(
+     |                              `- error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1330 |             scheduleId: fixture.schedule.id
+1331 |         ) == failedSnapshot.cursor
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1356:41: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1354 |         )
+1355 |     )
+1356 |     let original = try fixture.database.startScheduledMission(
+     |                                         `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1357 |         scheduleStartCommand(
+1358 |             fixture,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1360:27: error: cannot infer contextual base in reference to member 'forcedFailure'
+1358 |             fixture,
+1359 |             context: context,
+1360 |             preparation: .forcedFailure,
+     |                           `- error: cannot infer contextual base in reference to member 'forcedFailure'
+1361 |             traceId: "trace-replay-original"
+1362 |         ),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1365:37: error: cannot infer contextual base in reference to member 'failed'
+1363 |         planningProviderResolver: ScheduleTestResolverRecorder()
+1364 |     )
+1365 |     #expect(original.fire.state == .failed)
+     |                                     `- error: cannot infer contextual base in reference to member 'failed'
+1366 |     let cursorBefore = try #require(
+1367 |         try fixture.database.scheduleEvaluationCursor(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1367:30: error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1365 |     #expect(original.fire.state == .failed)
+1366 |     let cursorBefore = try #require(
+1367 |         try fixture.database.scheduleEvaluationCursor(
+     |                              `- error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1368 |             scheduleId: fixture.schedule.id
+1369 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1391:39: error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1389 |     let replayKey =
+1390 |         "schedule-replay:20000000-0000-0000-0000-000000000002"
+1391 |     let replay = try fixture.database.replayMissedScheduleFire(
+     |                                       `- error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1392 |         try scheduleReplayCommand(
+1393 |             original: original.fire,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1409:36: error: cannot infer contextual base in reference to member 'inserted'
+1407 |         + ":v1"
+1408 | 
+1409 |     #expect(replay.disposition == .inserted)
+     |                                    `- error: cannot infer contextual base in reference to member 'inserted'
+1410 |     #expect(replay.fire.state == .started)
+1411 |     #expect(replay.fire.replayOfFireId == original.fire.id)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1410:35: error: cannot infer contextual base in reference to member 'started'
+1408 | 
+1409 |     #expect(replay.disposition == .inserted)
+1410 |     #expect(replay.fire.state == .started)
+     |                                   `- error: cannot infer contextual base in reference to member 'started'
+1411 |     #expect(replay.fire.replayOfFireId == original.fire.id)
+1412 |     #expect(replay.fire.templateId == reboundTemplate.id)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1420:30: error: value of type 'AppDatabase' has no member 'scheduleFire'
+1418 |     #expect(replayWork.idempotencyKey == expectedWorkKey)
+1419 |     #expect(
+1420 |         try fixture.database.scheduleFire(id: original.fire.id)
+     |                              `- error: value of type 'AppDatabase' has no member 'scheduleFire'
+1421 |             == originalBefore
+1422 |     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1424:30: error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1422 |     )
+1423 |     #expect(
+1424 |         try fixture.database.scheduleEvaluationCursor(
+     |                              `- error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1425 |             scheduleId: fixture.schedule.id
+1426 |         ) == cursorBefore
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1433:45: error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1431 |     )
+1432 | 
+1433 |     let failedReplay = try fixture.database.replayMissedScheduleFire(
+     |                                             `- error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1434 |         try scheduleReplayCommand(
+1435 |             original: original.fire,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1437:27: error: cannot infer contextual base in reference to member 'unavailable'
+1435 |             original: original.fire,
+1436 |             effectiveTemplateId: reboundTemplate.id,
+1437 |             preparation: .unavailable,
+     |                           `- error: cannot infer contextual base in reference to member 'unavailable'
+1438 |             replayIdempotencyKey:
+1439 |                 "schedule-replay:20000000-0000-0000-0000-000000000003",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1446:41: error: cannot infer contextual base in reference to member 'failed'
+1444 |         })
+1445 |     )
+1446 |     #expect(failedReplay.fire.state == .failed)
+     |                                         `- error: cannot infer contextual base in reference to member 'failed'
+1447 |     #expect(
+1448 |         failedReplay.fire.errorCode == "schedule_runtime_unavailable"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1452:30: error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1450 |     #expect(failedReplay.fire.replayOfFireId == original.fire.id)
+1451 |     #expect(
+1452 |         try fixture.database.scheduleEvaluationCursor(
+     |                              `- error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1453 |             scheduleId: fixture.schedule.id
+1454 |         ) == cursorBefore
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1462:21: error: cannot find 'InvalidScheduleReplaySourceError' in scope
+1460 | 
+1461 |     let beforeInvalidSource = try scheduleMutationSnapshot(fixture)
+1462 |     #expect(throws: InvalidScheduleReplaySourceError.self) {
+     |                     `- error: cannot find 'InvalidScheduleReplaySourceError' in scope
+1463 |         _ = try fixture.database.replayMissedScheduleFire(
+1464 |             try scheduleReplayCommand(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1463:34: error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1461 |     let beforeInvalidSource = try scheduleMutationSnapshot(fixture)
+1462 |     #expect(throws: InvalidScheduleReplaySourceError.self) {
+1463 |         _ = try fixture.database.replayMissedScheduleFire(
+     |                                  `- error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1464 |             try scheduleReplayCommand(
+1465 |                 original: replay.fire,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1366:24: warning: no calls to throwing functions occur within 'try' expression
+1364 |     )
+1365 |     #expect(original.fire.state == .failed)
+1366 |     let cursorBefore = try #require(
+     |                        `- warning: no calls to throwing functions occur within 'try' expression
+1367 |         try fixture.database.scheduleEvaluationCursor(
+1368 |             scheduleId: fixture.schedule.id
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1493:41: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1491 |         )
+1492 |     )
+1493 |     let original = try fixture.database.startScheduledMission(
+     |                                         `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1494 |         scheduleStartCommand(
+1495 |             fixture,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1497:27: error: cannot infer contextual base in reference to member 'unavailable'
+1495 |             fixture,
+1496 |             context: context,
+1497 |             preparation: .unavailable,
+     |                           `- error: cannot infer contextual base in reference to member 'unavailable'
+1498 |             traceId: "trace-key-original"
+1499 |         ),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1511:38: error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1509 |     )
+1510 |     let firstResolver = ScheduleTestResolverRecorder()
+1511 |     let first = try fixture.database.replayMissedScheduleFire(
+     |                                      `- error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1512 |         firstCommand,
+1513 |         planningProviderResolver: firstResolver
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1520:9: error: cannot find 'ScheduleReplayStartCommand' in scope
+1518 |     })
+1519 |     let repeated = try fixture.database.replayMissedScheduleFire(
+1520 |         ScheduleReplayStartCommand(
+     |         `- error: cannot find 'ScheduleReplayStartCommand' in scope
+1521 |             originalFireId: firstCommand.originalFireId,
+1522 |             replayIdempotencyKey: firstCommand.replayIdempotencyKey,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1519:41: error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1517 |         Issue.record("same replay key winner must skip provider")
+1518 |     })
+1519 |     let repeated = try fixture.database.replayMissedScheduleFire(
+     |                                         `- error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1520 |         ScheduleReplayStartCommand(
+1521 |             originalFireId: firstCommand.originalFireId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1529:35: error: cannot infer contextual base in reference to member 'inserted'
+1527 |         planningProviderResolver: replayResolver
+1528 |     )
+1529 |     #expect(first.disposition == .inserted)
+     |                                   `- error: cannot infer contextual base in reference to member 'inserted'
+1530 |     #expect(repeated.disposition == .replayed)
+1531 |     #expect(repeated.fire == first.fire)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1530:38: error: cannot infer contextual base in reference to member 'replayed'
+1528 |     )
+1529 |     #expect(first.disposition == .inserted)
+1530 |     #expect(repeated.disposition == .replayed)
+     |                                      `- error: cannot infer contextual base in reference to member 'replayed'
+1531 |     #expect(repeated.fire == first.fire)
+1532 |     #expect(repeated.missionId == first.missionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1539:34: error: cannot find 'ScheduleReplayPayloadV1' in scope
+1537 |     #expect(try scheduleMutationSnapshot(fixture) == firstSnapshot)
+1538 | 
+1539 |     let conflictingPayload = try ScheduleReplayPayloadV1(
+     |                                  `- error: cannot find 'ScheduleReplayPayloadV1' in scope
+1540 |         originalFire: original.fire,
+1541 |         effectiveTemplateId: "different-template",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1550:13: error: cannot find 'ScheduleReplayStartCommand' in scope
+1548 |     #expect(throws: DurableWorkReplayConflictError.self) {
+1549 |         _ = try fixture.database.replayMissedScheduleFire(
+1550 |             ScheduleReplayStartCommand(
+     |             `- error: cannot find 'ScheduleReplayStartCommand' in scope
+1551 |                 originalFireId: original.fire.id,
+1552 |                 replayIdempotencyKey: key,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1549:34: error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1547 |     })
+1548 |     #expect(throws: DurableWorkReplayConflictError.self) {
+1549 |         _ = try fixture.database.replayMissedScheduleFire(
+     |                                  `- error: value of type 'AppDatabase' has no member 'replayMissedScheduleFire'
+1550 |             ScheduleReplayStartCommand(
+1551 |                 originalFireId: original.fire.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1566:49: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1564 |         scheduleId: "schedule-a4-replay-race"
+1565 |     )
+1566 |     let raceOriginal = try raceFixture.database.startScheduledMission(
+     |                                                 `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1567 |         scheduleStartCommand(
+1568 |             raceFixture,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1580:27: error: cannot infer contextual base in reference to member 'unavailable'
+1578 |                 )
+1579 |             ),
+1580 |             preparation: .unavailable,
+     |                           `- error: cannot infer contextual base in reference to member 'unavailable'
+1581 |             traceId: "trace-race-original"
+1582 |         ),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1585:27: error: cannot find 'ScheduleReplayPayloadV1' in scope
+1583 |         planningProviderResolver: ScheduleTestResolverRecorder()
+1584 |     )
+1585 |     let racePayload = try ScheduleReplayPayloadV1(
+     |                           `- error: cannot find 'ScheduleReplayPayloadV1' in scope
+1586 |         originalFire: raceOriginal.fire,
+1587 |         effectiveTemplateId: raceFixture.template.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1594:23: error: cannot find 'ScheduleReplayStartCommand' in scope
+1592 |     let race = try await runScheduleReplayRace(
+1593 |         database: raceFixture.database,
+1594 |         firstCommand: ScheduleReplayStartCommand(
+     |                       `- error: cannot find 'ScheduleReplayStartCommand' in scope
+1595 |             originalFireId: raceOriginal.fire.id,
+1596 |             replayIdempotencyKey: raceKey,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1601:24: error: cannot find 'ScheduleReplayStartCommand' in scope
+1599 |             traceId: "trace-race-first"
+1600 |         ),
+1601 |         secondCommand: ScheduleReplayStartCommand(
+     |                        `- error: cannot find 'ScheduleReplayStartCommand' in scope
+1602 |             originalFireId: raceOriginal.fire.id,
+1603 |             replayIdempotencyKey: raceKey,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1614:26: error: cannot infer key path type from context; consider explicitly specifying a root type
+1612 |     #expect(race.results[0].workId == race.results[1].workId)
+1613 |     #expect(
+1614 |         race.results.map(\.disposition).filter { $0 == .inserted }.count
+     |                          `- error: cannot infer key path type from context; consider explicitly specifying a root type
+1615 |             == 1
+1616 |     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1614:57: error: cannot infer contextual base in reference to member 'inserted'
+1612 |     #expect(race.results[0].workId == race.results[1].workId)
+1613 |     #expect(
+1614 |         race.results.map(\.disposition).filter { $0 == .inserted }.count
+     |                                                         `- error: cannot infer contextual base in reference to member 'inserted'
+1615 |             == 1
+1616 |     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1618:26: error: cannot infer key path type from context; consider explicitly specifying a root type
+1616 |     )
+1617 |     #expect(
+1618 |         race.results.map(\.disposition).filter { $0 == .replayed }.count
+     |                          `- error: cannot infer key path type from context; consider explicitly specifying a root type
+1619 |             == 1
+1620 |     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1618:57: error: cannot infer contextual base in reference to member 'replayed'
+1616 |     )
+1617 |     #expect(
+1618 |         race.results.map(\.disposition).filter { $0 == .replayed }.count
+     |                                                         `- error: cannot infer contextual base in reference to member 'replayed'
+1619 |             == 1
+1620 |     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1762:36: error: type 'ScheduleMath' has no member 'slotContext'
+1760 |     let runtimeProfileId = "schedule-crud-runtime"
+1761 |     _ = try seedTestPlanningProfile(db, profileId: runtimeProfileId)
+1762 |     let context = try ScheduleMath.slotContext(
+     |                                    `- error: type 'ScheduleMath' has no member 'slotContext'
+1763 |         for: fire,
+1764 |         frequency: schedule.frequency,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1771:19: error: cannot find 'SchedulePlanningStartCommand' in scope
+1769 |         timeZone: timeZone
+1770 |     )
+1771 |     let command = SchedulePlanningStartCommand(
+     |                   `- error: cannot find 'SchedulePlanningStartCommand' in scope
+1772 |         scheduleId: schedule.id,
+1773 |         context: context,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1774:23: error: cannot infer contextual base in reference to member 'selected'
+1772 |         scheduleId: schedule.id,
+1773 |         context: context,
+1774 |         preparation: .selected(
+     |                       `- error: cannot infer contextual base in reference to member 'selected'
+1775 |             runtimeProfileId: runtimeProfileId,
+1776 |             plannerModel: "schedule-crud-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1780:24: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1778 |         traceId: "schedule-crud-first"
+1779 |     )
+1780 |     let first = try db.startScheduledMission(
+     |                        `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1781 |         command,
+1782 |         planningProviderResolver: ScheduleTestResolverRecorder()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1788:9: error: cannot find 'SchedulePlanningStartCommand' in scope
+1786 |     })
+1787 |     let second = try db.startScheduledMission(
+1788 |         SchedulePlanningStartCommand(
+     |         `- error: cannot find 'SchedulePlanningStartCommand' in scope
+1789 |             scheduleId: schedule.id,
+1790 |             context: context,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1787:25: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1785 |         Issue.record("same slot replay must not resolve provider")
+1786 |     })
+1787 |     let second = try db.startScheduledMission(
+     |                         `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1788 |         SchedulePlanningStartCommand(
+1789 |             scheduleId: schedule.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1796:35: error: cannot infer contextual base in reference to member 'inserted'
+1794 |         planningProviderResolver: secondResolver
+1795 |     )
+1796 |     #expect(first.disposition == .inserted)
+     |                                   `- error: cannot infer contextual base in reference to member 'inserted'
+1797 |     #expect(second.disposition == .replayed)
+1798 |     #expect(second.fire == first.fire)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1797:36: error: cannot infer contextual base in reference to member 'replayed'
+1795 |     )
+1796 |     #expect(first.disposition == .inserted)
+1797 |     #expect(second.disposition == .replayed)
+     |                                    `- error: cannot infer contextual base in reference to member 'replayed'
+1798 |     #expect(second.fire == first.fire)
+1799 |     #expect(secondResolver.callCount == 0)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1800:20: error: value of type 'AppDatabase' has no member 'scheduleFires'
+1798 |     #expect(second.fire == first.fire)
+1799 |     #expect(secondResolver.callCount == 0)
+1800 |     #expect(try db.scheduleFires(scheduleId: schedule.id).count == 1)
+     |                    `- error: value of type 'AppDatabase' has no member 'scheduleFires'
+1801 |     #expect(
+1802 |         try db.scheduleEvaluationCursor(scheduleId: schedule.id)?.version
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1802:16: error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1800 |     #expect(try db.scheduleFires(scheduleId: schedule.id).count == 1)
+1801 |     #expect(
+1802 |         try db.scheduleEvaluationCursor(scheduleId: schedule.id)?.version
+     |                `- error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1803 |             == 1
+1804 |     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1840:21: error: cannot find 'ScheduleSlotComponentsUnavailableError' in scope
+1838 | 
+1839 |     let (calendar, timeZone) = scheduleCalendar("UTC")
+1840 |     #expect(throws: ScheduleSlotComponentsUnavailableError.self) {
+     |                     `- error: cannot find 'ScheduleSlotComponentsUnavailableError' in scope
+1841 |         _ = try ScheduleMath.slotContext(
+1842 |             for: extremeFiniteFire,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1841:30: error: type 'ScheduleMath' has no member 'slotContext'
+1839 |     let (calendar, timeZone) = scheduleCalendar("UTC")
+1840 |     #expect(throws: ScheduleSlotComponentsUnavailableError.self) {
+1841 |         _ = try ScheduleMath.slotContext(
+     |                              `- error: type 'ScheduleMath' has no member 'slotContext'
+1842 |             for: extremeFiniteFire,
+1843 |             frequency: schedule.frequency,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1852:20: error: value of type 'AppDatabase' has no member 'scheduleFires'
+1850 |     }
+1851 |     #expect(try db.schedule(id: schedule.id)?.lastFiredAt == extremeFiniteFire)
+1852 |     #expect(try db.scheduleFires(scheduleId: schedule.id).isEmpty)
+     |                    `- error: value of type 'AppDatabase' has no member 'scheduleFires'
+1853 |     #expect(try db.scheduleEvaluationCursor(scheduleId: schedule.id) == nil)
+1854 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1853:20: error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1851 |     #expect(try db.schedule(id: schedule.id)?.lastFiredAt == extremeFiniteFire)
+1852 |     #expect(try db.scheduleFires(scheduleId: schedule.id).isEmpty)
+1853 |     #expect(try db.scheduleEvaluationCursor(scheduleId: schedule.id) == nil)
+     |                    `- error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1854 | }
+1855 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1974:39: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1972 |     )
+1973 |     let firedAt = scheduleDate(2026, 7, 14, 9, 0, timeZoneID: "America/Los_Angeles")
+1974 |     let result = try fixture.database.startScheduledMission(
+     |                                       `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1975 |         scheduleStartCommand(
+1976 |             fixture,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1983:21: warning: no calls to throwing functions occur within 'try' expression
+1981 |         planningProviderResolver: ScheduleTestResolverRecorder()
+1982 |     )
+1983 |     let missionId = try #require(result.missionId)
+     |                     `- warning: no calls to throwing functions occur within 'try' expression
+1984 | 
+1985 |     let origin = try #require(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ScheduleTests.swift:1985:18: warning: no calls to throwing functions occur within 'try' expression
+1983 |     let missionId = try #require(result.missionId)
+1984 | 
+1985 |     let origin = try #require(
+     |                  `- warning: no calls to throwing functions occur within 'try' expression
+1986 |         try fixture.database.scheduledOrigin(missionId: missionId)
+1987 |     )
+[5/8] Compiling AgentLoopTestSuite DatabaseTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:864:17: warning: variable 'violations' was never mutated; consider changing to 'let' constant
+ 862 |             #expect(try p1SQLiteObjectNames(database, type: "index").count == 60)
+ 863 |             #expect(try p1SQLiteObjectNames(database, type: "trigger").count == 4)
+ 864 |             var violations = try database.foreignKeyViolations()
+     |                 `- warning: variable 'violations' was never mutated; consider changing to 'let' constant
+ 865 |             #expect(try violations.next() == nil)
+ 866 |             #expect(
+
+macro expansion #expect:1:22: error: errors thrown from here are not handled
+`- /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:848:64: note: expanded code originates here
+ 846 |         }
+ 847 |         try pool.read { database in
+ 848 |             #expect(try !database.tableExists("schedule_fire"))
+     |             `- note: in expansion of macro 'expect' here
+     +--- macro expansion #expect --------------------------------------
+     |1 | Testing.__checkValue(try !database.tableExists("schedule_fire"),expression: .__fromSyntaxNode(#"try !database.tableExists("schedule_fire")"#),comments: [],isRequired: false,sourceLocation: Testing.SourceLocation.__here()).__expected()
+     |  |                      `- error: errors thrown from here are not handled
+     +------------------------------------------------------------------
+ 849 |             #expect(try !database.tableExists("schedule_evaluation_cursor"))
+ 850 |         }
+
+macro expansion #expect:1:22: error: errors thrown from here are not handled
+`- /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:849:77: note: expanded code originates here
+ 847 |         try pool.read { database in
+ 848 |             #expect(try !database.tableExists("schedule_fire"))
+ 849 |             #expect(try !database.tableExists("schedule_evaluation_cursor"))
+     |             `- note: in expansion of macro 'expect' here
+     +--- macro expansion #expect --------------------------------------
+     |1 | Testing.__checkValue(try !database.tableExists("schedule_evaluation_cursor"),expression: .__fromSyntaxNode(#"try !database.tableExists("schedule_evaluation_cursor")"#),comments: [],isRequired: false,sourceLocation: Testing.SourceLocation.__here()).__expected()
+     |  |                      `- error: errors thrown from here are not handled
+     +------------------------------------------------------------------
+ 850 |         }
+ 851 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1252:41: error: cannot find 'ScheduleFireRecord' in scope
+1250 |                     """
+1251 |             ) == "real")
+1252 |             let fire = try #require(try ScheduleFireRecord.fetchOne(
+     |                                         `- error: cannot find 'ScheduleFireRecord' in scope
+1253 |                 database,
+1254 |                 key: "numeric-fire"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1257:21: error: cannot find 'ScheduleEvaluationCursorRecord' in scope
+1255 |             ))
+1256 |             let cursor = try #require(
+1257 |                 try ScheduleEvaluationCursorRecord.fetchOne(
+     |                     `- error: cannot find 'ScheduleEvaluationCursorRecord' in scope
+1258 |                     database,
+1259 |                     key: "schedule-fire-schedule"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1262:45: error: cannot find 'ScheduleFireRecord' in scope
+1260 |                 )
+1261 |             )
+1262 |             let redacted = try #require(try ScheduleFireRecord.fetchOne(
+     |                                             `- error: cannot find 'ScheduleFireRecord' in scope
+1263 |                 database,
+1264 |                 key: "redacted-fire"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1292:37: error: cannot find 'ScheduleFireRecord' in scope
+1290 |     let reopened = try DatabasePool(path: databasePath)
+1291 |     try reopened.read { database in
+1292 |         let fire = try #require(try ScheduleFireRecord.fetchOne(
+     |                                     `- error: cannot find 'ScheduleFireRecord' in scope
+1293 |             database,
+1294 |             key: "numeric-fire"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1297:17: error: cannot find 'ScheduleEvaluationCursorRecord' in scope
+1295 |         ))
+1296 |         let cursor = try #require(
+1297 |             try ScheduleEvaluationCursorRecord.fetchOne(
+     |                 `- error: cannot find 'ScheduleEvaluationCursorRecord' in scope
+1298 |                 database,
+1299 |                 key: "schedule-fire-schedule"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1392:21: error: cannot find 'ScheduleFireRecord' in scope
+1390 |     #expect(throws: RowDecodingError.self) {
+1391 |         try reopened.read { database in
+1392 |             _ = try ScheduleFireRecord.fetchOne(database, key: "numeric-fire")
+     |                     `- error: cannot find 'ScheduleFireRecord' in scope
+1393 |         }
+1394 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1407:21: error: cannot find 'ScheduleFireRecord' in scope
+1405 |     #expect(throws: RowDecodingError.self) {
+1406 |         try reopened.read { database in
+1407 |             _ = try ScheduleFireRecord.fetchOne(database, key: "numeric-fire")
+     |                     `- error: cannot find 'ScheduleFireRecord' in scope
+1408 |         }
+1409 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1422:21: error: cannot find 'ScheduleFireRecord' in scope
+1420 |     #expect(throws: RowDecodingError.self) {
+1421 |         try reopened.read { database in
+1422 |             _ = try ScheduleFireRecord.fetchOne(database, key: "redacted-fire")
+     |                     `- error: cannot find 'ScheduleFireRecord' in scope
+1423 |         }
+1424 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1427:21: error: cannot find 'ScheduleEvaluationCursorRecord' in scope
+1425 |     #expect(throws: RowDecodingError.self) {
+1426 |         try reopened.read { database in
+1427 |             _ = try ScheduleEvaluationCursorRecord.fetchOne(
+     |                     `- error: cannot find 'ScheduleEvaluationCursorRecord' in scope
+1428 |                 database,
+1429 |                 key: "schedule-fire-schedule"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1446:21: error: cannot find 'ScheduleEvaluationCursorRecord' in scope
+1444 |     #expect(throws: RowDecodingError.self) {
+1445 |         try reopened.read { database in
+1446 |             _ = try ScheduleEvaluationCursorRecord.fetchOne(
+     |                     `- error: cannot find 'ScheduleEvaluationCursorRecord' in scope
+1447 |                 database,
+1448 |                 key: "schedule-fire-schedule"
+
+macro expansion #expect:1:22: error: errors thrown from here are not handled
+`- /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1350:16: note: expanded code originates here
+1342 |     }
+1343 |     try reopened.read { database in
+1344 |         #expect(try Int.fetchOne(
+     |         `- note: in expansion of macro 'expect' here
+1345 |             database,
+1346 |             sql: """
+     :
+1348 |                 WHERE id IN ('numeric-fire', 'redacted-fire')
+1349 |                 """
+1350 |         ) == 2)
+     +--- macro expansion #expect --------------------------------------
+     |1 | Testing.__checkValue(try Int.fetchOne(
+     |  |                      `- error: errors thrown from here are not handled
+     |2 |             database,
+     |3 |             sql: """
+     +------------------------------------------------------------------
+1351 |         #expect(try Int.fetchOne(
+1352 |             database,
+
+macro expansion #expect:1:22: error: errors thrown from here are not handled
+`- /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1357:16: note: expanded code originates here
+1349 |                 """
+1350 |         ) == 2)
+1351 |         #expect(try Int.fetchOne(
+     |         `- note: in expansion of macro 'expect' here
+1352 |             database,
+1353 |             sql: """
+     :
+1355 |                 WHERE scheduleId = 'schedule-fire-schedule'
+1356 |                 """
+1357 |         ) == 1)
+     +--- macro expansion #expect --------------------------------------
+     |1 | Testing.__checkValue(try Int.fetchOne(
+     |  |                      `- error: errors thrown from here are not handled
+     |2 |             database,
+     |3 |             sql: """
+     +------------------------------------------------------------------
+1358 |         #expect(try Int.fetchOne(
+1359 |             database,
+
+macro expansion #expect:1:22: error: errors thrown from here are not handled
+`- /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1364:16: note: expanded code originates here
+1356 |                 """
+1357 |         ) == 1)
+1358 |         #expect(try Int.fetchOne(
+     |         `- note: in expansion of macro 'expect' here
+1359 |             database,
+1360 |             sql: """
+     :
+1362 |                 WHERE id = 'schedule-fire-mission'
+1363 |                 """
+1364 |         ) == 1)
+     +--- macro expansion #expect --------------------------------------
+     |1 | Testing.__checkValue(try Int.fetchOne(
+     |  |                      `- error: errors thrown from here are not handled
+     |2 |             database,
+     |3 |             sql: """
+     +------------------------------------------------------------------
+1365 |         #expect(try Int.fetchOne(
+1366 |             database,
+
+macro expansion #expect:1:22: error: errors thrown from here are not handled
+`- /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DatabaseTests.swift:1371:16: note: expanded code originates here
+1363 |                 """
+1364 |         ) == 1)
+1365 |         #expect(try Int.fetchOne(
+     |         `- note: in expansion of macro 'expect' here
+1366 |             database,
+1367 |             sql: """
+     :
+1369 |                 WHERE id = 'schedule-fire-template'
+1370 |                 """
+1371 |         ) == 1)
+     +--- macro expansion #expect --------------------------------------
+     |1 | Testing.__checkValue(try Int.fetchOne(
+     |  |                      `- error: errors thrown from here are not handled
+     |2 |             database,
+     |3 |             sql: """
+     +------------------------------------------------------------------
+1372 |     }
+1373 | 
+[6/8] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1452:13: error: cannot find type 'ScheduleSlotContextV1' in scope
+1450 |     _ schedule: ScheduleRecord,
+1451 |     scheduledAt: Date
+1452 | ) throws -> ScheduleSlotContextV1 {
+     |             `- error: cannot find type 'ScheduleSlotContextV1' in scope
+1453 |     let timeZone = try #require(
+1454 |         TimeZone(identifier: "America/Los_Angeles")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1478:13: error: cannot find type 'SchedulePlanningStartCommand' in scope
+1476 |     ),
+1477 |     traceId: String
+1478 | ) throws -> SchedulePlanningStartCommand {
+     |             `- error: cannot find type 'SchedulePlanningStartCommand' in scope
+1479 |     SchedulePlanningStartCommand(
+1480 |         scheduleId: schedule.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1473:18: error: cannot find type 'ScheduleFirePreparation' in scope
+1471 |     _ schedule: ScheduleRecord,
+1472 |     scheduledAt: Date,
+1473 |     preparation: ScheduleFirePreparation = .selected(
+     |                  `- error: cannot find type 'ScheduleFirePreparation' in scope
+1474 |         runtimeProfileId: "planning-profile",
+1475 |         plannerModel: "planner-model"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1492:17: error: cannot find type 'ScheduleFireCommitResult' in scope
+1490 | private struct A4RestartSetup: Sendable {
+1491 |     let scheduleId: String
+1492 |     let result: ScheduleFireCommitResult
+     |                 `- error: cannot find type 'ScheduleFireCommitResult' in scope
+1493 | }
+1494 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1564:17: error: cannot find type 'ScheduleFireRecord' in scope
+1562 | 
+1563 | private struct A4ScheduleGraphSnapshot: Equatable {
+1564 |     let fires: [ScheduleFireRecord]
+     |                 `- error: cannot find type 'ScheduleFireRecord' in scope
+1565 |     let cursor: ScheduleEvaluationCursorRecord?
+1566 |     let lastFiredAtBits: UInt64?
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1565:17: error: cannot find type 'ScheduleEvaluationCursorRecord' in scope
+1563 | private struct A4ScheduleGraphSnapshot: Equatable {
+1564 |     let fires: [ScheduleFireRecord]
+1565 |     let cursor: ScheduleEvaluationCursorRecord?
+     |                 `- error: cannot find type 'ScheduleEvaluationCursorRecord' in scope
+1566 |     let lastFiredAtBits: UInt64?
+1567 |     let squadCount: Int
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1563:16: error: type 'A4ScheduleGraphSnapshot' does not conform to protocol 'Equatable'
+1561 | }
+1562 | 
+1563 | private struct A4ScheduleGraphSnapshot: Equatable {
+     |                |- error: type 'A4ScheduleGraphSnapshot' does not conform to protocol 'Equatable'
+     |                `- note: add stubs for conformance
+1564 |     let fires: [ScheduleFireRecord]
+     |         `- note: stored property type '<<error type>>' does not conform to protocol 'Equatable', preventing synthesized conformance of 'A4ScheduleGraphSnapshot' to 'Equatable'
+1565 |     let cursor: ScheduleEvaluationCursorRecord?
+     |         `- note: stored property type '<<error type>>' does not conform to protocol 'Equatable', preventing synthesized conformance of 'A4ScheduleGraphSnapshot' to 'Equatable'
+1566 |     let lastFiredAtBits: UInt64?
+1567 |     let squadCount: Int
+
+Swift.==:1:24: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'RawRepresentable'
+1 | @inlinable public func == <T>(lhs: T, rhs: T) -> Bool where T : RawRepresentable, T.RawValue : Equatable
+  |                        `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'RawRepresentable'
+
+Swift.FloatingPoint.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'FloatingPoint'
+1 | protocol FloatingPoint {
+2 | public static func == (lhs: Self, rhs: Self) -> Bool}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'FloatingPoint'
+3 | 
+
+Swift.BinaryInteger.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'BinaryInteger'
+1 | protocol BinaryInteger {
+2 | public static func == <Other>(lhs: Self, rhs: Other) -> Bool where Other : BinaryInteger}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'BinaryInteger'
+3 | 
+
+Swift._Pointer.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_Pointer'
+1 | protocol _Pointer {
+2 | public static func == (lhs: Self, rhs: Self) -> Bool}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_Pointer'
+3 | 
+
+Swift._Pointer.==:2:31: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_Pointer'
+1 | protocol _Pointer {
+2 | @inlinable public static func == <Other>(lhs: Self, rhs: Other) -> Bool where Other : _Pointer}
+  |                               `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_Pointer'
+3 | 
+
+Swift.Strideable.==:2:31: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'Strideable'
+1 | protocol Strideable {
+2 | @inlinable public static func == (x: Self, y: Self) -> Bool}
+  |                               `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'Strideable'
+3 | 
+
+Swift.StringProtocol.==:2:31: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'StringProtocol'
+1 | protocol StringProtocol {
+2 | @inlinable public static func == <RHS>(lhs: Self, rhs: RHS) -> Bool where RHS : StringProtocol}
+  |                               `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'StringProtocol'
+3 | 
+
+Swift.SIMD.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'SIMD'
+1 | protocol SIMD {
+2 | public static func == (a: Self, b: Self) -> Bool}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'SIMD'
+3 | 
+
+Foundation.AttributedStringProtocol.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'AttributedStringProtocol'
+1 | protocol AttributedStringProtocol {
+2 | public static func == <RHS>(lhs: Self, rhs: RHS) -> Bool where RHS : AttributedStringProtocol}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to 'AttributedStringProtocol'
+3 | 
+
+Foundation._BridgedStoredNSError.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_BridgedStoredNSError'
+1 | protocol _BridgedStoredNSError {
+2 | public static func == (lhs: Self, rhs: Self) -> Bool}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_BridgedStoredNSError'
+3 | 
+
+/Users/muzi/Agent-loop/.build/checkouts/GRDB.swift/GRDB/QueryInterface/SQL/SQLOperators.swift:20:24: note: candidate has non-matching type '<Self> (Self, (any SQLExpressible)?) -> SQLExpression'
+ 18 |     /// Column("name") == nil
+ 19 |     /// ```
+ 20 |     public static func == (lhs: Self, rhs: (any SQLExpressible)?) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Self, (any SQLExpressible)?) -> SQLExpression'
+ 21 |         .equal(lhs.sqlExpression, rhs?.sqlExpression ?? .null)
+ 22 |     }
+ 23 |     
+ 24 |     /// The `=` SQL operator.
+ 25 |     public static func == (lhs: Self, rhs: Bool) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Self, Bool) -> SQLExpression'
+ 26 |         if rhs {
+ 27 |             return lhs.sqlExpression.is(.true)
+    :
+ 47 |     /// nil == Column("name")
+ 48 |     /// ```
+ 49 |     public static func == (lhs: (any SQLExpressible)?, rhs: Self) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> ((any SQLExpressible)?, Self) -> SQLExpression'
+ 50 |         .equal(lhs?.sqlExpression ?? .null, rhs.sqlExpression)
+ 51 |     }
+ 52 |     
+ 53 |     /// The `=` SQL operator.
+ 54 |     public static func == (lhs: Bool, rhs: Self) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Bool, Self) -> SQLExpression'
+ 55 |         if lhs {
+ 56 |             return rhs.sqlExpression.is(.true)
+    :
+ 61 |     
+ 62 |     /// The `=` SQL operator.
+ 63 |     public static func == (lhs: Self, rhs: some SQLSpecificExpressible) -> SQLExpression {
+    |                        `- note: candidate has non-matching type '<Self> (Self, some SQLSpecificExpressible) -> SQLExpression'
+ 64 |         .equal(lhs.sqlExpression, rhs.sqlExpression)
+ 65 |     }
+
+CoreFoundation._CFObject.==:2:20: note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_CFObject'
+1 | protocol _CFObject {
+2 | public static func == (left: Self, right: Self) -> Bool}
+  |                    `- note: candidate would match if 'A4ScheduleGraphSnapshot' conformed to '_CFObject'
+3 | 
+
+Swift.Equatable.==:2:13: note: protocol requires function '==' with type '(A4ScheduleGraphSnapshot, A4ScheduleGraphSnapshot) -> Bool'
+1 | protocol Equatable {
+2 | static func == (lhs: Self, rhs: Self) -> Bool}
+  |             `- note: protocol requires function '==' with type '(A4ScheduleGraphSnapshot, A4ScheduleGraphSnapshot) -> Bool'
+3 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1621:18: error: cannot find type 'ScheduleFireCommitResult' in scope
+1619 | 
+1620 | private enum A4ScheduleRaceOutcome: @unchecked Sendable {
+1621 |     case success(ScheduleFireCommitResult)
+     |                  `- error: cannot find type 'ScheduleFireCommitResult' in scope
+1622 |     case failure(any Error)
+1623 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1690:19: error: cannot find type 'ScheduleFireCommitResult' in scope
+1688 | 
+1689 | private struct A4ScheduleRaceResult: Sendable {
+1690 |     let results: [ScheduleFireCommitResult]
+     |                   `- error: cannot find type 'ScheduleFireCommitResult' in scope
+1691 |     let resolverCounts: [Int]
+1692 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1696:19: error: cannot find type 'SchedulePlanningStartCommand' in scope
+1694 | private func a4RunScheduleRace(
+1695 |     database: AppDatabase,
+1696 |     firstCommand: SchedulePlanningStartCommand,
+     |                   `- error: cannot find type 'SchedulePlanningStartCommand' in scope
+1697 |     secondCommand: SchedulePlanningStartCommand
+1698 | ) async throws -> A4ScheduleRaceResult {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1697:20: error: cannot find type 'SchedulePlanningStartCommand' in scope
+1695 |     database: AppDatabase,
+1696 |     firstCommand: SchedulePlanningStartCommand,
+1697 |     secondCommand: SchedulePlanningStartCommand
+     |                    `- error: cannot find type 'SchedulePlanningStartCommand' in scope
+1698 | ) async throws -> A4ScheduleRaceResult {
+1699 |     let state = A4ScheduleRaceState()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1541:31: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1539 |     )
+1540 |     try database.saveSchedule(schedule)
+1541 |     let result = try database.startScheduledMission(
+     |                               `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1542 |         try a4ScheduleCommand(
+1543 |             schedule,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1553:36: error: cannot infer contextual base in reference to member 'inserted'
+1551 |         try DurableWorkRecord.fetchOne($0, key: workId)
+1552 |     })
+1553 |     #expect(result.disposition == .inserted)
+     |                                    `- error: cannot infer contextual base in reference to member 'inserted'
+1554 |     #expect(result.fire.state == .started)
+1555 |     #expect(committedWork.state == .queued)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1554:35: error: cannot infer contextual base in reference to member 'started'
+1552 |     })
+1553 |     #expect(result.disposition == .inserted)
+1554 |     #expect(result.fire.state == .started)
+     |                                   `- error: cannot infer contextual base in reference to member 'started'
+1555 |     #expect(committedWork.state == .queued)
+1556 |     #expect(committedWork.attempt == 0)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1555:37: error: cannot infer contextual base in reference to member 'queued'
+1553 |     #expect(result.disposition == .inserted)
+1554 |     #expect(result.fire.state == .started)
+1555 |     #expect(committedWork.state == .queued)
+     |                                     `- error: cannot infer contextual base in reference to member 'queued'
+1556 |     #expect(committedWork.attempt == 0)
+1557 |     return A4RestartSetup(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1549:18: warning: no calls to throwing functions occur within 'try' expression
+1547 |         planningProviderResolver: R01PlanningResolver()
+1548 |     )
+1549 |     let workId = try #require(result.workId)
+     |                  `- warning: no calls to throwing functions occur within 'try' expression
+1550 |     let committedWork = try #require(try database.pool.read {
+1551 |         try DurableWorkRecord.fetchOne($0, key: workId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1550:25: warning: no calls to throwing functions occur within 'try' expression
+1548 |     )
+1549 |     let workId = try #require(result.workId)
+1550 |     let committedWork = try #require(try database.pool.read {
+     |                         `- warning: no calls to throwing functions occur within 'try' expression
+1551 |         try DurableWorkRecord.fetchOne($0, key: workId)
+1552 |     })
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1579:30: error: value of type 'AppDatabase' has no member 'scheduleFires'
+1577 |     scheduleId: String
+1578 | ) throws -> A4ScheduleGraphSnapshot {
+1579 |     let fires = try database.scheduleFires(scheduleId: scheduleId)
+     |                              `- error: value of type 'AppDatabase' has no member 'scheduleFires'
+1580 |     let cursor = try database.scheduleEvaluationCursor(
+1581 |         scheduleId: scheduleId
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1580:31: error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1578 | ) throws -> A4ScheduleGraphSnapshot {
+1579 |     let fires = try database.scheduleFires(scheduleId: scheduleId)
+1580 |     let cursor = try database.scheduleEvaluationCursor(
+     |                               `- error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+1581 |         scheduleId: scheduleId
+1582 |     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1716:34: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1714 |                 index: 0,
+1715 |                 outcome: .success(
+1716 |                     try database.startScheduledMission(
+     |                                  `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1717 |                         firstCommand,
+1718 |                         planningProviderResolver: firstResolver
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1733:34: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1731 |                 index: 1,
+1732 |                 outcome: .success(
+1733 |                     try database.startScheduledMission(
+     |                                  `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+1734 |                         secondCommand,
+1735 |                         planningProviderResolver: secondResolver
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1759:19: error: cannot find type 'ScheduleFireCommitResult' in scope
+1757 |         }
+1758 | 
+1759 |     var results: [ScheduleFireCommitResult] = []
+     |                   `- error: cannot find type 'ScheduleFireCommitResult' in scope
+1760 |     for (index, outcome) in outcomes.enumerated() {
+1761 |         switch outcome {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1762:15: error: expression pattern of type 'ResultCode' cannot match values of type 'A4ScheduleRaceOutcome'
+1760 |     for (index, outcome) in outcomes.enumerated() {
+1761 |         switch outcome {
+1762 |         case .success(let result):
+     |               |- error: expression pattern of type 'ResultCode' cannot match values of type 'A4ScheduleRaceOutcome'
+     |               `- note: overloads for '~=' exist with these partially matching parameter lists: (ResultCode, any Error)
+1763 |             results.append(result)
+1764 |         case .failure(let error):
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1762:15: error: reference to member 'success' cannot be resolved without a contextual type
+1760 |     for (index, outcome) in outcomes.enumerated() {
+1761 |         switch outcome {
+1762 |         case .success(let result):
+     |               `- error: reference to member 'success' cannot be resolved without a contextual type
+1763 |             results.append(result)
+1764 |         case .failure(let error):
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4061:33: error: cannot infer contextual base in reference to member 'running'
+4059 |     #expect(recovered.aggregateId == committedMissionId)
+4060 |     #expect(recovered.attempt == 1)
+4061 |     #expect(recovered.state == .running)
+     |                                 `- error: cannot infer contextual base in reference to member 'running'
+4062 |     #expect(
+4063 |         try reopened.scheduleFires(scheduleId: setup.scheduleId).count == 1
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4063:22: error: value of type 'AppDatabase' has no member 'scheduleFires'
+4061 |     #expect(recovered.state == .running)
+4062 |     #expect(
+4063 |         try reopened.scheduleFires(scheduleId: setup.scheduleId).count == 1
+     |                      `- error: value of type 'AppDatabase' has no member 'scheduleFires'
+4064 |     )
+4065 |     await provider.gate.release()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4074:38: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4072 |     let scheduledAt = Date(timeIntervalSince1970: 1_700_000_200)
+4073 |     let firstResolver = R01PlanningResolver()
+4074 |     let first = try fixture.database.startScheduledMission(
+     |                                      `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4075 |         try a4ScheduleCommand(
+4076 |             records.schedule,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4090:41: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4088 |         throw R01ResolverError.unavailable
+4089 |     })
+4090 |     let replayed = try fixture.database.startScheduledMission(
+     |                                         `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4091 |         try a4ScheduleCommand(
+4092 |             records.schedule,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4099:35: error: cannot infer contextual base in reference to member 'inserted'
+4097 |     )
+4098 | 
+4099 |     #expect(first.disposition == .inserted)
+     |                                   `- error: cannot infer contextual base in reference to member 'inserted'
+4100 |     #expect(replayed.disposition == .replayed)
+4101 |     #expect(replayed.fire == first.fire)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4100:38: error: cannot infer contextual base in reference to member 'replayed'
+4098 | 
+4099 |     #expect(first.disposition == .inserted)
+4100 |     #expect(replayed.disposition == .replayed)
+     |                                      `- error: cannot infer contextual base in reference to member 'replayed'
+4101 |     #expect(replayed.fire == first.fire)
+4102 |     #expect(replayed.missionId == first.missionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4140:26: error: cannot infer key path type from context; consider explicitly specifying a root type
+4138 |     #expect(race.results[0].workId == race.results[1].workId)
+4139 |     #expect(
+4140 |         race.results.map(\.disposition).filter { $0 == .inserted }.count
+     |                          `- error: cannot infer key path type from context; consider explicitly specifying a root type
+4141 |             == 1
+4142 |     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4140:57: error: cannot infer contextual base in reference to member 'inserted'
+4138 |     #expect(race.results[0].workId == race.results[1].workId)
+4139 |     #expect(
+4140 |         race.results.map(\.disposition).filter { $0 == .inserted }.count
+     |                                                         `- error: cannot infer contextual base in reference to member 'inserted'
+4141 |             == 1
+4142 |     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4144:26: error: cannot infer key path type from context; consider explicitly specifying a root type
+4142 |     )
+4143 |     #expect(
+4144 |         race.results.map(\.disposition).filter { $0 == .replayed }.count
+     |                          `- error: cannot infer key path type from context; consider explicitly specifying a root type
+4145 |             == 1
+4146 |     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4144:57: error: cannot infer contextual base in reference to member 'replayed'
+4142 |     )
+4143 |     #expect(
+4144 |         race.results.map(\.disposition).filter { $0 == .replayed }.count
+     |                                                         `- error: cannot infer contextual base in reference to member 'replayed'
+4145 |             == 1
+4146 |     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4165:39: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4163 |     let fixture = try makeR01FailureFirstFixture()
+4164 |     let records = try r01ScheduleRecords(fixture, suffix: "broadcast")
+4165 |     let result = try fixture.database.startScheduledMission(
+     |                                       `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4166 |         try a4ScheduleCommand(
+4167 |             records.schedule,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4173:36: error: cannot infer contextual base in reference to member 'inserted'
+4171 |         planningProviderResolver: R01PlanningResolver()
+4172 |     )
+4173 |     #expect(result.disposition == .inserted)
+     |                                    `- error: cannot infer contextual base in reference to member 'inserted'
+4174 |     #expect(result.fire.state == .started)
+4175 |     let committed = try a4ScheduleGraphSnapshot(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4174:35: error: cannot infer contextual base in reference to member 'started'
+4172 |     )
+4173 |     #expect(result.disposition == .inserted)
+4174 |     #expect(result.fire.state == .started)
+     |                                   `- error: cannot infer contextual base in reference to member 'started'
+4175 |     let committed = try a4ScheduleGraphSnapshot(
+4176 |         fixture.database,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4302:38: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4300 |         traceId: "a4-submillisecond-second"
+4301 |     )
+4302 |     let first = try fixture.database.startScheduledMission(
+     |                                      `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4303 |         firstCommand,
+4304 |         planningProviderResolver: R01PlanningResolver()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4306:39: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4304 |         planningProviderResolver: R01PlanningResolver()
+4305 |     )
+4306 |     let second = try fixture.database.startScheduledMission(
+     |                                       `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4307 |         secondCommand,
+4308 |         planningProviderResolver: R01PlanningResolver()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4319:35: error: cannot infer contextual base in reference to member 'inserted'
+4317 |     let secondWorkId = try #require(second.workId)
+4318 | 
+4319 |     #expect(first.disposition == .inserted)
+     |                                   `- error: cannot infer contextual base in reference to member 'inserted'
+4320 |     #expect(second.disposition == .inserted)
+4321 |     #expect(first.fire.scheduledAt.timeIntervalSince1970.bitPattern == 0x41d954fc40000001)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4320:36: error: cannot infer contextual base in reference to member 'inserted'
+4318 | 
+4319 |     #expect(first.disposition == .inserted)
+4320 |     #expect(second.disposition == .inserted)
+     |                                    `- error: cannot infer contextual base in reference to member 'inserted'
+4321 |     #expect(first.fire.scheduledAt.timeIntervalSince1970.bitPattern == 0x41d954fc40000001)
+4322 |     #expect(second.fire.scheduledAt.timeIntervalSince1970.bitPattern == 0x41d954fc40000002)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4316:23: warning: no calls to throwing functions occur within 'try' expression
+4314 |         + CanonicalJSONV1.sha256Hex(Data(secondCommand.context.slotKey.utf8))
+4315 |         + ":v1"
+4316 |     let firstWorkId = try #require(first.workId)
+     |                       `- warning: no calls to throwing functions occur within 'try' expression
+4317 |     let secondWorkId = try #require(second.workId)
+4318 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4317:24: warning: no calls to throwing functions occur within 'try' expression
+4315 |         + ":v1"
+4316 |     let firstWorkId = try #require(first.workId)
+4317 |     let secondWorkId = try #require(second.workId)
+     |                        `- warning: no calls to throwing functions occur within 'try' expression
+4318 | 
+4319 |     #expect(first.disposition == .inserted)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4353:21: error: cannot find 'ScheduleSlotComponentsUnavailableError' in scope
+4351 |     )
+4352 | 
+4353 |     #expect(throws: ScheduleSlotComponentsUnavailableError.self) {
+     |                     `- error: cannot find 'ScheduleSlotComponentsUnavailableError' in scope
+4354 |         _ = try ScheduleMath.slotContext(
+4355 |             for: fireDate,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4354:30: error: type 'ScheduleMath' has no member 'slotContext'
+4352 | 
+4353 |     #expect(throws: ScheduleSlotComponentsUnavailableError.self) {
+4354 |         _ = try ScheduleMath.slotContext(
+     |                              `- error: type 'ScheduleMath' has no member 'slotContext'
+4355 |             for: fireDate,
+4356 |             frequency: records.schedule.frequency,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4382:23: error: cannot infer contextual base in reference to member 'unavailable'
+4380 |         records.schedule,
+4381 |         scheduledAt: fireDate,
+4382 |         preparation: .unavailable,
+     |                       `- error: cannot infer contextual base in reference to member 'unavailable'
+4383 |         traceId: "a4-runtime-unavailable-first"
+4384 |     )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4388:38: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4386 |         throw R01ResolverError.unavailable
+4387 |     })
+4388 |     let first = try fixture.database.startScheduledMission(
+     |                                      `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4389 |         command,
+4390 |         planningProviderResolver: firstResolver
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4395:39: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4393 |         throw R01ResolverError.unavailable
+4394 |     })
+4395 |     let second = try fixture.database.startScheduledMission(
+     |                                       `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4396 |         try a4ScheduleCommand(
+4397 |             records.schedule,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4399:27: error: cannot infer contextual base in reference to member 'unavailable'
+4397 |             records.schedule,
+4398 |             scheduledAt: fireDate,
+4399 |             preparation: .unavailable,
+     |                           `- error: cannot infer contextual base in reference to member 'unavailable'
+4400 |             traceId: "a4-runtime-unavailable-late"
+4401 |         ),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4408:34: error: cannot infer contextual base in reference to member 'failed'
+4406 |     }
+4407 | 
+4408 |     #expect(first.fire.state == .failed)
+     |                                  `- error: cannot infer contextual base in reference to member 'failed'
+4409 |     #expect(first.fire.errorCode == "schedule_runtime_unavailable")
+4410 |     #expect(first.disposition == .inserted)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4410:35: error: cannot infer contextual base in reference to member 'inserted'
+4408 |     #expect(first.fire.state == .failed)
+4409 |     #expect(first.fire.errorCode == "schedule_runtime_unavailable")
+4410 |     #expect(first.disposition == .inserted)
+     |                                   `- error: cannot infer contextual base in reference to member 'inserted'
+4411 |     #expect(second.disposition == .replayed)
+4412 |     #expect(second.fire == first.fire)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4411:36: error: cannot infer contextual base in reference to member 'replayed'
+4409 |     #expect(first.fire.errorCode == "schedule_runtime_unavailable")
+4410 |     #expect(first.disposition == .inserted)
+4411 |     #expect(second.disposition == .replayed)
+     |                                    `- error: cannot infer contextual base in reference to member 'replayed'
+4412 |     #expect(second.fire == first.fire)
+4413 |     #expect(missed.count == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4416:30: error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+4414 |     #expect(try fixture.database.schedule(id: records.schedule.id)?.lastFiredAt == nil)
+4415 |     #expect(
+4416 |         try fixture.database.scheduleEvaluationCursor(
+     |                              `- error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+4417 |             scheduleId: records.schedule.id
+4418 |         )?.version == 1
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4443:30: error: type 'ScheduleMath' has no member 'slotContext'
+4441 | 
+4442 |     #expect(throws: InvalidSchedulePlanningFireTimeError.self) {
+4443 |         _ = try ScheduleMath.slotContext(
+     |                              `- error: type 'ScheduleMath' has no member 'slotContext'
+4444 |             for: Date(timeIntervalSince1970: .nan),
+4445 |             frequency: records.schedule.frequency,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4468:38: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4466 |     let records = try r01ScheduleRecords(fixture, suffix: "claim-cas")
+4467 |     let fireDate = Date(timeIntervalSince1970: 1_700_000_200)
+4468 |     let first = try fixture.database.startScheduledMission(
+     |                                      `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4469 |         try a4ScheduleCommand(
+4470 |             records.schedule,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4476:39: error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4474 |         planningProviderResolver: R01PlanningResolver()
+4475 |     )
+4476 |     let second = try fixture.database.startScheduledMission(
+     |                                       `- error: value of type 'AppDatabase' has no member 'startScheduledMission'
+4477 |         try a4ScheduleCommand(
+4478 |             records.schedule,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4498:35: error: cannot infer contextual base in reference to member 'inserted'
+4496 |     }
+4497 | 
+4498 |     #expect(first.disposition == .inserted)
+     |                                   `- error: cannot infer contextual base in reference to member 'inserted'
+4499 |     #expect(second.disposition == .replayed)
+4500 |     #expect(second.fire == first.fire)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4499:36: error: cannot infer contextual base in reference to member 'replayed'
+4497 | 
+4498 |     #expect(first.disposition == .inserted)
+4499 |     #expect(second.disposition == .replayed)
+     |                                    `- error: cannot infer contextual base in reference to member 'replayed'
+4500 |     #expect(second.fire == first.fire)
+4501 |     #expect(scheduleFireTableCount == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4503:30: error: value of type 'AppDatabase' has no member 'scheduleFires'
+4501 |     #expect(scheduleFireTableCount == 1)
+4502 |     #expect(
+4503 |         try fixture.database.scheduleFires(
+     |                              `- error: value of type 'AppDatabase' has no member 'scheduleFires'
+4504 |             scheduleId: records.schedule.id
+4505 |         ).count == 1
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:4508:30: error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+4506 |     )
+4507 |     #expect(
+4508 |         try fixture.database.scheduleEvaluationCursor(
+     |                              `- error: value of type 'AppDatabase' has no member 'scheduleEvaluationCursor'
+4509 |             scheduleId: records.schedule.id
+4510 |         )?.version == 1

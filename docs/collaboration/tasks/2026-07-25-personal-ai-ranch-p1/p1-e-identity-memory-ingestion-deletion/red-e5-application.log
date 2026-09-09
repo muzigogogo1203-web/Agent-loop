@@ -1,0 +1,504 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[3/6] Emitting module AgentLoopTestSuite
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:195:16: error: cannot find type 'InputActiveIngestionDeletionPorts' in scope
+ 193 |     }
+ 194 | 
+ 195 |     var ports: InputActiveIngestionDeletionPorts {
+     |                `- error: cannot find type 'InputActiveIngestionDeletionPorts' in scope
+ 196 |         InputActiveIngestionDeletionPorts(
+ 197 |             makeEnvelope: { [self] in try makeEnvelope() },
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:360:6: error: cannot find type 'InputDeletionConfirmation' in scope
+ 358 |     _ fixture: P1EDeletionFixture,
+ 359 |     scope: InputDeletionScope = .sourceAndResult
+ 360 | ) -> InputDeletionConfirmation {
+     |      `- error: cannot find type 'InputDeletionConfirmation' in scope
+ 361 |     InputDeletionConfirmation(
+ 362 |         campId: fixture.campID,
+[4/6] Compiling AgentLoopTestSuite IngestionDeletionContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:195:16: error: cannot find type 'InputActiveIngestionDeletionPorts' in scope
+ 193 |     }
+ 194 | 
+ 195 |     var ports: InputActiveIngestionDeletionPorts {
+     |                `- error: cannot find type 'InputActiveIngestionDeletionPorts' in scope
+ 196 |         InputActiveIngestionDeletionPorts(
+ 197 |             makeEnvelope: { [self] in try makeEnvelope() },
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:360:6: error: cannot find type 'InputDeletionConfirmation' in scope
+ 358 |     _ fixture: P1EDeletionFixture,
+ 359 |     scope: InputDeletionScope = .sourceAndResult
+ 360 | ) -> InputDeletionConfirmation {
+     |      `- error: cannot find type 'InputDeletionConfirmation' in scope
+ 361 |     InputDeletionConfirmation(
+ 362 |         campId: fixture.campID,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:353:47: error: extra argument 'activeIngestionDeletionPorts' in call
+ 351 |         resolver: resolver,
+ 352 |         reporter: FailureReporter(database: fixture.database),
+ 353 |         activeIngestionDeletionPorts: harness.ports
+     |                                               `- error: extra argument 'activeIngestionDeletionPorts' in call
+ 354 |     )
+ 355 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1409:45: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1407 |         let trace = p1eDeletionTrace("single-flight")
+1408 | 
+1409 |         async let firstPrepare = controller.prepareActiveIngestionDeletion(
+     |                                             `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1410 |             confirmation,
+1411 |             trace: trace
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1413:49: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1411 |             trace: trace
+1412 |         )
+1413 |         async let duplicatePrepare = controller.prepareActiveIngestionDeletion(
+     |                                                 `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1414 |             confirmation,
+1415 |             trace: trace
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1420:33: error: cannot infer contextual base in reference to member 'prepared'
+1418 |         #expect(first.preparedCommand == duplicate.preparedCommand)
+1419 |         #expect(first.envelope == duplicate.envelope)
+1420 |         #expect(first.phase == .prepared)
+     |                                 `- error: cannot infer contextual base in reference to member 'prepared'
+1421 |         #expect(harness.counts.envelope == 1)
+1422 |         #expect(harness.counts.prepare == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1425:14: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1423 | 
+1424 |         async let execution = controller
+1425 |             .executePendingActiveIngestionDeletion()
+     |              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1426 |         await gate.waitUntilArrived()
+1427 |         let duplicateExecution = await controller
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1428:14: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1426 |         await gate.waitUntilArrived()
+1427 |         let duplicateExecution = await controller
+1428 |             .executePendingActiveIngestionDeletion()
+     |              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1429 |         #expect(duplicateExecution?.phase == .executing)
+1430 |         #expect(harness.counts.execute == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1431:34: error: value of type 'InputWorkflowController' has no member 'cancelPreparedActiveIngestionDeletion'
+1429 |         #expect(duplicateExecution?.phase == .executing)
+1430 |         #expect(harness.counts.execute == 1)
+1431 |         #expect(await controller.cancelPreparedActiveIngestionDeletion() == false)
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'cancelPreparedActiveIngestionDeletion'
+1432 |         await gate.release()
+1433 |         let committed = await execution
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1417:34: warning: no calls to throwing functions occur within 'try' expression
+1415 |             trace: trace
+1416 |         )
+1417 |         let (first, duplicate) = try await (firstPrepare, duplicatePrepare)
+     |                                  `- warning: no calls to throwing functions occur within 'try' expression
+1418 |         #expect(first.preparedCommand == duplicate.preparedCommand)
+1419 |         #expect(first.envelope == duplicate.envelope)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1455:45: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1453 |         let trace = p1eDeletionTrace("prepared-cancel-retry")
+1454 | 
+1455 |         let canceled = try await controller.prepareActiveIngestionDeletion(
+     |                                             `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1456 |             confirmation,
+1457 |             trace: trace
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1459:34: error: value of type 'InputWorkflowController' has no member 'cancelPreparedActiveIngestionDeletion'
+1457 |             trace: trace
+1458 |         )
+1459 |         #expect(await controller.cancelPreparedActiveIngestionDeletion())
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'cancelPreparedActiveIngestionDeletion'
+1460 |         #expect(await controller.activeIngestionDeletionPendingState() == nil)
+1461 |         #expect(harness.counts.execute == 0)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1460:34: error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1458 |         )
+1459 |         #expect(await controller.cancelPreparedActiveIngestionDeletion())
+1460 |         #expect(await controller.activeIngestionDeletionPendingState() == nil)
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1461 |         #expect(harness.counts.execute == 0)
+1462 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1464:14: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1462 | 
+1463 |         let retryHandle = try await controller
+1464 |             .prepareActiveIngestionDeletion(confirmation, trace: trace)
+     |              `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1465 |         #expect(
+1466 |             retryHandle.envelope.idempotencyKey
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1470:14: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1468 |         )
+1469 |         let notCommitted = await controller
+1470 |             .executePendingActiveIngestionDeletion()
+     |              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1471 |         #expect(notCommitted?.phase == .prepared)
+1472 |         #expect(notCommitted?.failure?.traceId == trace.traceId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1478:14: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1476 |         )
+1477 |         let committed = await controller
+1478 |             .executePendingActiveIngestionDeletion()
+     |              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1479 |         #expect(committed?.phase == .committedRefreshPending)
+1480 |         #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1497:45: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1495 |         )
+1496 |         let controller = try p1eDeletionController(fixture, harness: harness)
+1497 |         let prepared = try await controller.prepareActiveIngestionDeletion(
+     |                                             `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1498 |             p1eDeletionConfirmation(fixture),
+1499 |             trace: p1eDeletionTrace("executing-cancel-race")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1503:14: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1501 | 
+1502 |         async let execution = controller
+1503 |             .executePendingActiveIngestionDeletion()
+     |              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1504 |         await gate.waitUntilArrived()
+1505 |         #expect(await controller.cancelPreparedActiveIngestionDeletion() == false)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1505:34: error: value of type 'InputWorkflowController' has no member 'cancelPreparedActiveIngestionDeletion'
+1503 |             .executePendingActiveIngestionDeletion()
+1504 |         await gate.waitUntilArrived()
+1505 |         #expect(await controller.cancelPreparedActiveIngestionDeletion() == false)
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'cancelPreparedActiveIngestionDeletion'
+1506 |         #expect(await controller.dismissCommittedActiveIngestionDeletion() == false)
+1507 |         let executing = await controller
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1506:34: error: value of type 'InputWorkflowController' has no member 'dismissCommittedActiveIngestionDeletion'
+1504 |         await gate.waitUntilArrived()
+1505 |         #expect(await controller.cancelPreparedActiveIngestionDeletion() == false)
+1506 |         #expect(await controller.dismissCommittedActiveIngestionDeletion() == false)
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'dismissCommittedActiveIngestionDeletion'
+1507 |         let executing = await controller
+1508 |             .activeIngestionDeletionPendingState()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1508:14: error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1506 |         #expect(await controller.dismissCommittedActiveIngestionDeletion() == false)
+1507 |         let executing = await controller
+1508 |             .activeIngestionDeletionPendingState()
+     |              `- error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1509 |         #expect(executing?.phase == .executing)
+1510 |         #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1529:45: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1527 |         let controller = try p1eDeletionController(fixture, harness: harness)
+1528 |         let trace = p1eDeletionTrace("refresh-replay")
+1529 |         let prepared = try await controller.prepareActiveIngestionDeletion(
+     |                                             `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1530 |             p1eDeletionConfirmation(fixture),
+1531 |             trace: trace
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1533:30: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1531 |             trace: trace
+1532 |         )
+1533 |         _ = await controller.executePendingActiveIngestionDeletion()
+     |                              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1534 |         #expect(
+1535 |             await controller.refreshCommittedActiveIngestionDeletion {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1535:30: error: value of type 'InputWorkflowController' has no member 'refreshCommittedActiveIngestionDeletion'
+1533 |         _ = await controller.executePendingActiveIngestionDeletion()
+1534 |         #expect(
+1535 |             await controller.refreshCommittedActiveIngestionDeletion {
+     |                              `- error: value of type 'InputWorkflowController' has no member 'refreshCommittedActiveIngestionDeletion'
+1536 |                 throw P1EDeletionTestFailure.forcedRefresh
+1537 |             } == false
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1540:14: error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1538 |         )
+1539 |         let failedRefresh = await controller
+1540 |             .activeIngestionDeletionPendingState()
+     |              `- error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1541 |         #expect(failedRefresh?.phase == .committedRefreshPending)
+1542 |         #expect(failedRefresh?.failure?.traceId == trace.traceId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1549:14: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1547 | 
+1548 |         let replayed = await controller
+1549 |             .executePendingActiveIngestionDeletion()
+     |              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1550 |         #expect(replayed?.phase == .committedRefreshPending)
+1551 |         #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1557:30: error: value of type 'InputWorkflowController' has no member 'refreshCommittedActiveIngestionDeletion'
+1555 |         #expect(try p1eDeletionCounts(fixture.database) == (1, 1, 1, 1))
+1556 |         #expect(
+1557 |             await controller.refreshCommittedActiveIngestionDeletion {}
+     |                              `- error: value of type 'InputWorkflowController' has no member 'refreshCommittedActiveIngestionDeletion'
+1558 |         )
+1559 |         #expect(await controller.activeIngestionDeletionPendingState() == nil)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1559:34: error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1557 |             await controller.refreshCommittedActiveIngestionDeletion {}
+1558 |         )
+1559 |         #expect(await controller.activeIngestionDeletionPendingState() == nil)
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1560 |         #expect(harness.counts.envelope == 1)
+1561 |         #expect(harness.counts.prepare == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1575:45: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1573 |         )
+1574 |         let controller = try p1eDeletionController(fixture, harness: harness)
+1575 |         let prepared = try await controller.prepareActiveIngestionDeletion(
+     |                                             `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1576 |             p1eDeletionConfirmation(fixture),
+1577 |             trace: p1eDeletionTrace("commit-outcome-unknown")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1580:14: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1578 |         )
+1579 |         let pending = await controller
+1580 |             .executePendingActiveIngestionDeletion()
+     |              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1581 |         #expect(pending?.phase == .executionResolutionPending)
+1582 |         #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1585:30: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1583 |             pending?.resolutionDisposition == .commitOutcomeUnknown
+1584 |         )
+1585 |         _ = await controller.executePendingActiveIngestionDeletion()
+     |                              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1586 |         #expect(harness.counts.execute == 1)
+1587 |         #expect(await controller.cancelPreparedActiveIngestionDeletion() == false)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1587:34: error: value of type 'InputWorkflowController' has no member 'cancelPreparedActiveIngestionDeletion'
+1585 |         _ = await controller.executePendingActiveIngestionDeletion()
+1586 |         #expect(harness.counts.execute == 1)
+1587 |         #expect(await controller.cancelPreparedActiveIngestionDeletion() == false)
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'cancelPreparedActiveIngestionDeletion'
+1588 |         #expect(await controller.dismissCommittedActiveIngestionDeletion() == false)
+1589 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1588:34: error: value of type 'InputWorkflowController' has no member 'dismissCommittedActiveIngestionDeletion'
+1586 |         #expect(harness.counts.execute == 1)
+1587 |         #expect(await controller.cancelPreparedActiveIngestionDeletion() == false)
+1588 |         #expect(await controller.dismissCommittedActiveIngestionDeletion() == false)
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'dismissCommittedActiveIngestionDeletion'
+1589 | 
+1590 |         let resolved = await controller
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1591:14: error: value of type 'InputWorkflowController' has no member 'resolvePendingActiveIngestionDeletion'
+1589 | 
+1590 |         let resolved = await controller
+1591 |             .resolvePendingActiveIngestionDeletion()
+     |              `- error: value of type 'InputWorkflowController' has no member 'resolvePendingActiveIngestionDeletion'
+1592 |         #expect(resolved?.phase == .committedRefreshPending)
+1593 |         #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1615:45: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1613 |         let controller = try p1eDeletionController(fixture, harness: harness)
+1614 |         let trace = p1eDeletionTrace("integrity-blocked")
+1615 |         let prepared = try await controller.prepareActiveIngestionDeletion(
+     |                                             `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1616 |             p1eDeletionConfirmation(fixture),
+1617 |             trace: trace
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1620:14: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1618 |         )
+1619 |         let blocked = await controller
+1620 |             .executePendingActiveIngestionDeletion()
+     |              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1621 |         #expect(blocked?.phase == .executionResolutionPending)
+1622 |         #expect(blocked?.resolutionDisposition == .integrityBlocked)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1624:30: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1622 |         #expect(blocked?.resolutionDisposition == .integrityBlocked)
+1623 |         #expect(blocked?.failure?.traceId == trace.traceId)
+1624 |         _ = await controller.executePendingActiveIngestionDeletion()
+     |                              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1625 |         #expect(harness.counts.execute == 1)
+1626 |         #expect(await controller.cancelPreparedActiveIngestionDeletion() == false)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1626:34: error: value of type 'InputWorkflowController' has no member 'cancelPreparedActiveIngestionDeletion'
+1624 |         _ = await controller.executePendingActiveIngestionDeletion()
+1625 |         #expect(harness.counts.execute == 1)
+1626 |         #expect(await controller.cancelPreparedActiveIngestionDeletion() == false)
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'cancelPreparedActiveIngestionDeletion'
+1627 |         #expect(await controller.dismissCommittedActiveIngestionDeletion() == false)
+1628 |         #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1627:34: error: value of type 'InputWorkflowController' has no member 'dismissCommittedActiveIngestionDeletion'
+1625 |         #expect(harness.counts.execute == 1)
+1626 |         #expect(await controller.cancelPreparedActiveIngestionDeletion() == false)
+1627 |         #expect(await controller.dismissCommittedActiveIngestionDeletion() == false)
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'dismissCommittedActiveIngestionDeletion'
+1628 |         #expect(
+1629 |             await controller.abandonTerminalConflict {} == false
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1629:30: error: value of type 'InputWorkflowController' has no member 'abandonTerminalConflict'
+1627 |         #expect(await controller.dismissCommittedActiveIngestionDeletion() == false)
+1628 |         #expect(
+1629 |             await controller.abandonTerminalConflict {} == false
+     |                              `- error: value of type 'InputWorkflowController' has no member 'abandonTerminalConflict'
+1630 |         )
+1631 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1632:39: error: value of type 'InputWorkflowController' has no member 'resolvePendingActiveIngestionDeletion'
+1630 |         )
+1631 | 
+1632 |         let reread = await controller.resolvePendingActiveIngestionDeletion()
+     |                                       `- error: value of type 'InputWorkflowController' has no member 'resolvePendingActiveIngestionDeletion'
+1633 |         #expect(reread?.resolutionDisposition == .integrityBlocked)
+1634 |         #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1654:14: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1652 |         let trace = p1eDeletionTrace("terminal-conflict")
+1653 |         let conflictedHandle = try await controller
+1654 |             .prepareActiveIngestionDeletion(
+     |              `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1655 |                 p1eDeletionConfirmation(fixture),
+1656 |                 trace: trace
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1659:14: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1657 |             )
+1658 |         let conflicted = await controller
+1659 |             .executePendingActiveIngestionDeletion()
+     |              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1660 |         #expect(conflicted?.resolutionDisposition == .terminalConflict)
+1661 |         _ = await controller.executePendingActiveIngestionDeletion()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1661:30: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1659 |             .executePendingActiveIngestionDeletion()
+1660 |         #expect(conflicted?.resolutionDisposition == .terminalConflict)
+1661 |         _ = await controller.executePendingActiveIngestionDeletion()
+     |                              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1662 |         _ = await controller.resolvePendingActiveIngestionDeletion()
+1663 |         #expect(harness.counts.execute == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1662:30: error: value of type 'InputWorkflowController' has no member 'resolvePendingActiveIngestionDeletion'
+1660 |         #expect(conflicted?.resolutionDisposition == .terminalConflict)
+1661 |         _ = await controller.executePendingActiveIngestionDeletion()
+1662 |         _ = await controller.resolvePendingActiveIngestionDeletion()
+     |                              `- error: value of type 'InputWorkflowController' has no member 'resolvePendingActiveIngestionDeletion'
+1663 |         #expect(harness.counts.execute == 1)
+1664 |         #expect(harness.counts.resolve == 0)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1667:30: error: value of type 'InputWorkflowController' has no member 'abandonTerminalConflict'
+1665 | 
+1666 |         #expect(
+1667 |             await controller.abandonTerminalConflict {
+     |                              `- error: value of type 'InputWorkflowController' has no member 'abandonTerminalConflict'
+1668 |                 throw P1EDeletionTestFailure.forcedReload
+1669 |             } == false
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1672:14: error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1670 |         )
+1671 |         let reloadFailed = await controller
+1672 |             .activeIngestionDeletionPendingState()
+     |              `- error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1673 |         #expect(reloadFailed?.resolutionDisposition == .terminalConflict)
+1674 |         #expect(reloadFailed?.failure?.traceId == trace.traceId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1675:34: error: value of type 'InputWorkflowController' has no member 'abandonTerminalConflict'
+1673 |         #expect(reloadFailed?.resolutionDisposition == .terminalConflict)
+1674 |         #expect(reloadFailed?.failure?.traceId == trace.traceId)
+1675 |         #expect(await controller.abandonTerminalConflict {})
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'abandonTerminalConflict'
+1676 |         #expect(await controller.activeIngestionDeletionPendingState() == nil)
+1677 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1676:34: error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1674 |         #expect(reloadFailed?.failure?.traceId == trace.traceId)
+1675 |         #expect(await controller.abandonTerminalConflict {})
+1676 |         #expect(await controller.activeIngestionDeletionPendingState() == nil)
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1677 | 
+1678 |         let fresh = try await controller.prepareActiveIngestionDeletion(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1678:42: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1676 |         #expect(await controller.activeIngestionDeletionPendingState() == nil)
+1677 | 
+1678 |         let fresh = try await controller.prepareActiveIngestionDeletion(
+     |                                          `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1679 |             p1eDeletionConfirmation(fixture),
+1680 |             trace: p1eDeletionTrace("terminal-conflict-fresh")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1696:45: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1694 |         )
+1695 |         let controller = try p1eDeletionController(fixture, harness: harness)
+1696 |         let prepared = try await controller.prepareActiveIngestionDeletion(
+     |                                             `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1697 |             p1eDeletionConfirmation(fixture),
+1698 |             trace: p1eDeletionTrace("committed-dismiss")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1701:14: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1699 |         )
+1700 |         let committed = await controller
+1701 |             .executePendingActiveIngestionDeletion()
+     |              `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1702 |         #expect(committed?.phase == .committedRefreshPending)
+1703 |         #expect(await controller.dismissCommittedActiveIngestionDeletion())
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1703:34: error: value of type 'InputWorkflowController' has no member 'dismissCommittedActiveIngestionDeletion'
+1701 |             .executePendingActiveIngestionDeletion()
+1702 |         #expect(committed?.phase == .committedRefreshPending)
+1703 |         #expect(await controller.dismissCommittedActiveIngestionDeletion())
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'dismissCommittedActiveIngestionDeletion'
+1704 |         #expect(await controller.activeIngestionDeletionPendingState() == nil)
+1705 |         #expect(harness.counts.envelope == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1704:34: error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1702 |         #expect(committed?.phase == .committedRefreshPending)
+1703 |         #expect(await controller.dismissCommittedActiveIngestionDeletion())
+1704 |         #expect(await controller.activeIngestionDeletionPendingState() == nil)
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1705 |         #expect(harness.counts.envelope == 1)
+1706 |         #expect(harness.counts.prepare == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1728:38: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1726 |                 harness: beforeCommitHarness
+1727 |             )
+1728 |             _ = try await controller.prepareActiveIngestionDeletion(
+     |                                      `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1729 |                 p1eDeletionConfirmation(fixture),
+1730 |                 trace: p1eDeletionTrace("process-death-before")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1733:34: error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1731 |             )
+1732 |             #expect(
+1733 |                 await controller.activeIngestionDeletionPendingState() != nil
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1734 |             )
+1735 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1753:34: error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1751 |             )
+1752 |             #expect(
+1753 |                 await controller.activeIngestionDeletionPendingState() == nil
+     |                                  `- error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1754 |             )
+1755 |             _ = try await controller.prepareActiveIngestionDeletion(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1755:38: error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1753 |                 await controller.activeIngestionDeletionPendingState() == nil
+1754 |             )
+1755 |             _ = try await controller.prepareActiveIngestionDeletion(
+     |                                      `- error: value of type 'InputWorkflowController' has no member 'prepareActiveIngestionDeletion'
+1756 |                 p1eDeletionConfirmation(fixture),
+1757 |                 trace: p1eDeletionTrace("process-death-after")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1760:18: error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1758 |             )
+1759 |             let committed = await controller
+1760 |                 .executePendingActiveIngestionDeletion()
+     |                  `- error: value of type 'InputWorkflowController' has no member 'executePendingActiveIngestionDeletion'
+1761 |             #expect(committed?.phase == .committedRefreshPending)
+1762 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:1773:30: error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1771 |         )
+1772 |         #expect(
+1773 |             await relaunched.activeIngestionDeletionPendingState() == nil
+     |                              `- error: value of type 'InputWorkflowController' has no member 'activeIngestionDeletionPendingState'
+1774 |         )
+1775 |         #expect(relaunchedHarness.counts == (0, 0, 0, 0))
+
+test_status=1
+tee_status=0

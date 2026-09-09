@@ -1,0 +1,34 @@
+P0 sanitized CLI smoke commands
+Date: 2026-07-25
+Working directory: /Users/muzi/Agent-loop
+
+Codex CLI
+
+printf '%s\n' 'Do not use tools. Reply with exactly P0_CODEX_CLI_OK and nothing else.' |
+  codex exec --cd /Users/muzi/Agent-loop --sandbox read-only --ephemeral \
+  -m gpt-5.6-sol -c model_reasoning_effort=low -
+
+Result location: ../provider-cli-smoke.log
+Result: completed with P0_CODEX_CLI_OK after five WebSocket reconnects and HTTPS fallback.
+
+Claude Code, attempt 1
+
+claude -p 'Do not use tools. Reply with exactly P0_CLAUDE_CLI_OK and nothing else.' \
+  --model sonnet --output-format text
+
+Result location: ../provider-cli-smoke.log
+Result: 403 Request not allowed.
+
+Claude Code, attempt 2
+
+claude -p 'Do not use tools. Reply with exactly P0_CLAUDE_CLI_OK and nothing else.' \
+  --output-format text
+
+Result location: ../provider-cli-smoke.log
+Result: 403 Request not allowed.
+
+Privacy boundary
+
+- These commands contain no credential, account identifier, OAuth callback, API key, or user content.
+- The CLI processes consumed only their existing local login state.
+- The Codex command is an isolated bare-CLI smoke, not evidence that AgentLoop's CliProcessBackend completed a card.

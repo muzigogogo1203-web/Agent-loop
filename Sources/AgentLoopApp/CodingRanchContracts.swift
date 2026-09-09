@@ -1,6 +1,29 @@
 import Foundation
+import AgentLoopCore
+import AgentLoopApplication
 
 // MARK: - Shared UI boundary
+
+struct CodingRanchUserFacingError: LocalizedError, Sendable, Equatable {
+    let message: String
+
+    var errorDescription: String? {
+        message
+    }
+}
+
+func codingRanchUserFacingMessage(
+    for error: Error,
+    fallback: String
+) -> String {
+    if let safe = error as? CodingRanchUserFacingError {
+        return safe.message
+    }
+    if let operation = error as? UserVisibleOperationError {
+        return operation.failure.message
+    }
+    return fallback
+}
 
 enum CodingRanchLoadState: Sendable, Equatable { case idle, loading, loaded, failed(String) }
 enum CodingRanchActionState: Sendable, Equatable { case idle, running, failed(String) }
@@ -96,7 +119,13 @@ enum FeedSubmissionResult: Sendable, Equatable {
 }
 
 enum RuminationSourceKind: String, Sendable, Equatable { case pastedText, directThought, url, file }
-enum RuminationStage: Sendable, Equatable { case saved, reading, extracting, organizing }
+enum RuminationStage: Sendable, Equatable {
+    case saved
+    case recovering
+    case reading
+    case extracting
+    case organizing
+}
 enum RuminationStatusViewState: Sendable, Equatable {
     case queued
     case ruminating(stage: RuminationStage)
@@ -176,6 +205,12 @@ struct MissionDraftViewState: Sendable, Equatable {
     var isNewcomer: Bool
     var canStart: Bool
     var startBlockReason: String?
+    let startCapability: InputMissionDraftStartCapability?
+}
+
+struct SuggestedMissionReviewViewState: Sendable, Equatable {
+    var draft: MissionDraftViewState
+    let why: String
 }
 
 struct RuminationReviewViewState: Sendable, Equatable {
@@ -183,13 +218,17 @@ struct RuminationReviewViewState: Sendable, Equatable {
     var title: String
     var summary: String
     var candidates: [EditableCandidateViewState]
-    var missionDraft: MissionDraftViewState?
+    var suggestedMission: SuggestedMissionReviewViewState?
     let source: SourceViewState
     var uncertainties: [String]
     var isSaving: Bool
     var error: String?
     var hasChanges: Bool
     var canMaterialize: Bool
+
+    var missionDraft: MissionDraftViewState? {
+        suggestedMission?.draft
+    }
 }
 
 enum MaterializationMode: Sendable, Equatable { case notesOnly, notesAndMission }
@@ -197,7 +236,36 @@ struct MaterializationResult: Sendable, Equatable {
     let noteId: String
     let missionDraft: MissionDraftViewState?
 }
-enum IngestionDeletionScope: Sendable, Equatable { case resultOnly, sourceAndResult, everythingIncludingProjection }
+enum IngestionDeletionScope: Sendable, Equatable {
+    case resultOnly
+    case sourceAndResult
+}
+
+enum IngestionDeletionPhaseViewState: Sendable, Equatable {
+    case prepared
+    case executing
+    case executionResolutionPending
+    case committedRefreshPending
+}
+
+enum IngestionDeletionResolutionViewState: Sendable, Equatable {
+    case commitOutcomeUnknown
+    case integrityBlocked
+    case terminalConflict
+}
+
+struct PendingIngestionDeletionViewState: Sendable, Equatable {
+    let campId: String
+    let ingestionId: String
+    let scope: IngestionDeletionScope
+    let phase: IngestionDeletionPhaseViewState
+    let deletedResultCount: Int
+    let deletedSourceCount: Int
+    let campResultsAreRetained: Bool
+    let failureMessage: String?
+    let traceId: String
+    let resolution: IngestionDeletionResolutionViewState?
+}
 
 struct ArtifactSummaryViewState: Sendable, Equatable, Identifiable {
     let id: String
@@ -238,6 +306,7 @@ struct CowRosterViewState: Sendable, Equatable {
 protocol CodingRanchStoreProtocol: AnyObject {
     var dashboard: CampDashboardViewState? { get }
     var ruminationInbox: RuminationInboxViewState { get }
+    var pendingIngestionDeletion: PendingIngestionDeletionViewState? { get }
 
     func loadDashboard(campId: String) async
     func loadRuminationInbox(campId: String) async
@@ -250,7 +319,13 @@ protocol CodingRanchStoreProtocol: AnyObject {
     func loadRuminationReview(ingestionId: String) async throws -> RuminationReviewViewState
     func saveRuminationReview(_ review: RuminationReviewViewState) async throws
     func materializeRumination(_ review: RuminationReviewViewState, mode: MaterializationMode) async throws -> MaterializationResult
-    func deleteIngestion(ingestionId: String, scope: IngestionDeletionScope) async throws
+    func prepareIngestionDeletion(ingestionId: String, scope: IngestionDeletionScope) async throws
+    func executeIngestionDeletion() async -> Bool
+    func resolveIngestionDeletion() async -> Bool
+    func cancelIngestionDeletion() async -> Bool
+    func retryIngestionDeletionRefresh() async -> Bool
+    func abandonIngestionDeletionConflict() async -> Bool
+    func dismissCommittedIngestionDeletion() async -> Bool
     func createMissionDraft(from ingestionId: String) async throws -> MissionDraftViewState
     func startMission(from draft: MissionDraftViewState) async throws -> String
     func loadReturnSummary(missionId: String) async throws -> ReturnSummaryViewState

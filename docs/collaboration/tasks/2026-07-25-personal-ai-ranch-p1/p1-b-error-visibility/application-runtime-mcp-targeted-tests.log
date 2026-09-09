@@ -1,0 +1,25 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[1/4] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[2/4] Linking RunTests
+[3/4] Applying RunTests
+Build of product 'RunTests' complete! (1.64s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test runtimeReconcileFailureNeverChangesDefault() started.
+◇ Test runtimeProfileDeleteFailureNeverProjectsSuccess() started.
+◇ Test keychainReadDistinguishesNotFoundFromFailure() started.
+◇ Test keychainMutationFailureNeverProjectsSuccess() started.
+◇ Test runtimeProfileWriteFailureNeverProjectsSuccess() started.
+◇ Test mcpRegistryRefreshFailurePreservesPriorRegistry() started.
+✔ Test keychainReadDistinguishesNotFoundFromFailure() passed after 0.001 seconds.
+✔ Test mcpRegistryRefreshFailurePreservesPriorRegistry() passed after 0.045 seconds.
+✔ Test keychainMutationFailureNeverProjectsSuccess() passed after 0.049 seconds.
+✔ Test runtimeProfileDeleteFailureNeverProjectsSuccess() passed after 0.054 seconds.
+✔ Test runtimeProfileWriteFailureNeverProjectsSuccess() passed after 0.054 seconds.
+✔ Test runtimeReconcileFailureNeverChangesDefault() passed after 0.056 seconds.
+✔ Test run with 6 tests in 0 suites passed after 0.057 seconds.

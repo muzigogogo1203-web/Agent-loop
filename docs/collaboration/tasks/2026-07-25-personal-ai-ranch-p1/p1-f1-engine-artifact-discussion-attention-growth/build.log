@@ -1,0 +1,153 @@
+==> swift build -c release
+Building for production...
+[0/10] Copying PrivacyInfo.xcprivacy
+[0/10] Write sources
+[3/10] Copying Info.plist
+[3/10] Write sources
+[6/10] Copying RanchArt
+[7/10] Write swift-version--1AB21518FC5DEDBE.txt
+[9/11] Compiling GRDB Configuration.swift
+[10/12] Compiling AgentLoopCore ChatService.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:1381:13: warning: no 'async' operations occur within 'await' expression
+ 1379 |                 result = .failure(error)
+ 1380 |             }
+ 1381 |             await self.finishPrimary(
+      |             `- warning: no 'async' operations occur within 'await' expression
+ 1382 |                 executionId: executionId,
+ 1383 |                 generation: generation,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4246:24: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4244 |                 throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 4245 |             }
+ 4246 |             let path = String(cString: pathBytes)
+      |                        `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4247 |             guard path.hasPrefix("/"),
+ 4248 |                   URL(fileURLWithPath: path).standardizedFileURL.path == path
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:4326:15: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4324 |               ownedDescriptor >= 0,
+ 4325 |               descriptorPathResult == 0,
+ 4326 |               String(cString: descriptorPath) == directoryURL.path,
+      |               `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 4327 |               Darwin.fstat(ownedDescriptor, &info) == 0,
+ 4328 |               info.st_mode & S_IFMT == S_IFDIR,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5169:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5167 |             throw EngineRuntimeAuthorityErrorV1.descriptorFailure(errno)
+ 5168 |         }
+ 5169 |         let parentPath = String(cString: bytes)
+      |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5170 |         let value = URL(fileURLWithPath: parentPath, isDirectory: true)
+ 5171 |             .appendingPathComponent(authorityName, isDirectory: true)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:5894:20: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5892 |             throw EngineRuntimeAuthorityErrorV1.processSnapshot
+ 5893 |         }
+ 5894 |         let path = String(cString: pathBytes)
+      |                    `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 5895 |         let file = try EngineRuntimeIdentityReaderV1.file(
+ 5896 |             path: path,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6752:15: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6750 |               UInt64(info.st_ino) == identity.inode,
+ 6751 |               UInt32(info.st_uid) == identity.uid,
+ 6752 |               String(cString: path) == identity.canonicalPath
+      |               `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6753 |         else {
+ 6754 |             throw EngineRuntimeAuthorityErrorV1.invalidStateRoot
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6871:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6869 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6870 |         }
+ 6871 |         let systemPath = String(cString: systemBytes)
+      |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6872 |         var resolvedBytes = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+ 6873 |         guard systemPath.withCString({ source in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6878:24: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6876 |             throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+ 6877 |         }
+ 6878 |         let resolved = String(cString: resolvedBytes)
+      |                        `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6879 |         let canonical = resolved.hasPrefix("/var/")
+ 6880 |             ? "/private" + resolved
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:6960:19: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6958 |             )
+ 6959 |             guard pathResult == 0,
+ 6960 |                   String(cString: frozenPath) == url.path
+      |                   `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 6961 |             else {
+ 6962 |                 throw EngineRuntimeAuthorityErrorV1.invalidDirectory
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Kernel/Orchestrator.swift:7044:17: warning: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7042 |         var snapshots: [EngineRuntimeExecutableRemovalSnapshotV1] = []
+ 7043 |         for boot in oldBoots {
+ 7044 |             var bootDescriptor = try openExistingDirectory(
+      |                 `- warning: variable 'bootDescriptor' was never mutated; consider changing to 'let' constant
+ 7045 |                 parent: engineRootDescriptor,
+ 7046 |                 name: boot.name,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/BoardServerBridgeMain.swift:213:15: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+211 |               !socketPath.utf8.contains(0),
+212 |               resolvedPathResult != nil,
+213 |               String(cString: resolvedPathBytes) == socketPath,
+    |               `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+214 |               Self.isLowercaseHex(token, count: 64)
+215 |         else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Loop/CliEngineAdapter.swift:1888:22: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1886 |             throw EngineContextValidationErrorV1()
+1887 |         }
+1888 |         let result = String(cString: buffer)
+     |                      `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+1889 |         guard CliExecutableAuthorityV1.isCanonicalAbsolutePath(result) else {
+1890 |             throw EngineContextValidationErrorV1()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Work/PlanningProviderResolver.swift:417:13: warning: no calls to throwing functions occur within 'try' expression
+415 |         }
+416 |         let trustedCatalog = try Self.mapCatalogSourceFailure {
+417 |             try ModelCatalogService.trustedCatalog(
+    |             `- warning: no calls to throwing functions occur within 'try' expression
+418 |                 profile: profile,
+419 |                 defaults: defaults
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[11/13] Compiling AgentLoopApplication AcceptanceWorkflowController.swift
+[12/14] Compiling AgentLoopApp AgentLoopApp.swift
+[12/14] Write Objects.LinkFileList
+[13/14] Linking AgentLoopApp
+Build of product 'AgentLoopApp' complete! (261.22s)
+[0/1] Planning build
+Building for production...
+[0/3] Write sources
+[1/4] Write swift-version--1AB21518FC5DEDBE.txt
+[3/5] Compiling AgentLoopBoardBridge main.swift
+[3/5] Write Objects.LinkFileList
+[4/5] Linking AgentLoopBoardBridge
+Build of product 'AgentLoopBoardBridge' complete! (2.68s)
+==> icon
+==> codesign (explicit same-invocation ad-hoc preview)
+dist/Coding 牧场.app/Contents/Helpers/AgentLoopBoardBridge: replacing existing signature
+dist/Coding 牧场.app: replacing existing signature
+dist/Coding 牧场.app/Contents/Helpers/AgentLoopBoardBridge: valid on disk
+dist/Coding 牧场.app/Contents/Helpers/AgentLoopBoardBridge: satisfies its Designated Requirement
+--prepared:/Users/muzi/Agent-loop/dist/Coding 牧场.app/Contents/Helpers/AgentLoopBoardBridge
+--validated:/Users/muzi/Agent-loop/dist/Coding 牧场.app/Contents/Helpers/AgentLoopBoardBridge
+dist/Coding 牧场.app: valid on disk
+dist/Coding 牧场.app: satisfies its Designated Requirement
+--prepared:/Users/muzi/Agent-loop/dist/Coding 牧场.app/Contents/Helpers/AgentLoopBoardBridge
+--validated:/Users/muzi/Agent-loop/dist/Coding 牧场.app/Contents/Helpers/AgentLoopBoardBridge
+dist/Coding 牧场.app: valid on disk
+dist/Coding 牧场.app: satisfies its Designated Requirement
+dist/Coding 牧场.app/Contents/Helpers/AgentLoopBoardBridge: valid on disk
+dist/Coding 牧场.app/Contents/Helpers/AgentLoopBoardBridge: satisfies its Designated Requirement
+==> zip
+==> 未配置 NOTARY_PROFILE,跳过公证(脚本头注释有一次性配置方法)
+==> DMG
+打包完成:dist/Coding 牧场.app(v1.1.0 build 128)
+  - dist/CodingRanch-1.1.0.zip
+  - dist/CodingRanch-1.1.0.dmg
+Executable=/Users/muzi/Agent-loop/dist/Coding 牧场.app/Contents/MacOS/AgentLoop
+Identifier=com.muzi.agentloop
+Format=app bundle with Mach-O thin (arm64)

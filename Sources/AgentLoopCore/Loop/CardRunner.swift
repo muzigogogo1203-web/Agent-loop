@@ -1,7 +1,6 @@
 import Foundation
 
-/// 外部（MCP）工具装配单元（M8-D4）：def 进提示词工具区，handler 进分发表。
-/// 与内置工具走同一装配口（白名单过滤 + 审批门 + 三处同源），不开旁路。
+/// 外部工具装配单元：定义进入 provider 工具区，handler 进入同名分发表。
 public struct ExternalTool: Sendable {
     public let def: ToolDef
     public let handler: any ToolHandler
@@ -12,260 +11,754 @@ public struct ExternalTool: Sendable {
     }
 }
 
-public struct CardRunner: Sendable {
-    let db: AppDatabase
-    let provider: any LLMProvider
-    let artifactStoreRoot: URL
-    let retryDelays: [Duration]
-    let turnTimeout: Duration
+package typealias ModelLoopCapabilityToolsResolveV1 =
+    @Sendable (
+        _ request: EngineExecutionRequest,
+        _ workspaceURL: URL
+    ) throws -> [ExternalTool]
 
-    public init(
-        db: AppDatabase,
-        provider: any LLMProvider,
-        artifactStoreRoot: URL,
-        retryDelays: [Duration] = [.seconds(2), .seconds(4)],
-        turnTimeout: Duration = KernelDefaults.turnTimeout
-    ) {
-        self.db = db
-        self.provider = provider
-        self.artifactStoreRoot = artifactStoreRoot
-        self.retryDelays = retryDelays
-        self.turnTimeout = turnTimeout
+private final class ModelLoopTaskPublicationGateV1: @unchecked Sendable {
+    private let lock = NSLock()
+    private var opened = false
+    private var waiter: CheckedContinuation<Void, Never>?
+
+    func waitUntilOpened() async {
+        if lock.withLock({ opened }) { return }
+        await withCheckedContinuation { continuation in
+            let resumeNow = lock.withLock { () -> Bool in
+                if opened { return true }
+                precondition(waiter == nil, "duplicate CardRunner start waiter")
+                waiter = continuation
+                return false
+            }
+            if resumeNow { continuation.resume() }
+        }
     }
 
-    public func run(
-        cardId: String,
-        companionName: String,
-        rolePrompt: String,
-        upstreamHandoffs: [UpstreamHandoff] = [],
-        answeredRequests: [(prompt: String, answer: String)] = [],
-        campNotes: [NoteSnippet] = [],
-        companionNotes: [NoteSnippet] = [],
-        toolAccess: ToolAccess = .full,
-        searchKey: String? = nil,
-        autonomy: MissionAutonomy = .standard,
-        externalTools: [ExternalTool] = []
-    ) throws -> AsyncThrowingStream<AgentEvent, Error> {
-        guard let card = try db.card(id: cardId) else {
-            throw RecordNotFoundError(table: "card", id: cardId)
+    func open() {
+        let current = lock.withLock { () -> CheckedContinuation<Void, Never>? in
+            precondition(!opened, "duplicate CardRunner start open")
+            opened = true
+            let current = waiter
+            waiter = nil
+            return current
         }
-        let squad = try db.squad(forCard: cardId)
-        // M5-1：书签优先恢复工作目录权限（沙箱重启场景），path 兜底
-        let workspaceAccess = WorkspaceScopedAccess(
-            workspacePath: squad?.workspacePath,
-            bookmark: squad?.workspaceBookmark)
-        let workspace = workspaceAccess.url
-        let runId = UUID().uuidString
+        current?.resume()
+    }
+}
 
-        try db.startRun(cardId: cardId, runId: runId)
+private final class ModelLoopTaskRegistryV1: @unchecked Sendable {
+    private let lock = NSLock()
+    private let cancellationLifecycleObserver: @Sendable (
+        EngineAdapterCancellationLifecycleEventV1
+    ) -> Void
+    private var entries: [
+        String: EngineAdapterCancellationGenerationV1
+    ] = [:]
 
-        let board = BoardTools(
-            db: db,
-            cardId: cardId,
-            runId: runId,
-            workspaceRoot: workspace,
-            artifactStoreRoot: artifactStoreRoot
-        )
-        let files = FileTools(workspaceRoot: workspace)
-        // M6-D4：白名单在此单点收口——handlers、提示词工具区、契约文本三处同源。
-        // 板工具四件永远在场（终结契约 + 人工门，spec §5.2-4）。
-        var handlers: [String: any ToolHandler] = [
-            "complete_card": BoardToolHandler(tools: board, op: .complete),
-            "block_card": BoardToolHandler(tools: board, op: .block),
-            "add_progress_note": BoardToolHandler(tools: board, op: .note),
-            "ask_user": BoardToolHandler(tools: board, op: .askUser),
-        ]
-        var capabilityHandlers: [String: any ToolHandler] = [
-            "list_dir": FileToolHandler(tools: files, op: .list),
-            "read_file": FileToolHandler(tools: files, op: .read),
-            "write_file": FileToolHandler(tools: files, op: .write),
-            "web_fetch": WebFetchTool(),
-            "search_camp_notes": CampNotesSearchTool(db: db, campId: squad?.campId),
-        ]
-        // M6-D8：无 key 时 web_search 根本不装配——白名单 ∩ 可用性
-        if let searchKey, !searchKey.isEmpty {
-            capabilityHandlers["web_search"] = WebSearchTool(apiKey: searchKey)
-        }
-        // M7-D6：无工作目录不装配 shell（可见即可用）
-        if let workspace {
-            capabilityHandlers["run_shell"] = ShellTool(workspaceRoot: workspace)
-        }
-        // M8-D4：MCP 外部工具走同一装配口。白名单语义（M6-D5b）：必须显式勾选，
-        // 存量 "[]"（=内置全量）与 v2 空名单都不包含 mcp__ 名——构造上不被继承。
-        for tool in externalTools where capabilityHandlers[tool.def.name] == nil {
-            capabilityHandlers[tool.def.name] = tool.handler
-        }
-        for (name, handler) in capabilityHandlers where toolAccess.allows(name) {
-            handlers[name] = handler
-        }
-        // M7-D3/D4：审批门套在非只读工具上——档位矩阵 + 一次性授权令牌（冷启动重跑时装罐）
-        let approvalJar = ApprovalTokenJar((try? db.approvalDecisions(cardId: cardId)) ?? [])
-        for (name, handler) in handlers where ToolDef.risk(name) != .readOnly {
-            handlers[name] = ApprovalGateHandler(
-                inner: handler, toolName: name, autonomy: autonomy,
-                jar: approvalJar, db: db, cardId: cardId, runId: runId)
-        }
-        let executor = ToolExecutor(handlers: handlers)
-        // 提示词工具区从 handlers 派生：可见即可用，构造上保证同源（D4/D8）
-        let tools = (ToolDef.agentTools + externalTools.map(\.def))
-            .filter { handlers.keys.contains($0.name) }
-        let packet = ContextPacket(
-            companionName: companionName,
-            rolePrompt: rolePrompt,
-            cardTitle: card.title,
-            cardDescription: card.descriptionText,
-            expectedOutput: card.expectedOutput,
-            workspacePath: workspace?.path,
-            upstreamHandoffs: upstreamHandoffs,
-            answeredRequests: answeredRequests,
-            campNotes: campNotes,
-            companionNotes: companionNotes,
-            toolNames: tools.map(\.name)
-        )
-        let loop = AgentLoop(
-            provider: provider,
-            executor: executor,
-            packet: packet,
-            tools: tools,
-            maxTurns: card.maxTurns,
-            tokenBudget: card.tokenBudget,
-            maxTokensPerTurn: KernelDefaults.maxTokensPerTurn,
-            retryDelays: retryDelays,
-            turnTimeout: turnTimeout
-        )
+    init(
+        cancellationLifecycleObserver: @escaping @Sendable (
+            EngineAdapterCancellationLifecycleEventV1
+        ) -> Void
+    ) {
+        self.cancellationLifecycleObserver = cancellationLifecycleObserver
+    }
 
-        return AsyncThrowingStream { continuation in
+    func reserve(
+        executionId: String
+    ) throws -> EngineAdapterCancellationGenerationV1 {
+        do {
+            try CanonicalContractCodingV1.validateCanonicalUUID(executionId)
+        } catch {
+            throw EngineDispatchConflictErrorV1()
+        }
+        let generation = EngineAdapterCancellationGenerationV1(
+            executionId: executionId
+        )
+        lock.lock()
+        defer { lock.unlock() }
+        guard entries[executionId] == nil else {
+            throw EngineDispatchConflictErrorV1()
+        }
+        entries[executionId] = generation
+        return generation
+    }
+
+    func attach(
+        _ task: Task<Void, Error>,
+        executionId: String,
+        generation: EngineAdapterCancellationGenerationV1
+    ) throws {
+        try lock.withLock {
+            guard entries[executionId] === generation else {
+                throw EngineDispatchConflictErrorV1()
+            }
+            try generation.attach(task)
+        }
+    }
+
+    func publishOutcome(
+        executionId: String,
+        generation: EngineAdapterCancellationGenerationV1,
+        result: Result<Void, any Error>
+    ) {
+        generation.publishOutcome(result)
+        cancellationLifecycleObserver(.generationOutcomePublished)
+        lock.withLock {
+            retireIfEligibleLocked(
+                executionId: executionId,
+                generation: generation
+            )
+        }
+    }
+
+    func markOuterTaskSettled(
+        executionId: String,
+        generation: EngineAdapterCancellationGenerationV1
+    ) {
+        generation.markOuterTaskSettled()
+        lock.withLock {
+            retireIfEligibleLocked(
+                executionId: executionId,
+                generation: generation
+            )
+        }
+    }
+
+    func claimCancellation(
+        executionId: String
+    ) throws -> EngineAdapterCancellationClaimV1 {
+        do {
+            try CanonicalContractCodingV1.validateCanonicalUUID(executionId)
+        } catch {
+            throw EngineDispatchConflictErrorV1()
+        }
+        let installed = try lock.withLock { () throws -> (
+            claim: EngineAdapterCancellationClaimV1,
+            startOwner:
+                EngineAdapterCancellationGenerationV1.StartCancellationOwner
+        ) in
+            guard let generation = entries[executionId] else {
+                throw EngineDispatchConflictErrorV1()
+            }
+            let installed = makeCancellationClaimLocked(
+                generation: generation
+            )
+            cancellationLifecycleObserver(.claimLookup)
+            return installed
+        }
+        installed.startOwner()
+        return installed.claim
+    }
+
+    func signalCancellation(
+        executionId: String,
+        generation: EngineAdapterCancellationGenerationV1
+    ) {
+        let startOwner = lock.withLock {
+            () -> EngineAdapterCancellationGenerationV1
+                .StartCancellationOwner? in
+            guard entries[executionId] === generation else { return nil }
+            return makeCancellationSignalLocked(generation: generation)
+        }
+        startOwner?()
+    }
+
+    func claimCancellation(
+        executionId: String,
+        generation: EngineAdapterCancellationGenerationV1
+    ) throws -> EngineAdapterCancellationClaimV1 {
+        do {
+            try CanonicalContractCodingV1.validateCanonicalUUID(executionId)
+        } catch {
+            throw EngineDispatchConflictErrorV1()
+        }
+        let installed = try lock.withLock { () throws -> (
+            claim: EngineAdapterCancellationClaimV1,
+            startOwner:
+                EngineAdapterCancellationGenerationV1.StartCancellationOwner
+        ) in
+            guard generation.executionId == executionId,
+                  entries[executionId] === generation
+            else { throw EngineDispatchConflictErrorV1() }
+            let installed = makeCancellationClaimLocked(
+                generation: generation
+            )
+            cancellationLifecycleObserver(.claimLookup)
+            return installed
+        }
+        installed.startOwner()
+        return installed.claim
+    }
+
+    func acknowledgeCancellation(
+        _ claim: EngineAdapterCancellationClaimV1
+    ) {
+        lock.withLock {
+            guard let generation = entries[claim.executionId],
+                  generation.token === claim.generationToken,
+                  generation.acknowledgeCancellation(
+                    generationToken: claim.generationToken,
+                    ownerToken: claim.ownerToken,
+                    claimToken: claim.claimToken
+                  )
+            else { return }
+            retireIfEligibleLocked(
+                executionId: claim.executionId,
+                generation: generation
+            )
+        }
+    }
+
+    private func makeCancellationClaimLocked(
+        generation: EngineAdapterCancellationGenerationV1
+    ) -> (
+        claim: EngineAdapterCancellationClaimV1,
+        startOwner:
+            EngineAdapterCancellationGenerationV1.StartCancellationOwner
+    ) {
+        generation.claimCancellation(
+            operation: cancellationOperation,
+            onSettled: { [weak self] generation, _ in
+                self?.cancellationOwnerDidSettle(generation)
+            }
+        )
+    }
+
+    private func makeCancellationSignalLocked(
+        generation: EngineAdapterCancellationGenerationV1
+    ) -> EngineAdapterCancellationGenerationV1.StartCancellationOwner {
+        generation.signalCancellation(
+            operation: cancellationOperation,
+            onSettled: { [weak self] generation, _ in
+                self?.cancellationOwnerDidSettle(generation)
+            }
+        )
+    }
+
+    private var cancellationOperation:
+        EngineAdapterCancellationGenerationV1.CancellationOperation
+    {
+        { generation in
+            let outerTask: Task<Void, Error>?
+            switch await generation.loadTaskOrOutcome() {
+            case let .task(task):
+                outerTask = task
+                task.cancel()
+            case let .completed(result):
+                outerTask = nil
+                if case let .failure(error) = result,
+                   !(error is CancellationError)
+                {
+                    throw error
+                }
+                return
+            }
+            let result = await generation.waitForOutcome()
+            if let outerTask { _ = await outerTask.result }
+            if case let .failure(error) = result,
+               !(error is CancellationError)
+            {
+                throw error
+            }
+        }
+    }
+
+    private func cancellationOwnerDidSettle(
+        _ generation: EngineAdapterCancellationGenerationV1
+    ) {
+        cancellationLifecycleObserver(.cancellationOwnerSettled)
+        lock.withLock {
+            retireIfEligibleLocked(
+                executionId: generation.executionId,
+                generation: generation
+            )
+        }
+    }
+
+    private func retireIfEligibleLocked(
+        executionId: String,
+        generation: EngineAdapterCancellationGenerationV1
+    ) {
+        guard entries[executionId] === generation,
+              generation.isRetirable
+        else { return }
+        entries[executionId] = nil
+    }
+}
+
+private actor ModelLoopForwardingBoardTerminalSinkV1:
+    EngineBoardTerminalSink
+{
+    private let downstream: any EngineBoardTerminalSink
+    private var acceptedTerminal = false
+
+    init(downstream: any EngineBoardTerminalSink) {
+        self.downstream = downstream
+    }
+
+    func submit(_ intent: EngineBoardTerminalIntentV1) async throws {
+        try await downstream.submit(intent)
+        acceptedTerminal = true
+    }
+
+    func hasAcceptedTerminal() -> Bool {
+        acceptedTerminal
+    }
+}
+
+private struct ModelLoopCapabilityHandlerV1: ToolHandler {
+    let inner: any ToolHandler
+
+    func execute(input: JSONValue) async -> ToolOutcome {
+        switch await inner.execute(input: input) {
+        case let .result(value):
+            return .result(value)
+        case let .error(message):
+            return .error(message)
+        case .completed, .blocked:
+            return .error("Capability tools cannot submit Board outcomes.")
+        }
+    }
+}
+
+private struct ModelLoopTerminalDeliveryFailureV1:
+    Error,
+    @unchecked Sendable
+{
+    let underlying: any Error
+}
+
+public struct CardRunner: ModelLoopExecutionDrivingV1, Sendable {
+    package static let rateLimitReasonCode = "engine_provider_rate_limit"
+
+    let provider: any LLMProvider
+    let capabilityToolsResolver: ModelLoopCapabilityToolsResolveV1
+    let maxTurns: Int
+    let maxTokensPerTurn: Int
+    let retryDelays: [Duration]
+    let turnTimeout: Duration
+    private let taskRegistry: ModelLoopTaskRegistryV1
+
+    package init(
+        provider: any LLMProvider,
+        capabilityToolsResolver:
+            @escaping ModelLoopCapabilityToolsResolveV1,
+        maxTurns: Int = KernelDefaults.maxTurns,
+        maxTokensPerTurn: Int = KernelDefaults.maxTokensPerTurn,
+        retryDelays: [Duration] = [.seconds(2), .seconds(4)],
+        turnTimeout: Duration = KernelDefaults.turnTimeout,
+        cancellationLifecycleObserver: @escaping @Sendable (
+            EngineAdapterCancellationLifecycleEventV1
+        ) -> Void = { _ in }
+    ) {
+        self.provider = provider
+        self.capabilityToolsResolver = capabilityToolsResolver
+        self.maxTurns = maxTurns
+        self.maxTokensPerTurn = maxTokensPerTurn
+        self.retryDelays = retryDelays
+        self.turnTimeout = turnTimeout
+        taskRegistry = ModelLoopTaskRegistryV1(
+            cancellationLifecycleObserver: cancellationLifecycleObserver
+        )
+    }
+
+    package func execute(
+        request: EngineExecutionRequest,
+        context: EngineResolvedContextTransportV1,
+        workspaceURL: URL,
+        terminalSink: any EngineTerminalSink,
+        boardTerminalSink: any EngineBoardTerminalSink,
+        progressSink: any EngineProgressSink
+    ) -> AsyncThrowingStream<EngineExecutionEventPayloadV1, Error> {
+        startExecution(
+            request: request,
+            context: context,
+            workspaceURL: workspaceURL,
+            terminalSink: terminalSink,
+            boardTerminalSink: boardTerminalSink,
+            progressSink: progressSink
+        ).events
+    }
+
+    package func startExecution(
+        request: EngineExecutionRequest,
+        context: EngineResolvedContextTransportV1,
+        workspaceURL: URL,
+        terminalSink: any EngineTerminalSink,
+        boardTerminalSink: any EngineBoardTerminalSink,
+        progressSink: any EngineProgressSink
+    ) -> ModelLoopExecutionRunV1 {
+        let generation: EngineAdapterCancellationGenerationV1
+        do {
+            generation = try taskRegistry.reserve(
+                executionId: request.executionId
+            )
+        } catch {
+            return ModelLoopExecutionRunV1(
+                events: AsyncThrowingStream {
+                    $0.finish(throwing: error)
+                },
+                cancellation: .completed(.failure(error))
+            )
+        }
+
+        let stream = AsyncThrowingStream<
+            EngineExecutionEventPayloadV1,
+            Error
+        > { continuation in
+            let gate = ModelLoopTaskPublicationGateV1()
             let task = Task {
-                defer { workspaceAccess.stop() }
-                var totalIn = 0
-                var totalOut = 0
-                var turns = 0
-                var finalized = false
+                let result: Result<Void, any Error>
                 do {
-                    var sawFinished = false
-                    for try await event in loop.run() {
-                        switch event {
-                        case .turnEnded(let usage):
-                            totalIn += usage.inputTokens
-                            totalOut += usage.outputTokens
-                            turns += 1
-                            continuation.yield(event)
-
-                        case .finished(let outcome):
-                            sawFinished = true
-                            switch outcome {
-                            case .completed:
-                                finalized = true
-                                try db.finishRun(
-                                    id: runId,
-                                    outcome: "completed",
-                                    turns: turns,
-                                    tokensIn: totalIn,
-                                    tokensOut: totalOut
-                                )
-                            case .blocked(let reason, let detail):
-                                finalized = true
-                                try blockCardIfStillRunning(
-                                    cardId: cardId,
-                                    runId: runId,
-                                    reason: reason,
-                                    detail: detail
-                                )
-                                try db.finishRun(
-                                    id: runId,
-                                    outcome: "blocked",
-                                    turns: turns,
-                                    tokensIn: totalIn,
-                                    tokensOut: totalOut
-                                )
-                            }
-                            continuation.yield(event)
-
-                        default:
-                            continuation.yield(event)
-                        }
-                    }
-                    // If the stream ended without a .finished event, the consumer cancelled us.
-                    if !sawFinished && !finalized {
-                        finalized = true
-                        try? db.finishRun(
-                            id: runId,
-                            outcome: "canceled",
-                            turns: turns,
-                            tokensIn: totalIn,
-                            tokensOut: totalOut
-                        )
-                        try? interruptCardIfStillRunning(cardId: cardId, runId: runId)
-                    }
-                    continuation.finish()
-                } catch is CancellationError {
-                    if !finalized {
-                        finalized = true
-                        try? db.finishRun(
-                            id: runId,
-                            outcome: "canceled",
-                            turns: turns,
-                            tokensIn: totalIn,
-                            tokensOut: totalOut
-                        )
-                        try? interruptCardIfStillRunning(cardId: cardId, runId: runId)
-                    }
-                    continuation.finish()
+                    await gate.waitUntilOpened()
+                    try Task.checkCancellation()
+                    try await drive(
+                        request: request,
+                        context: context,
+                        workspaceURL: workspaceURL,
+                        terminalSink: terminalSink,
+                        boardTerminalSink: boardTerminalSink,
+                        progressSink: progressSink,
+                        continuation: continuation
+                    )
+                    result = .success(())
                 } catch {
-                    if !finalized {
-                        finalized = true
-                        let detail = Self.readableError(error)
-                        try? db.finishRun(
-                            id: runId,
-                            outcome: "failed",
-                            turns: turns,
-                            tokensIn: totalIn,
-                            tokensOut: totalOut
-                        )
-                        try? db.appendDiagnosticEvent(
-                            cardId: cardId,
-                            runId: runId,
-                            kind: EventKind.runError,
-                            payload: ["error": .string(detail), "turns": .number(Double(turns))]
-                        )
-                        try? blockCardIfStillRunning(
-                            cardId: cardId,
-                            runId: runId,
-                            reason: "other",
-                            detail: "运行错误：\(detail)"
-                        )
-                    }
+                    result = .failure(error)
+                }
+                taskRegistry.publishOutcome(
+                    executionId: request.executionId,
+                    generation: generation,
+                    result: result
+                )
+                return try result.get()
+            }
+            do {
+                try taskRegistry.attach(
+                    task,
+                    executionId: request.executionId,
+                    generation: generation
+                )
+            } catch {
+                task.cancel()
+                gate.open()
+                continuation.finish(throwing: error)
+                return
+            }
+            continuation.onTermination = { termination in
+                guard case .cancelled = termination else { return }
+                taskRegistry.signalCancellation(
+                    executionId: request.executionId,
+                    generation: generation
+                )
+            }
+            Task {
+                let result = await task.result
+                taskRegistry.markOuterTaskSettled(
+                    executionId: request.executionId,
+                    generation: generation
+                )
+                switch result {
+                case .success:
+                    continuation.finish()
+                case let .failure(error) where error is CancellationError:
+                    continuation.finish()
+                case let .failure(error):
                     continuation.finish(throwing: error)
                 }
             }
-            continuation.onTermination = { _ in task.cancel() }
+            gate.open()
         }
-    }
-
-    private func blockCardIfStillRunning(cardId: String, runId: String, reason: String, detail: String) throws {
-        guard try db.card(id: cardId)?.status == .running else {
-            return
-        }
-        try db.blockCard(id: cardId, runId: runId, reason: reason, detail: detail)
-    }
-
-    /// Transitions running→ready after a consumer cancellation (card_interrupted event).
-    private func interruptCardIfStillRunning(cardId: String, runId: String) throws {
-        guard try db.card(id: cardId)?.status == .running else {
-            return
-        }
-        try db.transitionCard(
-            id: cardId,
-            to: .ready,
-            eventKind: EventKind.cardInterrupted,
-            payload: ["runId": .string(runId), "reason": "canceled"]
+        return ModelLoopExecutionRunV1(
+            events: stream,
+            cancellation: .target {
+                let claim = try taskRegistry.claimCancellation(
+                    executionId: request.executionId,
+                    generation: generation
+                )
+                defer { taskRegistry.acknowledgeCancellation(claim) }
+                try await claim.wait()
+            }
         )
     }
 
-    private static func readableError(_ error: Error) -> String {
-        if let urlError = error as? URLError {
-            return urlError.localizedDescription
+    package func cancel(executionId: String) async throws {
+        let claim = try await claimCancellation(executionId: executionId)
+        defer { acknowledgeCancellation(claim) }
+        do {
+            try await claim.wait()
+        } catch is CancellationError {
+        } catch {
+            throw error
         }
-        return String(describing: error)
     }
+
+    package func claimCancellation(
+        executionId: String
+    ) async throws -> EngineAdapterCancellationClaimV1 {
+        try taskRegistry.claimCancellation(executionId: executionId)
+    }
+
+    package func acknowledgeCancellation(
+        _ claim: EngineAdapterCancellationClaimV1
+    ) {
+        taskRegistry.acknowledgeCancellation(claim)
+    }
+
+    private func drive(
+        request: EngineExecutionRequest,
+        context: EngineResolvedContextTransportV1,
+        workspaceURL: URL,
+        terminalSink: any EngineTerminalSink,
+        boardTerminalSink: any EngineBoardTerminalSink,
+        progressSink: any EngineProgressSink,
+        continuation:
+            AsyncThrowingStream<EngineExecutionEventPayloadV1, Error>
+                .Continuation
+    ) async throws {
+        let forwardingBoardSink =
+            ModelLoopForwardingBoardTerminalSinkV1(
+                downstream: boardTerminalSink
+            )
+        do {
+            try validateConfiguration()
+            try Task.checkCancellation()
+            let capabilityTools = try capabilityToolsResolver(
+                request,
+                workspaceURL
+            )
+            let assembled = try assembleTools(
+                capabilityTools,
+                boardTerminalSink: forwardingBoardSink,
+                progressSink: progressSink
+            )
+            let loop = AgentLoop(
+                provider: provider,
+                executor: ToolExecutor(handlers: assembled.handlers),
+                packet: context.packet,
+                tools: assembled.definitions,
+                maxTurns: maxTurns,
+                tokenBudget: request.budget.tokenLimit,
+                maxTokensPerTurn: maxTokensPerTurn,
+                retryDelays: retryDelays,
+                turnTimeout: turnTimeout
+            )
+
+            try Task.checkCancellation()
+            continuation.yield(.accepted)
+            let run = loop.makeRunHandle()
+            var streamFailure: (any Error)?
+            do {
+                for try await event in run.events {
+                    try Task.checkCancellation()
+                    if case let .finished(outcome) = event {
+                        let boardAccepted =
+                            await forwardingBoardSink.hasAcceptedTerminal()
+                        if !boardAccepted {
+                            let intent = try Self.terminalIntent(for: outcome)
+                            try await finishThroughSink(
+                                intent,
+                                terminalSink: terminalSink
+                            )
+                        }
+                    }
+                    if let payload = try Self.payload(for: event) {
+                        continuation.yield(payload)
+                    }
+                }
+            } catch {
+                streamFailure = error
+                run.completion.cancel()
+            }
+
+            let completionResult = await run.completion.result
+            if case let .failure(completionFailure) = completionResult,
+               !(completionFailure is CancellationError)
+            {
+                throw completionFailure
+            }
+            if let streamFailure {
+                throw streamFailure
+            }
+            if case let .failure(completionFailure) = completionResult {
+                throw completionFailure
+            }
+        } catch let delivery as ModelLoopTerminalDeliveryFailureV1 {
+            throw delivery.underlying
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            if Task.isCancelled {
+                throw error
+            }
+            if await forwardingBoardSink.hasAcceptedTerminal() {
+                return
+            }
+            if Self.isRateLimit(error) {
+                try await finishThroughSink(
+                    .blocked(
+                        subtype: .ordinary,
+                        reasonCode: Self.rateLimitReasonCode,
+                        detail: "ModelLoop provider rate limit exhausted."
+                    ),
+                    terminalSink: terminalSink
+                )
+            } else {
+                try await finishThroughSink(
+                    .failed(
+                        code: "engine_provider_error",
+                        detail: "ModelLoop execution failed."
+                    ),
+                    terminalSink: terminalSink
+                )
+            }
+        }
+    }
+
+    private static func isRateLimit(_ error: any Error) -> Bool {
+        guard let providerError = error as? ProviderError else { return false }
+        switch providerError {
+        case .http(let status, _):
+            return status == 429
+        case .overloadedRetriesExhausted:
+            return true
+        case .apiError(let type, _):
+            return type == "rate_limit_error"
+        case .unauthorized, .malformedStream:
+            return false
+        }
+    }
+
+    private func validateConfiguration() throws {
+        guard maxTurns > 0,
+              maxTokensPerTurn > 0,
+              turnTimeout > .zero,
+              retryDelays.allSatisfy({ $0 >= .zero })
+        else {
+            throw EngineContextValidationErrorV1()
+        }
+    }
+
+    private func assembleTools(
+        _ capabilityTools: [ExternalTool],
+        boardTerminalSink: any EngineBoardTerminalSink,
+        progressSink: any EngineProgressSink
+    ) throws -> (
+        definitions: [ToolDef],
+        handlers: [String: any ToolHandler]
+    ) {
+        let board = BoardTools(
+            boardTerminalSink: boardTerminalSink,
+            progressSink: progressSink
+        )
+        let boardTools: [ExternalTool] = [
+            ExternalTool(
+                def: .completeCard,
+                handler: BoardToolHandler(tools: board, op: .complete)
+            ),
+            ExternalTool(
+                def: .blockCard,
+                handler: BoardToolHandler(tools: board, op: .block)
+            ),
+            ExternalTool(
+                def: .addProgressNote,
+                handler: BoardToolHandler(tools: board, op: .note)
+            ),
+            ExternalTool(
+                def: .askUser,
+                handler: BoardToolHandler(tools: board, op: .askUser)
+            ),
+        ]
+        let boardNames = Set(boardTools.map(\.def.name))
+        var seen = boardNames
+        var handlers = Dictionary(
+            uniqueKeysWithValues: boardTools.map {
+                ($0.def.name, $0.handler)
+            }
+        )
+
+        for tool in capabilityTools {
+            try EngineContractValidationV1.validateToolName(tool.def.name)
+            guard !boardNames.contains(tool.def.name),
+                  seen.insert(tool.def.name).inserted
+            else {
+                throw EngineDispatchConflictErrorV1()
+            }
+            handlers[tool.def.name] = ModelLoopCapabilityHandlerV1(
+                inner: tool.handler
+            )
+        }
+
+        let sortedCapabilities = capabilityTools.sorted {
+            $0.def.name.utf8.lexicographicallyPrecedes($1.def.name.utf8)
+        }
+        return (
+            definitions: boardTools.map(\.def)
+                + sortedCapabilities.map(\.def),
+            handlers: handlers
+        )
+    }
+
+    private static func payload(
+        for event: AgentEvent
+    ) throws -> EngineExecutionEventPayloadV1? {
+        switch event {
+        case .turnStarted, .toolFinished, .finished:
+            return nil
+        case let .textDelta(text):
+            try EngineContractValidationV1.validateProgress(text)
+            return .progress(message: text)
+        case let .toolStarted(name):
+            try EngineContractValidationV1.validateToolName(name)
+            return .toolActivity(name: name)
+        case let .turnEnded(usage):
+            let payload = EngineUsageV1(
+                inputTokens: usage.inputTokens,
+                outputTokens: usage.outputTokens,
+                cacheReadTokens: usage.cacheReadTokens,
+                costMicros: 0
+            )
+            try payload.validateNonnegative()
+            return .usage(payload)
+        case let .turnRetrying(attempt, _):
+            try CanonicalContractCodingV1.validatePositive(attempt)
+            return .progress(message: "Model turn retry \(attempt).")
+        case let .contextCompacted(fromMessages, toMessages):
+            try CanonicalContractCodingV1.validateNonnegative(fromMessages)
+            try CanonicalContractCodingV1.validateNonnegative(toMessages)
+            return .progress(
+                message:
+                    "Model context compacted \(fromMessages) -> \(toMessages)."
+            )
+        }
+    }
+
+    private static func terminalIntent(
+        for outcome: LoopOutcome
+    ) throws -> EngineTerminalIntentV1 {
+        switch outcome {
+        case let .completed(handoff):
+            return .completed(handoff: handoff)
+        case let .blocked(reason, detail):
+            try EngineContractValidationV1.validateReasonCode(reason)
+            try EngineContractValidationV1.validateDetail(detail)
+            return .blocked(
+                subtype: .ordinary,
+                reasonCode: reason,
+                detail: detail
+            )
+        }
+    }
+
+    private func finishThroughSink(
+        _ intent: EngineTerminalIntentV1,
+        terminalSink: any EngineTerminalSink
+    ) async throws {
+        do {
+            try await terminalSink.submit(intent)
+        } catch {
+            throw ModelLoopTerminalDeliveryFailureV1(underlying: error)
+        }
+    }
+
 }

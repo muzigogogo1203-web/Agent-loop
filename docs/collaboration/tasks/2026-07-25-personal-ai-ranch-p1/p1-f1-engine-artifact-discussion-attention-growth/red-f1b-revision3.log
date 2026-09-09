@@ -1,0 +1,251 @@
+checkpoint=P1-F1-F1B-Revision3-tests-first-red
+plan_sha256=ae3162dbe24d2069009e7ffbc33e75b82c31c859a2a658db6bbbf543d7edf609
+review_sha256=b2ae3efb5cbf69aa811313dc80f8c096fde0ae9400502f88d360189c0d972f29
+filter_count=26
+COMMAND: swift run RunTests --filter p1f1_017ContextEnvelopeCanonicalGoldenBytes|p1f1_018ContextEnvelopeRejectsInvalidBeforeWrite|p1f1_019ContextEnvelopePromptRenderingDoesNotChangeIdentity|p1f1_020SessionScopeDerivedCanonicalGoldenBytes|p1f1_021SessionScopeSpoofAndDriftZeroWrite|p1f1_022BeginAllocatesExecutionRunCardAndLifecycleAtomically|p1f1_023BeginReplaySameHashAndConflictMatrix|p1f1_024DescriptorReplayClassIsDerivedAndPersisted|p1f1_025DispatchCASStartsAdapterExactlyOnce|p1f1_026PreDispatchFailureTerminalizesWithoutDispatch|p1f1_027AcceptEventMonotonicSequenceMatrix|p1f1_028UsageOverflowFailsWithoutPartialProjection|p1f1_029TerminalReceiptLinksDomainResultHashNotProposalHash|p1f1_030WholeProposalCanonicalIdentityIncludesArtifacts|p1f1_031ProposalReplayReturnsGeneratedArtifactIds|p1f1_032TerminalKeyManifestAndOrdinalConflictMatrix|p1f1_033CompletedTerminalCommitsAllProjectionsAtomically|p1f1_034BlockedFailedCanceledTerminalTaxonomy|p1f1_035AskUserCommitsBlockedNeedsHumanInputAtomically|p1f1_036InvalidPreparationCommitsOneProtocolErrorReceipt|p1f1_037TerminalMutationFailureRollsBackEveryProjection|p1f1_038DuplicateTerminalReplaysAndSecondTerminalRejects|p1f1_039BindResumeRequiresExactScopeAndWorkspace|p1f1_040UserAnswerNewContextSameScopeResumes|p1f1_041ScopeDriftStartsNewSessionAndMismatchZeroWrite|p1f1_042RecoveryPrecedenceAndFourDispatchCrashWindows
+23ae9669644c387f4ca5161aac895d3bd041d68cc7daf227f69d423609d96d6e  Sources/AgentLoopCore/Database/EngineExecutionStore.swift
+babd02286771b2b49a5e3e7bff5a7fc2a33126039d57098038d391fb7de3a743  Sources/AgentLoopCore/Database/EngineSessionStore.swift
+676ce2d100b43cc6abc6f096aaa732ce41ac47c65721d572f6f44dd2ec6a9b52  Sources/AgentLoopCore/Database/DomainEventStore.swift
+66a61b6f696ea683d4cff3c0a1e89ac30a4e15d44f74d2c4071c3930ba852ee9  Sources/AgentLoopCore/Domain/ExecutionEngine.swift
+7c75eded6c83cc3acf1da24bf06fb73de02fb4208f096fbe9c0e0501f495a976  Sources/AgentLoopCore/Domain/EngineExecutionReceipt.swift
+[0/1] Planning build
+Building for debugging...
+[0/4] Write sources
+[1/4] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[3/8] Emitting module AgentLoopTestSuite
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:851:27: error: cannot find type 'EngineSessionSelectionV1' in scope
+ 849 |             hash: p1f1EngineWorkspaceHash
+ 850 |         ),
+ 851 |         sessionSelection: EngineSessionSelectionV1? = nil,
+     |                           `- error: cannot find type 'EngineSessionSelectionV1' in scope
+ 852 |         claimedSessionScopeJson: String? = nil,
+ 853 |         claimedSessionScopeHash: String? = nil
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:1187:34: error: cannot find 'EngineSessionSelectionV1' in scope
+1185 |             with: p1f1EngineHashF
+1186 |         )
+1187 |         let driftedSession = try EngineSessionSelectionV1(
+     |                                  `- error: cannot find 'EngineSessionSelectionV1' in scope
+1188 |             sessionId: "70000000-0000-4000-8000-000000000099"
+1189 |         )
+[4/8] Compiling AgentLoopTestSuite EngineSessionTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:232:39: error: cannot find 'EngineSessionSelectionV1' in scope
+230 |                 contextJson: answeredJSON,
+231 |                 contextHash: CanonicalJSONV1.sha256Hex(Data(answeredJSON.utf8)),
+232 |                 sessionSelection: try EngineSessionSelectionV1(sessionId: session.id)
+    |                                       `- error: cannot find 'EngineSessionSelectionV1' in scope
+233 |             )
+234 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:851:27: error: cannot find type 'EngineSessionSelectionV1' in scope
+ 849 |             hash: p1f1EngineWorkspaceHash
+ 850 |         ),
+ 851 |         sessionSelection: EngineSessionSelectionV1? = nil,
+     |                           `- error: cannot find type 'EngineSessionSelectionV1' in scope
+ 852 |         claimedSessionScopeJson: String? = nil,
+ 853 |         claimedSessionScopeHash: String? = nil
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:240:32: error: extra argument 'externalSessionId' in call
+238 |         let expectedSessionReference = try EngineSessionReferenceV1(
+239 |             sessionId: session.id,
+240 |             externalSessionId: "codex-thread-answer"
+    |                                `- error: extra argument 'externalSessionId' in call
+241 |         )
+242 |         #expect(next.sessionRef == expectedSessionReference)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:285:43: error: cannot infer contextual base in reference to member 'sessionBound'
+283 |         )
+284 |         #expect(resumed.sessionId == session.id)
+285 |         #expect(resumed.dispatchState == .sessionBound)
+    |                                           `- error: cannot infer contextual base in reference to member 'sessionBound'
+286 |         #expect(resumed.nextSequence == 1)
+287 |         let oldRun = try #require(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:402:52: error: extra arguments at positions #3, #6 in call
+400 |         #expect(throws: EngineSessionScopeMismatchError.self) {
+401 |             _ = try fixture.db.pool.write { database in
+402 |                 try sessionStore.requireExactResume(
+    |                                                    `- error: extra arguments at positions #3, #6 in call
+403 |                     execution: try #require(
+404 |                         try EngineExecutionRecord.fetchOne(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Database/EngineSessionStore.swift:102:18: note: 'requireExactResume(execution:sessionId:descriptor:database:)' declared here
+100 |     }
+101 | 
+102 |     package func requireExactResume(
+    |                  `- note: 'requireExactResume(execution:sessionId:descriptor:database:)' declared here
+103 |         execution: EngineExecutionRecord,
+104 |         sessionId: String,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:450:30: error: value of type 'EngineSessionStore' has no member 'closeOrInvalidate'
+448 | 
+449 |         let invalidated = try fixture.db.pool.write { database in
+450 |             try sessionStore.closeOrInvalidate(
+    |                              `- error: value of type 'EngineSessionStore' has no member 'closeOrInvalidate'
+451 |                 sessionId: firstSession.id,
+452 |                 expectedVersion: firstSession.version,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:453:31: error: cannot infer contextual base in reference to member 'invalid'
+451 |                 sessionId: firstSession.id,
+452 |                 expectedVersion: firstSession.version,
+453 |                 disposition: .invalid,
+    |                               `- error: cannot infer contextual base in reference to member 'invalid'
+454 |                 database: database,
+455 |                 now: p1f1EngineTestNow.addingTimeInterval(10)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:458:39: error: cannot infer contextual base in reference to member 'invalid'
+456 |             )
+457 |         }
+458 |         #expect(invalidated.state == .invalid)
+    |                                       `- error: cannot infer contextual base in reference to member 'invalid'
+459 |         #expect(invalidated.version == firstSession.version + 1)
+460 |         #expect(invalidated.externalSessionId == firstSession.externalSessionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:464:30: error: value of type 'EngineSessionStore' has no member 'closeOrInvalidate'
+462 |         #expect(invalidated.redactedAt == nil)
+463 |         let invalidReplay = try fixture.db.pool.write { database in
+464 |             try sessionStore.closeOrInvalidate(
+    |                              `- error: value of type 'EngineSessionStore' has no member 'closeOrInvalidate'
+465 |                 sessionId: firstSession.id,
+466 |                 expectedVersion: firstSession.version,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:467:31: error: cannot infer contextual base in reference to member 'invalid'
+465 |                 sessionId: firstSession.id,
+466 |                 expectedVersion: firstSession.version,
+467 |                 disposition: .invalid,
+    |                               `- error: cannot infer contextual base in reference to member 'invalid'
+468 |                 database: database,
+469 |                 now: p1f1EngineTestNow.addingTimeInterval(11)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:475:34: error: value of type 'EngineSessionStore' has no member 'closeOrInvalidate'
+473 |         #expect(throws: Error.self) {
+474 |             _ = try fixture.db.pool.write { database in
+475 |                 try sessionStore.closeOrInvalidate(
+    |                                  `- error: value of type 'EngineSessionStore' has no member 'closeOrInvalidate'
+476 |                     sessionId: firstSession.id,
+477 |                     expectedVersion: firstSession.version,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:478:35: error: cannot infer contextual base in reference to member 'closed'
+476 |                     sessionId: firstSession.id,
+477 |                     expectedVersion: firstSession.version,
+478 |                     disposition: .closed,
+    |                                   `- error: cannot infer contextual base in reference to member 'closed'
+479 |                     database: database,
+480 |                     now: p1f1EngineTestNow.addingTimeInterval(12)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:486:30: error: value of type 'EngineSessionStore' has no member 'closeOrInvalidate'
+484 | 
+485 |         let closed = try fixture.db.pool.write { database in
+486 |             try sessionStore.closeOrInvalidate(
+    |                              `- error: value of type 'EngineSessionStore' has no member 'closeOrInvalidate'
+487 |                 sessionId: secondSession.id,
+488 |                 expectedVersion: secondSession.version,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:489:31: error: cannot infer contextual base in reference to member 'closed'
+487 |                 sessionId: secondSession.id,
+488 |                 expectedVersion: secondSession.version,
+489 |                 disposition: .closed,
+    |                               `- error: cannot infer contextual base in reference to member 'closed'
+490 |                 database: database,
+491 |                 now: p1f1EngineTestNow.addingTimeInterval(10)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:494:34: error: cannot infer contextual base in reference to member 'closed'
+492 |             )
+493 |         }
+494 |         #expect(closed.state == .closed)
+    |                                  `- error: cannot infer contextual base in reference to member 'closed'
+495 |         #expect(closed.version == secondSession.version + 1)
+496 |         #expect(closed.externalSessionId == secondSession.externalSessionId)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineSessionTests.swift:434:31: warning: no calls to throwing functions occur within 'try' expression
+432 |             id: second.executionId
+433 |         )
+434 |         let secondSessionID = try #require(secondBound.sessionId)
+    |                               `- warning: no calls to throwing functions occur within 'try' expression
+435 |         let secondSession = try fixture.db.pool.read { database in
+436 |             try #require(
+[5/8] Compiling AgentLoopTestSuite CrashRecoveryTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CrashRecoveryTests.swift:1707:44: error: 'nil' is not compatible with expected argument type 'String'
+1705 |         #expect(summary.terminalReceipts.isEmpty)
+1706 |         #expect(summary.directives.map(\.action) == [
+1707 |             .deferCampDeletion(proposalId: nil),
+     |                                            `- error: 'nil' is not compatible with expected argument type 'String'
+1708 |         ])
+1709 |         #expect(try p1f1EngineProjectionSnapshot(
+[6/8] Compiling AgentLoopTestSuite EngineExecutionStoreTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:851:27: error: cannot find type 'EngineSessionSelectionV1' in scope
+ 849 |             hash: p1f1EngineWorkspaceHash
+ 850 |         ),
+ 851 |         sessionSelection: EngineSessionSelectionV1? = nil,
+     |                           `- error: cannot find type 'EngineSessionSelectionV1' in scope
+ 852 |         claimedSessionScopeJson: String? = nil,
+ 853 |         claimedSessionScopeHash: String? = nil
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:855:43: error: incorrect argument label in call (have 'campId:cardId:contract:profileId:engineKind:model:contextJson:contextHash:requiredCapabilities:approvalGrantIds:budget:workspace:sessionSelection:claimedSessionScopeJson:claimedSessionScopeHash:', expected 'campId:cardId:contract:profileId:engineKind:model:contextJson:contextHash:requiredCapabilities:approvalGrantIds:budget:workspace:sessionRef:claimedSessionScopeJson:claimedSessionScopeHash:')
+ 853 |         claimedSessionScopeHash: String? = nil
+ 854 |     ) throws -> EngineExecutionRequestFieldsV1 {
+ 855 |         try EngineExecutionRequestFieldsV1(
+     |                                           `- error: incorrect argument label in call (have 'campId:cardId:contract:profileId:engineKind:model:contextJson:contextHash:requiredCapabilities:approvalGrantIds:budget:workspace:sessionSelection:claimedSessionScopeJson:claimedSessionScopeHash:', expected 'campId:cardId:contract:profileId:engineKind:model:contextJson:contextHash:requiredCapabilities:approvalGrantIds:budget:workspace:sessionRef:claimedSessionScopeJson:claimedSessionScopeHash:')
+ 856 |             campId: campID,
+ 857 |             cardId: cardID,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:1187:34: error: cannot find 'EngineSessionSelectionV1' in scope
+1185 |             with: p1f1EngineHashF
+1186 |         )
+1187 |         let driftedSession = try EngineSessionSelectionV1(
+     |                                  `- error: cannot find 'EngineSessionSelectionV1' in scope
+1188 |             sessionId: "70000000-0000-4000-8000-000000000099"
+1189 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:1358:41: error: cannot infer contextual base in reference to member 'replaySafe'
+1356 |             fields: fixture.fields(grantIDs: [p1f1EngineGrantA])
+1357 |         )
+1358 |         #expect(request.replayClass == .replaySafe)
+     |                                         `- error: cannot infer contextual base in reference to member 'replaySafe'
+1359 |         let row = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+1360 |         #expect((row["replayClass"] as String) == "replaySafe")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:1744:27: error: type 'EngineExecutionEventPayloadV1' has no member 'toolActivity'
+1742 |                 executionId: request.executionId,
+1743 |                 sequence: 3,
+1744 |                 payload: .toolActivity(name: "swift-build")
+     |                           `- error: type 'EngineExecutionEventPayloadV1' has no member 'toolActivity'
+1745 |             )
+1746 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:1774:27: error: type 'EngineExecutionEventPayloadV1' has no member 'terminal'
+1772 |                 executionId: request.executionId,
+1773 |                 sequence: 5,
+1774 |                 payload: .terminal(terminalContent)
+     |                           `- error: type 'EngineExecutionEventPayloadV1' has no member 'terminal'
+1775 |             )
+1776 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:1857:31: error: type 'EngineExecutionEventPayloadV1' has no member 'toolActivity'
+1855 |                     executionId: request.executionId,
+1856 |                     sequence: 3,
+1857 |                     payload: .toolActivity(name: "codec-tool")
+     |                               `- error: type 'EngineExecutionEventPayloadV1' has no member 'toolActivity'
+1858 |                 ),
+1859 |                 "{\"executionId\":\"\(request.executionId)\",\"payload\":{\"kind\":\"toolActivity\",\"name\":\"codec-tool\"},\"sequence\":3}"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:1880:31: error: type 'EngineExecutionEventPayloadV1' has no member 'terminal'
+1878 |                     executionId: request.executionId,
+1879 |                     sequence: 5,
+1880 |                     payload: .terminal(terminalContent)
+     |                               `- error: type 'EngineExecutionEventPayloadV1' has no member 'terminal'
+1881 |                 ),
+1882 |                 "{\"executionId\":\"\(request.executionId)\",\"payload\":{\"kind\":\"terminal\",\"proposal\":\(String(decoding: try CanonicalJSONV1.encode(terminalContent), as: UTF8.self))},\"sequence\":5}"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:1919:27: error: type 'EngineExecutionEventPayloadV1' has no member 'terminal'
+1917 |                 executionId: request.executionId,
+1918 |                 sequence: 6,
+1919 |                 payload: .terminal(terminalContent)
+     |                           `- error: type 'EngineExecutionEventPayloadV1' has no member 'terminal'
+1920 |             )
+1921 |             _ = try CanonicalContractCodingV1.decode(
+red_command_status=1
+red_tee_status=0
+red_candidate=/tmp/p1f1-f1b-revision3-red.OtrYjw

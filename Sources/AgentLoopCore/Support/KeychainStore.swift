@@ -10,6 +10,10 @@ public enum KeychainInteractionPolicy: Sendable, Equatable {
 public struct KeychainStore: Sendable {
     public let service: String
 
+    public var backendNamespace: CredentialStoreBackendNamespace {
+        .keychainService(service)
+    }
+
     public init(service: String = "com.muzi.agentloop") {
         self.service = service
     }
@@ -60,7 +64,10 @@ public struct KeychainStore: Sendable {
         guard status == errSecSuccess, let data = item as? Data else {
             throw KeychainError(status: status)
         }
-        return String(data: data, encoding: .utf8)
+        guard let value = String(data: data, encoding: .utf8) else {
+            throw CredentialValueInvalidError()
+        }
+        return value
     }
 
     public func delete(account: String) throws {

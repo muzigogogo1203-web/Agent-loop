@@ -1,0 +1,1684 @@
+status=PURE_RED_E2_PRE_IMPLEMENTATION
+command=swift run RunTests --filter 'p1e(1[7-9]|2[0-9]|3[0-2])'
+[0/1] Planning build
+Building for debugging...
+[0/5] Write sources
+[1/5] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/10] Compiling AgentLoopTestSuite CowResidencyContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:72:13: error: cannot find type 'CowIdentitySnapshotV1' in scope
+ 70 |     database: AppDatabase,
+ 71 |     campID: String? = nil
+ 72 | ) throws -> CowIdentitySnapshotV1 {
+    |             `- error: cannot find type 'CowIdentitySnapshotV1' in scope
+ 73 |     let companion = CompanionRecord(
+ 74 |         id: id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:99:13: error: cannot find type 'CampResidencySnapshotV1' in scope
+ 97 |     campID: String,
+ 98 |     suffix: String
+ 99 | ) throws -> CampResidencySnapshotV1 {
+    |             `- error: cannot find type 'CampResidencySnapshotV1' in scope
+100 |     let requested = try store.request(
+101 |         RequestCampResidencyCommandV1(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:95:12: error: cannot find type 'CowResidencyStore' in scope
+ 93 | @discardableResult
+ 94 | func p1eE2ActivateResidency(
+ 95 |     store: CowResidencyStore,
+    |            `- error: cannot find type 'CowResidencyStore' in scope
+ 96 |     cowID: String,
+ 97 |     campID: String,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:101:9: error: cannot find 'RequestCampResidencyCommandV1' in scope
+ 99 | ) throws -> CampResidencySnapshotV1 {
+100 |     let requested = try store.request(
+101 |         RequestCampResidencyCommandV1(
+    |         `- error: cannot find 'RequestCampResidencyCommandV1' in scope
+102 |             envelope: p1eE2Envelope("p1e:\(suffix):request"),
+103 |             residencyId: "residency:\(suffix)",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:111:9: error: cannot find 'ChangeCampResidencyCommandV1' in scope
+109 |     )
+110 |     let authorized = try store.transition(
+111 |         ChangeCampResidencyCommandV1(
+    |         `- error: cannot find 'ChangeCampResidencyCommandV1' in scope
+112 |             envelope: p1eE2Envelope("p1e:\(suffix):authorize"),
+113 |             residencyId: requested.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:115:26: error: cannot infer contextual base in reference to member 'authorize'
+113 |             residencyId: requested.id,
+114 |             expectedAggregateVersion: requested.aggregateVersion,
+115 |             transition: .authorize,
+    |                          `- error: cannot infer contextual base in reference to member 'authorize'
+116 |             expectedCampLifecycleVersion: 1
+117 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:140:25: error: cannot find 'CowIdentitySnapshotV1' in scope
+138 | struct P1ECowResidencyContractTests {
+139 |     @Test func p1e17CowIdentityContractValidation() throws {
+140 |         let valid = try CowIdentitySnapshotV1(
+    |                         `- error: cannot find 'CowIdentitySnapshotV1' in scope
+141 |             id: "cow:identity:1",
+142 |             displayName: "Builder",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:147:22: error: cannot infer contextual base in reference to member 'active'
+145 |             baseRole: "builder",
+146 |             defaultEnginePolicyJson: "{}",
+147 |             status: .active,
+    |                      `- error: cannot infer contextual base in reference to member 'active'
+148 |             aggregateVersion: 1,
+149 |             createdAt: p1eE2Epoch,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:156:21: error: cannot find 'CowIdentitySnapshotV1' in scope
+154 | 
+155 |         #expect(throws: P1ContractValidationError.self) {
+156 |             _ = try CowIdentitySnapshotV1(
+    |                     `- error: cannot find 'CowIdentitySnapshotV1' in scope
+157 |                 id: valid.id,
+158 |                 displayName: " Builder ",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:163:26: error: cannot infer contextual base in reference to member 'active'
+161 |                 baseRole: valid.baseRole,
+162 |                 defaultEnginePolicyJson: valid.defaultEnginePolicyJson,
+163 |                 status: .active,
+    |                          `- error: cannot infer contextual base in reference to member 'active'
+164 |                 aggregateVersion: 1,
+165 |                 createdAt: p1eE2Epoch,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:170:21: error: cannot find 'CowIdentitySnapshotV1' in scope
+168 |         }
+169 |         #expect(throws: CanonicalJSONNotCanonicalError.self) {
+170 |             _ = try CowIdentitySnapshotV1(
+    |                     `- error: cannot find 'CowIdentitySnapshotV1' in scope
+171 |                 id: valid.id,
+172 |                 displayName: valid.displayName,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:177:26: error: cannot infer contextual base in reference to member 'active'
+175 |                 baseRole: valid.baseRole,
+176 |                 defaultEnginePolicyJson: "{ \"model\" : \"x\" }",
+177 |                 status: .active,
+    |                          `- error: cannot infer contextual base in reference to member 'active'
+178 |                 aggregateVersion: 1,
+179 |                 createdAt: p1eE2Epoch,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:197:26: error: cannot find 'CowResidencyStore' in scope
+195 |         )
+196 |         try database.pool.write { try companion.insert($0) }
+197 |         let synced = try CowResidencyStore(database: database)
+    |                          `- error: cannot find 'CowResidencyStore' in scope
+198 |             .synchronizeCompanion(
+199 |                 companion,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:211:21: error: cannot find 'CowResidencyStore' in scope
+209 |         _ = try p1eE2SeedCamp("camp:residency", database: database)
+210 |         _ = try p1eE2SeedCow("cow:residency", database: database)
+211 |         let store = CowResidencyStore(database: database)
+    |                     `- error: cannot find 'CowResidencyStore' in scope
+212 |         let request = try RequestCampResidencyCommandV1(
+213 |             envelope: p1eE2Envelope("residency:request"),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:212:27: error: cannot find 'RequestCampResidencyCommandV1' in scope
+210 |         _ = try p1eE2SeedCow("cow:residency", database: database)
+211 |         let store = CowResidencyStore(database: database)
+212 |         let request = try RequestCampResidencyCommandV1(
+    |                           `- error: cannot find 'RequestCampResidencyCommandV1' in scope
+213 |             envelope: p1eE2Envelope("residency:request"),
+214 |             residencyId: "residency:first",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:221:34: error: cannot infer contextual base in reference to member 'requested'
+219 |         )
+220 |         let first = try store.request(request)
+221 |         #expect(first.status == .requested)
+    |                                  `- error: cannot infer contextual base in reference to member 'requested'
+222 |         #expect(try store.request(request) == first)
+223 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:225:35: error: cannot find 'RequestCampResidencyCommandV1' in scope
+223 | 
+224 |         #expect(throws: DomainCommandReplayConflictError.self) {
+225 |             _ = try store.request(RequestCampResidencyCommandV1(
+    |                                   `- error: cannot find 'RequestCampResidencyCommandV1' in scope
+226 |                 envelope: request.envelope,
+227 |                 residencyId: request.residencyId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:239:21: error: cannot find type 'CampResidencySnapshotV1' in scope
+237 |             _ transition: CampResidencyTransitionV1,
+238 |             _ key: String
+239 |         ) throws -> CampResidencySnapshotV1 {
+    |                     `- error: cannot find type 'CampResidencySnapshotV1' in scope
+240 |             let command = try ChangeCampResidencyCommandV1(
+241 |                 envelope: p1eE2Envelope(key),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:236:24: error: cannot find type 'CampResidencySnapshotV1' in scope
+234 | 
+235 |         func change(
+236 |             _ current: CampResidencySnapshotV1,
+    |                        `- error: cannot find type 'CampResidencySnapshotV1' in scope
+237 |             _ transition: CampResidencyTransitionV1,
+238 |             _ key: String
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:237:27: error: cannot find type 'CampResidencyTransitionV1' in scope
+235 |         func change(
+236 |             _ current: CampResidencySnapshotV1,
+237 |             _ transition: CampResidencyTransitionV1,
+    |                           `- error: cannot find type 'CampResidencyTransitionV1' in scope
+238 |             _ key: String
+239 |         ) throws -> CampResidencySnapshotV1 {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:240:31: error: cannot find 'ChangeCampResidencyCommandV1' in scope
+238 |             _ key: String
+239 |         ) throws -> CampResidencySnapshotV1 {
+240 |             let command = try ChangeCampResidencyCommandV1(
+    |                               `- error: cannot find 'ChangeCampResidencyCommandV1' in scope
+241 |                 envelope: p1eE2Envelope(key),
+242 |                 residencyId: current.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:252:45: error: cannot infer contextual base in reference to member 'authorize'
+250 |         }
+251 | 
+252 |         let authorized = try change(first, .authorize, "residency:authorize")
+    |                                             `- error: cannot infer contextual base in reference to member 'authorize'
+253 |         let active = try change(authorized, .activate, "residency:activate")
+254 |         let paused = try change(active, .pause, "residency:pause")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:253:46: error: cannot infer contextual base in reference to member 'activate'
+251 | 
+252 |         let authorized = try change(first, .authorize, "residency:authorize")
+253 |         let active = try change(authorized, .activate, "residency:activate")
+    |                                              `- error: cannot infer contextual base in reference to member 'activate'
+254 |         let paused = try change(active, .pause, "residency:pause")
+255 |         let resumed = try change(paused, .resume, "residency:resume")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:254:42: error: cannot infer contextual base in reference to member 'pause'
+252 |         let authorized = try change(first, .authorize, "residency:authorize")
+253 |         let active = try change(authorized, .activate, "residency:activate")
+254 |         let paused = try change(active, .pause, "residency:pause")
+    |                                          `- error: cannot infer contextual base in reference to member 'pause'
+255 |         let resumed = try change(paused, .resume, "residency:resume")
+256 |         let left = try change(resumed, .leave, "residency:leave")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:255:43: error: cannot infer contextual base in reference to member 'resume'
+253 |         let active = try change(authorized, .activate, "residency:activate")
+254 |         let paused = try change(active, .pause, "residency:pause")
+255 |         let resumed = try change(paused, .resume, "residency:resume")
+    |                                           `- error: cannot infer contextual base in reference to member 'resume'
+256 |         let left = try change(resumed, .leave, "residency:leave")
+257 |         #expect(left.status == .left)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:256:41: error: cannot infer contextual base in reference to member 'leave'
+254 |         let paused = try change(active, .pause, "residency:pause")
+255 |         let resumed = try change(paused, .resume, "residency:resume")
+256 |         let left = try change(resumed, .leave, "residency:leave")
+    |                                         `- error: cannot infer contextual base in reference to member 'leave'
+257 |         #expect(left.status == .left)
+258 |         #expect(throws: InvalidCampResidencyTransitionError.self) {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:258:25: error: cannot find 'InvalidCampResidencyTransitionError' in scope
+256 |         let left = try change(resumed, .leave, "residency:leave")
+257 |         #expect(left.status == .left)
+258 |         #expect(throws: InvalidCampResidencyTransitionError.self) {
+    |                         `- error: cannot find 'InvalidCampResidencyTransitionError' in scope
+259 |             _ = try change(left, .resume, "residency:illegal-resume")
+260 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:259:35: error: cannot infer contextual base in reference to member 'resume'
+257 |         #expect(left.status == .left)
+258 |         #expect(throws: InvalidCampResidencyTransitionError.self) {
+259 |             _ = try change(left, .resume, "residency:illegal-resume")
+    |                                   `- error: cannot infer contextual base in reference to member 'resume'
+260 |         }
+261 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:262:40: error: cannot find 'RequestCampResidencyCommandV1' in scope
+260 |         }
+261 | 
+262 |         let rejoin = try store.request(RequestCampResidencyCommandV1(
+    |                                        `- error: cannot find 'RequestCampResidencyCommandV1' in scope
+263 |             envelope: p1eE2Envelope("residency:rejoin"),
+264 |             residencyId: "residency:second",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:271:35: error: cannot infer contextual base in reference to member 'requested'
+269 |         ))
+270 |         #expect(rejoin.id != left.id)
+271 |         #expect(rejoin.status == .requested)
+    |                                   `- error: cannot infer contextual base in reference to member 'requested'
+272 |     }
+273 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:278:21: error: cannot find 'CowResidencyStore' in scope
+276 |         _ = try p1eE2SeedCamp("camp:authorization", database: database)
+277 |         _ = try p1eE2SeedCow("cow:authorization", database: database)
+278 |         let store = CowResidencyStore(database: database)
+    |                     `- error: cannot find 'CowResidencyStore' in scope
+279 |         let active = try p1eE2ActivateResidency(
+280 |             store: store,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:292:43: error: cannot find 'ChangeCampResidencyCommandV1' in scope
+290 |         )
+291 | 
+292 |         let paused = try store.transition(ChangeCampResidencyCommandV1(
+    |                                           `- error: cannot find 'ChangeCampResidencyCommandV1' in scope
+293 |             envelope: p1eE2Envelope("authorization:pause"),
+294 |             residencyId: active.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:296:26: error: cannot infer contextual base in reference to member 'pause'
+294 |             residencyId: active.id,
+295 |             expectedAggregateVersion: active.aggregateVersion,
+296 |             transition: .pause,
+    |                          `- error: cannot infer contextual base in reference to member 'pause'
+297 |             expectedCampLifecycleVersion: 1
+298 |         ))
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:299:35: error: cannot infer contextual base in reference to member 'paused'
+297 |             expectedCampLifecycleVersion: 1
+298 |         ))
+299 |         #expect(paused.status == .paused)
+    |                                   `- error: cannot infer contextual base in reference to member 'paused'
+300 |         #expect(throws: ResidencyAuthorizationError.inactive(.paused)) {
+301 |             _ = try store.requireActiveResidency(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:300:25: error: cannot find 'ResidencyAuthorizationError' in scope
+298 |         ))
+299 |         #expect(paused.status == .paused)
+300 |         #expect(throws: ResidencyAuthorizationError.inactive(.paused)) {
+    |                         `- error: cannot find 'ResidencyAuthorizationError' in scope
+301 |             _ = try store.requireActiveResidency(
+302 |                 cowId: active.cowId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:300:63: error: cannot infer contextual base in reference to member 'paused'
+298 |         ))
+299 |         #expect(paused.status == .paused)
+300 |         #expect(throws: ResidencyAuthorizationError.inactive(.paused)) {
+    |                                                               `- error: cannot infer contextual base in reference to member 'paused'
+301 |             _ = try store.requireActiveResidency(
+302 |                 cowId: active.cowId,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:306:25: error: cannot find 'ResidencyAuthorizationError' in scope
+304 |             )
+305 |         }
+306 |         #expect(throws: ResidencyAuthorizationError.missing) {
+    |                         `- error: cannot find 'ResidencyAuthorizationError' in scope
+307 |             _ = try store.requireActiveResidency(
+308 |                 cowId: "cow:missing",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:319:25: error: cannot find 'CowResidencyStore' in scope
+317 |         _ = try p1eE2SeedCamp("camp:target", database: database)
+318 |         _ = try p1eE2SeedCow("cow:bridge", database: database)
+319 |         let residency = CowResidencyStore(database: database)
+    |                         `- error: cannot find 'CowResidencyStore' in scope
+320 |         _ = try p1eE2ActivateResidency(
+321 |             store: residency,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:332:27: error: cannot find 'MemoryRecordStore' in scope
+330 |             suffix: "bridge-target"
+331 |         )
+332 |         let memoryStore = MemoryRecordStore(database: database)
+    |                           `- error: cannot find 'MemoryRecordStore' in scope
+333 |         let sourceMemory = try memoryStore.record(
+334 |             try MemoryRecordDraftV1(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:334:17: error: cannot find 'MemoryRecordDraftV1' in scope
+332 |         let memoryStore = MemoryRecordStore(database: database)
+333 |         let sourceMemory = try memoryStore.record(
+334 |             try MemoryRecordDraftV1(
+    |                 `- error: cannot find 'MemoryRecordDraftV1' in scope
+335 |                 id: "memory:source",
+336 |                 layer: .working,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:336:25: error: cannot infer contextual base in reference to member 'working'
+334 |             try MemoryRecordDraftV1(
+335 |                 id: "memory:source",
+336 |                 layer: .working,
+    |                         `- error: cannot infer contextual base in reference to member 'working'
+337 |                 ownerType: .cow,
+338 |                 ownerId: "cow:bridge",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:337:29: error: cannot infer contextual base in reference to member 'cow'
+335 |                 id: "memory:source",
+336 |                 layer: .working,
+337 |                 ownerType: .cow,
+    |                             `- error: cannot infer contextual base in reference to member 'cow'
+338 |                 ownerId: "cow:bridge",
+339 |                 campId: "camp:source",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:342:29: error: 'nil' requires a contextual type
+340 |                 title: "Source-only",
+341 |                 bodyText: "source body",
+342 |                 contentRef: nil,
+    |                             `- error: 'nil' requires a contextual type
+343 |                 sourceType: .inference,
+344 |                 applicabilityJson: "{}",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:343:30: error: cannot infer contextual base in reference to member 'inference'
+341 |                 bodyText: "source body",
+342 |                 contentRef: nil,
+343 |                 sourceType: .inference,
+    |                              `- error: cannot infer contextual base in reference to member 'inference'
+344 |                 applicabilityJson: "{}",
+345 |                 createdByActorId: "cow:bridge",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:346:37: error: 'nil' requires a contextual type
+344 |                 applicabilityJson: "{}",
+345 |                 createdByActorId: "cow:bridge",
+346 |                 confirmedByActorId: nil
+    |                                     `- error: 'nil' requires a contextual type
+347 |             ),
+348 |             authorizedCowId: "cow:bridge",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:352:49: error: cannot find 'CreateCampBridgeCommandV1' in scope
+350 |             at: p1eE2Epoch
+351 |         )
+352 |         let bridge = try residency.createBridge(CreateCampBridgeCommandV1(
+    |                                                 `- error: cannot find 'CreateCampBridgeCommandV1' in scope
+353 |             envelope: p1eE2Envelope("bridge:create"),
+354 |             bridgeId: "bridge:source-target",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:358:31: error: cannot find 'CampBridgeContentScopeV1' in scope
+356 |             targetCampId: "camp:target",
+357 |             mode: .reference,
+358 |             contentScope: try CampBridgeContentScopeV1(
+    |                               `- error: cannot find 'CampBridgeContentScopeV1' in scope
+359 |                 memoryIds: [sourceMemory.id]
+360 |             ),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:357:20: error: cannot infer contextual base in reference to member 'reference'
+355 |             sourceCampId: "camp:source",
+356 |             targetCampId: "camp:target",
+357 |             mode: .reference,
+    |                    `- error: cannot infer contextual base in reference to member 'reference'
+358 |             contentScope: try CampBridgeContentScopeV1(
+359 |                 memoryIds: [sourceMemory.id]
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:369:23: error: cannot find 'CampBridgeReadV1' in scope
+367 |             cowId: "cow:bridge",
+368 |             campId: "camp:target",
+369 |             bridges: [CampBridgeReadV1(
+    |                       `- error: cannot find 'CampBridgeReadV1' in scope
+370 |                 sourceCampId: "camp:source",
+371 |                 memoryIds: [sourceMemory.id]
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:377:25: error: cannot find 'CampBridgeAuthorizationError' in scope
+375 |         #expect(bridged.contains(where: { $0.id == sourceMemory.id }))
+376 | 
+377 |         #expect(throws: CampBridgeAuthorizationError.self) {
+    |                         `- error: cannot find 'CampBridgeAuthorizationError' in scope
+378 |             _ = try residency.authorizedMemory(
+379 |                 cowId: "cow:bridge",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:381:27: error: cannot find 'CampBridgeReadV1' in scope
+379 |                 cowId: "cow:bridge",
+380 |                 campId: "camp:source",
+381 |                 bridges: [CampBridgeReadV1(
+    |                           `- error: cannot find 'CampBridgeReadV1' in scope
+382 |                     sourceCampId: "camp:target",
+383 |                     memoryIds: [sourceMemory.id]
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:388:40: error: cannot find 'RevokeCampBridgeCommandV1' in scope
+386 |             )
+387 |         }
+388 |         _ = try residency.revokeBridge(RevokeCampBridgeCommandV1(
+    |                                        `- error: cannot find 'RevokeCampBridgeCommandV1' in scope
+389 |             envelope: p1eE2Envelope("bridge:revoke"),
+390 |             bridgeId: bridge.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:395:25: error: cannot find 'CampBridgeAuthorizationError' in scope
+393 |             expectedTargetLifecycleVersion: 1
+394 |         ))
+395 |         #expect(throws: CampBridgeAuthorizationError.self) {
+    |                         `- error: cannot find 'CampBridgeAuthorizationError' in scope
+396 |             _ = try residency.authorizedMemory(
+397 |                 cowId: "cow:bridge",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:399:27: error: cannot find 'CampBridgeReadV1' in scope
+397 |                 cowId: "cow:bridge",
+398 |                 campId: "camp:target",
+399 |                 bridges: [CampBridgeReadV1(
+    |                           `- error: cannot find 'CampBridgeReadV1' in scope
+400 |                     sourceCampId: "camp:source",
+401 |                     memoryIds: [sourceMemory.id]
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:411:21: error: cannot find 'CampLifecycleStore' in scope
+409 |         let database = try p1eE2Database("lifecycle-fence")
+410 |         _ = try p1eE2SeedCamp("camp:lifecycle", database: database)
+411 |         let store = CampLifecycleStore(database: database)
+    |                     `- error: cannot find 'CampLifecycleStore' in scope
+412 |         try database.pool.read { db in
+413 |             let lifecycle = try store.requireActiveCampWrite(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:421:25: error: cannot find 'CampLifecycleWriteAuthorizationError' in scope
+419 |             #expect(lifecycle.version == 1)
+420 |         }
+421 |         #expect(throws: CampLifecycleWriteAuthorizationError.self) {
+    |                         `- error: cannot find 'CampLifecycleWriteAuthorizationError' in scope
+422 |             try database.pool.read { db in
+423 |                 _ = try store.requireActiveCampWrite(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:436:25: error: cannot find 'CampLifecycleWriteAuthorizationError' in scope
+434 |             )
+435 |         }
+436 |         #expect(throws: CampLifecycleWriteAuthorizationError.legacyArchived) {
+    |                         `- error: cannot find 'CampLifecycleWriteAuthorizationError' in scope
+437 |             try database.pool.read { db in
+438 |                 _ = try store.requireActiveCampWrite(
+[4/10] Compiling AgentLoopTestSuite MemoryProvenanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:13:13: error: cannot find type 'MemoryRecordDraftV1' in scope
+ 11 |     id: String,
+ 12 |     title: String
+ 13 | ) throws -> MemoryRecordDraftV1 {
+    |             `- error: cannot find type 'MemoryRecordDraftV1' in scope
+ 14 |     try MemoryRecordDraftV1(
+ 15 |         id: id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:72:13: error: cannot find type 'CowIdentitySnapshotV1' in scope
+ 70 |     database: AppDatabase,
+ 71 |     campID: String? = nil
+ 72 | ) throws -> CowIdentitySnapshotV1 {
+    |             `- error: cannot find type 'CowIdentitySnapshotV1' in scope
+ 73 |     let companion = CompanionRecord(
+ 74 |         id: id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:36:25: error: cannot find 'CowResidencyStore' in scope
+ 34 |         _ = try p1eE2SeedCamp("camp:memory-promotion", database: database)
+ 35 |         _ = try p1eE2SeedCow("cow:memory-promotion", database: database)
+ 36 |         let residency = CowResidencyStore(database: database)
+    |                         `- error: cannot find 'CowResidencyStore' in scope
+ 37 |         _ = try p1eE2ActivateResidency(
+ 38 |             store: residency,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:99:13: error: cannot find type 'CampResidencySnapshotV1' in scope
+ 97 |     campID: String,
+ 98 |     suffix: String
+ 99 | ) throws -> CampResidencySnapshotV1 {
+    |             `- error: cannot find type 'CampResidencySnapshotV1' in scope
+100 |     let requested = try store.request(
+101 |         RequestCampResidencyCommandV1(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:95:12: error: cannot find type 'CowResidencyStore' in scope
+ 93 | @discardableResult
+ 94 | func p1eE2ActivateResidency(
+ 95 |     store: CowResidencyStore,
+    |            `- error: cannot find type 'CowResidencyStore' in scope
+ 96 |     cowID: String,
+ 97 |     campID: String,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:43:21: error: cannot find 'MemoryRecordStore' in scope
+ 41 |             suffix: "memory-promotion"
+ 42 |         )
+ 43 |         let store = MemoryRecordStore(database: database)
+    |                     `- error: cannot find 'MemoryRecordStore' in scope
+ 44 |         let raw = try store.record(
+ 45 |             try MemoryRecordDraftV1(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:45:17: error: cannot find 'MemoryRecordDraftV1' in scope
+ 43 |         let store = MemoryRecordStore(database: database)
+ 44 |         let raw = try store.record(
+ 45 |             try MemoryRecordDraftV1(
+    |                 `- error: cannot find 'MemoryRecordDraftV1' in scope
+ 46 |                 id: "memory:promotion",
+ 47 |                 layer: .rawSource,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:47:25: error: cannot infer contextual base in reference to member 'rawSource'
+ 45 |             try MemoryRecordDraftV1(
+ 46 |                 id: "memory:promotion",
+ 47 |                 layer: .rawSource,
+    |                         `- error: cannot infer contextual base in reference to member 'rawSource'
+ 48 |                 ownerType: .camp,
+ 49 |                 ownerId: "camp:memory-promotion",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:48:29: error: cannot infer contextual base in reference to member 'camp'
+ 46 |                 id: "memory:promotion",
+ 47 |                 layer: .rawSource,
+ 48 |                 ownerType: .camp,
+    |                             `- error: cannot infer contextual base in reference to member 'camp'
+ 49 |                 ownerId: "camp:memory-promotion",
+ 50 |                 campId: "camp:memory-promotion",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:53:29: error: 'nil' requires a contextual type
+ 51 |                 title: "Untrusted source",
+ 52 |                 bodyText: "observed fact",
+ 53 |                 contentRef: nil,
+    |                             `- error: 'nil' requires a contextual type
+ 54 |                 sourceType: .independentSource,
+ 55 |                 applicabilityJson: "{}",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:54:30: error: cannot infer contextual base in reference to member 'independentSource'
+ 52 |                 bodyText: "observed fact",
+ 53 |                 contentRef: nil,
+ 54 |                 sourceType: .independentSource,
+    |                              `- error: cannot infer contextual base in reference to member 'independentSource'
+ 55 |                 applicabilityJson: "{}",
+ 56 |                 createdByActorId: "system:distiller:v1",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:57:37: error: 'nil' requires a contextual type
+ 55 |                 applicabilityJson: "{}",
+ 56 |                 createdByActorId: "system:distiller:v1",
+ 57 |                 confirmedByActorId: nil
+    |                                     `- error: 'nil' requires a contextual type
+ 58 |             ),
+ 59 |             authorizedCowId: "cow:memory-promotion",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:63:31: error: cannot infer contextual base in reference to member 'rawSource'
+ 61 |             at: p1eE2Epoch
+ 62 |         )
+ 63 |         #expect(raw.layer == .rawSource)
+    |                               `- error: cannot infer contextual base in reference to member 'rawSource'
+ 64 |         #expect(raw.status == .active)
+ 65 |         #expect(raw.confirmedByActorId == nil)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:64:32: error: cannot infer contextual base in reference to member 'active'
+ 62 |         )
+ 63 |         #expect(raw.layer == .rawSource)
+ 64 |         #expect(raw.status == .active)
+    |                                `- error: cannot infer contextual base in reference to member 'active'
+ 65 |         #expect(raw.confirmedByActorId == nil)
+ 66 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:69:27: error: cannot infer contextual base in reference to member 'campKnowledge'
+ 67 |         let promoted = try store.promote(
+ 68 |             source: raw.ref,
+ 69 |             targetLayer: .campKnowledge,
+    |                           `- error: cannot infer contextual base in reference to member 'campKnowledge'
+ 70 |             targetOwnerType: .camp,
+ 71 |             targetOwnerId: "camp:memory-promotion",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:70:31: error: cannot infer contextual base in reference to member 'camp'
+ 68 |             source: raw.ref,
+ 69 |             targetLayer: .campKnowledge,
+ 70 |             targetOwnerType: .camp,
+    |                               `- error: cannot infer contextual base in reference to member 'camp'
+ 71 |             targetOwnerId: "camp:memory-promotion",
+ 72 |             targetCampId: "camp:memory-promotion",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:73:26: error: cannot infer contextual base in reference to member 'independentSource'
+ 71 |             targetOwnerId: "camp:memory-promotion",
+ 72 |             targetCampId: "camp:memory-promotion",
+ 73 |             sourceType: .independentSource,
+    |                          `- error: cannot infer contextual base in reference to member 'independentSource'
+ 74 |             confirmedByActorId: "user:local-owner",
+ 75 |             authorizedCowId: "cow:memory-promotion",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:81:36: error: cannot infer contextual base in reference to member 'campKnowledge'
+ 79 |         #expect(promoted.id == raw.id)
+ 80 |         #expect(promoted.version == 2)
+ 81 |         #expect(promoted.layer == .campKnowledge)
+    |                                    `- error: cannot infer contextual base in reference to member 'campKnowledge'
+ 82 |         #expect(promoted.status == .active)
+ 83 |         #expect(promoted.confirmedByActorId == "user:local-owner")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:82:37: error: cannot infer contextual base in reference to member 'active'
+ 80 |         #expect(promoted.version == 2)
+ 81 |         #expect(promoted.layer == .campKnowledge)
+ 82 |         #expect(promoted.status == .active)
+    |                                     `- error: cannot infer contextual base in reference to member 'active'
+ 83 |         #expect(promoted.confirmedByActorId == "user:local-owner")
+ 84 |         let dependencies = try store.dependencies(memory: promoted.ref)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:86:52: error: cannot infer contextual base in reference to member 'memory'
+ 84 |         let dependencies = try store.dependencies(memory: promoted.ref)
+ 85 |         #expect(dependencies.count == 1)
+ 86 |         #expect(dependencies[0].dependencyType == .memory)
+    |                                                    `- error: cannot infer contextual base in reference to member 'memory'
+ 87 |         #expect(dependencies[0].dependencyId == raw.id)
+ 88 |         #expect(dependencies[0].dependencyVersion == raw.version)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:93:25: error: cannot find 'MemoryRecordContractError' in scope
+ 91 | 
+ 92 |     @Test func p1e26MemoryLayerOwnerAndCarrierInvariants() throws {
+ 93 |         #expect(throws: MemoryRecordContractError.invalidLayerOwner) {
+    |                         `- error: cannot find 'MemoryRecordContractError' in scope
+ 94 |             _ = try MemoryRecordDraftV1(
+ 95 |                 id: "memory:bad-owner",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:94:21: error: cannot find 'MemoryRecordDraftV1' in scope
+ 92 |     @Test func p1e26MemoryLayerOwnerAndCarrierInvariants() throws {
+ 93 |         #expect(throws: MemoryRecordContractError.invalidLayerOwner) {
+ 94 |             _ = try MemoryRecordDraftV1(
+    |                     `- error: cannot find 'MemoryRecordDraftV1' in scope
+ 95 |                 id: "memory:bad-owner",
+ 96 |                 layer: .campKnowledge,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:96:25: error: cannot infer contextual base in reference to member 'campKnowledge'
+ 94 |             _ = try MemoryRecordDraftV1(
+ 95 |                 id: "memory:bad-owner",
+ 96 |                 layer: .campKnowledge,
+    |                         `- error: cannot infer contextual base in reference to member 'campKnowledge'
+ 97 |                 ownerType: .cow,
+ 98 |                 ownerId: "cow:bad",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:97:29: error: cannot infer contextual base in reference to member 'cow'
+ 95 |                 id: "memory:bad-owner",
+ 96 |                 layer: .campKnowledge,
+ 97 |                 ownerType: .cow,
+    |                             `- error: cannot infer contextual base in reference to member 'cow'
+ 98 |                 ownerId: "cow:bad",
+ 99 |                 campId: "camp:bad",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:102:29: error: 'nil' requires a contextual type
+100 |                 title: "Bad",
+101 |                 bodyText: "body",
+102 |                 contentRef: nil,
+    |                             `- error: 'nil' requires a contextual type
+103 |                 sourceType: .userConfirmed,
+104 |                 applicabilityJson: "{}",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:103:30: error: cannot infer contextual base in reference to member 'userConfirmed'
+101 |                 bodyText: "body",
+102 |                 contentRef: nil,
+103 |                 sourceType: .userConfirmed,
+    |                              `- error: cannot infer contextual base in reference to member 'userConfirmed'
+104 |                 applicabilityJson: "{}",
+105 |                 createdByActorId: "user:local-owner",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:109:25: error: cannot find 'MemoryRecordContractError' in scope
+107 |             )
+108 |         }
+109 |         #expect(throws: MemoryRecordContractError.invalidCampScope) {
+    |                         `- error: cannot find 'MemoryRecordContractError' in scope
+110 |             _ = try MemoryRecordDraftV1(
+111 |                 id: "memory:bad-global",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:110:21: error: cannot find 'MemoryRecordDraftV1' in scope
+108 |         }
+109 |         #expect(throws: MemoryRecordContractError.invalidCampScope) {
+110 |             _ = try MemoryRecordDraftV1(
+    |                     `- error: cannot find 'MemoryRecordDraftV1' in scope
+111 |                 id: "memory:bad-global",
+112 |                 layer: .globalPreference,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:112:25: error: cannot infer contextual base in reference to member 'globalPreference'
+110 |             _ = try MemoryRecordDraftV1(
+111 |                 id: "memory:bad-global",
+112 |                 layer: .globalPreference,
+    |                         `- error: cannot infer contextual base in reference to member 'globalPreference'
+113 |                 ownerType: .user,
+114 |                 ownerId: "user:local-owner",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:113:29: error: cannot infer contextual base in reference to member 'user'
+111 |                 id: "memory:bad-global",
+112 |                 layer: .globalPreference,
+113 |                 ownerType: .user,
+    |                             `- error: cannot infer contextual base in reference to member 'user'
+114 |                 ownerId: "user:local-owner",
+115 |                 campId: "camp:unexpected",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:118:29: error: 'nil' requires a contextual type
+116 |                 title: "Bad",
+117 |                 bodyText: "body",
+118 |                 contentRef: nil,
+    |                             `- error: 'nil' requires a contextual type
+119 |                 sourceType: .userConfirmed,
+120 |                 applicabilityJson: "{}",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:119:30: error: cannot infer contextual base in reference to member 'userConfirmed'
+117 |                 bodyText: "body",
+118 |                 contentRef: nil,
+119 |                 sourceType: .userConfirmed,
+    |                              `- error: cannot infer contextual base in reference to member 'userConfirmed'
+120 |                 applicabilityJson: "{}",
+121 |                 createdByActorId: "user:local-owner",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:125:25: error: cannot find 'MemoryRecordContractError' in scope
+123 |             )
+124 |         }
+125 |         #expect(throws: MemoryRecordContractError.invalidCarrier) {
+    |                         `- error: cannot find 'MemoryRecordContractError' in scope
+126 |             _ = try MemoryRecordDraftV1(
+127 |                 id: "memory:bad-carrier",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:126:21: error: cannot find 'MemoryRecordDraftV1' in scope
+124 |         }
+125 |         #expect(throws: MemoryRecordContractError.invalidCarrier) {
+126 |             _ = try MemoryRecordDraftV1(
+    |                     `- error: cannot find 'MemoryRecordDraftV1' in scope
+127 |                 id: "memory:bad-carrier",
+128 |                 layer: .working,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:128:25: error: cannot infer contextual base in reference to member 'working'
+126 |             _ = try MemoryRecordDraftV1(
+127 |                 id: "memory:bad-carrier",
+128 |                 layer: .working,
+    |                         `- error: cannot infer contextual base in reference to member 'working'
+129 |                 ownerType: .user,
+130 |                 ownerId: "user:local-owner",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:129:29: error: cannot infer contextual base in reference to member 'user'
+127 |                 id: "memory:bad-carrier",
+128 |                 layer: .working,
+129 |                 ownerType: .user,
+    |                             `- error: cannot infer contextual base in reference to member 'user'
+130 |                 ownerId: "user:local-owner",
+131 |                 campId: nil,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:131:25: error: 'nil' requires a contextual type
+129 |                 ownerType: .user,
+130 |                 ownerId: "user:local-owner",
+131 |                 campId: nil,
+    |                         `- error: 'nil' requires a contextual type
+132 |                 title: "Bad",
+133 |                 bodyText: "body",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:135:30: error: cannot infer contextual base in reference to member 'inference'
+133 |                 bodyText: "body",
+134 |                 contentRef: "file://duplicate",
+135 |                 sourceType: .inference,
+    |                              `- error: cannot infer contextual base in reference to member 'inference'
+136 |                 applicabilityJson: "{}",
+137 |                 createdByActorId: "system:test",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:138:37: error: 'nil' requires a contextual type
+136 |                 applicabilityJson: "{}",
+137 |                 createdByActorId: "system:test",
+138 |                 confirmedByActorId: nil
+    |                                     `- error: 'nil' requires a contextual type
+139 |             )
+140 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:141:25: error: cannot find 'MemoryRecordDraftV1' in scope
+139 |             )
+140 |         }
+141 |         let valid = try MemoryRecordDraftV1(
+    |                         `- error: cannot find 'MemoryRecordDraftV1' in scope
+142 |             id: "memory:global-preference",
+143 |             layer: .globalPreference,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:143:21: error: cannot infer contextual base in reference to member 'globalPreference'
+141 |         let valid = try MemoryRecordDraftV1(
+142 |             id: "memory:global-preference",
+143 |             layer: .globalPreference,
+    |                     `- error: cannot infer contextual base in reference to member 'globalPreference'
+144 |             ownerType: .user,
+145 |             ownerId: "user:local-owner",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:144:25: error: cannot infer contextual base in reference to member 'user'
+142 |             id: "memory:global-preference",
+143 |             layer: .globalPreference,
+144 |             ownerType: .user,
+    |                         `- error: cannot infer contextual base in reference to member 'user'
+145 |             ownerId: "user:local-owner",
+146 |             campId: nil,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:146:21: error: 'nil' requires a contextual type
+144 |             ownerType: .user,
+145 |             ownerId: "user:local-owner",
+146 |             campId: nil,
+    |                     `- error: 'nil' requires a contextual type
+147 |             title: "Preferred style",
+148 |             bodyText: nil,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:148:23: error: 'nil' requires a contextual type
+146 |             campId: nil,
+147 |             title: "Preferred style",
+148 |             bodyText: nil,
+    |                       `- error: 'nil' requires a contextual type
+149 |             contentRef: "local-memory://preference/1",
+150 |             sourceType: .userConfirmed,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:150:26: error: cannot infer contextual base in reference to member 'userConfirmed'
+148 |             bodyText: nil,
+149 |             contentRef: "local-memory://preference/1",
+150 |             sourceType: .userConfirmed,
+    |                          `- error: cannot infer contextual base in reference to member 'userConfirmed'
+151 |             applicabilityJson: "{\"contexts\":[\"coding\"]}",
+152 |             createdByActorId: "user:local-owner",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:157:33: error: cannot infer contextual base in reference to member 'globalPreference'
+155 |         #expect(valid.bodyText == nil)
+156 |         #expect(valid.contentRef != nil)
+157 |         #expect(valid.layer == .globalPreference)
+    |                                 `- error: cannot infer contextual base in reference to member 'globalPreference'
+158 |     }
+159 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:162:21: error: cannot find 'MemoryRecordStore' in scope
+160 |     @Test func p1e29MemoryDependencyAppendOnlyGraph() throws {
+161 |         let database = try p1eE2Database("memory-dependency")
+162 |         let store = MemoryRecordStore(database: database)
+    |                     `- error: cannot find 'MemoryRecordStore' in scope
+163 |         let memory = try store.record(
+164 |             p1eGlobalWorkingDraft(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:168:30: error: 'nil' requires a contextual type
+166 |                 title: "Dependency graph"
+167 |             ),
+168 |             authorizedCowId: nil,
+    |                              `- error: 'nil' requires a contextual type
+169 |             expectedCampLifecycleVersion: nil,
+170 |             at: p1eE2Epoch
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:169:43: error: 'nil' requires a contextual type
+167 |             ),
+168 |             authorizedCowId: nil,
+169 |             expectedCampLifecycleVersion: nil,
+    |                                           `- error: 'nil' requires a contextual type
+170 |             at: p1eE2Epoch
+171 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:173:17: error: cannot find 'MemoryDependencyDraftV1' in scope
+171 |         )
+172 |         let dependency = try store.appendDependency(
+173 |             try MemoryDependencyDraftV1(
+    |                 `- error: cannot find 'MemoryDependencyDraftV1' in scope
+174 |                 id: "memory-dependency:input:1",
+175 |                 memory: memory.ref,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:176:34: error: cannot infer contextual base in reference to member 'input'
+174 |                 id: "memory-dependency:input:1",
+175 |                 memory: memory.ref,
+176 |                 dependencyType: .input,
+    |                                  `- error: cannot infer contextual base in reference to member 'input'
+177 |                 dependencyId: "input:1",
+178 |                 dependencyVersion: 1,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:205:21: error: cannot find 'MemoryRecordStore' in scope
+203 |     @Test func p1e30DependencyInvalidationStateMatrix() throws {
+204 |         let database = try p1eE2Database("memory-invalidation")
+205 |         let store = MemoryRecordStore(database: database)
+    |                     `- error: cannot find 'MemoryRecordStore' in scope
+206 |         let acceptanceMemory = try store.record(
+207 |             p1eGlobalWorkingDraft(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:211:30: error: 'nil' requires a contextual type
+209 |                 title: "Acceptance"
+210 |             ),
+211 |             authorizedCowId: nil,
+    |                              `- error: 'nil' requires a contextual type
+212 |             expectedCampLifecycleVersion: nil,
+213 |             at: p1eE2Epoch
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:212:43: error: 'nil' requires a contextual type
+210 |             ),
+211 |             authorizedCowId: nil,
+212 |             expectedCampLifecycleVersion: nil,
+    |                                           `- error: 'nil' requires a contextual type
+213 |             at: p1eE2Epoch
+214 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:220:30: error: 'nil' requires a contextual type
+218 |                 title: "Verification"
+219 |             ),
+220 |             authorizedCowId: nil,
+    |                              `- error: 'nil' requires a contextual type
+221 |             expectedCampLifecycleVersion: nil,
+222 |             at: p1eE2Epoch
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:221:43: error: 'nil' requires a contextual type
+219 |             ),
+220 |             authorizedCowId: nil,
+221 |             expectedCampLifecycleVersion: nil,
+    |                                           `- error: 'nil' requires a contextual type
+222 |             at: p1eE2Epoch
+223 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:229:30: error: 'nil' requires a contextual type
+227 |                 title: "Outcome"
+228 |             ),
+229 |             authorizedCowId: nil,
+    |                              `- error: 'nil' requires a contextual type
+230 |             expectedCampLifecycleVersion: nil,
+231 |             at: p1eE2Epoch
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:230:43: error: 'nil' requires a contextual type
+228 |             ),
+229 |             authorizedCowId: nil,
+230 |             expectedCampLifecycleVersion: nil,
+    |                                           `- error: 'nil' requires a contextual type
+231 |             at: p1eE2Epoch
+232 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:238:30: error: 'nil' requires a contextual type
+236 |                 title: "Source"
+237 |             ),
+238 |             authorizedCowId: nil,
+    |                              `- error: 'nil' requires a contextual type
+239 |             expectedCampLifecycleVersion: nil,
+240 |             at: p1eE2Epoch
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:239:43: error: 'nil' requires a contextual type
+237 |             ),
+238 |             authorizedCowId: nil,
+239 |             expectedCampLifecycleVersion: nil,
+    |                                           `- error: 'nil' requires a contextual type
+240 |             at: p1eE2Epoch
+241 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:247:17: error: cannot find 'MemoryDependencyDraftV1' in scope
+245 |         let sourceID = "input:memory-matrix"
+246 |         let dependencyRows = [
+247 |             try MemoryDependencyDraftV1(
+    |                 `- error: cannot find 'MemoryDependencyDraftV1' in scope
+248 |                 id: "dep:acceptance", memory: acceptanceMemory.ref,
+249 |                 dependencyType: .acceptance, dependencyId: acceptanceID,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:253:17: error: cannot find 'MemoryDependencyDraftV1' in scope
+251 |                 createdAt: p1eE2Epoch
+252 |             ),
+253 |             try MemoryDependencyDraftV1(
+    |                 `- error: cannot find 'MemoryDependencyDraftV1' in scope
+254 |                 id: "dep:verification", memory: verificationMemory.ref,
+255 |                 dependencyType: .verification, dependencyId: verificationID,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:259:17: error: cannot find 'MemoryDependencyDraftV1' in scope
+257 |                 createdAt: p1eE2Epoch
+258 |             ),
+259 |             try MemoryDependencyDraftV1(
+    |                 `- error: cannot find 'MemoryDependencyDraftV1' in scope
+260 |                 id: "dep:outcome", memory: outcomeMemory.ref,
+261 |                 dependencyType: .outcome, dependencyId: outcomeID,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:265:17: error: cannot find 'MemoryDependencyDraftV1' in scope
+263 |                 createdAt: p1eE2Epoch
+264 |             ),
+265 |             try MemoryDependencyDraftV1(
+    |                 `- error: cannot find 'MemoryDependencyDraftV1' in scope
+266 |                 id: "dep:source", memory: sourceMemory.ref,
+267 |                 dependencyType: .input, dependencyId: sourceID,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:249:34: error: cannot infer contextual base in reference to member 'acceptance'
+247 |             try MemoryDependencyDraftV1(
+248 |                 id: "dep:acceptance", memory: acceptanceMemory.ref,
+249 |                 dependencyType: .acceptance, dependencyId: acceptanceID,
+    |                                  `- error: cannot infer contextual base in reference to member 'acceptance'
+250 |                 dependencyVersion: 1, dependencyHash: p1eHashA,
+251 |                 createdAt: p1eE2Epoch
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:255:34: error: cannot infer contextual base in reference to member 'verification'
+253 |             try MemoryDependencyDraftV1(
+254 |                 id: "dep:verification", memory: verificationMemory.ref,
+255 |                 dependencyType: .verification, dependencyId: verificationID,
+    |                                  `- error: cannot infer contextual base in reference to member 'verification'
+256 |                 dependencyVersion: 1, dependencyHash: p1eHashB,
+257 |                 createdAt: p1eE2Epoch
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:261:34: error: cannot infer contextual base in reference to member 'outcome'
+259 |             try MemoryDependencyDraftV1(
+260 |                 id: "dep:outcome", memory: outcomeMemory.ref,
+261 |                 dependencyType: .outcome, dependencyId: outcomeID,
+    |                                  `- error: cannot infer contextual base in reference to member 'outcome'
+262 |                 dependencyVersion: 1, dependencyHash: p1eHashC,
+263 |                 createdAt: p1eE2Epoch
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:267:34: error: cannot infer contextual base in reference to member 'input'
+265 |             try MemoryDependencyDraftV1(
+266 |                 id: "dep:source", memory: sourceMemory.ref,
+267 |                 dependencyType: .input, dependencyId: sourceID,
+    |                                  `- error: cannot infer contextual base in reference to member 'input'
+268 |                 dependencyVersion: 1, dependencyHash: p1eHashA,
+269 |                 createdAt: p1eE2Epoch
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:278:18: error: cannot infer contextual base in reference to member 'outcomeReturned'
+276 |         try database.pool.write { db in
+277 |             _ = try store.applyInvalidation(
+278 |                 .outcomeReturned(
+    |                  `- error: cannot infer contextual base in reference to member 'outcomeReturned'
+279 |                     outcomeId: outcomeID,
+280 |                     outcomeVersion: 1,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:291:18: error: cannot infer contextual base in reference to member 'verificationInvalidated'
+289 |         try database.pool.write { db in
+290 |             _ = try store.applyInvalidation(
+291 |                 .verificationInvalidated(
+    |                  `- error: cannot infer contextual base in reference to member 'verificationInvalidated'
+292 |                     outcomeId: outcomeID,
+293 |                     outcomeVersion: 1,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:305:18: error: cannot infer contextual base in reference to member 'dependencyInvalidated'
+303 |         try database.pool.write { db in
+304 |             _ = try store.applyInvalidation(
+305 |                 .dependencyInvalidated(
+    |                  `- error: cannot infer contextual base in reference to member 'dependencyInvalidated'
+306 |                     type: .input,
+307 |                     id: sourceID,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:306:28: error: cannot infer contextual base in reference to member 'input'
+304 |             _ = try store.applyInvalidation(
+305 |                 .dependencyInvalidated(
+306 |                     type: .input,
+    |                            `- error: cannot infer contextual base in reference to member 'input'
+307 |                     id: sourceID,
+308 |                     version: 1,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:319:25: error: cannot infer contextual base in reference to member 'user'
+317 | 
+318 |         let injectable = try store.injectableMemories(
+319 |             ownerType: .user,
+    |                         `- error: cannot infer contextual base in reference to member 'user'
+320 |             ownerId: "user:local-owner",
+321 |             campId: nil
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:321:21: error: 'nil' requires a contextual type
+319 |             ownerType: .user,
+320 |             ownerId: "user:local-owner",
+321 |             campId: nil
+    |                     `- error: 'nil' requires a contextual type
+322 |         )
+323 |         #expect(injectable.isEmpty)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:328:21: error: cannot find 'MemoryRecordStore' in scope
+326 |     @Test func p1e31MemoryTombstoneErasesPrivateCarrier() throws {
+327 |         let database = try p1eE2Database("memory-tombstone")
+328 |         let store = MemoryRecordStore(database: database)
+    |                     `- error: cannot find 'MemoryRecordStore' in scope
+329 |         let first = try store.record(
+330 |             p1eGlobalWorkingDraft(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:334:30: error: 'nil' requires a contextual type
+332 |                 title: "Private body"
+333 |             ),
+334 |             authorizedCowId: nil,
+    |                              `- error: 'nil' requires a contextual type
+335 |             expectedCampLifecycleVersion: nil,
+336 |             at: p1eE2Epoch
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:335:43: error: 'nil' requires a contextual type
+333 |             ),
+334 |             authorizedCowId: nil,
+335 |             expectedCampLifecycleVersion: nil,
+    |                                           `- error: 'nil' requires a contextual type
+336 |             at: p1eE2Epoch
+337 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:340:27: error: cannot infer contextual base in reference to member 'globalPreference'
+338 |         _ = try store.promote(
+339 |             source: first.ref,
+340 |             targetLayer: .globalPreference,
+    |                           `- error: cannot infer contextual base in reference to member 'globalPreference'
+341 |             targetOwnerType: .user,
+342 |             targetOwnerId: "user:local-owner",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:341:31: error: cannot infer contextual base in reference to member 'user'
+339 |             source: first.ref,
+340 |             targetLayer: .globalPreference,
+341 |             targetOwnerType: .user,
+    |                               `- error: cannot infer contextual base in reference to member 'user'
+342 |             targetOwnerId: "user:local-owner",
+343 |             targetCampId: nil,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:343:27: error: 'nil' requires a contextual type
+341 |             targetOwnerType: .user,
+342 |             targetOwnerId: "user:local-owner",
+343 |             targetCampId: nil,
+    |                           `- error: 'nil' requires a contextual type
+344 |             sourceType: .userConfirmed,
+345 |             confirmedByActorId: "user:local-owner",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:344:26: error: cannot infer contextual base in reference to member 'userConfirmed'
+342 |             targetOwnerId: "user:local-owner",
+343 |             targetCampId: nil,
+344 |             sourceType: .userConfirmed,
+    |                          `- error: cannot infer contextual base in reference to member 'userConfirmed'
+345 |             confirmedByActorId: "user:local-owner",
+346 |             authorizedCowId: nil,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:346:30: error: 'nil' requires a contextual type
+344 |             sourceType: .userConfirmed,
+345 |             confirmedByActorId: "user:local-owner",
+346 |             authorizedCowId: nil,
+    |                              `- error: 'nil' requires a contextual type
+347 |             expectedCampLifecycleVersion: nil,
+348 |             at: p1eE2Epoch.addingTimeInterval(1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:347:43: error: 'nil' requires a contextual type
+345 |             confirmedByActorId: "user:local-owner",
+346 |             authorizedCowId: nil,
+347 |             expectedCampLifecycleVersion: nil,
+    |                                           `- error: 'nil' requires a contextual type
+348 |             at: p1eE2Epoch.addingTimeInterval(1)
+349 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:354:38: error: cannot infer contextual base in reference to member 'deletedTombstone'
+352 |             at: p1eE2Epoch.addingTimeInterval(2)
+353 |         )
+354 |         #expect(tombstone.status == .deletedTombstone)
+    |                                      `- error: cannot infer contextual base in reference to member 'deletedTombstone'
+355 |         #expect(tombstone.bodyText == nil)
+356 |         #expect(tombstone.contentRef == nil)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:359:9: error: the compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+357 |         let allVersions = try store.versions(id: first.id)
+358 |         #expect(allVersions.count == 2)
+359 |         #expect(allVersions.allSatisfy { version in
+    |         `- error: the compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+360 |             version.status == .deletedTombstone
+361 |                 && version.bodyText == nil
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[5/10] Emitting module AgentLoopTestSuite
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:349:13: error: cannot find type 'MemoryRecordDraftV1' in scope
+ 347 |     id: String,
+ 348 |     cowID: String
+ 349 | ) throws -> MemoryRecordDraftV1 {
+     |             `- error: cannot find type 'MemoryRecordDraftV1' in scope
+ 350 |     try MemoryRecordDraftV1(
+ 351 |         id: id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:72:13: error: cannot find type 'CowIdentitySnapshotV1' in scope
+ 70 |     database: AppDatabase,
+ 71 |     campID: String? = nil
+ 72 | ) throws -> CowIdentitySnapshotV1 {
+    |             `- error: cannot find type 'CowIdentitySnapshotV1' in scope
+ 73 |     let companion = CompanionRecord(
+ 74 |         id: id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:99:13: error: cannot find type 'CampResidencySnapshotV1' in scope
+ 97 |     campID: String,
+ 98 |     suffix: String
+ 99 | ) throws -> CampResidencySnapshotV1 {
+    |             `- error: cannot find type 'CampResidencySnapshotV1' in scope
+100 |     let requested = try store.request(
+101 |         RequestCampResidencyCommandV1(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:95:12: error: cannot find type 'CowResidencyStore' in scope
+ 93 | @discardableResult
+ 94 | func p1eE2ActivateResidency(
+ 95 |     store: CowResidencyStore,
+    |            `- error: cannot find type 'CowResidencyStore' in scope
+ 96 |     cowID: String,
+ 97 |     campID: String,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/MemoryProvenanceTests.swift:13:13: error: cannot find type 'MemoryRecordDraftV1' in scope
+ 11 |     id: String,
+ 12 |     title: String
+ 13 | ) throws -> MemoryRecordDraftV1 {
+    |             `- error: cannot find type 'MemoryRecordDraftV1' in scope
+ 14 |     try MemoryRecordDraftV1(
+ 15 |         id: id,
+[6/10] Compiling AgentLoopTestSuite CampIsolationTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:72:13: error: cannot find type 'CowIdentitySnapshotV1' in scope
+ 70 |     database: AppDatabase,
+ 71 |     campID: String? = nil
+ 72 | ) throws -> CowIdentitySnapshotV1 {
+    |             `- error: cannot find type 'CowIdentitySnapshotV1' in scope
+ 73 |     let companion = CompanionRecord(
+ 74 |         id: id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:13:25: error: cannot find 'CowResidencyStore' in scope
+ 11 |         _ = try p1eE2SeedCamp("camp:isolation:b", database: database)
+ 12 |         _ = try p1eE2SeedCow("cow:isolation", database: database)
+ 13 |         let residency = CowResidencyStore(database: database)
+    |                         `- error: cannot find 'CowResidencyStore' in scope
+ 14 |         _ = try p1eE2ActivateResidency(
+ 15 |             store: residency,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:99:13: error: cannot find type 'CampResidencySnapshotV1' in scope
+ 97 |     campID: String,
+ 98 |     suffix: String
+ 99 | ) throws -> CampResidencySnapshotV1 {
+    |             `- error: cannot find type 'CampResidencySnapshotV1' in scope
+100 |     let requested = try store.request(
+101 |         RequestCampResidencyCommandV1(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CowResidencyContractTests.swift:95:12: error: cannot find type 'CowResidencyStore' in scope
+ 93 | @discardableResult
+ 94 | func p1eE2ActivateResidency(
+ 95 |     store: CowResidencyStore,
+    |            `- error: cannot find type 'CowResidencyStore' in scope
+ 96 |     cowID: String,
+ 97 |     campID: String,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:26:26: error: cannot find 'CampMemoryWorkflowController' in scope
+ 24 |             suffix: "isolation-b"
+ 25 |         )
+ 26 |         let controller = CampMemoryWorkflowController.live(database: database)
+    |                          `- error: cannot find 'CampMemoryWorkflowController' in scope
+ 27 |         _ = try controller.record(
+ 28 |             try MemoryRecordDraftV1(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:28:17: error: cannot find 'MemoryRecordDraftV1' in scope
+ 26 |         let controller = CampMemoryWorkflowController.live(database: database)
+ 27 |         _ = try controller.record(
+ 28 |             try MemoryRecordDraftV1(
+    |                 `- error: cannot find 'MemoryRecordDraftV1' in scope
+ 29 |                 id: "memory:isolation:a",
+ 30 |                 layer: .working,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:30:25: error: cannot infer contextual base in reference to member 'working'
+ 28 |             try MemoryRecordDraftV1(
+ 29 |                 id: "memory:isolation:a",
+ 30 |                 layer: .working,
+    |                         `- error: cannot infer contextual base in reference to member 'working'
+ 31 |                 ownerType: .cow,
+ 32 |                 ownerId: "cow:isolation",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:31:29: error: cannot infer contextual base in reference to member 'cow'
+ 29 |                 id: "memory:isolation:a",
+ 30 |                 layer: .working,
+ 31 |                 ownerType: .cow,
+    |                             `- error: cannot infer contextual base in reference to member 'cow'
+ 32 |                 ownerId: "cow:isolation",
+ 33 |                 campId: "camp:isolation:a",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:36:29: error: 'nil' requires a contextual type
+ 34 |                 title: "Only A",
+ 35 |                 bodyText: "camp A",
+ 36 |                 contentRef: nil,
+    |                             `- error: 'nil' requires a contextual type
+ 37 |                 sourceType: .inference,
+ 38 |                 applicabilityJson: "{}",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:37:30: error: cannot infer contextual base in reference to member 'inference'
+ 35 |                 bodyText: "camp A",
+ 36 |                 contentRef: nil,
+ 37 |                 sourceType: .inference,
+    |                              `- error: cannot infer contextual base in reference to member 'inference'
+ 38 |                 applicabilityJson: "{}",
+ 39 |                 createdByActorId: "cow:isolation",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:40:37: error: 'nil' requires a contextual type
+ 38 |                 applicabilityJson: "{}",
+ 39 |                 createdByActorId: "cow:isolation",
+ 40 |                 confirmedByActorId: nil
+    |                                     `- error: 'nil' requires a contextual type
+ 41 |             ),
+ 42 |             authorizedCowId: "cow:isolation",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:47:17: error: cannot find 'MemoryRecordDraftV1' in scope
+ 45 |         )
+ 46 |         _ = try controller.record(
+ 47 |             try MemoryRecordDraftV1(
+    |                 `- error: cannot find 'MemoryRecordDraftV1' in scope
+ 48 |                 id: "memory:isolation:b",
+ 49 |                 layer: .working,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:49:25: error: cannot infer contextual base in reference to member 'working'
+ 47 |             try MemoryRecordDraftV1(
+ 48 |                 id: "memory:isolation:b",
+ 49 |                 layer: .working,
+    |                         `- error: cannot infer contextual base in reference to member 'working'
+ 50 |                 ownerType: .cow,
+ 51 |                 ownerId: "cow:isolation",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:50:29: error: cannot infer contextual base in reference to member 'cow'
+ 48 |                 id: "memory:isolation:b",
+ 49 |                 layer: .working,
+ 50 |                 ownerType: .cow,
+    |                             `- error: cannot infer contextual base in reference to member 'cow'
+ 51 |                 ownerId: "cow:isolation",
+ 52 |                 campId: "camp:isolation:b",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:55:29: error: 'nil' requires a contextual type
+ 53 |                 title: "Only B",
+ 54 |                 bodyText: "camp B",
+ 55 |                 contentRef: nil,
+    |                             `- error: 'nil' requires a contextual type
+ 56 |                 sourceType: .inference,
+ 57 |                 applicabilityJson: "{}",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:56:30: error: cannot infer contextual base in reference to member 'inference'
+ 54 |                 bodyText: "camp B",
+ 55 |                 contentRef: nil,
+ 56 |                 sourceType: .inference,
+    |                              `- error: cannot infer contextual base in reference to member 'inference'
+ 57 |                 applicabilityJson: "{}",
+ 58 |                 createdByActorId: "cow:isolation",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:59:37: error: 'nil' requires a contextual type
+ 57 |                 applicabilityJson: "{}",
+ 58 |                 createdByActorId: "cow:isolation",
+ 59 |                 confirmedByActorId: nil
+    |                                     `- error: 'nil' requires a contextual type
+ 60 |             ),
+ 61 |             authorizedCowId: "cow:isolation",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:78:27: error: cannot infer key path type from context; consider explicitly specifying a root type
+ 76 |             at: p1eE2Epoch
+ 77 |         )
+ 78 |         #expect(campA.map(\.id) == ["memory:isolation:a"])
+    |                           `- error: cannot infer key path type from context; consider explicitly specifying a root type
+ 79 |         #expect(campB.map(\.id) == ["memory:isolation:b"])
+ 80 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:79:27: error: cannot infer key path type from context; consider explicitly specifying a root type
+ 77 |         )
+ 78 |         #expect(campA.map(\.id) == ["memory:isolation:a"])
+ 79 |         #expect(campB.map(\.id) == ["memory:isolation:b"])
+    |                           `- error: cannot infer key path type from context; consider explicitly specifying a root type
+ 80 |     }
+ 81 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:86:25: error: cannot find 'CowResidencyStore' in scope
+ 84 |         _ = try p1eE2SeedCamp("camp:inactive", database: database)
+ 85 |         _ = try p1eE2SeedCow("cow:inactive", database: database)
+ 86 |         let residency = CowResidencyStore(database: database)
+    |                         `- error: cannot find 'CowResidencyStore' in scope
+ 87 |         let active = try p1eE2ActivateResidency(
+ 88 |             store: residency,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:93:38: error: cannot find 'ChangeCampResidencyCommandV1' in scope
+ 91 |             suffix: "inactive"
+ 92 |         )
+ 93 |         _ = try residency.transition(ChangeCampResidencyCommandV1(
+    |                                      `- error: cannot find 'ChangeCampResidencyCommandV1' in scope
+ 94 |             envelope: p1eE2Envelope("inactive:pause"),
+ 95 |             residencyId: active.id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:97:26: error: cannot infer contextual base in reference to member 'pause'
+ 95 |             residencyId: active.id,
+ 96 |             expectedAggregateVersion: active.aggregateVersion,
+ 97 |             transition: .pause,
+    |                          `- error: cannot infer contextual base in reference to member 'pause'
+ 98 |             expectedCampLifecycleVersion: 1
+ 99 |         ))
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:100:26: error: cannot find 'CampMemoryWorkflowController' in scope
+ 98 |             expectedCampLifecycleVersion: 1
+ 99 |         ))
+100 |         let controller = CampMemoryWorkflowController.live(database: database)
+    |                          `- error: cannot find 'CampMemoryWorkflowController' in scope
+101 |         let draft = try MemoryRecordDraftV1(
+102 |             id: "memory:inactive",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:101:25: error: cannot find 'MemoryRecordDraftV1' in scope
+ 99 |         ))
+100 |         let controller = CampMemoryWorkflowController.live(database: database)
+101 |         let draft = try MemoryRecordDraftV1(
+    |                         `- error: cannot find 'MemoryRecordDraftV1' in scope
+102 |             id: "memory:inactive",
+103 |             layer: .working,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:103:21: error: cannot infer contextual base in reference to member 'working'
+101 |         let draft = try MemoryRecordDraftV1(
+102 |             id: "memory:inactive",
+103 |             layer: .working,
+    |                     `- error: cannot infer contextual base in reference to member 'working'
+104 |             ownerType: .cow,
+105 |             ownerId: "cow:inactive",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:104:25: error: cannot infer contextual base in reference to member 'cow'
+102 |             id: "memory:inactive",
+103 |             layer: .working,
+104 |             ownerType: .cow,
+    |                         `- error: cannot infer contextual base in reference to member 'cow'
+105 |             ownerId: "cow:inactive",
+106 |             campId: "camp:inactive",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:109:25: error: 'nil' requires a contextual type
+107 |             title: "Must not write",
+108 |             bodyText: "blocked",
+109 |             contentRef: nil,
+    |                         `- error: 'nil' requires a contextual type
+110 |             sourceType: .inference,
+111 |             applicabilityJson: "{}",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:110:26: error: cannot infer contextual base in reference to member 'inference'
+108 |             bodyText: "blocked",
+109 |             contentRef: nil,
+110 |             sourceType: .inference,
+    |                          `- error: cannot infer contextual base in reference to member 'inference'
+111 |             applicabilityJson: "{}",
+112 |             createdByActorId: "cow:inactive",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:113:33: error: 'nil' requires a contextual type
+111 |             applicabilityJson: "{}",
+112 |             createdByActorId: "cow:inactive",
+113 |             confirmedByActorId: nil
+    |                                 `- error: 'nil' requires a contextual type
+114 |         )
+115 |         #expect(throws: ResidencyAuthorizationError.inactive(.paused)) {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:115:25: error: cannot find 'ResidencyAuthorizationError' in scope
+113 |             confirmedByActorId: nil
+114 |         )
+115 |         #expect(throws: ResidencyAuthorizationError.inactive(.paused)) {
+    |                         `- error: cannot find 'ResidencyAuthorizationError' in scope
+116 |             _ = try controller.record(
+117 |                 draft,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:115:63: error: cannot infer contextual base in reference to member 'paused'
+113 |             confirmedByActorId: nil
+114 |         )
+115 |         #expect(throws: ResidencyAuthorizationError.inactive(.paused)) {
+    |                                                               `- error: cannot infer contextual base in reference to member 'paused'
+116 |             _ = try controller.record(
+117 |                 draft,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:123:25: error: cannot find 'ResidencyAuthorizationError' in scope
+121 |             )
+122 |         }
+123 |         #expect(throws: ResidencyAuthorizationError.inactive(.paused)) {
+    |                         `- error: cannot find 'ResidencyAuthorizationError' in scope
+124 |             _ = try controller.authorizedMemory(
+125 |                 cowId: "cow:inactive",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CampIsolationTests.swift:123:63: error: cannot infer contextual base in reference to member 'paused'
+121 |             )
+122 |         }
+123 |         #expect(throws: ResidencyAuthorizationError.inactive(.paused)) {
+    |                                                               `- error: cannot infer contextual base in reference to member 'paused'
+124 |             _ = try controller.authorizedMemory(
+125 |                 cowId: "cow:inactive",
+[7/10] Compiling AgentLoopTestSuite AcceptanceWorkflowTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:349:13: error: cannot find type 'MemoryRecordDraftV1' in scope
+ 347 |     id: String,
+ 348 |     cowID: String
+ 349 | ) throws -> MemoryRecordDraftV1 {
+     |             `- error: cannot find type 'MemoryRecordDraftV1' in scope
+ 350 |     try MemoryRecordDraftV1(
+ 351 |         id: id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:340:13: error: cannot find 'CowResidencyStore' in scope
+ 338 |     )
+ 339 |     try database.pool.write { try companion.insert($0) }
+ 340 |     _ = try CowResidencyStore(database: database).synchronizeCompanion(
+     |             `- error: cannot find 'CowResidencyStore' in scope
+ 341 |         companion,
+ 342 |         provisionActiveResidency: false
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:376:21: error: cannot find 'MemoryRecordStore' in scope
+ 374 |         let cowID = "cow:p1e:skill:accepted"
+ 375 |         try p1eSeedSkillCow(cowID, database: fixture.domain.base.database)
+ 376 |         let store = MemoryRecordStore(database: fixture.domain.base.database)
+     |                     `- error: cannot find 'MemoryRecordStore' in scope
+ 377 |         let skill = try store.recordOutcomeSkill(
+ 378 |             try p1eOutcomeSkillDraft(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:387:33: error: cannot infer contextual base in reference to member 'globalSkill'
+ 385 |             at: p1dEpoch.addingTimeInterval(2)
+ 386 |         )
+ 387 |         #expect(skill.layer == .globalSkill)
+     |                                 `- error: cannot infer contextual base in reference to member 'globalSkill'
+ 388 |         #expect(skill.status == .active)
+ 389 |         #expect(skill.sourceType == .outcomeExperience)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:388:34: error: cannot infer contextual base in reference to member 'active'
+ 386 |         )
+ 387 |         #expect(skill.layer == .globalSkill)
+ 388 |         #expect(skill.status == .active)
+     |                                  `- error: cannot infer contextual base in reference to member 'active'
+ 389 |         #expect(skill.sourceType == .outcomeExperience)
+ 390 |         let dependencies = try store.dependencies(memory: skill.ref)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:389:38: error: cannot infer contextual base in reference to member 'outcomeExperience'
+ 387 |         #expect(skill.layer == .globalSkill)
+ 388 |         #expect(skill.status == .active)
+ 389 |         #expect(skill.sourceType == .outcomeExperience)
+     |                                      `- error: cannot infer contextual base in reference to member 'outcomeExperience'
+ 390 |         let dependencies = try store.dependencies(memory: skill.ref)
+ 391 |         #expect(dependencies.map(\.dependencyType) == [
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:391:34: error: cannot infer key path type from context; consider explicitly specifying a root type
+ 389 |         #expect(skill.sourceType == .outcomeExperience)
+ 390 |         let dependencies = try store.dependencies(memory: skill.ref)
+ 391 |         #expect(dependencies.map(\.dependencyType) == [
+     |                                  `- error: cannot infer key path type from context; consider explicitly specifying a root type
+ 392 |             .outcome, .verification, .acceptance,
+ 393 |         ])
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:392:14: error: reference to member 'outcome' cannot be resolved without a contextual type
+ 390 |         let dependencies = try store.dependencies(memory: skill.ref)
+ 391 |         #expect(dependencies.map(\.dependencyType) == [
+ 392 |             .outcome, .verification, .acceptance,
+     |              `- error: reference to member 'outcome' cannot be resolved without a contextual type
+ 393 |         ])
+ 394 |         #expect(dependencies.map(\.dependencyId) == [
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:392:24: error: reference to member 'verification' cannot be resolved without a contextual type
+ 390 |         let dependencies = try store.dependencies(memory: skill.ref)
+ 391 |         #expect(dependencies.map(\.dependencyType) == [
+ 392 |             .outcome, .verification, .acceptance,
+     |                        `- error: reference to member 'verification' cannot be resolved without a contextual type
+ 393 |         ])
+ 394 |         #expect(dependencies.map(\.dependencyId) == [
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:392:39: error: reference to member 'acceptance' cannot be resolved without a contextual type
+ 390 |         let dependencies = try store.dependencies(memory: skill.ref)
+ 391 |         #expect(dependencies.map(\.dependencyType) == [
+ 392 |             .outcome, .verification, .acceptance,
+     |                                       `- error: reference to member 'acceptance' cannot be resolved without a contextual type
+ 393 |         ])
+ 394 |         #expect(dependencies.map(\.dependencyId) == [
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:394:34: error: cannot infer key path type from context; consider explicitly specifying a root type
+ 392 |             .outcome, .verification, .acceptance,
+ 393 |         ])
+ 394 |         #expect(dependencies.map(\.dependencyId) == [
+     |                                  `- error: cannot infer key path type from context; consider explicitly specifying a root type
+ 395 |             accepted.outcome.id, fixture.verificationId, accepted.record.id,
+ 396 |         ])
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:406:31: error: cannot find 'MemoryRecordStore' in scope
+ 404 |             database: unaccepted.domain.base.database
+ 405 |         )
+ 406 |         let unacceptedStore = MemoryRecordStore(
+     |                               `- error: cannot find 'MemoryRecordStore' in scope
+ 407 |             database: unaccepted.domain.base.database
+ 408 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:410:21: error: cannot find 'MemoryPromotionAuthorizationError' in scope
+ 408 |         )
+ 409 |         #expect(
+ 410 |             throws: MemoryPromotionAuthorizationError.outcomeNotAccepted
+     |                     `- error: cannot find 'MemoryPromotionAuthorizationError' in scope
+ 411 |         ) {
+ 412 |             _ = try unacceptedStore.recordOutcomeSkill(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:440:28: error: cannot find 'MemoryRecordStore' in scope
+ 438 |             )
+ 439 |         }
+ 440 |         let invalidStore = MemoryRecordStore(
+     |                            `- error: cannot find 'MemoryRecordStore' in scope
+ 441 |             database: invalid.domain.base.database
+ 442 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:444:21: error: cannot find 'MemoryPromotionAuthorizationError' in scope
+ 442 |         )
+ 443 |         #expect(
+ 444 |             throws: MemoryPromotionAuthorizationError.verificationInvalid
+     |                     `- error: cannot find 'MemoryPromotionAuthorizationError' in scope
+ 445 |         ) {
+ 446 |             _ = try invalidStore.recordOutcomeSkill(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:465:27: error: cannot find 'MemoryRecordStore' in scope
+ 463 |             key: "p1e-memory-atomic:accept"
+ 464 |         )
+ 465 |         let memoryStore = MemoryRecordStore(
+     |                           `- error: cannot find 'MemoryRecordStore' in scope
+ 466 |             database: fixture.domain.base.database
+ 467 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:469:17: error: cannot find 'MemoryRecordDraftV1' in scope
+ 467 |         )
+ 468 |         let memory = try memoryStore.record(
+ 469 |             try MemoryRecordDraftV1(
+     |                 `- error: cannot find 'MemoryRecordDraftV1' in scope
+ 470 |                 id: "memory:p1e:atomic",
+ 471 |                 layer: .working,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:471:25: error: cannot infer contextual base in reference to member 'working'
+ 469 |             try MemoryRecordDraftV1(
+ 470 |                 id: "memory:p1e:atomic",
+ 471 |                 layer: .working,
+     |                         `- error: cannot infer contextual base in reference to member 'working'
+ 472 |                 ownerType: .user,
+ 473 |                 ownerId: P1DActorID.localOwner,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:472:29: error: cannot infer contextual base in reference to member 'user'
+ 470 |                 id: "memory:p1e:atomic",
+ 471 |                 layer: .working,
+ 472 |                 ownerType: .user,
+     |                             `- error: cannot infer contextual base in reference to member 'user'
+ 473 |                 ownerId: P1DActorID.localOwner,
+ 474 |                 campId: nil,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:474:25: error: 'nil' requires a contextual type
+ 472 |                 ownerType: .user,
+ 473 |                 ownerId: P1DActorID.localOwner,
+ 474 |                 campId: nil,
+     |                         `- error: 'nil' requires a contextual type
+ 475 |                 title: "Atomic dependent memory",
+ 476 |                 bodyText: "Must move with the Outcome",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:477:29: error: 'nil' requires a contextual type
+ 475 |                 title: "Atomic dependent memory",
+ 476 |                 bodyText: "Must move with the Outcome",
+ 477 |                 contentRef: nil,
+     |                             `- error: 'nil' requires a contextual type
+ 478 |                 sourceType: .inference,
+ 479 |                 applicabilityJson: "{}",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:478:30: error: cannot infer contextual base in reference to member 'inference'
+ 476 |                 bodyText: "Must move with the Outcome",
+ 477 |                 contentRef: nil,
+ 478 |                 sourceType: .inference,
+     |                              `- error: cannot infer contextual base in reference to member 'inference'
+ 479 |                 applicabilityJson: "{}",
+ 480 |                 createdByActorId: "system:memory:test",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:481:37: error: 'nil' requires a contextual type
+ 479 |                 applicabilityJson: "{}",
+ 480 |                 createdByActorId: "system:memory:test",
+ 481 |                 confirmedByActorId: nil
+     |                                     `- error: 'nil' requires a contextual type
+ 482 |             ),
+ 483 |             authorizedCowId: nil,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:483:30: error: 'nil' requires a contextual type
+ 481 |                 confirmedByActorId: nil
+ 482 |             ),
+ 483 |             authorizedCowId: nil,
+     |                              `- error: 'nil' requires a contextual type
+ 484 |             expectedCampLifecycleVersion: nil,
+ 485 |             at: p1dEpoch.addingTimeInterval(1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:484:43: error: 'nil' requires a contextual type
+ 482 |             ),
+ 483 |             authorizedCowId: nil,
+ 484 |             expectedCampLifecycleVersion: nil,
+     |                                           `- error: 'nil' requires a contextual type
+ 485 |             at: p1dEpoch.addingTimeInterval(1)
+ 486 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:487:46: error: cannot find 'MemoryDependencyDraftV1' in scope
+ 485 |             at: p1dEpoch.addingTimeInterval(1)
+ 486 |         )
+ 487 |         _ = try memoryStore.appendDependency(MemoryDependencyDraftV1(
+     |                                              `- error: cannot find 'MemoryDependencyDraftV1' in scope
+ 488 |             id: "dependency:p1e:atomic:outcome",
+ 489 |             memory: memory.ref,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:490:30: error: cannot infer contextual base in reference to member 'outcome'
+ 488 |             id: "dependency:p1e:atomic:outcome",
+ 489 |             memory: memory.ref,
+ 490 |             dependencyType: .outcome,
+     |                              `- error: cannot infer contextual base in reference to member 'outcome'
+ 491 |             dependencyId: accepted.outcome.id,
+ 492 |             dependencyVersion: accepted.outcome.currentVersion,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:496:46: error: cannot find 'MemoryDependencyDraftV1' in scope
+ 494 |             createdAt: p1dEpoch.addingTimeInterval(1)
+ 495 |         ))
+ 496 |         _ = try memoryStore.appendDependency(MemoryDependencyDraftV1(
+     |                                              `- error: cannot find 'MemoryDependencyDraftV1' in scope
+ 497 |             id: "dependency:p1e:atomic:acceptance",
+ 498 |             memory: memory.ref,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/AcceptanceWorkflowTests.swift:499:30: error: cannot infer contextual base in reference to member 'acceptance'
+ 497 |             id: "dependency:p1e:atomic:acceptance",
+ 498 |             memory: memory.ref,
+ 499 |             dependencyType: .acceptance,
+     |                              `- error: cannot infer contextual base in reference to member 'acceptance'
+ 500 |             dependencyId: accepted.record.id,
+ 501 |             dependencyVersion: 1,
+test_status=1
+wrapper_status= initial_tee_status=
+status_capture_correction=zsh_pipestatus
+wrapper_status=1 initial_tee_status=0

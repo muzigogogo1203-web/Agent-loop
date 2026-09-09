@@ -101,42 +101,102 @@ private func webSearchStubSession(_ protocolClass: AnyClass) -> URLSession {
     }
 }
 
-// MARK: - 装配语义（M6-D8：无 key 时工具不出现）
+// MARK: - Engine preparation semantics
 
-@Test func runnerOmitsWebSearchWithoutKey() async throws {
-    let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-    try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
-    let db = try AppDatabase(path: base.appendingPathComponent("t.sqlite").path)
-    let ids = try db.createSingleCardMission(
-        campName: "c", squadName: "s", goal: "g",
-        cardTitle: "t", cardDescription: "d", expectedOutput: "e",
-        assigneeId: nil, maxTurns: 5, workspacePath: nil
+private func webSearchPreparationResolver(
+    fixture: P1F1DCanonicalExecutionFixture,
+    key: String?
+) -> EngineContextTransportResolverV1 {
+    EngineContextTransportResolverV1(
+        database: fixture.db,
+        dependencyLoader: ContextDependencyLoader(
+            database: fixture.db,
+            manager: nil,
+            reporter: FailureReporter(database: fixture.db),
+            searchCredential: { key },
+            knowledge: .live(database: fixture.db),
+            makeTrace: { operation, scope in
+                OperationTraceFactory.live.generated(
+                    operation: operation,
+                    scope: scope
+                )
+            }
+        )
     )
-    let complete = TurnResult(
-        content: [.toolUse(id: "t1", name: "complete_card", input: [
-            "outcome": "o", "summary": "s", "noArtifactReason": "无",
-            "verification": [["method": "自查", "passed": true, "note": "ok"]],
-            "risks": [],
-        ])],
-        stopReason: .toolUse
-    )
-    // 无 key：web_search 不进提示词工具区（即便白名单全量）
-    let mockWithout = MockProvider(script: [complete])
-    let runner = CardRunner(db: db, provider: mockWithout, artifactStoreRoot: base.appendingPathComponent("a"))
-    for try await _ in try runner.run(cardId: ids.cardId, companionName: "n", rolePrompt: "r") {}
-    let namesWithout = await mockWithout.recordedTools.first?.map(\.name) ?? []
-    #expect(!namesWithout.contains("web_search"))
+}
 
-    // 有 key：web_search 在场
-    let ids2 = try db.createSingleCardMission(
-        campName: "c", squadName: "s2", goal: "g",
-        cardTitle: "t", cardDescription: "d", expectedOutput: "e",
-        assigneeId: nil, maxTurns: 5, workspacePath: nil
+@Test func selectedWebSearchRequiresCredentialDuringPreparation() async throws {
+    let toolsJson = ToolAccess.explicitJson(allow: ["web_search"])
+    let missingFixture = try P1F1DCanonicalExecutionFixture(
+        toolsJson: toolsJson
     )
-    let mockWith = MockProvider(script: [complete])
-    let runner2 = CardRunner(db: db, provider: mockWith, artifactStoreRoot: base.appendingPathComponent("a"))
-    for try await _ in try runner2.run(
-        cardId: ids2.cardId, companionName: "n", rolePrompt: "r", searchKey: "k") {}
-    let namesWith = await mockWith.recordedTools.first?.map(\.name) ?? []
-    #expect(namesWith.contains("web_search"))
+    let missingResolver = webSearchPreparationResolver(
+        fixture: missingFixture,
+        key: nil
+    )
+
+    // Mutation caught: silently omitting a selected required search tool or
+    // restoring the former profile-kind-wide CLI rejection.
+    await #expect(throws: EngineContextValidationErrorV1.self) {
+        _ = try await missingResolver.prepareCurrent(
+            campId: missingFixture.camp.id,
+            cardId: missingFixture.card.id,
+            companionId: missingFixture.companion.id
+        )
+    }
+    #expect(try missingFixture.db.card(id: missingFixture.card.id)?.status == .blocked)
+    let failures = try missingFixture.db.contextDegradations(
+        missionId: missingFixture.mission.id,
+        cardId: missingFixture.card.id
+    )
+    #expect(failures.count == 1)
+    #expect(failures[0].dependencyType == .search)
+    #expect(failures[0].policy == .required)
+    #expect(!failures[0].detail.isEmpty)
+    #expect(
+        try missingFixture.db.failureRecord(id: failures[0].traceId) != nil
+    )
+
+    let availableFixture = try P1F1DCanonicalExecutionFixture(
+        toolsJson: toolsJson
+    )
+    let available = try await webSearchPreparationResolver(
+        fixture: availableFixture,
+        key: "test-search-key"
+    ).prepareCurrent(
+        campId: availableFixture.camp.id,
+        cardId: availableFixture.card.id,
+        companionId: availableFixture.companion.id
+    )
+    #expect(
+        available.capabilityTools.logicalDefinitions.map(\.name)
+            == [
+                "complete_card",
+                "block_card",
+                "add_progress_note",
+                "ask_user",
+                "web_search",
+            ]
+    )
+    let bound = try available.capabilityTools.makeCapabilityTools(
+        availableFixture.workspaceURL
+    )
+    let search = try #require(
+        bound.capabilityTools.first { $0.def.name == "web_search" }
+    )
+    guard case .error(let message) = await search.handler.execute(
+        input: ["query": "  "]
+    ) else {
+        Issue.record("credentialed web_search must use the real read-only handler")
+        return
+    }
+    #expect(message == "需要非空的 query")
+    #expect(message != "engine_approval_required")
+    #expect(try availableFixture.db.card(id: availableFixture.card.id)?.status == .ready)
+    #expect(
+        try availableFixture.db.contextDegradations(
+            missionId: availableFixture.mission.id,
+            cardId: availableFixture.card.id
+        ).isEmpty
+    )
 }

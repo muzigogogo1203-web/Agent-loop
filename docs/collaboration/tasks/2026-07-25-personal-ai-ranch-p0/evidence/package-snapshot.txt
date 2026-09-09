@@ -1,0 +1,51 @@
+P0 package verification snapshot
+Date: 2026-07-25
+Source HEAD: 02334ec8d21533be81d93d39191bc7d9b9c24f7f
+Final verification worktree: /private/tmp/agentloop-p0-package-verify.XFrtdg
+Reason for isolated worktree: preserve the user's existing dist/ directory because package-app.sh replaces dist.
+
+Attempt 1
+- Command: scripts/package-app.sh --version 1.1.0
+- Result: failed before compilation because cloning GRDB.swift timed out.
+- Evidence: ../package.log
+
+Attempt 2
+- Preparation: copied the already verified SwiftPM checkout/repository cache and workspace-state from the source workspace into the detached worktree.
+- Command: scripts/package-app.sh --version 1.1.0
+- Result: PASS.
+
+Audit follow-up
+- The first successful artifacts had already been removed with their temporary worktree before the P0 evidence audit.
+- The same recorded HEAD was rebuilt a second time in a fresh isolated worktree.
+- Full commands, raw output, and explicit exit codes are preserved in `package-verify.log`.
+- The final verification worktree was removed only after every command passed.
+
+Final verification result
+- Release build completed.
+- Generated:
+  - dist/Coding 牧场.app
+  - dist/CodingRanch-1.1.0.zip
+  - dist/CodingRanch-1.1.0.dmg
+- Bundle identifier: com.muzi.agentloop
+- Short version: 1.1.0
+- Build version: 128
+- Architecture reported by codesign: arm64
+- Signing level: ad-hoc only.
+- Notarization: skipped because NOTARY_PROFILE was not configured.
+
+Artifact verification
+- codesign --verify --deep --strict --verbose=2 "dist/Coding 牧场.app": PASS
+- codesign -d --entitlements :- "dist/Coding 牧场.app": no entitlement plist emitted
+- unzip -t "dist/CodingRanch-1.1.0.zip": PASS, no compressed-data errors
+- hdiutil verify "dist/CodingRanch-1.1.0.dmg": PASS, checksum valid
+
+SHA-256 from the final verification rebuild
+- CodingRanch-1.1.0.zip: 54e719075f75e57738abdbfef5bf342ec33cb6d78c2d519ace115b2dd2078638
+- CodingRanch-1.1.0.dmg: 9b5787ccba205b1ad7dd49b927467b3556137287ee2a488132e3109fa1547a14
+
+The first and final package hashes differ because the bundle/archive and disk-image creation include fresh generated files and timestamps. Each hash identifies only its own build; reproducibility here means the recorded source/commands/results are repeatable, not byte-for-byte deterministic packaging.
+
+Evidence boundary
+- The artifacts were rebuilt from the recorded HEAD in an isolated worktree, and the full verification transcript is durable.
+- The generated bundle was not launched because the currently running normal App owns the same default state root.
+- This proves local packaging integrity, not Developer ID signing, notarization, cross-machine Gatekeeper acceptance, or production release readiness.

@@ -1,0 +1,684 @@
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-cleanup-provenance-20260909.gzrfYwt14y/CliProcessBackend.swift.before b/Sources/AgentLoopCore/Loop/CliProcessBackend.swift
+index b3a643e..bc05fba 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-cleanup-provenance-20260909.gzrfYwt14y/CliProcessBackend.swift.before
++++ b/Sources/AgentLoopCore/Loop/CliProcessBackend.swift
+@@ -18,24 +18,61 @@ private struct CliProcessLiveCodeSignatureRevalidatorV1:
+         _ authority: CliExecutableAuthorityV1
+     ) throws {
+         try authority.revalidateStagedCodeSignature()
+     }
+ 
+     func revalidateBoardBridge(
+         _ authority: EngineBoardBridgeExecutableAuthorityV1
+     ) throws {
+         try authority.revalidateStagedCodeSignature()
+     }
+ }
+ 
++package struct CliProcessCleanupFailureV1: Error, Sendable, CustomStringConvertible {
++    package enum Phase: String, Sendable {
++        case boardStop
++        case cleanupAuthority
++        case signal
++        case liveness
++        case reap
++        case descriptor
++    }
++
++    package struct Cause: Error, Sendable, CustomStringConvertible {
++        package let phase: Phase
++        package let underlying: any Error
++
++        package var description: String {
++            "\(phase.rawValue):\(String(reflecting: type(of: underlying)))"
++        }
++    }
++
++    package let executionId: String
++    package let pid: Int32?
++    package let processGroupID: Int32?
++    package let primary: any Error
++    package let causes: [Cause]
++
++    package var description: String {
++        let causeTypes = causes.map {
++            "\($0.phase.rawValue):\(String(reflecting: type(of: $0.underlying)))"
++        }.joined(separator: ",")
++        return "CLI cleanup failed execution=\(executionId) "
++            + "pid=\(pid.map(String.init) ?? "none") "
++            + "group=\(processGroupID.map(String.init) ?? "none") "
++            + "primary=\(String(reflecting: type(of: primary))) "
++            + "causes=[\(causeTypes)]"
++    }
++}
++
+ package enum CliAuxiliaryDescriptorFailureV1: Error, Sendable, Equatable {
+     case invalidDescriptor
+     case duplicationFailed
+     case originalCloseFailed
+ }
+ 
+ package enum CliAuxiliaryDescriptorV1 {
+     package static func normalizeOwned(
+         _ descriptor: inout Int32
+     ) throws {
+         guard descriptor >= 0 else {
+             throw CliAuxiliaryDescriptorFailureV1.invalidDescriptor
+@@ -701,43 +738,55 @@ private final class CliProcessExecution: @unchecked Sendable {
+                 completionTask: completionTask
+             )
+             registered = true
+             publishRegistration(process)
+             core.stdinGate.open()
+ 
+             let evidence = try await completionTask.value
+             continuation.yield(.exited(evidence.status))
+             continuation.finish()
+         } catch {
+             var terminalError: any Error = error
+             if !registered {
+-                var cleanupFailed = false
++                RuntimeLifecycleDiagnostics.event(
++                    .cliRunCleanupEntered, owner: diagnosticId
++                )
++                var causes: [CliProcessCleanupFailureV1.Cause] = []
+                 if let server {
+                     do {
+                         try await server.stopAsync()
+                     } catch {
+-                        cleanupFailed = true
++                        causes.append(.init(phase: .boardStop, underlying: error))
+                     }
+                 }
+                 do {
+                     try removeCleanupFiles()
+                 } catch {
+-                    cleanupFailed = true
++                    causes.append(error)
+                 }
+-                if cleanupFailed {
+-                    terminalError = CliProcessBackendError
+-                        .processCleanupFailed(
+-                            "pre-registration Board or config cleanup failed"
+-                        )
++                if !causes.isEmpty {
++                    let nested = error as? CliProcessCleanupFailureV1
++                    terminalError = CliProcessCleanupFailureV1(
++                        executionId: nested?.executionId ?? request.executionId,
++                        pid: nested?.pid,
++                        processGroupID: nested?.processGroupID,
++                        primary: nested?.primary ?? error,
++                        causes: (nested?.causes ?? []) + causes
++                    )
+                 }
++                RuntimeLifecycleDiagnostics.event(
++                    .cliCleanupCauseCount, owner: diagnosticId,
++                    value: (terminalError as? CliProcessCleanupFailureV1)?
++                        .causes.count ?? 0
++                )
+                 owner.remove(self)
+                 failRegistration(terminalError)
+             }
+             continuation.finish(throwing: terminalError)
+         }
+     }
+ 
+     private func validateLaunchInputs() throws {
+         let strings = [request.spec.command]
+             + request.spec.arguments
+             + [request.workspaceURL.path]
+         guard !request.spec.command.isEmpty,
+@@ -1027,24 +1076,32 @@ private final class CliProcessExecution: @unchecked Sendable {
+             let reapState = CliProcessReapState()
+             RuntimeLifecycleDiagnostics.event(
+                 .cliReapTaskQueued, owner: diagnosticOwner
+             )
+             let createdReapTask = BlockingProcessOperation.start {
+                 RuntimeLifecycleDiagnostics.event(
+                     .cliReapTaskStarted, owner: diagnosticOwner
+                 )
+                 var rawStatus: Int32 = 0
+                 while true {
+                     let result = waitpid(childPID, &rawStatus, 0)
+                     let waitError = result < 0 ? errno : 0
++                    RuntimeLifecycleDiagnostics.event(
++                        .cliWaitpidRawStatus,
++                        owner: diagnosticOwner, value: Int(rawStatus)
++                    )
++                    RuntimeLifecycleDiagnostics.event(
++                        .cliWaitpidErrno,
++                        owner: diagnosticOwner, value: Int(waitError)
++                    )
+                     if result == childPID {
+                         RuntimeLifecycleDiagnostics.event(
+                             .cliWaitpidReturned,
+                             owner: diagnosticOwner, value: Int(result)
+                         )
+                         reapState.markExited()
+                         return CliProcessReapResult(
+                             status: Self.decodeWaitStatus(rawStatus),
+                             failure: nil
+                         )
+                     }
+                     if result < 0, waitError == EINTR { continue }
+@@ -1133,78 +1190,105 @@ private final class CliProcessExecution: @unchecked Sendable {
+             return CliSpawnCore(
+                 pid: childPID,
+                 processGroupID: processGroupID,
+                 server: server,
+                 stdinGate: stdinGate,
+                 stdinTask: stdinTask,
+                 reapTask: createdReapTask,
+                 stdoutTask: createdStdoutTask,
+                 stderrTask: createdStderrTask
+             )
+         } catch {
+             let primaryError = error
+-            var cleanupFailure: (any Error)?
++            RuntimeLifecycleDiagnostics.event(
++                .cliSpawnCleanupEntered, owner: diagnosticOwner
++            )
++            var causes: [CliProcessCleanupFailureV1.Cause] = []
++            var registryRetained = groupRegistered
+             if groupRegistered {
+                 let signalOutcome = Self.signalSpawnedGroupForTermination(
+                     processGroupID: pid,
+-                    processInspector: processInspector
++                    processInspector: processInspector,
++                    diagnosticOwner: diagnosticOwner
+                 )
+-                if let failure = signalOutcome.failure,
+-                   signalOutcome.groupStillLiveAfterFailure
+-                {
+-                    cleanupFailure = failure
+-                } else {
+-                    _ = await reapTask?.value
+-                    _ = await stdoutTask?.value
+-                    _ = await stderrTask?.value
++                causes.append(contentsOf: signalOutcome.causes)
++                if causes.isEmpty || !signalOutcome.groupStillLiveAfterFailure {
++                    let reap = await reapTask?.value
++                    RuntimeLifecycleDiagnostics.event(
++                        .cliCleanupReapJoined, owner: diagnosticOwner,
++                        value: reap.map { $0.status == nil ? 1 : 0 } ?? -1
++                    )
++                    let stdoutEOF = await stdoutTask?.value
++                    RuntimeLifecycleDiagnostics.event(
++                        .cliCleanupStdoutJoined, owner: diagnosticOwner,
++                        value: stdoutEOF.map { $0 ? 0 : 1 } ?? -1
++                    )
++                    let stderrEOF = await stderrTask?.value
++                    RuntimeLifecycleDiagnostics.event(
++                        .cliCleanupStderrJoined, owner: diagnosticOwner,
++                        value: stderrEOF.map { $0 ? 0 : 1 } ?? -1
++                    )
+                     do {
+-                        guard !(try processInspector.processGroupExists(pid))
++                        guard !(try Self.observeCleanupGroupExists(
++                            pid, processInspector: processInspector,
++                            diagnosticOwner: diagnosticOwner
++                        ))
+                         else {
+                             throw CliProcessBackendError
+                                 .processGroupStillAlive(pid)
+                         }
+                         registry.unregister(-pid)
+-                        cleanupFailure = signalOutcome.failure
++                        registryRetained = false
+                     } catch {
+-                        cleanupFailure = signalOutcome.failure ?? error
++                        causes.append(.init(phase: .liveness, underlying: error))
+                     }
+                 }
+             } else {
+-                do {
+-                    try Self.terminateAndReapSpawnedGroup(
+-                        pid: pid,
+-                        processGroupID: pid,
+-                        processInspector: processInspector
+-                    )
+-                } catch {
+-                    cleanupFailure = error
+-                }
++                causes.append(contentsOf: Self.terminateAndReapSpawnedGroup(
++                    pid: pid,
++                    processGroupID: pid,
++                    processInspector: processInspector,
++                    diagnosticOwner: diagnosticOwner
++                ))
+             }
+             for closeOperation in [
+                 { try Self.checkedClose(&stdinRead) },
+                 { try Self.checkedClose(&stdinWrite) },
+                 { try Self.checkedClose(&stdoutRead) },
+                 { try Self.checkedClose(&stdoutWrite) },
+                 { try Self.checkedClose(&stderrRead) },
+                 { try Self.checkedClose(&stderrWrite) },
+             ] {
+                 do {
+                     try closeOperation()
+                 } catch {
+-                    cleanupFailure = cleanupFailure ?? error
++                    causes.append(.init(phase: .descriptor, underlying: error))
+                 }
+             }
+-            if cleanupFailure != nil {
+-                throw CliProcessBackendError.processCleanupFailed(
+-                    "spawned process or pipe cleanup failed"
++            RuntimeLifecycleDiagnostics.event(
++                registryRetained ? .cliCleanupRegistryRetained
++                    : (groupRegistered ? .cliCleanupRegistryUnregistered
++                        : .cliCleanupRegistryNotRegistered),
++                owner: diagnosticOwner
++            )
++            RuntimeLifecycleDiagnostics.event(
++                .cliCleanupCauseCount, owner: diagnosticOwner, value: causes.count
++            )
++            if !causes.isEmpty {
++                throw CliProcessCleanupFailureV1(
++                    executionId: request.executionId,
++                    pid: pid,
++                    processGroupID: pid,
++                    primary: primaryError,
++                    causes: causes
+                 )
+             }
+             throw primaryError
+         }
+     }
+ 
+     private func performCancellation() async throws
+         -> CliProcessExitEvidenceV1
+     {
+         let process = try await awaitRegistration()
+         markCancellationRequested()
+         process.core.stdinTask.cancel()
+@@ -1330,31 +1414,31 @@ private final class CliProcessExecution: @unchecked Sendable {
+             processGroupID: core.processGroupID,
+             status: reap.status ?? -1,
+             termSent: flags.term,
+             killSent: flags.kill,
+             stdoutEOF: stdoutEOF,
+             stderrEOF: stderrEOF,
+             childReaped: reap.status != nil
+         )
+         successful = true
+         return evidence
+     }
+ 
+-    private func removeCleanupFiles() throws {
++    private func removeCleanupFiles() throws(CliProcessCleanupFailureV1.Cause) {
+         for authority in request.spec.cleanupAuthorities {
+             do {
+                 try authority.removeExpectedFile()
+             } catch {
+-                throw CliProcessBackendError.processCleanupFailed(
+-                    "checked cleanup authority failed"
++                throw CliProcessCleanupFailureV1.Cause(
++                    phase: .cleanupAuthority, underlying: error
+                 )
+             }
+         }
+     }
+ 
+     private func terminateProcessGroup(_ processGroupID: Int32) async throws {
+         if try processInspector.processGroupExists(processGroupID) {
+             if claimTermSignal() {
+                 do {
+                     try processInspector.send(
+                         signal: SIGTERM,
+                         processGroupId: processGroupID
+@@ -1614,126 +1698,174 @@ private final class CliProcessExecution: @unchecked Sendable {
+             image.designatedRequirement == authority.designatedRequirement,
+             image.cdHash == authority.cdHash
+         else {
+             throw CliProcessBackendError.processLaunchFailed(
+                 "Board bridge peer identity mismatch"
+             )
+         }
+     }
+ 
+     private static func terminateAndReapSpawnedGroup(
+         pid: Int32,
+         processGroupID: Int32,
+-        processInspector: any EngineRuntimeProcessInspectingV1
+-    ) throws {
++        processInspector: any EngineRuntimeProcessInspectingV1,
++        diagnosticOwner: UUID
++    ) -> [CliProcessCleanupFailureV1.Cause] {
+         let signalOutcome = signalSpawnedGroupForTermination(
+             processGroupID: processGroupID,
+-            processInspector: processInspector
++            processInspector: processInspector,
++            diagnosticOwner: diagnosticOwner
+         )
+-        var firstFailure = signalOutcome.failure
++        var causes = signalOutcome.causes
+         var status: Int32 = 0
+         let options = signalOutcome.groupStillLiveAfterFailure
+             ? WNOHANG : 0
+         while true {
+             let result = waitpid(pid, &status, options)
+-            if result == pid || (result < 0 && errno == ECHILD) { break }
+-            if result < 0 && errno == EINTR { continue }
++            let waitError = result < 0 ? errno : 0
++            RuntimeLifecycleDiagnostics.event(
++                .cliWaitpidReturned, owner: diagnosticOwner, value: Int(result)
++            )
++            RuntimeLifecycleDiagnostics.event(
++                .cliWaitpidRawStatus, owner: diagnosticOwner, value: Int(status)
++            )
++            RuntimeLifecycleDiagnostics.event(
++                .cliWaitpidErrno, owner: diagnosticOwner, value: Int(waitError)
++            )
++            if result == pid || (result < 0 && waitError == ECHILD) { break }
++            if result < 0 && waitError == EINTR { continue }
+             if result == 0 {
+-                if firstFailure == nil {
+-                    firstFailure = CliProcessBackendError
++                causes.append(.init(
++                    phase: .reap,
++                    underlying: CliProcessBackendError
+                         .processGroupStillAlive(processGroupID)
+-                }
++                ))
+                 break
+             }
+             if result < 0 {
+-                if firstFailure == nil {
+-                    firstFailure = CliProcessBackendError
++                causes.append(.init(
++                    phase: .reap,
++                    underlying: CliProcessBackendError
+                         .processCleanupFailed("spawned child reap failed")
+-                }
++                ))
+                 break
+             }
+         }
+         do {
+-            if try processInspector.processGroupExists(processGroupID),
+-               firstFailure == nil
+-            {
+-                firstFailure = CliProcessBackendError.processGroupStillAlive(
+-                    processGroupID
+-                )
++            if try observeCleanupGroupExists(
++                processGroupID, processInspector: processInspector,
++                diagnosticOwner: diagnosticOwner
++            ) {
++                causes.append(.init(
++                    phase: .liveness,
++                    underlying: CliProcessBackendError
++                        .processGroupStillAlive(processGroupID)
++                ))
+             }
+         } catch {
+-            if firstFailure == nil { firstFailure = error }
++            causes.append(.init(phase: .liveness, underlying: error))
+         }
+-        if let firstFailure { throw firstFailure }
++        return causes
+     }
+ 
+     private struct SpawnedGroupSignalOutcome {
+-        let failure: (any Error)?
++        let causes: [CliProcessCleanupFailureV1.Cause]
+         let groupStillLiveAfterFailure: Bool
+     }
+ 
++    private static func observeCleanupGroupExists(
++        _ processGroupID: Int32,
++        processInspector: any EngineRuntimeProcessInspectingV1,
++        diagnosticOwner: UUID
++    ) throws -> Bool {
++        do {
++            let exists = try processInspector.processGroupExists(processGroupID)
++            RuntimeLifecycleDiagnostics.event(
++                exists ? .cliCleanupLivenessLive : .cliCleanupLivenessAbsent,
++                owner: diagnosticOwner, value: Int(processGroupID)
++            )
++            return exists
++        } catch {
++            RuntimeLifecycleDiagnostics.event(
++                .cliCleanupLivenessError,
++                owner: diagnosticOwner, value: Int(processGroupID)
++            )
++            throw error
++        }
++    }
++
+     private static func signalSpawnedGroupForTermination(
+         processGroupID: Int32,
+-        processInspector: any EngineRuntimeProcessInspectingV1
++        processInspector: any EngineRuntimeProcessInspectingV1,
++        diagnosticOwner: UUID
+     ) -> SpawnedGroupSignalOutcome {
+         do {
+-            guard try processInspector.processGroupExists(processGroupID)
++            guard try observeCleanupGroupExists(
++                processGroupID, processInspector: processInspector,
++                diagnosticOwner: diagnosticOwner
++            )
+             else {
+                 return SpawnedGroupSignalOutcome(
+-                    failure: nil,
++                    causes: [],
+                     groupStillLiveAfterFailure: false
+                 )
+             }
+         } catch {
+             return SpawnedGroupSignalOutcome(
+-                failure: error,
++                causes: [.init(phase: .liveness, underlying: error)],
+                 groupStillLiveAfterFailure: true
+             )
+         }
+-        var firstFailure: (any Error)?
++        var causes: [CliProcessCleanupFailureV1.Cause] = []
+         for signal in [SIGKILL, SIGCONT] {
+             do {
+                 try processInspector.send(
+                     signal: signal,
+                     processGroupId: processGroupID
+                 )
+             } catch let dispatchFailure {
+                 do {
+-                    if try processInspector.processGroupExists(
+-                        processGroupID
+-                    ), firstFailure == nil {
+-                        firstFailure = dispatchFailure
++                    if try observeCleanupGroupExists(
++                        processGroupID, processInspector: processInspector,
++                        diagnosticOwner: diagnosticOwner
++                    ) {
++                        causes.append(.init(
++                            phase: .signal, underlying: dispatchFailure
++                        ))
+                     }
+                 } catch {
+-                    if firstFailure == nil {
+-                        firstFailure = dispatchFailure
+-                    }
++                    causes.append(.init(phase: .signal, underlying: dispatchFailure))
++                    causes.append(.init(phase: .liveness, underlying: error))
+                 }
+             }
+         }
+-        guard firstFailure != nil else {
++        guard !causes.isEmpty else {
+             return SpawnedGroupSignalOutcome(
+-                failure: nil,
++                causes: [],
+                 groupStillLiveAfterFailure: false
+             )
+         }
+         do {
+             return SpawnedGroupSignalOutcome(
+-                failure: firstFailure,
++                causes: causes,
+                 groupStillLiveAfterFailure:
+-                    try processInspector.processGroupExists(processGroupID)
++                    try observeCleanupGroupExists(
++                        processGroupID, processInspector: processInspector,
++                        diagnosticOwner: diagnosticOwner
++                    )
+             )
+         } catch {
++            causes.append(.init(phase: .liveness, underlying: error))
+             return SpawnedGroupSignalOutcome(
+-                failure: firstFailure ?? error,
++                causes: causes,
+                 groupStillLiveAfterFailure: true
+             )
+         }
+     }
+ 
+     private static func validateExecutableAuthority(
+         _ authority: CliExecutableAuthorityV1,
+         codeSignatureRevalidator:
+             any CliProcessCodeSignatureRevalidatingV1
+     ) throws {
+         try authority.validateCanonical()
+         try codeSignatureRevalidator.revalidateCLI(authority)
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-cleanup-provenance-20260909.gzrfYwt14y/RuntimeLifecycleDiagnostics.swift.before b/Sources/AgentLoopCore/Observability/RuntimeLifecycleDiagnostics.swift
+index 82f9c98..8eb1ecd 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-cleanup-provenance-20260909.gzrfYwt14y/RuntimeLifecycleDiagnostics.swift.before
++++ b/Sources/AgentLoopCore/Observability/RuntimeLifecycleDiagnostics.swift
+@@ -8,24 +8,31 @@ package enum RuntimeLifecycleStage: String, Sendable {
+     case boardStopStarted, boardAcceptJoined, boardHandlersJoined
+     case drainQueued, drainStarted, drainEOF, drainFinished
+     case drainJoinStarted, drainJoinCompleted, drainJoinTimedOut
+     case probeCompositionStarted, probeCompositionCompleted
+     case cliFinalizeStarted, cliStdinFinished, cliReaped, cliStdoutFinished, cliStderrFinished
+     case cliServerStopStarted, cliServerStopFinished, cliFinalizeFinished
+     case cliRunQueued, cliRunStarted, cliLaunchInputsValidated
+     case cliEnvironmentRequested, cliEnvironmentReady, cliEnvironmentValidated
+     case cliBoardStartCalled, cliBoardStartReturned
+     case cliSpawnPreparationStarted, cliPosixSpawnCalled, cliSpawned, cliSpawnFailed
+     case cliSuspendedValidationCalled, cliSuspendedValidationReturned
+     case cliReapTaskQueued, cliReapTaskStarted, cliWaitpidReturned, cliWaitpidError
++    case cliWaitpidRawStatus, cliWaitpidErrno
++    case cliRunCleanupEntered, cliSpawnCleanupEntered, cliCleanupCauseCount
++    // Joined outcomes: -1 = no task, 0 = success/EOF, 1 = missing status/EOF.
++    case cliCleanupReapJoined, cliCleanupStdoutJoined, cliCleanupStderrJoined
++    case cliCleanupLivenessAbsent, cliCleanupLivenessLive, cliCleanupLivenessError
++    case cliCleanupRegistryRetained, cliCleanupRegistryUnregistered
++    case cliCleanupRegistryNotRegistered
+     case cliStdoutTaskQueued, cliStdoutTaskStarted, cliStdoutDrainEntered
+     case cliStdoutFirstBytes, cliStdoutFirstLineYielded
+     case cliStderrTaskQueued, cliStderrTaskStarted
+     case cliSIGCONTCalled, cliSIGCONTReturned
+     case cliFixtureLaunchCalled, cliFixtureLaunchReturned
+     case cliFixtureConsumerQueued, cliFixtureConsumerStarted
+     case cliFixtureBodyStarted, cliFixtureFirstStdoutReceived
+     case cliFixtureFirstStdoutRecorded, cliFixtureStreamFinished
+     case cliFixtureReadyAwaitQueued, cliFixtureReadyWaitStarted, cliFixtureReadyWaitEnded
+     case cliFixtureConsumerJoined
+     case processSignalPath, processSignalTarget, processSignalNumber
+     case processSignalResult, processSignalErrno
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-cleanup-provenance-20260909.gzrfYwt14y/ExecutionEngineConformanceTests.swift.before b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+index 3fb85cd..82c0ab7 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-cleanup-provenance-20260909.gzrfYwt14y/ExecutionEngineConformanceTests.swift.before
++++ b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+@@ -8258,24 +8258,100 @@ struct ExecutionEngineConformanceTests {
+         let eofRequest = try p1f1dRequest()
+         for try await _ in adapter.execute(request: eofRequest) {}
+         let terminalIntents = await terminalRecorder.snapshot()
+         #expect(terminalIntents.count == 1)
+         guard case let .blocked(subtype, reasonCode, _) = terminalIntents.first else {
+             Issue.record("EOF without Board terminal did not fail closed")
+             return
+         }
+         #expect(subtype == .engineProtocolError)
+         #expect(reasonCode == "engine_protocol_error")
+     }
+ 
++    @Test func p1f1_065CleanupFailurePreservesPrimaryAndAuthorityCause() async throws {
++        let harness = try P1F1D065MechanicsHarness(label: "cleanup-cause")
++        defer {
++            do { try harness.removeChecked() }
++            catch { Issue.record(error) }
++        }
++        let executionId = "00000000-0000-4000-8000-000000000765"
++        let cleanup = try harness.makeCleanupAuthority("cleanup.json")
++        let retainedOriginalURL = harness.root.appendingPathComponent(
++            "cleanup-original.json"
++        )
++        try FileManager.default.moveItem(
++            at: cleanup.url, to: retainedOriginalURL
++        )
++        let replacementBytes = Data("replacement-must-survive".utf8)
++        try replacementBytes.write(to: cleanup.url)
++        let request = try harness.request(
++            executionId: executionId,
++            mode: .exitZero,
++            token: "7",
++            cleanupAuthorities: [cleanup.authority]
++        )
++        let socketURL = try harness.socketURL(executionId: executionId)
++        let registry = ShellProcessRegistry()
++        let revalidator = P1F1D065SignatureRevalidator(
++            expectedCLI: harness.executableAuthority,
++            expectedBoardBridge: harness.bridgeAuthority,
++            injectedFailure: .cli
++        )
++        let backend = try p1f1d065GateBackend(
++            harness: harness, registry: registry, revalidator: revalidator
++        )
++        var terminalError: (any Error)?
++        var frameCount = 0
++        do {
++            for try await _ in backend.launch(request) { frameCount += 1 }
++        } catch {
++            terminalError = error
++        }
++
++        // Establish all resource and zero-effect evidence before the intended
++        // RED cast: cleanup must preserve a file outside the captured identity.
++        try #require(revalidator.snapshot() == [.cli])
++        try #require(frameCount == 0)
++        try #require(registry.activeCount == 0)
++        let effects = harness.processInspector.effectSnapshot
++        try #require(effects.snapshotCalls == 0)
++        try #require(effects.signalCount == 0)
++        try #require(harness.processInspector.signalObservations().isEmpty)
++        try #require(!FileManager.default.fileExists(atPath: socketURL.path))
++        let observedReplacement = try Data(contentsOf: cleanup.url)
++        let observedOriginal = try Data(contentsOf: retainedOriginalURL)
++        try #require(observedReplacement == replacementBytes)
++        try #require(observedOriginal == Data("{}".utf8))
++        print(
++            "065-cleanup-provenance pre-cast: cli-rejected=true frames=0 "
++                + "registry=0 snapshots=0 signals=0 socket-absent=true "
++                + "replacement-unchanged=true original-unchanged=true"
++        )
++
++        let failure = try #require(terminalError as? CliProcessCleanupFailureV1)
++        #expect(failure.executionId == executionId)
++        #expect(failure.pid == nil)
++        #expect(failure.processGroupID == nil)
++        #expect(
++            (failure.primary as? P1F1D065SignatureFixtureError)
++                == .injected(.cli)
++        )
++        try #require(failure.causes.count == 1)
++        #expect(failure.causes[0].phase == .cleanupAuthority)
++        #expect(
++            (failure.causes[0].underlying as? CliCleanupFileErrorV1)
++                == .identityMismatch
++        )
++    }
++
+     @Test func p1f1_065CancellationCleansProcessAndCommitsOnce() async throws {
+         let gateHarness = try P1F1D065MechanicsHarness(label: "gate")
+         var gateRemovalAllowed = true
+         defer {
+             if gateRemovalAllowed {
+                 do { try gateHarness.removeChecked() }
+                 catch { Issue.record(error) }
+             } else {
+                 Issue.record("retained 065 gate fixture: \(gateHarness.root.path)")
+             }
+         }
+ 

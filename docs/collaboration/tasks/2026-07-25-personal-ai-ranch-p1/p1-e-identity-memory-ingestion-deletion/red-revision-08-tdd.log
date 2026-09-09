@@ -1,0 +1,64 @@
+P1-E REVISION 08 TESTS-FIRST RED
+classified_harness_failure=zsh wrapper lacked Bash PIPESTATUS; product/test red itself was exact +2
+classified_harness_failure_log=/tmp/p1e-rev08-red.X03Dlu
+classified_harness_failure_sha256=d3c5a145cdfca25c167da1d58fd840964af2614d4b08d98de25c46ceff29b9eb
+phase=1-controlled-unrelated-fd-observer-red
+command=swift run RunTests --filter boardSocketClientClosesDescriptorWhenConnectFails
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.31s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardSocketClientClosesDescriptorWhenConnectFails() started.
+✘ Test boardSocketClientClosesDescriptorWhenConnectFails() recorded an issue at BoardServerTests.swift:121:9: Expectation failed: (Self.fileDescriptorCount() - baseline → 2) == 0
+✘ Test boardSocketClientClosesDescriptorWhenConnectFails() failed after 0.001 seconds with 1 issue.
+✘ Suite BoardServerTests failed after 0.001 seconds with 1 issue.
+✘ Test run with 1 test in 1 suite failed after 0.001 seconds with 1 issue.
+phase1_command_code=1
+phase1_tee_code=0
+phase=2-missing-clock-and-accept-queue-compile-red
+command=swift run RunTests --filter rateLimitTriggersGlobalCooldownThenRecovers|boardServerFramingForwardsToolCallsWhenSocketsAreAllowed
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/7] Compiling AgentLoopTestSuite BoardServerTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:205:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+203 |             probe.close()
+204 |             server?.stop()
+205 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+206 |             server = nil
+207 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:236:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+234 |             client.close()
+235 |             server?.stop()
+236 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+237 |             server = nil
+238 |             let deadline = Date().addingTimeInterval(5)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:302:38: error: extra argument 'acceptQueue' in call
+300 |             executor: built.executor,
+301 |             toolDefs: built.toolDefs,
+302 |             acceptQueue: acceptQueue ?? DispatchQueue.global(qos: .utility),
+    |                                      `- error: extra argument 'acceptQueue' in call
+303 |             handlerQueue: handlerQueue ?? DispatchQueue.global(qos: .utility)
+304 |         )
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[4/7] Compiling AgentLoopTestSuite HaltAndCooldownTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/HaltAndCooldownTests.swift:2300:23: error: extra argument 'rateLimitNow' in call
+2298 |         mcpManager: nil,
+2299 |         externalOperationWorkflow: nil,
+2300 |         rateLimitNow: { rateLimitClock.now() }
+     |                       `- error: extra argument 'rateLimitNow' in call
+2301 |     )
+2302 | 
+[5/7] Emitting module AgentLoopTestSuite
+phase2_command_code=1
+phase2_tee_code=0

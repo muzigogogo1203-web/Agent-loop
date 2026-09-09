@@ -3,7 +3,7 @@ import os
 
 /// OpenAI Responses transport used by ChatGPT/Codex OAuth credentials.
 /// API-key based OpenAI-compatible gateways continue to use `OpenAIProvider`.
-public struct OpenAIResponsesProvider: LLMProvider {
+public struct OpenAIResponsesProvider: LLMProvider, LLMProviderRunDrivingV1 {
     let accessToken: String
     let accountID: String
     let model: String
@@ -109,24 +109,36 @@ public struct OpenAIResponsesProvider: LLMProvider {
         toolChoice: ToolChoice,
         maxTokens: Int
     ) -> AsyncThrowingStream<ProviderEvent, Error> {
-        AsyncThrowingStream { continuation in
-            let task = Task {
-                do {
-                    try await run(
-                        system: system,
-                        history: history,
-                        tools: tools,
-                        toolChoice: toolChoice,
-                        maxTokens: maxTokens,
-                        continuation: continuation
-                    )
-                    continuation.finish()
-                } catch {
-                    Self.logger.error("provider final error: \(String(describing: error), privacy: .public)")
-                    continuation.finish(throwing: error)
-                }
+        startTurn(
+            system: system,
+            history: history,
+            tools: tools,
+            toolChoice: toolChoice,
+            maxTokens: maxTokens
+        ).events
+    }
+
+    package func startTurn(
+        system: String,
+        history: [APIMessage],
+        tools: [ToolDef],
+        toolChoice: ToolChoice,
+        maxTokens: Int
+    ) -> LLMProviderTurnRunV1 {
+        makeLLMProviderTurnRunV1 { continuation in
+            do {
+                try await run(
+                    system: system,
+                    history: history,
+                    tools: tools,
+                    toolChoice: toolChoice,
+                    maxTokens: maxTokens,
+                    continuation: continuation
+                )
+            } catch {
+                Self.logger.error("provider final error: \(String(describing: error), privacy: .public)")
+                throw error
             }
-            continuation.onTermination = { _ in task.cancel() }
         }
     }
 

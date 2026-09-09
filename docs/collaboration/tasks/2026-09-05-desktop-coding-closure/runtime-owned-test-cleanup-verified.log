@@ -1,0 +1,7 @@
+CHECK pid=10332 actual-start=Sun Sep 6 00:24:40 2026 expected-start=Sun Sep 6 00:24:40 2026
+VERIFIED pid=10332 pgid=10332 fixture=c-346-B200
+CHECK pid=78055 actual-start=Sat Sep 5 22:44:03 2026 expected-start=Sat Sep 5 22:44:03 2026
+VERIFIED pid=78055 pgid=78055 fixture=c-346-D502
+CHECK pid=85371 actual-start=Sat Sep 5 23:16:44 2026 expected-start=Sat Sep 5 23:16:44 2026
+VERIFIED pid=85371 pgid=85371 fixture=c-346-EBF7
+SIGKILL sent only to three verified orphaned test shell PIDs; no group signal, file deletion, or other App termination.

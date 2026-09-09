@@ -1,5 +1,4 @@
 import Foundation
-import CryptoKit
 
 /// 审批门（M7-D3/D4）：包裹非只读工具 handler 的装饰层。
 /// 放行判据 = 档位矩阵 + 一次性授权令牌（同卡、同工具、同参数哈希，用过即耗）。
@@ -21,15 +20,9 @@ public struct ApprovalDecision: Sendable, Equatable {
 }
 
 public enum ApprovalToken {
-    /// 参数哈希：SHA256(tool + 规范化 JSON)。sortedKeys 保证键序无关。
-    public static func hash(tool: String, input: JSONValue) -> String {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        let data = (try? encoder.encode(input)) ?? Data()
-        var hasher = SHA256()
-        hasher.update(data: Data(tool.utf8))
-        hasher.update(data: data)
-        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    /// 参数哈希只覆盖 canonical input；tool ID 是 Grant 的独立 scope。
+    public static func hash(input: JSONValue) throws -> String {
+        CanonicalJSONV1.sha256Hex(try CanonicalJSONV1.encode(input))
     }
 
     /// 审批弹卡的人话描述（动作实体内容在 UI 层从 optionsJson 全文渲染）
@@ -48,74 +41,138 @@ public enum ApprovalToken {
     }
 }
 
-/// 一次性令牌罐：本次 run 的已决审批快照，批准令牌用过即耗（严格一次）。
-public actor ApprovalTokenJar {
-    private var decisions: [ApprovalDecision]
-
-    public init(_ decisions: [ApprovalDecision]) {
-        self.decisions = decisions
-    }
-
-    /// 取用匹配令牌：批准令牌消耗式返回；拒绝记录不消耗（同参数反复调用一直拒）。
-    public func consume(tool: String, inputHash: String) -> ApprovalDecision? {
-        guard let index = decisions.firstIndex(where: { $0.tool == tool && $0.inputHash == inputHash }) else {
-            return nil
-        }
-        let decision = decisions[index]
-        if decision.approved {
-            decisions.remove(at: index)
-        }
-        return decision
-    }
-}
-
 public struct ApprovalGateHandler: ToolHandler {
     let inner: any ToolHandler
     let toolName: String
     let autonomy: MissionAutonomy
-    let jar: ApprovalTokenJar
     let db: AppDatabase
     let cardId: String
     let runId: String
+    let campId: String?
+    let workflow: (any ExternalOperationWorkflowPortV1)?
 
     public init(
         inner: any ToolHandler, toolName: String, autonomy: MissionAutonomy,
-        jar: ApprovalTokenJar, db: AppDatabase, cardId: String, runId: String
+        db: AppDatabase, cardId: String, runId: String, campId: String?
+    ) {
+        self.init(
+            inner: inner,
+            toolName: toolName,
+            autonomy: autonomy,
+            db: db,
+            cardId: cardId,
+            runId: runId,
+            campId: campId,
+            workflow: nil
+        )
+    }
+
+    package init(
+        inner: any ToolHandler, toolName: String, autonomy: MissionAutonomy,
+        db: AppDatabase, cardId: String, runId: String, campId: String?,
+        workflow: (any ExternalOperationWorkflowPortV1)?
     ) {
         self.inner = inner
         self.toolName = toolName
         self.autonomy = autonomy
-        self.jar = jar
         self.db = db
         self.cardId = cardId
         self.runId = runId
+        self.campId = campId
+        self.workflow = workflow
     }
 
     public func execute(input: JSONValue) async -> ToolOutcome {
-        guard autonomy.requiresApproval(risk: ToolDef.risk(toolName)) else {
-            return await inner.execute(input: input)
-        }
-        let hash = ApprovalToken.hash(tool: toolName, input: input)
-        if let decision = await jar.consume(tool: toolName, inputHash: hash) {
-            if decision.approved {
-                return await inner.execute(input: input)
-            }
-            let reasonSuffix = decision.reason.map { "：\($0)" } ?? ""
-            return .error("用户拒绝了此操作\(reasonSuffix)。请换一种做法，或用 block_card 说明无法继续。")
-        }
-        // 无令牌 → 挂起审批（持久门，崩溃恢复语义随 ask_user 继承）
+        let hash: String
         do {
-            _ = try db.suspendCardForApproval(
-                cardId: cardId,
-                runId: runId,
-                prompt: ApprovalToken.prompt(tool: toolName, input: input),
-                tool: toolName,
-                input: input,
-                inputHash: hash
-            )
-            return .blocked(reason: "needs_human_input", detail: "等待你批准：\(ToolDef.displayName(toolName))")
+            hash = try ApprovalToken.hash(input: input)
         } catch {
-            return .error("审批请求落库失败：\(error)")
+            return .error("审批参数无法规范化：\(error)")
+        }
+
+        let match: ApprovalGrantMatchV1
+        do {
+            match = try ApprovalGrantStore(database: db).matchGrant(
+                cardId: cardId,
+                toolId: toolName,
+                inputHash: hash,
+                at: Date()
+            )
+        } catch {
+            return .error(
+                "审批授权读取失败：\(String(reflecting: type(of: error)))"
+            )
+        }
+        switch match {
+        case let .authorized(grant):
+            guard let workflow, let campId else {
+                return .error("外部操作协调器不可用，已阻止工具执行。")
+            }
+            do {
+                let adapter = try ToolHandlerExternalOperationAdapterV1(
+                    toolId: toolName,
+                    inner: inner
+                )
+                let acknowledgment = try await workflow.execute(
+                    grantId: grant.id,
+                    expectedGrantVersion: grant.version,
+                    capability: grant.capability,
+                    campId: campId,
+                    cardId: cardId,
+                    toolId: toolName,
+                    input: input,
+                    adapter: adapter
+                )
+                if let local = await adapter.takeLocalOutcome(
+                    useId: acknowledgment.useId
+                ) {
+                    return local
+                }
+                switch acknowledgment.state {
+                case .succeeded:
+                    return .result("该操作已有成功的持久化回执。")
+                case .failedFinal:
+                    return .error("该操作已有失败的持久化回执。")
+                case .abandonedUnknown, .crashUnknown:
+                    return .error("该操作结果仍需用户确认，未自动重放。")
+                case .released:
+                    return .error("适配器确认操作未发生，请重新发起审批。")
+                case .reserved, .dispatching, .accepted:
+                    return .error("外部操作未进入终态，已停止继续执行。")
+                }
+            } catch {
+                return .error(
+                    "外部操作未完成：\(String(reflecting: type(of: error)))"
+                )
+            }
+
+        case let .denied(reason):
+            let reasonSuffix = reason.map { "：\($0)" } ?? ""
+            return .error("用户拒绝了此操作\(reasonSuffix)。请换一种做法，或用 block_card 说明无法继续。")
+
+        case .unavailable, .absent:
+            do {
+                let compatibilitySuffix = autonomy.requiresApproval(
+                    risk: ToolDef.risk(toolName)
+                ) ? "" : "（显式 Grant 必需）"
+                _ = try db.suspendCardForApproval(
+                    cardId: cardId,
+                    runId: runId,
+                    prompt: ApprovalToken.prompt(
+                        tool: toolName,
+                        input: input
+                    ),
+                    tool: toolName,
+                    input: input,
+                    inputHash: hash
+                )
+                return .blocked(
+                    reason: "needs_human_input",
+                    detail: "等待你批准：\(ToolDef.displayName(toolName))\(compatibilitySuffix)"
+                )
+            } catch {
+                return .error("审批请求落库失败：\(error)")
+            }
         }
     }
 }

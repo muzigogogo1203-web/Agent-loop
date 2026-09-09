@@ -1,0 +1,756 @@
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-spawn-cleanup-20260909-20260909-75692-v4dpsh/CliProcessBackend.swift.before b/Sources/AgentLoopCore/Loop/CliProcessBackend.swift
+index 8eb8d4c..2dbb4fc 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-spawn-cleanup-20260909-20260909-75692-v4dpsh/CliProcessBackend.swift.before
++++ b/Sources/AgentLoopCore/Loop/CliProcessBackend.swift
+@@ -40,24 +40,25 @@ package enum CliProcessSignalOperationV1 {
+         }
+         try await operation.value.get()
+     }
+ }
+ 
+ package struct CliProcessCleanupFailureV1: Error, Sendable, CustomStringConvertible {
+     package enum Phase: String, Sendable {
+         case boardStop
+         case cleanupAuthority
+         case signal
+         case liveness
+         case reap
++        case pipeDrain
+         case descriptor
+     }
+ 
+     package struct Cause: Error, Sendable, CustomStringConvertible {
+         package let phase: Phase
+         package let underlying: any Error
+ 
+         package var description: String {
+             "\(phase.rawValue):\(String(reflecting: type(of: underlying)))"
+         }
+     }
+ 
+@@ -480,27 +481,112 @@ private final class CliProcessMechanicsState: @unchecked Sendable {
+         return executions[id]
+     }
+ 
+     func remove(_ execution: CliProcessExecution) {
+         lock.lock()
+         defer { lock.unlock() }
+         if executions[execution.executionId] === execution {
+             executions.removeValue(forKey: execution.executionId)
+         }
+     }
+ }
+ 
+-private struct CliProcessReapResult: Sendable {
+-    let status: Int32?
+-    let failure: String?
++package struct CliProcessReapResult: Sendable {
++    package let status: Int32?
++    package let failure: String?
++
++    package init(status: Int32?, failure: String?) {
++        self.status = status
++        self.failure = failure
++    }
++}
++
++package struct CliSpawnCleanupSignalAttemptV1: Sendable {
++    package let signal: Int32
++    package let result: Result<Void, any Error>?
++}
++
++package struct CliSpawnCleanupReportV1: Sendable {
++    package let executionId: String
++    package let processGroupID: Int32
++    package let signals: [CliSpawnCleanupSignalAttemptV1]
++    package let preJoinProbes: [Result<Bool, any Error>]
++    package let reap: CliProcessReapResult?
++    package let stdoutEOF: Bool?
++    package let stderrEOF: Bool?
++    package let finalGroupExists: Result<Bool, any Error>?
++    package let reconciledFinalCONT: Bool
++    package let causes: [CliProcessCleanupFailureV1.Cause]
++    package let registryRetained: Bool
++}
++
++package enum CliProcessSpawnCleanupV1 {
++    package static func runRegistered(
++        executionId: String, processGroupID: Int32,
++        processInspector: any EngineRuntimeProcessInspectingV1,
++        reapTask: Task<CliProcessReapResult, Never>?,
++        stdoutTask: Task<Bool, Never>?, stderrTask: Task<Bool, Never>?,
++        registry: ShellProcessRegistry, diagnosticOwner: UUID
++    ) async -> CliSpawnCleanupReportV1 {
++        let signalOutcome = CliProcessExecution.signalSpawnedGroupForTermination(
++            processGroupID: processGroupID,
++            processInspector: processInspector, diagnosticOwner: diagnosticOwner
++        )
++        var causes = signalOutcome.causes
++        var reap: CliProcessReapResult?
++        var stdoutEOF: Bool?
++        var stderrEOF: Bool?
++        var finalGroupExists: Result<Bool, any Error>?
++        var registryRetained = true
++        // PRE-RED: retain the old join gate and ignored-result behavior.
++        if causes.isEmpty || !signalOutcome.groupStillLiveAfterFailure {
++            reap = await reapTask?.value
++            RuntimeLifecycleDiagnostics.event(
++                .cliCleanupReapJoined, owner: diagnosticOwner,
++                value: reap.map { $0.status == nil ? 1 : 0 } ?? -1
++            )
++            stdoutEOF = await stdoutTask?.value
++            RuntimeLifecycleDiagnostics.event(
++                .cliCleanupStdoutJoined, owner: diagnosticOwner,
++                value: stdoutEOF.map { $0 ? 0 : 1 } ?? -1
++            )
++            stderrEOF = await stderrTask?.value
++            RuntimeLifecycleDiagnostics.event(
++                .cliCleanupStderrJoined, owner: diagnosticOwner,
++                value: stderrEOF.map { $0 ? 0 : 1 } ?? -1
++            )
++            do {
++                let exists = try CliProcessExecution.observeCleanupGroupExists(
++                    processGroupID, processInspector: processInspector,
++                    diagnosticOwner: diagnosticOwner
++                )
++                finalGroupExists = .success(exists)
++                guard !exists else {
++                    throw CliProcessBackendError.processGroupStillAlive(processGroupID)
++                }
++                registry.unregister(-processGroupID)
++                registryRetained = false
++            } catch {
++                if case nil = finalGroupExists { finalGroupExists = .failure(error) }
++                causes.append(.init(phase: .liveness, underlying: error))
++            }
++        }
++        return .init(
++            executionId: executionId, processGroupID: processGroupID,
++            signals: signalOutcome.signals, preJoinProbes: signalOutcome.probes,
++            reap: reap, stdoutEOF: stdoutEOF, stderrEOF: stderrEOF,
++            finalGroupExists: finalGroupExists, reconciledFinalCONT: false,
++            causes: causes, registryRetained: registryRetained
++        )
++    }
+ }
+ 
+ private final class CliProcessReapState: @unchecked Sendable {
+     private let lock = NSLock()
+     private var didExit = false
+ 
+     func markExited() {
+         lock.lock()
+         didExit = true
+         lock.unlock()
+     }
+ 
+@@ -1212,61 +1298,34 @@ private final class CliProcessExecution: @unchecked Sendable {
+                 reapTask: createdReapTask,
+                 stdoutTask: createdStdoutTask,
+                 stderrTask: createdStderrTask
+             )
+         } catch {
+             let primaryError = error
+             RuntimeLifecycleDiagnostics.event(
+                 .cliSpawnCleanupEntered, owner: diagnosticOwner
+             )
+             var causes: [CliProcessCleanupFailureV1.Cause] = []
+             var registryRetained = groupRegistered
+             if groupRegistered {
+-                let signalOutcome = Self.signalSpawnedGroupForTermination(
++                let cleanup = await CliProcessSpawnCleanupV1.runRegistered(
++                    executionId: request.executionId,
+                     processGroupID: pid,
+                     processInspector: processInspector,
++                    reapTask: reapTask, stdoutTask: stdoutTask, stderrTask: stderrTask,
++                    registry: registry,
+                     diagnosticOwner: diagnosticOwner
+                 )
+-                causes.append(contentsOf: signalOutcome.causes)
+-                if causes.isEmpty || !signalOutcome.groupStillLiveAfterFailure {
+-                    let reap = await reapTask?.value
+-                    RuntimeLifecycleDiagnostics.event(
+-                        .cliCleanupReapJoined, owner: diagnosticOwner,
+-                        value: reap.map { $0.status == nil ? 1 : 0 } ?? -1
+-                    )
+-                    let stdoutEOF = await stdoutTask?.value
+-                    RuntimeLifecycleDiagnostics.event(
+-                        .cliCleanupStdoutJoined, owner: diagnosticOwner,
+-                        value: stdoutEOF.map { $0 ? 0 : 1 } ?? -1
+-                    )
+-                    let stderrEOF = await stderrTask?.value
+-                    RuntimeLifecycleDiagnostics.event(
+-                        .cliCleanupStderrJoined, owner: diagnosticOwner,
+-                        value: stderrEOF.map { $0 ? 0 : 1 } ?? -1
+-                    )
+-                    do {
+-                        guard !(try Self.observeCleanupGroupExists(
+-                            pid, processInspector: processInspector,
+-                            diagnosticOwner: diagnosticOwner
+-                        ))
+-                        else {
+-                            throw CliProcessBackendError
+-                                .processGroupStillAlive(pid)
+-                        }
+-                        registry.unregister(-pid)
+-                        registryRetained = false
+-                    } catch {
+-                        causes.append(.init(phase: .liveness, underlying: error))
+-                    }
+-                }
++                causes.append(contentsOf: cleanup.causes)
++                registryRetained = cleanup.registryRetained
+             } else {
+                 causes.append(contentsOf: Self.terminateAndReapSpawnedGroup(
+                     pid: pid,
+                     processGroupID: pid,
+                     processInspector: processInspector,
+                     diagnosticOwner: diagnosticOwner
+                 ))
+             }
+             for closeOperation in [
+                 { try Self.checkedClose(&stdinRead) },
+                 { try Self.checkedClose(&stdinWrite) },
+                 { try Self.checkedClose(&stdoutRead) },
+@@ -1774,115 +1833,125 @@ private final class CliProcessExecution: @unchecked Sendable {
+                 causes.append(.init(
+                     phase: .liveness,
+                     underlying: CliProcessBackendError
+                         .processGroupStillAlive(processGroupID)
+                 ))
+             }
+         } catch {
+             causes.append(.init(phase: .liveness, underlying: error))
+         }
+         return causes
+     }
+ 
+-    private struct SpawnedGroupSignalOutcome {
++    fileprivate struct SpawnedGroupSignalOutcome {
+         let causes: [CliProcessCleanupFailureV1.Cause]
+         let groupStillLiveAfterFailure: Bool
++        let signals: [CliSpawnCleanupSignalAttemptV1]
++        let probes: [Result<Bool, any Error>]
+     }
+ 
+-    private static func observeCleanupGroupExists(
++    fileprivate static func observeCleanupGroupExists(
+         _ processGroupID: Int32,
+         processInspector: any EngineRuntimeProcessInspectingV1,
+         diagnosticOwner: UUID
+     ) throws -> Bool {
+         do {
+             let exists = try processInspector.processGroupExists(processGroupID)
+             RuntimeLifecycleDiagnostics.event(
+                 exists ? .cliCleanupLivenessLive : .cliCleanupLivenessAbsent,
+                 owner: diagnosticOwner, value: Int(processGroupID)
+             )
+             return exists
+         } catch {
+             RuntimeLifecycleDiagnostics.event(
+                 .cliCleanupLivenessError,
+                 owner: diagnosticOwner, value: Int(processGroupID)
+             )
+             throw error
+         }
+     }
+ 
+-    private static func signalSpawnedGroupForTermination(
++    fileprivate static func signalSpawnedGroupForTermination(
+         processGroupID: Int32,
+         processInspector: any EngineRuntimeProcessInspectingV1,
+         diagnosticOwner: UUID
+     ) -> SpawnedGroupSignalOutcome {
++        var signals: [CliSpawnCleanupSignalAttemptV1] = []
++        var probes: [Result<Bool, any Error>] = []
++        func observeGroup() throws -> Bool {
++            do {
++                let exists = try observeCleanupGroupExists(
++                    processGroupID, processInspector: processInspector,
++                    diagnosticOwner: diagnosticOwner
++                )
++                probes.append(.success(exists))
++                return exists
++            } catch {
++                probes.append(.failure(error))
++                throw error
++            }
++        }
+         do {
+-            guard try observeCleanupGroupExists(
+-                processGroupID, processInspector: processInspector,
+-                diagnosticOwner: diagnosticOwner
+-            )
++            guard try observeGroup()
+             else {
+                 return SpawnedGroupSignalOutcome(
+                     causes: [],
+-                    groupStillLiveAfterFailure: false
++                    groupStillLiveAfterFailure: false, signals: signals, probes: probes
+                 )
+             }
+         } catch {
+             return SpawnedGroupSignalOutcome(
+                 causes: [.init(phase: .liveness, underlying: error)],
+-                groupStillLiveAfterFailure: true
++                groupStillLiveAfterFailure: true, signals: signals, probes: probes
+             )
+         }
+         var causes: [CliProcessCleanupFailureV1.Cause] = []
+         for signal in [SIGKILL, SIGCONT] {
+             do {
+                 try processInspector.send(
+                     signal: signal,
+                     processGroupId: processGroupID
+                 )
++                signals.append(.init(signal: signal, result: .success(())))
+             } catch let dispatchFailure {
++                signals.append(.init(signal: signal, result: .failure(dispatchFailure)))
+                 do {
+-                    if try observeCleanupGroupExists(
+-                        processGroupID, processInspector: processInspector,
+-                        diagnosticOwner: diagnosticOwner
+-                    ) {
++                    if try observeGroup() {
+                         causes.append(.init(
+                             phase: .signal, underlying: dispatchFailure
+                         ))
+                     }
+                 } catch {
+                     causes.append(.init(phase: .signal, underlying: dispatchFailure))
+                     causes.append(.init(phase: .liveness, underlying: error))
+                 }
+             }
+         }
+         guard !causes.isEmpty else {
+             return SpawnedGroupSignalOutcome(
+                 causes: [],
+-                groupStillLiveAfterFailure: false
++                groupStillLiveAfterFailure: false, signals: signals, probes: probes
+             )
+         }
+         do {
++            let groupStillLive = try observeGroup()
+             return SpawnedGroupSignalOutcome(
+                 causes: causes,
+-                groupStillLiveAfterFailure:
+-                    try observeCleanupGroupExists(
+-                        processGroupID, processInspector: processInspector,
+-                        diagnosticOwner: diagnosticOwner
+-                    )
++                groupStillLiveAfterFailure: groupStillLive, signals: signals, probes: probes
+             )
+         } catch {
+             causes.append(.init(phase: .liveness, underlying: error))
+             return SpawnedGroupSignalOutcome(
+                 causes: causes,
+-                groupStillLiveAfterFailure: true
++                groupStillLiveAfterFailure: true, signals: signals, probes: probes
+             )
+         }
+     }
+ 
+     private static func validateExecutableAuthority(
+         _ authority: CliExecutableAuthorityV1,
+         codeSignatureRevalidator:
+             any CliProcessCodeSignatureRevalidatingV1
+     ) throws {
+         try authority.validateCanonical()
+         try codeSignatureRevalidator.revalidateCLI(authority)
+         let identity = try executableFileIdentity(authority.stagedPath)
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-spawn-cleanup-20260909-20260909-75692-v4dpsh/CliBackendTests.swift.before b/Sources/AgentLoopTestSuite/CliBackendTests.swift
+index 8e30cd4..863a3c4 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-spawn-cleanup-20260909-20260909-75692-v4dpsh/CliBackendTests.swift.before
++++ b/Sources/AgentLoopTestSuite/CliBackendTests.swift
+@@ -1,17 +1,391 @@
+ import Darwin
+ import Foundation
+ import Testing
+ @testable import AgentLoopCore
+ 
++private enum P1F1D065SpawnCleanupSentinel: Error, Sendable, Equatable {
++    case unrelatedProbe, continuation, unexpectedCall
++}
++
++private enum P1F1D065SpawnCleanupError: Equatable {
++    case authority(Int32)
++    case backend(CliProcessBackendError)
++    case sentinel(P1F1D065SpawnCleanupSentinel)
++    case unexpected(String)
++
++    init(_ error: any Error) {
++        if case .processSignal(let number)? = error as? EngineRuntimeAuthorityErrorV1 {
++            self = .authority(number)
++        } else if let error = error as? CliProcessBackendError {
++            self = .backend(error)
++        } else if let error = error as? P1F1D065SpawnCleanupSentinel {
++            self = .sentinel(error)
++        } else {
++            self = .unexpected(String(reflecting: type(of: error)))
++        }
++    }
++}
++
++private enum P1F1D065SpawnCleanupProbe: Equatable {
++    case live, absent, failure(P1F1D065SpawnCleanupError)
++
++    init(_ result: Result<Bool, any Error>) {
++        switch result {
++        case .success(true): self = .live
++        case .success(false): self = .absent
++        case .failure(let error): self = .failure(.init(error))
++        }
++    }
++}
++
++private enum P1F1D065SpawnCleanupSignal: Equatable {
++    case accepted(Int32), failed(Int32, P1F1D065SpawnCleanupError)
++    case notAttempted(Int32)
++
++    init(_ attempt: CliSpawnCleanupSignalAttemptV1) {
++        switch attempt.result {
++        case .success?: self = .accepted(attempt.signal)
++        case .failure(let error)?: self = .failed(attempt.signal, .init(error))
++        case nil: self = .notAttempted(attempt.signal)
++        }
++    }
++}
++
++private struct P1F1D065SpawnCleanupCause: Equatable {
++    let phase: CliProcessCleanupFailureV1.Phase
++    let error: P1F1D065SpawnCleanupError
++}
++
++private struct P1F1D065SpawnCleanupReap: Equatable {
++    let status: Int32?
++    let failure: String?
++}
++
++private struct P1F1D065SpawnCleanupObservation: Equatable {
++    var signals: [P1F1D065SpawnCleanupSignal] = [.accepted(SIGKILL), .accepted(SIGCONT)]
++    var probes: [P1F1D065SpawnCleanupProbe] = [.live]
++    var reap: P1F1D065SpawnCleanupReap? = .init(status: 137, failure: nil)
++    var stdoutEOF: Bool? = true
++    var stderrEOF: Bool? = true
++    var finalProbe: P1F1D065SpawnCleanupProbe? = .absent
++    var reconciled = false
++    var causes: [P1F1D065SpawnCleanupCause]
++    var registryRetained = true
++    var activeCount = 1
++    var remainingCalls = 0
++}
++
++private enum P1F1D065SpawnCleanupStep: Sendable {
++    case probe(Result<Bool, any Error>)
++    case signal(Int32, Result<Void, any Error>)
++}
++
++private final class P1F1D065SpawnCleanupInspector:
++    EngineRuntimeProcessInspectingV1, @unchecked Sendable
++{
++    // This key belongs only to the private registry below. Never use a syscall.
++    static let group: Int32 = 2_000_065
++    private let lock = NSLock()
++    private let steps: [P1F1D065SpawnCleanupStep]
++    private var cursor = 0
++    private var violations = 0
++
++    init(_ steps: [P1F1D065SpawnCleanupStep]) { self.steps = steps }
++
++    private func next(group: Int32, signal: Int32?) throws -> P1F1D065SpawnCleanupStep {
++        try lock.withLock {
++            guard group == Self.group, cursor < steps.count else {
++                violations += 1
++                throw P1F1D065SpawnCleanupSentinel.unexpectedCall
++            }
++            let step = steps[cursor]
++            let matches: Bool
++            switch (step, signal) {
++            case (.probe, nil): matches = true
++            case (.signal(let expected, _), let actual?): matches = expected == actual
++            default: matches = false
++            }
++            guard matches else {
++                violations += 1
++                throw P1F1D065SpawnCleanupSentinel.unexpectedCall
++            }
++            cursor += 1
++            return step
++        }
++    }
++
++    func snapshots() throws -> [EngineRuntimeProcessSnapshotV1] {
++        lock.withLock { violations += 1 }
++        throw P1F1D065SpawnCleanupSentinel.unexpectedCall
++    }
++
++    func send(signal: Int32, processGroupId: Int32) throws {
++        guard case .signal(_, let result) = try next(group: processGroupId, signal: signal)
++        else { throw P1F1D065SpawnCleanupSentinel.unexpectedCall }
++        try result.get()
++    }
++
++    func processGroupExists(_ processGroupId: Int32) throws -> Bool {
++        guard case .probe(let result) = try next(group: processGroupId, signal: nil)
++        else { throw P1F1D065SpawnCleanupSentinel.unexpectedCall }
++        return try result.get()
++    }
++
++    var snapshot: (remaining: Int, violations: Int) {
++        lock.withLock { (steps.count - cursor, violations) }
++    }
++}
++
++private func p1f1d065RunSpawnCleanup(
++    _ steps: [P1F1D065SpawnCleanupStep],
++    reapResult: CliProcessReapResult = .init(status: 137, failure: nil),
++    stdoutEOF: Bool = true, stderrEOF: Bool = true, missingTask: String? = nil
++) async throws -> P1F1D065SpawnCleanupObservation {
++    let inspector = P1F1D065SpawnCleanupInspector(steps)
++    let registry = ShellProcessRegistry()
++    let group = P1F1D065SpawnCleanupInspector.group
++    registry.register(-group)
++    let reapTask: Task<CliProcessReapResult, Never>? = missingTask == "reap"
++        ? nil : Task { reapResult }
++    let stdoutTask: Task<Bool, Never>? = missingTask == "stdout"
++        ? nil : Task { stdoutEOF }
++    let stderrTask: Task<Bool, Never>? = missingTask == "stderr"
++        ? nil : Task { stderrEOF }
++    let report = await CliProcessSpawnCleanupV1.runRegistered(
++        executionId: "no-child-spawn-cleanup", processGroupID: group,
++        processInspector: inspector, reapTask: reapTask,
++        stdoutTask: stdoutTask, stderrTask: stderrTask,
++        registry: registry, diagnosticOwner: UUID()
++    )
++
++    // No assertion or throw can escape before every created task is joined.
++    var joined = 0
++    if let reapTask { _ = await reapTask.value; joined += 1 }
++    if let stdoutTask { _ = await stdoutTask.value; joined += 1 }
++    if let stderrTask { _ = await stderrTask.value; joined += 1 }
++    let activeCount = registry.activeCount
++    registry.unregister(-group)
++    let script = inspector.snapshot
++    let observed = P1F1D065SpawnCleanupObservation(
++        signals: report.signals.map(P1F1D065SpawnCleanupSignal.init),
++        probes: report.preJoinProbes.map(P1F1D065SpawnCleanupProbe.init),
++        reap: report.reap.map { .init(status: $0.status, failure: $0.failure) },
++        stdoutEOF: report.stdoutEOF, stderrEOF: report.stderrEOF,
++        finalProbe: report.finalGroupExists.map(P1F1D065SpawnCleanupProbe.init),
++        reconciled: report.reconciledFinalCONT,
++        causes: report.causes.map { .init(phase: $0.phase, error: .init($0.underlying)) },
++        registryRetained: report.registryRetained, activeCount: activeCount,
++        remainingCalls: script.remaining
++    )
++    print("065 SPAWN CLEANUP no-child=true joined=\(joined) missing=\(missingTask ?? "none") violations=\(script.violations) observation=\(observed)")
++    try #require(joined == (missingTask == nil ? 3 : 2))
++    try #require(registry.activeCount == 0 && script.violations == 0)
++    try #require(report.executionId == "no-child-spawn-cleanup" && report.processGroupID == group)
++    return observed
++}
++
++private func p1f1d065SpawnCONTFailureSteps(
++    _ failure: any Error = EngineRuntimeAuthorityErrorV1.processSignal(EPERM),
++    firstProbe: Result<Bool, any Error> = .failure(EngineRuntimeAuthorityErrorV1.processSignal(EPERM)),
++    secondProbe: Result<Bool, any Error> = .failure(EngineRuntimeAuthorityErrorV1.processSignal(EPERM)),
++    finalProbe: Result<Bool, any Error> = .success(false)
++) -> [P1F1D065SpawnCleanupStep] {
++    [
++        .probe(.success(true)), .signal(SIGKILL, .success(())),
++        .signal(SIGCONT, .failure(failure)), .probe(firstProbe),
++        .probe(secondProbe), .probe(finalProbe),
++    ]
++}
++
++private let p1f1d065SpawnAcceptedSteps: [P1F1D065SpawnCleanupStep] = [
++    .probe(.success(true)), .signal(SIGKILL, .success(())),
++    .signal(SIGCONT, .success(())), .probe(.success(false)),
++]
++
++@Test func p1f1_065SpawnCleanupReconcilesCONTAfterOwnedJoins() async throws {
++    let observed = try await p1f1d065RunSpawnCleanup(p1f1d065SpawnCONTFailureSteps())
++    #expect(observed == .init(
++        signals: [.accepted(SIGKILL), .failed(SIGCONT, .authority(EPERM))],
++        probes: [.live, .failure(.authority(EPERM)), .failure(.authority(EPERM))],
++        reconciled: true, causes: [], registryRetained: false, activeCount: 0
++    ))
++}
++
++@Test func p1f1_065SpawnCleanupRetainsDeniedKILL() async throws {
++    let observed = try await p1f1d065RunSpawnCleanup([
++        .probe(.success(true)), .signal(SIGKILL, .failure(EngineRuntimeAuthorityErrorV1.processSignal(EPERM))),
++        .probe(.success(true)), .signal(SIGCONT, .success(())), .probe(.success(true)),
++    ])
++    #expect(observed == .init(
++        signals: [.failed(SIGKILL, .authority(EPERM)), .accepted(SIGCONT)],
++        probes: [.live, .live, .live], reap: nil, stdoutEOF: nil, stderrEOF: nil,
++        finalProbe: nil, causes: [.init(phase: .signal, error: .authority(EPERM))]
++    ))
++}
++
++@Test func p1f1_065SpawnCleanupRetainsDeniedKILLAfterDisappearance() async throws {
++    let observed = try await p1f1d065RunSpawnCleanup([
++        .probe(.success(true)), .signal(SIGKILL, .failure(EngineRuntimeAuthorityErrorV1.processSignal(EPERM))),
++        .probe(.success(false)), .signal(SIGCONT, .success(())), .probe(.success(false)),
++    ])
++    #expect(observed == .init(
++        signals: [.failed(SIGKILL, .authority(EPERM)), .accepted(SIGCONT)],
++        probes: [.live, .absent], causes: [.init(phase: .signal, error: .authority(EPERM))]
++    ))
++}
++
++@Test func p1f1_065SpawnCleanupRetainsInitialProbeEPERM() async throws {
++    let observed = try await p1f1d065RunSpawnCleanup([
++        .probe(.failure(EngineRuntimeAuthorityErrorV1.processSignal(EPERM))),
++    ])
++    #expect(observed == .init(
++        signals: [], probes: [.failure(.authority(EPERM))], reap: nil,
++        stdoutEOF: nil, stderrEOF: nil, finalProbe: nil,
++        causes: [.init(phase: .liveness, error: .authority(EPERM))]
++    ))
++}
++
++@Test func p1f1_065SpawnCleanupRetainsLiveGroup() async throws {
++    let observed = try await p1f1d065RunSpawnCleanup(
++        p1f1d065SpawnCONTFailureSteps(finalProbe: .success(true))
++    )
++    #expect(observed == .init(
++        signals: [.accepted(SIGKILL), .failed(SIGCONT, .authority(EPERM))],
++        probes: [.live, .failure(.authority(EPERM)), .failure(.authority(EPERM))],
++        finalProbe: .live, causes: [
++            .init(phase: .signal, error: .authority(EPERM)),
++            .init(phase: .liveness, error: .authority(EPERM)),
++            .init(phase: .liveness, error: .authority(EPERM)),
++            .init(phase: .liveness, error: .backend(.processGroupStillAlive(2_000_065))),
++        ]
++    ))
++}
++
++@Test func p1f1_065SpawnCleanupRetainsUnknownFinalGroup() async throws {
++    let observed = try await p1f1d065RunSpawnCleanup(
++        p1f1d065SpawnCONTFailureSteps(finalProbe: .failure(EngineRuntimeAuthorityErrorV1.processSignal(EPERM)))
++    )
++    #expect(observed == .init(
++        signals: [.accepted(SIGKILL), .failed(SIGCONT, .authority(EPERM))],
++        probes: [.live, .failure(.authority(EPERM)), .failure(.authority(EPERM))],
++        finalProbe: .failure(.authority(EPERM)), causes: [
++            .init(phase: .signal, error: .authority(EPERM)),
++            .init(phase: .liveness, error: .authority(EPERM)),
++            .init(phase: .liveness, error: .authority(EPERM)),
++            .init(phase: .liveness, error: .authority(EPERM)),
++        ]
++    ))
++}
++
++@Test(arguments: [false, true])
++func p1f1_065SpawnCleanupRetainsUnrelatedPreJoinFailure(untyped: Bool) async throws {
++    let failure: any Error = untyped ? P1F1D065SpawnCleanupSentinel.unrelatedProbe
++        : EngineRuntimeAuthorityErrorV1.processSignal(EINVAL)
++    let observed = try await p1f1d065RunSpawnCleanup(p1f1d065SpawnCONTFailureSteps(
++        firstProbe: .failure(failure), secondProbe: .success(true)
++    ))
++    let expectedError: P1F1D065SpawnCleanupError = untyped
++        ? .sentinel(.unrelatedProbe) : .authority(EINVAL)
++    #expect(observed == .init(
++        signals: [.accepted(SIGKILL), .failed(SIGCONT, .authority(EPERM))],
++        probes: [.live, .failure(expectedError), .live], causes: [
++            .init(phase: .signal, error: .authority(EPERM)),
++            .init(phase: .liveness, error: expectedError),
++        ]
++    ))
++}
++
++@Test func p1f1_065SpawnCleanupRetainsReapFailure() async throws {
++    let observed = try await p1f1d065RunSpawnCleanup(
++        p1f1d065SpawnAcceptedSteps, reapResult: .init(status: nil, failure: "controlled wait failure")
++    )
++    #expect(observed == .init(
++        reap: .init(status: nil, failure: "controlled wait failure"),
++        causes: [.init(phase: .reap, error: .backend(.processCleanupFailed("waitpid: controlled wait failure")))]
++    ))
++}
++
++@Test func p1f1_065SpawnCleanupRetainsInvalidReapResult() async throws {
++    let observed = try await p1f1d065RunSpawnCleanup(
++        p1f1d065SpawnAcceptedSteps, reapResult: .init(status: nil, failure: nil)
++    )
++    #expect(observed == .init(
++        reap: .init(status: nil, failure: nil),
++        causes: [.init(phase: .reap, error: .backend(.processCleanupFailed("spawned child reap returned no status")))]
++    ))
++}
++
++@Test func p1f1_065SpawnCleanupRetainsStdoutFailure() async throws {
++    let observed = try await p1f1d065RunSpawnCleanup(p1f1d065SpawnAcceptedSteps, stdoutEOF: false)
++    #expect(observed == .init(
++        stdoutEOF: false,
++        causes: [.init(phase: .pipeDrain, error: .backend(.pipeDrainIncomplete("stdout did not reach EOF")))]
++    ))
++}
++
++@Test func p1f1_065SpawnCleanupRetainsStderrFailure() async throws {
++    let observed = try await p1f1d065RunSpawnCleanup(p1f1d065SpawnAcceptedSteps, stderrEOF: false)
++    #expect(observed == .init(
++        stderrEOF: false,
++        causes: [.init(phase: .pipeDrain, error: .backend(.pipeDrainIncomplete("stderr did not reach EOF")))]
++    ))
++}
++
++@Test func p1f1_065SpawnCleanupRetainsUntypedCONTFailure() async throws {
++    let observed = try await p1f1d065RunSpawnCleanup(p1f1d065SpawnCONTFailureSteps(
++        P1F1D065SpawnCleanupSentinel.continuation,
++        firstProbe: .success(true), secondProbe: .success(true)
++    ))
++    #expect(observed == .init(
++        signals: [.accepted(SIGKILL), .failed(SIGCONT, .sentinel(.continuation))],
++        probes: [.live, .live, .live], causes: [.init(phase: .signal, error: .sentinel(.continuation))]
++    ))
++}
++
++@Test func p1f1_065SpawnCleanupRetainsNonEPERMCONTFailure() async throws {
++    let observed = try await p1f1d065RunSpawnCleanup(p1f1d065SpawnCONTFailureSteps(
++        EngineRuntimeAuthorityErrorV1.processSignal(EINVAL),
++        firstProbe: .success(true), secondProbe: .success(true)
++    ))
++    #expect(observed == .init(
++        signals: [.accepted(SIGKILL), .failed(SIGCONT, .authority(EINVAL))],
++        probes: [.live, .live, .live], causes: [.init(phase: .signal, error: .authority(EINVAL))]
++    ))
++}
++
++@Test(arguments: ["reap", "stdout", "stderr"])
++func p1f1_065SpawnCleanupRetainsMissingTask(missing: String) async throws {
++    let observed = try await p1f1d065RunSpawnCleanup(p1f1d065SpawnAcceptedSteps, missingTask: missing)
++    let expected: P1F1D065SpawnCleanupObservation
++    switch missing {
++    case "reap":
++        expected = .init(reap: nil, causes: [
++            .init(phase: .reap, error: .backend(.processCleanupFailed("spawned child reap task missing"))),
++        ])
++    case "stdout":
++        expected = .init(stdoutEOF: nil, causes: [
++            .init(phase: .pipeDrain, error: .backend(.pipeDrainIncomplete("stdout task missing"))),
++        ])
++    case "stderr":
++        expected = .init(stderrEOF: nil, causes: [
++            .init(phase: .pipeDrain, error: .backend(.pipeDrainIncomplete("stderr task missing"))),
++        ])
++    default:
++        Issue.record("Unknown missing-task case after all task joins")
++        return
++    }
++    #expect(observed == expected)
++}
++
+ @Test func cliEngineCommandBuilderPinsSafeFlags() throws {
+     let base = FileManager.default.temporaryDirectory
+         .appendingPathComponent("cli-builder-safe-\(UUID().uuidString)")
+     try FileManager.default.createDirectory(
+         at: base,
+         withIntermediateDirectories: true
+     )
+     defer { try? FileManager.default.removeItem(at: base) }
+ 
+     let builder = CliEngineCommandBuilderV1()
+     let codex = try builder.buildCodex(
+         p1f1dCLIInput(

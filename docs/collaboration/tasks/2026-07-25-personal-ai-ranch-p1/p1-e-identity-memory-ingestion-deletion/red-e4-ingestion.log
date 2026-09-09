@@ -1,0 +1,698 @@
+[0/1] Planning build
+Building for debugging...
+[0/5] Write sources
+[1/5] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[3/7] Emitting module AgentLoopTestSuite
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:10:16: error: cannot find type 'IngestionDeletionStore' in scope
+  8 | private struct P1EDeletionFixture {
+  9 |     let database: AppDatabase
+ 10 |     let store: IngestionDeletionStore
+    |                `- error: cannot find type 'IngestionDeletionStore' in scope
+ 11 |     let campID: String
+ 12 |     let ingestionID: String
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:81:13: error: cannot find type 'ActiveIngestionDeletionPrepareRequestV1' in scope
+ 79 |     scope: ActiveIngestionDeletionScopeV1,
+ 80 |     key: String? = nil
+ 81 | ) throws -> ActiveIngestionDeletionPrepareRequestV1 {
+    |             `- error: cannot find type 'ActiveIngestionDeletionPrepareRequestV1' in scope
+ 82 |     try ActiveIngestionDeletionPrepareRequestV1(
+ 83 |         envelope: p1eE2Envelope(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:79:12: error: cannot find type 'ActiveIngestionDeletionScopeV1' in scope
+ 77 | private func p1eDeletionRequest(
+ 78 |     _ fixture: P1EDeletionFixture,
+ 79 |     scope: ActiveIngestionDeletionScopeV1,
+    |            `- error: cannot find type 'ActiveIngestionDeletionScopeV1' in scope
+ 80 |     key: String? = nil
+ 81 | ) throws -> ActiveIngestionDeletionPrepareRequestV1 {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:97:13: error: cannot find type 'PreparedActiveIngestionDeletionV1' in scope
+ 95 |     scope: ActiveIngestionDeletionScopeV1,
+ 96 |     key: String? = nil
+ 97 | ) throws -> PreparedActiveIngestionDeletionV1 {
+    |             `- error: cannot find type 'PreparedActiveIngestionDeletionV1' in scope
+ 98 |     try fixture.store.prepareActiveIngestionDeletion(
+ 99 |         request: p1eDeletionRequest(fixture, scope: scope, key: key)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:95:12: error: cannot find type 'ActiveIngestionDeletionScopeV1' in scope
+ 93 | private func p1ePrepared(
+ 94 |     _ fixture: P1EDeletionFixture,
+ 95 |     scope: ActiveIngestionDeletionScopeV1,
+    |            `- error: cannot find type 'ActiveIngestionDeletionScopeV1' in scope
+ 96 |     key: String? = nil
+ 97 | ) throws -> PreparedActiveIngestionDeletionV1 {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:108:5: error: cannot find type 'PreparedActiveIngestionDeletionV1' in scope
+106 |     key: String? = nil
+107 | ) throws -> (
+108 |     PreparedActiveIngestionDeletionV1,
+    |     `- error: cannot find type 'PreparedActiveIngestionDeletionV1' in scope
+109 |     ActiveIngestionDeletionResultV1
+110 | ) {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:109:5: error: cannot find type 'ActiveIngestionDeletionResultV1' in scope
+107 | ) throws -> (
+108 |     PreparedActiveIngestionDeletionV1,
+109 |     ActiveIngestionDeletionResultV1
+    |     `- error: cannot find type 'ActiveIngestionDeletionResultV1' in scope
+110 | ) {
+111 |     let prepared = try p1ePrepared(fixture, scope: scope, key: key)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:105:12: error: cannot find type 'ActiveIngestionDeletionScopeV1' in scope
+103 | private func p1eCommitted(
+104 |     _ fixture: P1EDeletionFixture,
+105 |     scope: ActiveIngestionDeletionScopeV1,
+    |            `- error: cannot find type 'ActiveIngestionDeletionScopeV1' in scope
+106 |     key: String? = nil
+107 | ) throws -> (
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:126:19: error: cannot find type 'ActiveIngestionDeletionExecutionResolutionV1' in scope
+124 | 
+125 | private func p1eExpectNotCommitted(
+126 |     _ resolution: ActiveIngestionDeletionExecutionResolutionV1,
+    |                   `- error: cannot find type 'ActiveIngestionDeletionExecutionResolutionV1' in scope
+127 |     _ expected: ActiveIngestionDeletionFailureV1
+128 | ) {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:127:17: error: cannot find type 'ActiveIngestionDeletionFailureV1' in scope
+125 | private func p1eExpectNotCommitted(
+126 |     _ resolution: ActiveIngestionDeletionExecutionResolutionV1,
+127 |     _ expected: ActiveIngestionDeletionFailureV1
+    |                 `- error: cannot find type 'ActiveIngestionDeletionFailureV1' in scope
+128 | ) {
+129 |     guard case .notCommitted(let actual) = resolution else {
+[4/7] Compiling AgentLoopTestSuite IngestionDeletionContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:10:16: error: cannot find type 'IngestionDeletionStore' in scope
+  8 | private struct P1EDeletionFixture {
+  9 |     let database: AppDatabase
+ 10 |     let store: IngestionDeletionStore
+    |                `- error: cannot find type 'IngestionDeletionStore' in scope
+ 11 |     let campID: String
+ 12 |     let ingestionID: String
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:81:13: error: cannot find type 'ActiveIngestionDeletionPrepareRequestV1' in scope
+ 79 |     scope: ActiveIngestionDeletionScopeV1,
+ 80 |     key: String? = nil
+ 81 | ) throws -> ActiveIngestionDeletionPrepareRequestV1 {
+    |             `- error: cannot find type 'ActiveIngestionDeletionPrepareRequestV1' in scope
+ 82 |     try ActiveIngestionDeletionPrepareRequestV1(
+ 83 |         envelope: p1eE2Envelope(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:79:12: error: cannot find type 'ActiveIngestionDeletionScopeV1' in scope
+ 77 | private func p1eDeletionRequest(
+ 78 |     _ fixture: P1EDeletionFixture,
+ 79 |     scope: ActiveIngestionDeletionScopeV1,
+    |            `- error: cannot find type 'ActiveIngestionDeletionScopeV1' in scope
+ 80 |     key: String? = nil
+ 81 | ) throws -> ActiveIngestionDeletionPrepareRequestV1 {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:97:13: error: cannot find type 'PreparedActiveIngestionDeletionV1' in scope
+ 95 |     scope: ActiveIngestionDeletionScopeV1,
+ 96 |     key: String? = nil
+ 97 | ) throws -> PreparedActiveIngestionDeletionV1 {
+    |             `- error: cannot find type 'PreparedActiveIngestionDeletionV1' in scope
+ 98 |     try fixture.store.prepareActiveIngestionDeletion(
+ 99 |         request: p1eDeletionRequest(fixture, scope: scope, key: key)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:95:12: error: cannot find type 'ActiveIngestionDeletionScopeV1' in scope
+ 93 | private func p1ePrepared(
+ 94 |     _ fixture: P1EDeletionFixture,
+ 95 |     scope: ActiveIngestionDeletionScopeV1,
+    |            `- error: cannot find type 'ActiveIngestionDeletionScopeV1' in scope
+ 96 |     key: String? = nil
+ 97 | ) throws -> PreparedActiveIngestionDeletionV1 {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:108:5: error: cannot find type 'PreparedActiveIngestionDeletionV1' in scope
+106 |     key: String? = nil
+107 | ) throws -> (
+108 |     PreparedActiveIngestionDeletionV1,
+    |     `- error: cannot find type 'PreparedActiveIngestionDeletionV1' in scope
+109 |     ActiveIngestionDeletionResultV1
+110 | ) {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:109:5: error: cannot find type 'ActiveIngestionDeletionResultV1' in scope
+107 | ) throws -> (
+108 |     PreparedActiveIngestionDeletionV1,
+109 |     ActiveIngestionDeletionResultV1
+    |     `- error: cannot find type 'ActiveIngestionDeletionResultV1' in scope
+110 | ) {
+111 |     let prepared = try p1ePrepared(fixture, scope: scope, key: key)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:105:12: error: cannot find type 'ActiveIngestionDeletionScopeV1' in scope
+103 | private func p1eCommitted(
+104 |     _ fixture: P1EDeletionFixture,
+105 |     scope: ActiveIngestionDeletionScopeV1,
+    |            `- error: cannot find type 'ActiveIngestionDeletionScopeV1' in scope
+106 |     key: String? = nil
+107 | ) throws -> (
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:126:19: error: cannot find type 'ActiveIngestionDeletionExecutionResolutionV1' in scope
+124 | 
+125 | private func p1eExpectNotCommitted(
+126 |     _ resolution: ActiveIngestionDeletionExecutionResolutionV1,
+    |                   `- error: cannot find type 'ActiveIngestionDeletionExecutionResolutionV1' in scope
+127 |     _ expected: ActiveIngestionDeletionFailureV1
+128 | ) {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:127:17: error: cannot find type 'ActiveIngestionDeletionFailureV1' in scope
+125 | private func p1eExpectNotCommitted(
+126 |     _ resolution: ActiveIngestionDeletionExecutionResolutionV1,
+127 |     _ expected: ActiveIngestionDeletionFailureV1
+    |                 `- error: cannot find type 'ActiveIngestionDeletionFailureV1' in scope
+128 | ) {
+129 |     guard case .notCommitted(let actual) = resolution else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:67:16: error: cannot find 'IngestionDeletionStore' in scope
+ 65 |     return P1EDeletionFixture(
+ 66 |         database: database,
+ 67 |         store: IngestionDeletionStore(
+    |                `- error: cannot find 'IngestionDeletionStore' in scope
+ 68 |             database: database,
+ 69 |             clock: { p1eDeletionEpoch.addingTimeInterval(10) }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:167:61: error: value of type 'LegacyContentScopeStore' has no member 'insertCampNote'
+165 |         bodyMd: "Private projection"
+166 |     )
+167 |     try LegacyContentScopeStore(database: fixture.database).insertCampNote(note)
+    |                                                             `- error: value of type 'LegacyContentScopeStore' has no member 'insertCampNote'
+168 |     try fixture.database.pool.write { db in
+169 |         try KnowledgeSourceLinkRecord(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:302:63: error: cannot infer contextual base in reference to member 'resultOnly'
+300 |     @Test func p1e49DeletionPrepareRequestSurface() throws {
+301 |         let fixture = try p1eDeletionFixture("request-surface")
+302 |         let request = try p1eDeletionRequest(fixture, scope: .resultOnly)
+    |                                                               `- error: cannot infer contextual base in reference to member 'resultOnly'
+303 |         #expect(Set(Mirror(reflecting: request).children.compactMap(\.label)) == [
+304 |             "envelope", "campId", "ingestionId", "scope",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:327:57: error: cannot infer contextual base in reference to member 'resultOnly'
+325 |         let fixture = try p1eDeletionFixture("prepare-private")
+326 |         let before = try p1eDeletionCounts(fixture.database)
+327 |         let prepared = try p1ePrepared(fixture, scope: .resultOnly)
+    |                                                         `- error: cannot infer contextual base in reference to member 'resultOnly'
+328 |         #expect(try p1eDeletionCounts(fixture.database) == before)
+329 |         let reflected = String(reflecting: prepared)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:340:54: error: cannot infer contextual base in reference to member 'resultOnly'
+338 |     @Test func p1e52DeletionCommandCanonicalHashAndCounts() throws {
+339 |         let fixture = try p1eDeletionFixture("canonical")
+340 |         let first = try p1ePrepared(fixture, scope: .resultOnly)
+    |                                                      `- error: cannot infer contextual base in reference to member 'resultOnly'
+341 |         let second = try p1ePrepared(fixture, scope: .resultOnly)
+342 |         #expect(first.commandPayloadHash == second.commandPayloadHash)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:341:55: error: cannot infer contextual base in reference to member 'resultOnly'
+339 |         let fixture = try p1eDeletionFixture("canonical")
+340 |         let first = try p1ePrepared(fixture, scope: .resultOnly)
+341 |         let second = try p1ePrepared(fixture, scope: .resultOnly)
+    |                                                       `- error: cannot infer contextual base in reference to member 'resultOnly'
+342 |         #expect(first.commandPayloadHash == second.commandPayloadHash)
+343 |         #expect(first.commandPayloadHash.count == 64)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:353:61: error: cannot infer contextual base in reference to member 'resultOnly'
+351 |     @Test func p1e53ResultOnlyNeedsReviewSuccess() throws {
+352 |         let fixture = try p1eDeletionFixture("result-review")
+353 |         let (_, result) = try p1eCommitted(fixture, scope: .resultOnly)
+    |                                                             `- error: cannot infer contextual base in reference to member 'resultOnly'
+354 |         #expect(result.deletedResultCount == 1)
+355 |         #expect(result.deletedIngestionCount == 0)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:370:61: error: cannot infer contextual base in reference to member 'resultOnly'
+368 |     @Test func p1e54ResultOnlyFailedWithResultSuccess() throws {
+369 |         let fixture = try p1eDeletionFixture("result-failed", status: .failed)
+370 |         let (_, result) = try p1eCommitted(fixture, scope: .resultOnly)
+    |                                                             `- error: cannot infer contextual base in reference to member 'resultOnly'
+371 |         #expect(result.oldIngestionStatus == .failed)
+372 |         #expect(result.deletedResultCount == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:371:47: error: cannot infer contextual base in reference to member 'failed'
+369 |         let fixture = try p1eDeletionFixture("result-failed", status: .failed)
+370 |         let (_, result) = try p1eCommitted(fixture, scope: .resultOnly)
+371 |         #expect(result.oldIngestionStatus == .failed)
+    |                                               `- error: cannot infer contextual base in reference to member 'failed'
+372 |         #expect(result.deletedResultCount == 1)
+373 |         #expect(try fixture.database.pool.read { db in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:380:61: error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+378 |     @Test func p1e55ResultOnlyRejectionMatrix() throws {
+379 |         for (label, status, result, materialized, expected) in [
+380 |             ("queued", IngestionStatus.queued, true, false, ActiveIngestionDeletionFailureV1.invalidIngestionState),
+    |                                                             `- error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+381 |             ("discarded", .discarded, true, false, .invalidIngestionState),
+382 |             ("materialized-source", .materialized, true, false, .invalidIngestionState),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:392:29: error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+390 |                 resultMaterialized: materialized
+391 |             )
+392 |             #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+    |                             `- error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+393 |                 _ = try p1ePrepared(fixture, scope: .resultOnly)
+394 |             }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:393:54: error: cannot infer contextual base in reference to member 'resultOnly'
+391 |             )
+392 |             #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+393 |                 _ = try p1ePrepared(fixture, scope: .resultOnly)
+    |                                                      `- error: cannot infer contextual base in reference to member 'resultOnly'
+394 |             }
+395 |             _ = expected
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:403:61: error: cannot infer contextual base in reference to member 'sourceAndResult'
+401 |             "source-no-result", status: .queued, withResult: false
+402 |         )
+403 |         let (_, result) = try p1eCommitted(fixture, scope: .sourceAndResult)
+    |                                                             `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+404 |         #expect(result.deletedResultCount == 0)
+405 |         #expect(result.deletedIngestionCount == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:414:61: error: cannot infer contextual base in reference to member 'sourceAndResult'
+412 |     @Test func p1e57SourceAndResultWithResultSuccess() throws {
+413 |         let fixture = try p1eDeletionFixture("source-with-result")
+414 |         let (_, result) = try p1eCommitted(fixture, scope: .sourceAndResult)
+    |                                                             `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+415 |         #expect(result.deletedResultCount == 1)
+416 |         #expect(result.deletedIngestionCount == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:431:29: error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+429 |                 resultMaterialized: materialized
+430 |             )
+431 |             #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+    |                             `- error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+432 |                 _ = try p1ePrepared(fixture, scope: .sourceAndResult)
+433 |             }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:432:54: error: cannot infer contextual base in reference to member 'sourceAndResult'
+430 |             )
+431 |             #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+432 |                 _ = try p1ePrepared(fixture, scope: .sourceAndResult)
+    |                                                      `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+433 |             }
+434 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:439:25: error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+437 |     @Test func p1e59ProjectionScopeAndPermanentProjectionGuards() throws {
+438 |         let fixture = try p1eDeletionFixture("projection")
+439 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+    |                         `- error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+440 |             _ = try p1ePrepared(fixture, scope: .everythingIncludingProjection)
+441 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:440:50: error: cannot infer contextual base in reference to member 'everythingIncludingProjection'
+438 |         let fixture = try p1eDeletionFixture("projection")
+439 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+440 |             _ = try p1ePrepared(fixture, scope: .everythingIncludingProjection)
+    |                                                  `- error: cannot infer contextual base in reference to member 'everythingIncludingProjection'
+441 |         }
+442 |         try p1eSeedKnowledgeBlocker(fixture)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:459:25: error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+457 |         let fixture = try p1eDeletionFixture("block-link")
+458 |         try p1eSeedKnowledgeBlocker(fixture)
+459 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+    |                         `- error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+460 |             _ = try p1ePrepared(fixture, scope: .sourceAndResult)
+461 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:460:50: error: cannot infer contextual base in reference to member 'sourceAndResult'
+458 |         try p1eSeedKnowledgeBlocker(fixture)
+459 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+460 |             _ = try p1ePrepared(fixture, scope: .sourceAndResult)
+    |                                                  `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+461 |         }
+462 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:467:25: error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+465 |         let fixture = try p1eDeletionFixture("block-candidate")
+466 |         try p1eSeedCandidateBlocker(fixture)
+467 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+    |                         `- error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+468 |             _ = try p1ePrepared(fixture, scope: .sourceAndResult)
+469 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:468:50: error: cannot infer contextual base in reference to member 'sourceAndResult'
+466 |         try p1eSeedCandidateBlocker(fixture)
+467 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+468 |             _ = try p1ePrepared(fixture, scope: .sourceAndResult)
+    |                                                  `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+469 |         }
+470 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:475:25: error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+473 |         let fixture = try p1eDeletionFixture("block-work")
+474 |         _ = try p1eSeedRuminationWorkBlocker(fixture)
+475 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+    |                         `- error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+476 |             _ = try p1ePrepared(fixture, scope: .sourceAndResult)
+477 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:476:50: error: cannot infer contextual base in reference to member 'sourceAndResult'
+474 |         _ = try p1eSeedRuminationWorkBlocker(fixture)
+475 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+476 |             _ = try p1ePrepared(fixture, scope: .sourceAndResult)
+    |                                                  `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+477 |         }
+478 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:485:25: error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+483 |             fixture, state: .failed, withOpenAttempt: true
+484 |         )
+485 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+    |                         `- error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+486 |             _ = try p1ePrepared(fixture, scope: .sourceAndResult)
+487 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:486:50: error: cannot infer contextual base in reference to member 'sourceAndResult'
+484 |         )
+485 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+486 |             _ = try p1ePrepared(fixture, scope: .sourceAndResult)
+    |                                                  `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+487 |         }
+488 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:493:25: error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+491 |         let fixture = try p1eDeletionFixture("block-provider")
+492 |         try p1eSeedProviderBlocker(fixture)
+493 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+    |                         `- error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+494 |             _ = try p1ePrepared(fixture, scope: .sourceAndResult)
+495 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:494:50: error: cannot infer contextual base in reference to member 'sourceAndResult'
+492 |         try p1eSeedProviderBlocker(fixture)
+493 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+494 |             _ = try p1ePrepared(fixture, scope: .sourceAndResult)
+    |                                                  `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+495 |         }
+496 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:500:57: error: cannot infer contextual base in reference to member 'sourceAndResult'
+498 |     @Test func p1e65DeletionLifecycleTOCTOURejects() throws {
+499 |         let fixture = try p1eDeletionFixture("toctou-lifecycle")
+500 |         let prepared = try p1ePrepared(fixture, scope: .sourceAndResult)
+    |                                                         `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+501 |         try fixture.database.pool.write { db in
+502 |             try db.execute(sql: "UPDATE camp SET archived=1 WHERE id=?", arguments: [fixture.campID])
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:507:14: error: cannot infer contextual base in reference to member 'lifecycleChanged'
+505 |         p1eExpectNotCommitted(
+506 |             fixture.store.executeActiveIngestionDeletion(preparedCommand: prepared),
+507 |             .lifecycleChanged
+    |              `- error: cannot infer contextual base in reference to member 'lifecycleChanged'
+508 |         )
+509 |         #expect(try p1eDeletionCounts(fixture.database) == (0, 0, 0, 0))
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:514:62: error: cannot infer contextual base in reference to member 'sourceAndResult'
+512 |     @Test func p1e66DeletionRowAndResultTOCTOURejects() throws {
+513 |         let source = try p1eDeletionFixture("toctou-source")
+514 |         let sourcePrepared = try p1ePrepared(source, scope: .sourceAndResult)
+    |                                                              `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+515 |         try source.database.pool.write { db in
+516 |             try db.execute(sql: "UPDATE ingestion_item SET title='changed',version=version+1 WHERE id=?", arguments: [source.ingestionID])
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:520:14: error: cannot infer contextual base in reference to member 'rowChanged'
+518 |         p1eExpectNotCommitted(
+519 |             source.store.executeActiveIngestionDeletion(preparedCommand: sourcePrepared),
+520 |             .rowChanged
+    |              `- error: cannot infer contextual base in reference to member 'rowChanged'
+521 |         )
+522 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:524:62: error: cannot infer contextual base in reference to member 'resultOnly'
+522 | 
+523 |         let result = try p1eDeletionFixture("toctou-result")
+524 |         let resultPrepared = try p1ePrepared(result, scope: .resultOnly)
+    |                                                              `- error: cannot infer contextual base in reference to member 'resultOnly'
+525 |         try result.database.pool.write { db in
+526 |             try db.execute(sql: "UPDATE rumination_result SET resultJson='{}',version=version+1 WHERE ingestionId=?", arguments: [result.ingestionID])
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:530:14: error: cannot infer contextual base in reference to member 'rowChanged'
+528 |         p1eExpectNotCommitted(
+529 |             result.store.executeActiveIngestionDeletion(preparedCommand: resultPrepared),
+530 |             .rowChanged
+    |              `- error: cannot infer contextual base in reference to member 'rowChanged'
+531 |         )
+532 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:536:57: error: cannot infer contextual base in reference to member 'sourceAndResult'
+534 |     @Test func p1e67DeletionBlockerTOCTOURejects() throws {
+535 |         let fixture = try p1eDeletionFixture("toctou-blocker")
+536 |         let prepared = try p1ePrepared(fixture, scope: .sourceAndResult)
+    |                                                         `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+537 |         try p1eSeedCandidateBlocker(fixture)
+538 |         p1eExpectNotCommitted(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:540:14: error: cannot infer contextual base in reference to member 'blockersChanged'
+538 |         p1eExpectNotCommitted(
+539 |             fixture.store.executeActiveIngestionDeletion(preparedCommand: prepared),
+540 |             .blockersChanged
+    |              `- error: cannot infer contextual base in reference to member 'blockersChanged'
+541 |         )
+542 |         #expect(try p1eDeletionCounts(fixture.database) == (0, 0, 0, 0))
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:548:30: error: cannot infer contextual base in reference to member 'sourceAndResult'
+546 |         let fixture = try p1eDeletionFixture("envelope-graph")
+547 |         let (prepared, result) = try p1eCommitted(
+548 |             fixture, scope: .sourceAndResult
+    |                              `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+549 |         )
+550 |         let row = try fixture.database.pool.read { db in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:564:61: error: cannot infer contextual base in reference to member 'resultOnly'
+562 |     @Test func p1e69DeletionExactJSONAndOutboxContract() throws {
+563 |         let fixture = try p1eDeletionFixture("json-outbox")
+564 |         let (_, result) = try p1eCommitted(fixture, scope: .resultOnly)
+    |                                                             `- error: cannot infer contextual base in reference to member 'resultOnly'
+565 |         let persisted = try fixture.database.pool.read { db -> (String, String, Row?) in
+566 |             let receipt = try String.fetchOne(db, sql: "SELECT resultJson FROM domain_command_receipt WHERE idempotencyKey=?", arguments: [result.commandIdempotencyKey]) ?? ""
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:571:49: error: cannot find 'ActiveIngestionDeletionResultV1' in scope
+569 |             return (receipt, event, outbox)
+570 |         }
+571 |         #expect(try p1eJSONKeys(persisted.0) == ActiveIngestionDeletionResultV1.exactJSONKeys)
+    |                                                 `- error: cannot find 'ActiveIngestionDeletionResultV1' in scope
+572 |         #expect(try p1eJSONKeys(persisted.1) == ActiveIngestionDeletionEventPayloadV1.exactJSONKeys)
+573 |         for forbidden in ["rawText", "title", "sourceURL", "resultJson", "userEditedJson", "actorId", "deviceId", "accountId"] {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:572:49: error: cannot find 'ActiveIngestionDeletionEventPayloadV1' in scope
+570 |         }
+571 |         #expect(try p1eJSONKeys(persisted.0) == ActiveIngestionDeletionResultV1.exactJSONKeys)
+572 |         #expect(try p1eJSONKeys(persisted.1) == ActiveIngestionDeletionEventPayloadV1.exactJSONKeys)
+    |                                                 `- error: cannot find 'ActiveIngestionDeletionEventPayloadV1' in scope
+573 |         for forbidden in ["rawText", "title", "sourceURL", "resultJson", "userEditedJson", "actorId", "deviceId", "accountId"] {
+574 |             #expect(!persisted.0.contains(forbidden))
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:584:67: error: cannot infer contextual base in reference to member 'sourceAndResult'
+582 |     @Test func p1e70DeletionReplayAfterLifecycleAndSourceLoss() throws {
+583 |         let fixture = try p1eDeletionFixture("replay-loss")
+584 |         let (prepared, first) = try p1eCommitted(fixture, scope: .sourceAndResult)
+    |                                                                   `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+585 |         try fixture.database.pool.write { db in
+586 |             try db.execute(sql: "UPDATE camp SET archived=1 WHERE id=?", arguments: [fixture.campID])
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:598:63: error: cannot infer contextual base in reference to member 'sourceAndResult'
+596 |     @Test func p1e71DeletionConflictIntegrityAndNewKeyMatrix() throws {
+597 |         let fixture = try p1eDeletionFixture("conflict-integrity")
+598 |         let (prepared, _) = try p1eCommitted(fixture, scope: .sourceAndResult)
+    |                                                               `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+599 |         try fixture.database.pool.write { db in
+600 |             try db.execute(sql: "UPDATE event_outbox SET lastError='tampered',version=version+1 WHERE eventId IN (SELECT id FROM domain_event WHERE commandIdempotencyKey=?)", arguments: [prepared.envelope.idempotencyKey])
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:604:40: error: cannot infer contextual base in reference to member 'integrityBlocked'
+602 |         #expect(
+603 |             fixture.store.executeActiveIngestionDeletion(preparedCommand: prepared)
+604 |                 == .resolutionPending(.integrityBlocked)
+    |                                        `- error: cannot infer contextual base in reference to member 'integrityBlocked'
+605 |         )
+606 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:606:25: error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+604 |                 == .resolutionPending(.integrityBlocked)
+605 |         )
+606 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+    |                         `- error: cannot find 'ActiveIngestionDeletionFailureV1' in scope
+607 |             _ = try fixture.store.prepareActiveIngestionDeletion(
+608 |                 request: ActiveIngestionDeletionPrepareRequestV1(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:608:26: error: cannot find 'ActiveIngestionDeletionPrepareRequestV1' in scope
+606 |         #expect(throws: ActiveIngestionDeletionFailureV1.self) {
+607 |             _ = try fixture.store.prepareActiveIngestionDeletion(
+608 |                 request: ActiveIngestionDeletionPrepareRequestV1(
+    |                          `- error: cannot find 'ActiveIngestionDeletionPrepareRequestV1' in scope
+609 |                     envelope: p1eE2Envelope("p1e:new-key-after-loss"),
+610 |                     campId: fixture.campID,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:612:29: error: cannot infer contextual base in reference to member 'sourceAndResult'
+610 |                     campId: fixture.campID,
+611 |                     ingestionId: fixture.ingestionID,
+612 |                     scope: .sourceAndResult
+    |                             `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+613 |                 )
+614 |             )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:661:25: error: cannot find 'ActiveIngestionDeletionSQLPermitTestProbeV1' in scope
+659 | 
+660 |     @Test func p1e74PermitRegistryInstallAndIsolationContract() throws {
+661 |         let first = try ActiveIngestionDeletionSQLPermitTestProbeV1
+    |                         `- error: cannot find 'ActiveIngestionDeletionSQLPermitTestProbeV1' in scope
+662 |             .runLifecycleScenario(.directPoolClose)
+663 |         let second = try ActiveIngestionDeletionSQLPermitTestProbeV1
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:662:36: error: cannot infer contextual base in reference to member 'directPoolClose'
+660 |     @Test func p1e74PermitRegistryInstallAndIsolationContract() throws {
+661 |         let first = try ActiveIngestionDeletionSQLPermitTestProbeV1
+662 |             .runLifecycleScenario(.directPoolClose)
+    |                                    `- error: cannot infer contextual base in reference to member 'directPoolClose'
+663 |         let second = try ActiveIngestionDeletionSQLPermitTestProbeV1
+664 |             .runLifecycleScenario(.directPoolClose)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:663:26: error: cannot find 'ActiveIngestionDeletionSQLPermitTestProbeV1' in scope
+661 |         let first = try ActiveIngestionDeletionSQLPermitTestProbeV1
+662 |             .runLifecycleScenario(.directPoolClose)
+663 |         let second = try ActiveIngestionDeletionSQLPermitTestProbeV1
+    |                          `- error: cannot find 'ActiveIngestionDeletionSQLPermitTestProbeV1' in scope
+664 |             .runLifecycleScenario(.directPoolClose)
+665 |         #expect(first.successfulRegistrations == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:664:36: error: cannot infer contextual base in reference to member 'directPoolClose'
+662 |             .runLifecycleScenario(.directPoolClose)
+663 |         let second = try ActiveIngestionDeletionSQLPermitTestProbeV1
+664 |             .runLifecycleScenario(.directPoolClose)
+    |                                    `- error: cannot infer contextual base in reference to member 'directPoolClose'
+665 |         #expect(first.successfulRegistrations == 1)
+666 |         #expect(first.rawRegistrationCalls == 1)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:673:25: error: cannot find 'ActiveIngestionDeletionSQLPermitLifecycleScenarioV1' in scope
+671 | 
+672 |     @Test func p1e75PermitLifecycleScenarioMatrix() throws {
+673 |         for scenario in ActiveIngestionDeletionSQLPermitLifecycleScenarioV1.allCases {
+    |                         `- error: cannot find 'ActiveIngestionDeletionSQLPermitLifecycleScenarioV1' in scope
+674 |             let report = try ActiveIngestionDeletionSQLPermitTestProbeV1
+675 |                 .runLifecycleScenario(scenario)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:674:30: error: cannot find 'ActiveIngestionDeletionSQLPermitTestProbeV1' in scope
+672 |     @Test func p1e75PermitLifecycleScenarioMatrix() throws {
+673 |         for scenario in ActiveIngestionDeletionSQLPermitLifecycleScenarioV1.allCases {
+674 |             let report = try ActiveIngestionDeletionSQLPermitTestProbeV1
+    |                              `- error: cannot find 'ActiveIngestionDeletionSQLPermitTestProbeV1' in scope
+675 |                 .runLifecycleScenario(scenario)
+676 |             #expect(report.scenario == scenario)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:683:25: error: cannot find 'ActiveIngestionDeletionSQLPermitCleanupMismatchV1' in scope
+681 | 
+682 |     @Test func p1e76PermitCleanupMismatchStickyFaultMatrix() throws {
+683 |         for scenario in ActiveIngestionDeletionSQLPermitCleanupMismatchV1.allCases {
+    |                         `- error: cannot find 'ActiveIngestionDeletionSQLPermitCleanupMismatchV1' in scope
+684 |             let report = try ActiveIngestionDeletionSQLPermitTestProbeV1
+685 |                 .injectCleanupMismatch(scenario)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:684:30: error: cannot find 'ActiveIngestionDeletionSQLPermitTestProbeV1' in scope
+682 |     @Test func p1e76PermitCleanupMismatchStickyFaultMatrix() throws {
+683 |         for scenario in ActiveIngestionDeletionSQLPermitCleanupMismatchV1.allCases {
+684 |             let report = try ActiveIngestionDeletionSQLPermitTestProbeV1
+    |                              `- error: cannot find 'ActiveIngestionDeletionSQLPermitTestProbeV1' in scope
+685 |                 .injectCleanupMismatch(scenario)
+686 |             #expect(report.scenario == scenario)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:696:67: error: cannot infer contextual base in reference to member 'sourceAndResult'
+694 |     @Test func p1e77PermitGenerationArityCursorAndReuseMatrix() throws {
+695 |         let fixture = try p1eDeletionFixture("permit-generation")
+696 |         let (prepared, first) = try p1eCommitted(fixture, scope: .sourceAndResult)
+    |                                                                   `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+697 |         #expect(
+698 |             fixture.store.executeActiveIngestionDeletion(preparedCommand: prepared)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:719:39: error: cannot infer contextual base in reference to member 'sourceAndResult'
+717 |         let committedFixture = try p1eDeletionFixture("resolve-committed")
+718 |         let (committedHandle, committedResult) = try p1eCommitted(
+719 |             committedFixture, scope: .sourceAndResult
+    |                                       `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+720 |         )
+721 |         #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:729:40: error: cannot infer contextual base in reference to member 'sourceAndResult'
+727 |         let rolledBackFixture = try p1eDeletionFixture("resolve-rollback")
+728 |         let rolledBackHandle = try p1ePrepared(
+729 |             rolledBackFixture, scope: .sourceAndResult
+    |                                        `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+730 |         )
+731 |         p1eExpectNotCommitted(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:735:14: error: cannot infer contextual base in reference to member 'notExecuted'
+733 |                 preparedCommand: rolledBackHandle
+734 |             ),
+735 |             .notExecuted
+    |              `- error: cannot infer contextual base in reference to member 'notExecuted'
+736 |         )
+737 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:741:68: error: cannot infer contextual base in reference to member 'resultOnly'
+739 |     @Test func p1e79DeletionSharedValidatorForgeryAndRelaunch() throws {
+740 |         let fixture = try p1eDeletionFixture("validator-relaunch")
+741 |         let (prepared, result) = try p1eCommitted(fixture, scope: .resultOnly)
+    |                                                                    `- error: cannot infer contextual base in reference to member 'resultOnly'
+742 |         let reloaded = IngestionDeletionStore(
+743 |             database: fixture.database,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:742:24: error: cannot find 'IngestionDeletionStore' in scope
+740 |         let fixture = try p1eDeletionFixture("validator-relaunch")
+741 |         let (prepared, result) = try p1eCommitted(fixture, scope: .resultOnly)
+742 |         let reloaded = IngestionDeletionStore(
+    |                        `- error: cannot find 'IngestionDeletionStore' in scope
+743 |             database: fixture.database,
+744 |             clock: { p1eDeletionEpoch.addingTimeInterval(20) }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:757:38: error: cannot infer contextual base in reference to member 'integrityBlocked'
+755 |             reloaded.resolveActiveIngestionDeletionExecution(
+756 |                 preparedCommand: prepared
+757 |             ) == .resolutionPending(.integrityBlocked)
+    |                                      `- error: cannot infer contextual base in reference to member 'integrityBlocked'
+758 |         )
+759 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:763:67: error: cannot infer contextual base in reference to member 'sourceAndResult'
+761 |     @Test func p1e80DeletionWorkerAndMaterializerRaceMatrix() throws {
+762 |         let workerFirst = try p1eDeletionFixture("race-worker")
+763 |         let workerPrepared = try p1ePrepared(workerFirst, scope: .sourceAndResult)
+    |                                                                   `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+764 |         _ = try p1eSeedRuminationWorkBlocker(workerFirst)
+765 |         p1eExpectNotCommitted(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:769:14: error: cannot infer contextual base in reference to member 'blockersChanged'
+767 |                 preparedCommand: workerPrepared
+768 |             ),
+769 |             .blockersChanged
+    |              `- error: cannot infer contextual base in reference to member 'blockersChanged'
+770 |         )
+771 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:773:53: error: cannot infer contextual base in reference to member 'sourceAndResult'
+771 | 
+772 |         let deletionFirst = try p1eDeletionFixture("race-deletion")
+773 |         _ = try p1eCommitted(deletionFirst, scope: .sourceAndResult)
+    |                                                     `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+774 |         #expect(throws: DatabaseError.self) {
+775 |             try deletionFirst.database.pool.write { db in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:793:40: error: cannot infer contextual base in reference to member 'sourceAndResult'
+791 |         let materializedFirst = try p1eDeletionFixture("race-materialized")
+792 |         let materializedPrepared = try p1ePrepared(
+793 |             materializedFirst, scope: .sourceAndResult
+    |                                        `- error: cannot infer contextual base in reference to member 'sourceAndResult'
+794 |         )
+795 |         try materializedFirst.database.pool.write { db in
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/IngestionDeletionContractTests.swift:802:14: error: cannot infer contextual base in reference to member 'rowChanged'
+800 |                 preparedCommand: materializedPrepared
+801 |             ),
+802 |             .rowChanged
+    |              `- error: cannot infer contextual base in reference to member 'rowChanged'
+803 |         )
+804 |     }
+
+test_status=1
+tee_status=0
+red_gate=EXPECTED_RED

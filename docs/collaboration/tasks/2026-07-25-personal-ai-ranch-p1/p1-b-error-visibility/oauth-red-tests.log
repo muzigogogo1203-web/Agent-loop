@@ -1,0 +1,1217 @@
+command=swift run RunTests --filter oauthCredentialCommitFailureRollsBackEarlierWrites|oauthCredentialRollbackFailureIsExplicitAndCritical|oauthPermanentUnauthorizedDeleteFailureNeverReportsCleanRelogin
+cwd=/Users/muzi/Agent-loop
+expected_red=missing frozen OAuth credential atomicity API only
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[3/6] Emitting module AgentLoopTestSuite
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:56:27: error: cannot find type 'CredentialStoreBackendNamespace' in scope
+  54 |     private var occurrences: [String: Int] = [:]
+  55 |     private var failures: [OAuthStoreFailureKey: Int32] = [:]
+  56 |     let backendNamespace: CredentialStoreBackendNamespace
+     |                           `- error: cannot find type 'CredentialStoreBackendNamespace' in scope
+  57 | 
+  58 |     init(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:60:27: error: cannot find type 'CredentialStoreBackendNamespace' in scope
+  58 |     init(
+  59 |         _ values: [String: String] = [:],
+  60 |         backendNamespace: CredentialStoreBackendNamespace = .isolated(UUID())
+     |                           `- error: cannot find type 'CredentialStoreBackendNamespace' in scope
+  61 |     ) {
+  62 |         self.values = values
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:164:6: error: cannot find type 'OAuthCredentialAccounts' in scope
+ 162 |     suffix: String = "main",
+ 163 |     verifier: String? = nil
+ 164 | ) -> OAuthCredentialAccounts {
+     |      `- error: cannot find type 'OAuthCredentialAccounts' in scope
+ 165 |     OAuthCredentialAccounts(
+ 166 |         access: "oauth-access-\(suffix)",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:174:46: error: cannot find type 'SecretValue' in scope
+ 172 | }
+ 173 | 
+ 174 | private func secret(_ raw: String) throws -> SecretValue {
+     |                                              `- error: cannot find type 'SecretValue' in scope
+ 175 |     try SecretValue(raw)
+ 176 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:184:13: error: cannot find type 'OAuthCredentialBundle' in scope
+ 182 |     id: String?,
+ 183 |     accountID: String?
+ 184 | ) throws -> OAuthCredentialBundle {
+     |             `- error: cannot find type 'OAuthCredentialBundle' in scope
+ 185 |     try OAuthCredentialBundle(
+ 186 |         flow: flow,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:179:11: error: cannot find type 'OAuthCredentialFlow' in scope
+ 177 | 
+ 178 | private func oauthBundle(
+ 179 |     flow: OAuthCredentialFlow = .chatGPT,
+     |           `- error: cannot find type 'OAuthCredentialFlow' in scope
+ 180 |     access: String,
+ 181 |     refresh: String?,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:200:19: error: cannot find type 'OAuthAuthorizationPreparation' in scope
+ 198 |     state: String = "oauth-state",
+ 199 |     verifier: String = "oauth-verifier"
+ 200 | ) async throws -> OAuthAuthorizationPreparation {
+     |                   `- error: cannot find type 'OAuthAuthorizationPreparation' in scope
+ 201 |     let outcome = await coordinator.commitAuthorizationPreparation(
+ 202 |         flow: flow,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:195:18: error: cannot find type 'CredentialBundleCoordinator' in scope
+ 193 | 
+ 194 | private func committedPreparation(
+ 195 |     coordinator: CredentialBundleCoordinator,
+     |                  `- error: cannot find type 'CredentialBundleCoordinator' in scope
+ 196 |     accounts: OAuthCredentialAccounts,
+ 197 |     flow: OAuthCredentialFlow = .chatGPT,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:196:15: error: cannot find type 'OAuthCredentialAccounts' in scope
+ 194 | private func committedPreparation(
+ 195 |     coordinator: CredentialBundleCoordinator,
+ 196 |     accounts: OAuthCredentialAccounts,
+     |               `- error: cannot find type 'OAuthCredentialAccounts' in scope
+ 197 |     flow: OAuthCredentialFlow = .chatGPT,
+ 198 |     state: String = "oauth-state",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:197:11: error: cannot find type 'OAuthCredentialFlow' in scope
+ 195 |     coordinator: CredentialBundleCoordinator,
+ 196 |     accounts: OAuthCredentialAccounts,
+ 197 |     flow: OAuthCredentialFlow = .chatGPT,
+     |           `- error: cannot find type 'OAuthCredentialFlow' in scope
+ 198 |     state: String = "oauth-state",
+ 199 |     verifier: String = "oauth-verifier"
+[4/6] Compiling AgentLoopTestSuite OpenAIOAuthSessionTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:56:27: error: cannot find type 'CredentialStoreBackendNamespace' in scope
+  54 |     private var occurrences: [String: Int] = [:]
+  55 |     private var failures: [OAuthStoreFailureKey: Int32] = [:]
+  56 |     let backendNamespace: CredentialStoreBackendNamespace
+     |                           `- error: cannot find type 'CredentialStoreBackendNamespace' in scope
+  57 | 
+  58 |     init(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:60:27: error: cannot find type 'CredentialStoreBackendNamespace' in scope
+  58 |     init(
+  59 |         _ values: [String: String] = [:],
+  60 |         backendNamespace: CredentialStoreBackendNamespace = .isolated(UUID())
+     |                           `- error: cannot find type 'CredentialStoreBackendNamespace' in scope
+  61 |     ) {
+  62 |         self.values = values
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:164:6: error: cannot find type 'OAuthCredentialAccounts' in scope
+ 162 |     suffix: String = "main",
+ 163 |     verifier: String? = nil
+ 164 | ) -> OAuthCredentialAccounts {
+     |      `- error: cannot find type 'OAuthCredentialAccounts' in scope
+ 165 |     OAuthCredentialAccounts(
+ 166 |         access: "oauth-access-\(suffix)",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:174:46: error: cannot find type 'SecretValue' in scope
+ 172 | }
+ 173 | 
+ 174 | private func secret(_ raw: String) throws -> SecretValue {
+     |                                              `- error: cannot find type 'SecretValue' in scope
+ 175 |     try SecretValue(raw)
+ 176 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:184:13: error: cannot find type 'OAuthCredentialBundle' in scope
+ 182 |     id: String?,
+ 183 |     accountID: String?
+ 184 | ) throws -> OAuthCredentialBundle {
+     |             `- error: cannot find type 'OAuthCredentialBundle' in scope
+ 185 |     try OAuthCredentialBundle(
+ 186 |         flow: flow,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:179:11: error: cannot find type 'OAuthCredentialFlow' in scope
+ 177 | 
+ 178 | private func oauthBundle(
+ 179 |     flow: OAuthCredentialFlow = .chatGPT,
+     |           `- error: cannot find type 'OAuthCredentialFlow' in scope
+ 180 |     access: String,
+ 181 |     refresh: String?,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:200:19: error: cannot find type 'OAuthAuthorizationPreparation' in scope
+ 198 |     state: String = "oauth-state",
+ 199 |     verifier: String = "oauth-verifier"
+ 200 | ) async throws -> OAuthAuthorizationPreparation {
+     |                   `- error: cannot find type 'OAuthAuthorizationPreparation' in scope
+ 201 |     let outcome = await coordinator.commitAuthorizationPreparation(
+ 202 |         flow: flow,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:195:18: error: cannot find type 'CredentialBundleCoordinator' in scope
+ 193 | 
+ 194 | private func committedPreparation(
+ 195 |     coordinator: CredentialBundleCoordinator,
+     |                  `- error: cannot find type 'CredentialBundleCoordinator' in scope
+ 196 |     accounts: OAuthCredentialAccounts,
+ 197 |     flow: OAuthCredentialFlow = .chatGPT,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:196:15: error: cannot find type 'OAuthCredentialAccounts' in scope
+ 194 | private func committedPreparation(
+ 195 |     coordinator: CredentialBundleCoordinator,
+ 196 |     accounts: OAuthCredentialAccounts,
+     |               `- error: cannot find type 'OAuthCredentialAccounts' in scope
+ 197 |     flow: OAuthCredentialFlow = .chatGPT,
+ 198 |     state: String = "oauth-state",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:197:11: error: cannot find type 'OAuthCredentialFlow' in scope
+ 195 |     coordinator: CredentialBundleCoordinator,
+ 196 |     accounts: OAuthCredentialAccounts,
+ 197 |     flow: OAuthCredentialFlow = .chatGPT,
+     |           `- error: cannot find type 'OAuthCredentialFlow' in scope
+ 198 |     state: String = "oauth-state",
+ 199 |     verifier: String = "oauth-verifier"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:206:29: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 204 |         verifier: try secret(verifier),
+ 205 |         accounts: accounts,
+ 206 |         interactionPolicy: .failIfInteractionRequired
+     |                             `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 207 |     )
+ 208 |     guard case .committed(let receipt) = outcome else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:442:5: warning: no 'async' operations occur within 'await' expression
+ 440 |     )
+ 441 | 
+ 442 |     await #expect(throws: ProviderError.unauthorized) {
+     |     `- warning: no 'async' operations occur within 'await' expression
+ 443 |         try await session.refreshedAccessToken()
+ 444 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:464:5: warning: no 'async' operations occur within 'await' expression
+ 462 |     )
+ 463 | 
+ 464 |     await #expect(throws: URLError.self) {
+     |     `- warning: no 'async' operations occur within 'await' expression
+ 465 |         try await session.refreshedAccessToken()
+ 466 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:508:5: warning: no 'async' operations occur within 'await' expression
+ 506 |     )
+ 507 | 
+ 508 |     await #expect(throws: ProviderError.unauthorized) {
+     |     `- warning: no 'async' operations occur within 'await' expression
+ 509 |         try await session.refreshedAccessToken()
+ 510 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:526:27: error: cannot find 'CredentialBundleCoordinator' in scope
+ 524 |             accounts.accountID: "account-old",
+ 525 |         ])
+ 526 |         let coordinator = CredentialBundleCoordinator(
+     |                           `- error: cannot find 'CredentialBundleCoordinator' in scope
+ 527 |             access: SynchronizedCredentialAccess(store: store)
+ 528 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:527:21: error: cannot find 'SynchronizedCredentialAccess' in scope
+ 525 |         ])
+ 526 |         let coordinator = CredentialBundleCoordinator(
+ 527 |             access: SynchronizedCredentialAccess(store: store)
+     |                     `- error: cannot find 'SynchronizedCredentialAccess' in scope
+ 528 |         )
+ 529 |         let preparation = try await committedPreparation(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:536:14: error: cannot infer contextual base in reference to member 'set'
+ 534 |         store.resetAudit()
+ 535 |         store.injectFailure(
+ 536 |             .set,
+     |              `- error: cannot infer contextual base in reference to member 'set'
+ 537 |             account: accounts.refresh,
+ 538 |             status: status
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:548:21: error: cannot find 'CredentialBundleError' in scope
+ 546 |         )
+ 547 |         await #expect(
+ 548 |             throws: CredentialBundleError.commit(
+     |                     `- error: cannot find 'CredentialBundleError' in scope
+ 549 |                 flow: .chatGPT,
+ 550 |                 mutation: .refresh,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:549:24: error: cannot infer contextual base in reference to member 'chatGPT'
+ 547 |         await #expect(
+ 548 |             throws: CredentialBundleError.commit(
+ 549 |                 flow: .chatGPT,
+     |                        `- error: cannot infer contextual base in reference to member 'chatGPT'
+ 550 |                 mutation: .refresh,
+ 551 |                 status: status
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:550:28: error: cannot infer contextual base in reference to member 'refresh'
+ 548 |             throws: CredentialBundleError.commit(
+ 549 |                 flow: .chatGPT,
+ 550 |                 mutation: .refresh,
+     |                            `- error: cannot infer contextual base in reference to member 'refresh'
+ 551 |                 status: status
+ 552 |             )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:557:37: error: cannot infer contextual base in reference to member 'allow'
+ 555 |                 replacement,
+ 556 |                 basedOn: preparation,
+ 557 |                 interactionPolicy: .allow
+     |                                     `- error: cannot infer contextual base in reference to member 'allow'
+ 558 |             )
+ 559 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:581:27: error: cannot find 'CredentialBundleCoordinator' in scope
+ 579 |             accounts.accountID: "account-old",
+ 580 |         ])
+ 581 |         let coordinator = CredentialBundleCoordinator(
+     |                           `- error: cannot find 'CredentialBundleCoordinator' in scope
+ 582 |             access: SynchronizedCredentialAccess(store: store)
+ 583 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:582:21: error: cannot find 'SynchronizedCredentialAccess' in scope
+ 580 |         ])
+ 581 |         let coordinator = CredentialBundleCoordinator(
+ 582 |             access: SynchronizedCredentialAccess(store: store)
+     |                     `- error: cannot find 'SynchronizedCredentialAccess' in scope
+ 583 |         )
+ 584 |         let read = try #require(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:587:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 585 |             try await coordinator.readRefreshCredential(
+ 586 |                 accounts: accounts,
+ 587 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 588 |             )
+ 589 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:592:30: error: cannot infer contextual base in reference to member 'set'
+ 590 |         let before = store.snapshot
+ 591 |         store.resetAudit()
+ 592 |         store.injectFailure(.set, account: accounts.id, status: status)
+     |                              `- error: cannot infer contextual base in reference to member 'set'
+ 593 | 
+ 594 |         let replacement = try oauthBundle(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:601:21: error: cannot find 'CredentialBundleError' in scope
+ 599 |         )
+ 600 |         await #expect(
+ 601 |             throws: CredentialBundleError.commit(
+     |                     `- error: cannot find 'CredentialBundleError' in scope
+ 602 |                 flow: .chatGPT,
+ 603 |                 mutation: .id,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:602:24: error: cannot infer contextual base in reference to member 'chatGPT'
+ 600 |         await #expect(
+ 601 |             throws: CredentialBundleError.commit(
+ 602 |                 flow: .chatGPT,
+     |                        `- error: cannot infer contextual base in reference to member 'chatGPT'
+ 603 |                 mutation: .id,
+ 604 |                 status: status
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:603:28: error: cannot infer contextual base in reference to member 'id'
+ 601 |             throws: CredentialBundleError.commit(
+ 602 |                 flow: .chatGPT,
+ 603 |                 mutation: .id,
+     |                            `- error: cannot infer contextual base in reference to member 'id'
+ 604 |                 status: status
+ 605 |             )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:610:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 608 |                 replacement,
+ 609 |                 basedOn: read,
+ 610 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 611 |             )
+ 612 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:636:27: error: cannot find 'CredentialBundleCoordinator' in scope
+ 634 |             accounts.accountID: "chatgpt-account",
+ 635 |         ])
+ 636 |         let coordinator = CredentialBundleCoordinator(
+     |                           `- error: cannot find 'CredentialBundleCoordinator' in scope
+ 637 |             access: SynchronizedCredentialAccess(store: store)
+ 638 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:637:21: error: cannot find 'SynchronizedCredentialAccess' in scope
+ 635 |         ])
+ 636 |         let coordinator = CredentialBundleCoordinator(
+ 637 |             access: SynchronizedCredentialAccess(store: store)
+     |                     `- error: cannot find 'SynchronizedCredentialAccess' in scope
+ 638 |         )
+ 639 |         let preparation = try await committedPreparation(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:642:20: error: cannot infer contextual base in reference to member 'generic'
+ 640 |             coordinator: coordinator,
+ 641 |             accounts: accounts,
+ 642 |             flow: .generic
+     |                    `- error: cannot infer contextual base in reference to member 'generic'
+ 643 |         )
+ 644 |         let generic = try oauthBundle(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:645:20: error: cannot infer contextual base in reference to member 'generic'
+ 643 |         )
+ 644 |         let generic = try oauthBundle(
+ 645 |             flow: .generic,
+     |                    `- error: cannot infer contextual base in reference to member 'generic'
+ 646 |             access: "generic-access",
+ 647 |             refresh: nil,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:647:22: error: 'nil' requires a contextual type
+ 645 |             flow: .generic,
+ 646 |             access: "generic-access",
+ 647 |             refresh: nil,
+     |                      `- error: 'nil' requires a contextual type
+ 648 |             id: nil,
+ 649 |             accountID: nil
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:648:17: error: 'nil' requires a contextual type
+ 646 |             access: "generic-access",
+ 647 |             refresh: nil,
+ 648 |             id: nil,
+     |                 `- error: 'nil' requires a contextual type
+ 649 |             accountID: nil
+ 650 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:649:24: error: 'nil' requires a contextual type
+ 647 |             refresh: nil,
+ 648 |             id: nil,
+ 649 |             accountID: nil
+     |                        `- error: 'nil' requires a contextual type
+ 650 |         )
+ 651 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:655:33: error: cannot infer contextual base in reference to member 'allow'
+ 653 |             generic,
+ 654 |             basedOn: preparation,
+ 655 |             interactionPolicy: .allow
+     |                                 `- error: cannot infer contextual base in reference to member 'allow'
+ 656 |         )
+ 657 |         #expect(receipt.mutationCount == 6)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:678:22: error: cannot find 'SynchronizedCredentialAccess' in scope
+ 676 |             accounts.accountID: "account-old",
+ 677 |         ])
+ 678 |         let access = SynchronizedCredentialAccess(store: store)
+     |                      `- error: cannot find 'SynchronizedCredentialAccess' in scope
+ 679 |         let coordinator = CredentialBundleCoordinator(access: access)
+ 680 |         let preparation = try await committedPreparation(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:679:27: error: cannot find 'CredentialBundleCoordinator' in scope
+ 677 |         ])
+ 678 |         let access = SynchronizedCredentialAccess(store: store)
+ 679 |         let coordinator = CredentialBundleCoordinator(access: access)
+     |                           `- error: cannot find 'CredentialBundleCoordinator' in scope
+ 680 |         let preparation = try await committedPreparation(
+ 681 |             coordinator: coordinator,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:686:14: error: cannot infer contextual base in reference to member 'set'
+ 684 |         store.resetAudit()
+ 685 |         store.injectFailure(
+ 686 |             .set,
+     |              `- error: cannot infer contextual base in reference to member 'set'
+ 687 |             account: accounts.refresh,
+ 688 |             status: primaryStatus
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:691:14: error: cannot infer contextual base in reference to member 'set'
+ 689 |         )
+ 690 |         store.injectFailure(
+ 691 |             .set,
+     |              `- error: cannot infer contextual base in reference to member 'set'
+ 692 |             account: accounts.access,
+ 693 |             occurrence: 2,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:698:21: error: cannot find 'CredentialBundleError' in scope
+ 696 | 
+ 697 |         await #expect(
+ 698 |             throws: CredentialBundleError.rollback(
+     |                     `- error: cannot find 'CredentialBundleError' in scope
+ 699 |                 flow: .chatGPT,
+ 700 |                 status: rollbackStatus
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:699:24: error: cannot infer contextual base in reference to member 'chatGPT'
+ 697 |         await #expect(
+ 698 |             throws: CredentialBundleError.rollback(
+ 699 |                 flow: .chatGPT,
+     |                        `- error: cannot infer contextual base in reference to member 'chatGPT'
+ 700 |                 status: rollbackStatus
+ 701 |             )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:711:37: error: cannot infer contextual base in reference to member 'allow'
+ 709 |                 ),
+ 710 |                 basedOn: preparation,
+ 711 |                 interactionPolicy: .allow
+     |                                     `- error: cannot infer contextual base in reference to member 'allow'
+ 712 |             )
+ 713 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:728:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 726 |             try access.readOAuthCredentials(
+ 727 |                 accounts: accounts,
+ 728 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 729 |             )
+ 730 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:746:27: error: cannot find 'CredentialBundleCoordinator' in scope
+ 744 |             accounts.accountID: "account-old",
+ 745 |         ])
+ 746 |         let coordinator = CredentialBundleCoordinator(
+     |                           `- error: cannot find 'CredentialBundleCoordinator' in scope
+ 747 |             access: SynchronizedCredentialAccess(store: store)
+ 748 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:747:21: error: cannot find 'SynchronizedCredentialAccess' in scope
+ 745 |         ])
+ 746 |         let coordinator = CredentialBundleCoordinator(
+ 747 |             access: SynchronizedCredentialAccess(store: store)
+     |                     `- error: cannot find 'SynchronizedCredentialAccess' in scope
+ 748 |         )
+ 749 |         let read = try #require(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:752:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 750 |             try await coordinator.readRefreshCredential(
+ 751 |                 accounts: accounts,
+ 752 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 753 |             )
+ 754 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:756:30: error: cannot infer contextual base in reference to member 'set'
+ 754 |         )
+ 755 |         store.resetAudit()
+ 756 |         store.injectFailure(.set, account: accounts.id, status: primaryStatus)
+     |                              `- error: cannot infer contextual base in reference to member 'set'
+ 757 |         store.injectFailure(
+ 758 |             .set,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:758:14: error: cannot infer contextual base in reference to member 'set'
+ 756 |         store.injectFailure(.set, account: accounts.id, status: primaryStatus)
+ 757 |         store.injectFailure(
+ 758 |             .set,
+     |              `- error: cannot infer contextual base in reference to member 'set'
+ 759 |             account: accounts.refresh,
+ 760 |             occurrence: 2,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:765:21: error: cannot find 'CredentialBundleError' in scope
+ 763 | 
+ 764 |         await #expect(
+ 765 |             throws: CredentialBundleError.rollback(
+     |                     `- error: cannot find 'CredentialBundleError' in scope
+ 766 |                 flow: .chatGPT,
+ 767 |                 status: rollbackStatus
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:766:24: error: cannot infer contextual base in reference to member 'chatGPT'
+ 764 |         await #expect(
+ 765 |             throws: CredentialBundleError.rollback(
+ 766 |                 flow: .chatGPT,
+     |                        `- error: cannot infer contextual base in reference to member 'chatGPT'
+ 767 |                 status: rollbackStatus
+ 768 |             )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:778:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 776 |                 ),
+ 777 |                 basedOn: read,
+ 778 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 779 |             )
+ 780 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:793:49: error: cannot find 'SecretValue' in scope
+ 791 | 
+ 792 |     do {
+ 793 |         #expect(throws: (any Error).self) { try SecretValue("") }
+     |                                                 `- error: cannot find 'SecretValue' in scope
+ 794 |         #expect(throws: (any Error).self) { try SecretValue(" \n\t") }
+ 795 |         let exact = try SecretValue(" current-state ")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:794:49: error: cannot find 'SecretValue' in scope
+ 792 |     do {
+ 793 |         #expect(throws: (any Error).self) { try SecretValue("") }
+ 794 |         #expect(throws: (any Error).self) { try SecretValue(" \n\t") }
+     |                                                 `- error: cannot find 'SecretValue' in scope
+ 795 |         let exact = try SecretValue(" current-state ")
+ 796 |         let same = try #require(SecretValue.validated(" current-state "))
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:795:25: error: cannot find 'SecretValue' in scope
+ 793 |         #expect(throws: (any Error).self) { try SecretValue("") }
+ 794 |         #expect(throws: (any Error).self) { try SecretValue(" \n\t") }
+ 795 |         let exact = try SecretValue(" current-state ")
+     |                         `- error: cannot find 'SecretValue' in scope
+ 796 |         let same = try #require(SecretValue.validated(" current-state "))
+ 797 |         let trimmed = try #require(SecretValue.validated("current-state"))
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:796:33: error: cannot find 'SecretValue' in scope
+ 794 |         #expect(throws: (any Error).self) { try SecretValue(" \n\t") }
+ 795 |         let exact = try SecretValue(" current-state ")
+ 796 |         let same = try #require(SecretValue.validated(" current-state "))
+     |                                 `- error: cannot find 'SecretValue' in scope
+ 797 |         let trimmed = try #require(SecretValue.validated("current-state"))
+ 798 |         #expect(exact.constantTimeEquals(same))
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:797:36: error: cannot find 'SecretValue' in scope
+ 795 |         let exact = try SecretValue(" current-state ")
+ 796 |         let same = try #require(SecretValue.validated(" current-state "))
+ 797 |         let trimmed = try #require(SecretValue.validated("current-state"))
+     |                                    `- error: cannot find 'SecretValue' in scope
+ 798 |         #expect(exact.constantTimeEquals(same))
+ 799 |         #expect(exact == same)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:807:29: error: cannot find 'SynchronizedCredentialAccess' in scope
+ 805 | 
+ 806 |         let invalidStore = MemoryCredentialStore()
+ 807 |         let invalidAccess = SynchronizedCredentialAccess(store: invalidStore)
+     |                             `- error: cannot find 'SynchronizedCredentialAccess' in scope
+ 808 |         let empty = OAuthCredentialAccounts(
+ 809 |             access: "",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:808:21: error: cannot find 'OAuthCredentialAccounts' in scope
+ 806 |         let invalidStore = MemoryCredentialStore()
+ 807 |         let invalidAccess = SynchronizedCredentialAccess(store: invalidStore)
+ 808 |         let empty = OAuthCredentialAccounts(
+     |                     `- error: cannot find 'OAuthCredentialAccounts' in scope
+ 809 |             access: "",
+ 810 |             refresh: "refresh",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:818:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 816 |             try invalidAccess.readOAuthCredentials(
+ 817 |                 accounts: empty,
+ 818 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 819 |             )
+ 820 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:821:25: error: cannot find 'OAuthCredentialAccounts' in scope
+ 819 |             )
+ 820 |         }
+ 821 |         let duplicate = OAuthCredentialAccounts(
+     |                         `- error: cannot find 'OAuthCredentialAccounts' in scope
+ 822 |             access: "same",
+ 823 |             refresh: "same",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:831:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 829 |             try invalidAccess.readOAuthCredentials(
+ 830 |                 accounts: duplicate,
+ 831 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 832 |             )
+ 833 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:845:22: error: cannot find 'SynchronizedCredentialAccess' in scope
+ 843 |             accounts.accountID: "account-old",
+ 844 |         ])
+ 845 |         let access = SynchronizedCredentialAccess(store: store)
+     |                      `- error: cannot find 'SynchronizedCredentialAccess' in scope
+ 846 |         let coordinatorA = CredentialBundleCoordinator(access: access)
+ 847 |         let coordinatorB = CredentialBundleCoordinator(access: access)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:846:28: error: cannot find 'CredentialBundleCoordinator' in scope
+ 844 |         ])
+ 845 |         let access = SynchronizedCredentialAccess(store: store)
+ 846 |         let coordinatorA = CredentialBundleCoordinator(access: access)
+     |                            `- error: cannot find 'CredentialBundleCoordinator' in scope
+ 847 |         let coordinatorB = CredentialBundleCoordinator(access: access)
+ 848 |         let read = try #require(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:847:28: error: cannot find 'CredentialBundleCoordinator' in scope
+ 845 |         let access = SynchronizedCredentialAccess(store: store)
+ 846 |         let coordinatorA = CredentialBundleCoordinator(access: access)
+ 847 |         let coordinatorB = CredentialBundleCoordinator(access: access)
+     |                            `- error: cannot find 'CredentialBundleCoordinator' in scope
+ 848 |         let read = try #require(
+ 849 |             try await coordinatorA.readRefreshCredential(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:851:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 849 |             try await coordinatorA.readRefreshCredential(
+ 850 |                 accounts: accounts,
+ 851 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 852 |             )
+ 853 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:856:21: error: cannot find 'CredentialBundleError' in scope
+ 854 |         store.resetAudit()
+ 855 |         await #expect(
+ 856 |             throws: CredentialBundleError.preimageChanged(flow: .chatGPT)
+     |                     `- error: cannot find 'CredentialBundleError' in scope
+ 857 |         ) {
+ 858 |             try await coordinatorB.commitRefresh(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:856:66: error: cannot infer contextual base in reference to member 'chatGPT'
+ 854 |         store.resetAudit()
+ 855 |         await #expect(
+ 856 |             throws: CredentialBundleError.preimageChanged(flow: .chatGPT)
+     |                                                                  `- error: cannot infer contextual base in reference to member 'chatGPT'
+ 857 |         ) {
+ 858 |             try await coordinatorB.commitRefresh(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:861:30: error: 'nil' requires a contextual type
+ 859 |                 oauthBundle(
+ 860 |                     access: "access-new",
+ 861 |                     refresh: nil,
+     |                              `- error: 'nil' requires a contextual type
+ 862 |                     id: nil,
+ 863 |                     accountID: nil
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:862:25: error: 'nil' requires a contextual type
+ 860 |                     access: "access-new",
+ 861 |                     refresh: nil,
+ 862 |                     id: nil,
+     |                         `- error: 'nil' requires a contextual type
+ 863 |                     accountID: nil
+ 864 |                 ),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:863:32: error: 'nil' requires a contextual type
+ 861 |                     refresh: nil,
+ 862 |                     id: nil,
+ 863 |                     accountID: nil
+     |                                `- error: 'nil' requires a contextual type
+ 864 |                 ),
+ 865 |                 basedOn: read,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:866:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 864 |                 ),
+ 865 |                 basedOn: read,
+ 866 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 867 |             )
+ 868 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:872:21: error: cannot find 'CredentialBundleError' in scope
+ 870 | 
+ 871 |         await #expect(
+ 872 |             throws: CredentialBundleError.preimageChanged(flow: .chatGPT)
+     |                     `- error: cannot find 'CredentialBundleError' in scope
+ 873 |         ) {
+ 874 |             try await coordinatorA.commitRefresh(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:872:66: error: cannot infer contextual base in reference to member 'chatGPT'
+ 870 | 
+ 871 |         await #expect(
+ 872 |             throws: CredentialBundleError.preimageChanged(flow: .chatGPT)
+     |                                                                  `- error: cannot infer contextual base in reference to member 'chatGPT'
+ 873 |         ) {
+ 874 |             try await coordinatorA.commitRefresh(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:876:28: error: cannot infer contextual base in reference to member 'generic'
+ 874 |             try await coordinatorA.commitRefresh(
+ 875 |                 oauthBundle(
+ 876 |                     flow: .generic,
+     |                            `- error: cannot infer contextual base in reference to member 'generic'
+ 877 |                     access: "access-new",
+ 878 |                     refresh: nil,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:878:30: error: 'nil' requires a contextual type
+ 876 |                     flow: .generic,
+ 877 |                     access: "access-new",
+ 878 |                     refresh: nil,
+     |                              `- error: 'nil' requires a contextual type
+ 879 |                     id: nil,
+ 880 |                     accountID: nil
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:879:25: error: 'nil' requires a contextual type
+ 877 |                     access: "access-new",
+ 878 |                     refresh: nil,
+ 879 |                     id: nil,
+     |                         `- error: 'nil' requires a contextual type
+ 880 |                     accountID: nil
+ 881 |                 ),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:880:32: error: 'nil' requires a contextual type
+ 878 |                     refresh: nil,
+ 879 |                     id: nil,
+ 880 |                     accountID: nil
+     |                                `- error: 'nil' requires a contextual type
+ 881 |                 ),
+ 882 |                 basedOn: read,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:883:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 881 |                 ),
+ 882 |                 basedOn: read,
+ 883 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 884 |             )
+ 885 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:894:21: error: cannot find 'CredentialBundleError' in scope
+ 892 |         store.resetAudit()
+ 893 |         await #expect(
+ 894 |             throws: CredentialBundleError.preimageChanged(flow: .chatGPT)
+     |                     `- error: cannot find 'CredentialBundleError' in scope
+ 895 |         ) {
+ 896 |             try await coordinatorB.commitInitial(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:894:66: error: cannot infer contextual base in reference to member 'chatGPT'
+ 892 |         store.resetAudit()
+ 893 |         await #expect(
+ 894 |             throws: CredentialBundleError.preimageChanged(flow: .chatGPT)
+     |                                                                  `- error: cannot infer contextual base in reference to member 'chatGPT'
+ 895 |         ) {
+ 896 |             try await coordinatorB.commitInitial(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:899:30: error: 'nil' requires a contextual type
+ 897 |                 oauthBundle(
+ 898 |                     access: "access-new",
+ 899 |                     refresh: nil,
+     |                              `- error: 'nil' requires a contextual type
+ 900 |                     id: nil,
+ 901 |                     accountID: "account-new"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:900:25: error: 'nil' requires a contextual type
+ 898 |                     access: "access-new",
+ 899 |                     refresh: nil,
+ 900 |                     id: nil,
+     |                         `- error: 'nil' requires a contextual type
+ 901 |                     accountID: "account-new"
+ 902 |                 ),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:904:37: error: cannot infer contextual base in reference to member 'allow'
+ 902 |                 ),
+ 903 |                 basedOn: preparation,
+ 904 |                 interactionPolicy: .allow
+     |                                     `- error: cannot infer contextual base in reference to member 'allow'
+ 905 |             )
+ 906 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:912:26: error: cannot find 'CredentialStoreBackendNamespace' in scope
+ 910 |     do {
+ 911 |         let accounts = oauthCredentialAccounts(suffix: "namespace")
+ 912 |         let namespaceA = CredentialStoreBackendNamespace.isolated(UUID())
+     |                          `- error: cannot find 'CredentialStoreBackendNamespace' in scope
+ 913 |         let namespaceB = CredentialStoreBackendNamespace.isolated(UUID())
+ 914 |         let values = [
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:913:26: error: cannot find 'CredentialStoreBackendNamespace' in scope
+ 911 |         let accounts = oauthCredentialAccounts(suffix: "namespace")
+ 912 |         let namespaceA = CredentialStoreBackendNamespace.isolated(UUID())
+ 913 |         let namespaceB = CredentialStoreBackendNamespace.isolated(UUID())
+     |                          `- error: cannot find 'CredentialStoreBackendNamespace' in scope
+ 914 |         let values = [
+ 915 |             accounts.access: "access-old",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:920:28: error: cannot find 'CredentialBundleCoordinator' in scope
+ 918 |         let storeA = MemoryCredentialStore(values, backendNamespace: namespaceA)
+ 919 |         let storeB = MemoryCredentialStore(values, backendNamespace: namespaceB)
+ 920 |         let coordinatorA = CredentialBundleCoordinator(
+     |                            `- error: cannot find 'CredentialBundleCoordinator' in scope
+ 921 |             access: SynchronizedCredentialAccess(store: storeA)
+ 922 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:921:21: error: cannot find 'SynchronizedCredentialAccess' in scope
+ 919 |         let storeB = MemoryCredentialStore(values, backendNamespace: namespaceB)
+ 920 |         let coordinatorA = CredentialBundleCoordinator(
+ 921 |             access: SynchronizedCredentialAccess(store: storeA)
+     |                     `- error: cannot find 'SynchronizedCredentialAccess' in scope
+ 922 |         )
+ 923 |         let coordinatorB = CredentialBundleCoordinator(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:923:28: error: cannot find 'CredentialBundleCoordinator' in scope
+ 921 |             access: SynchronizedCredentialAccess(store: storeA)
+ 922 |         )
+ 923 |         let coordinatorB = CredentialBundleCoordinator(
+     |                            `- error: cannot find 'CredentialBundleCoordinator' in scope
+ 924 |             access: SynchronizedCredentialAccess(store: storeB)
+ 925 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:924:21: error: cannot find 'SynchronizedCredentialAccess' in scope
+ 922 |         )
+ 923 |         let coordinatorB = CredentialBundleCoordinator(
+ 924 |             access: SynchronizedCredentialAccess(store: storeB)
+     |                     `- error: cannot find 'SynchronizedCredentialAccess' in scope
+ 925 |         )
+ 926 |         let readA = try #require(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:929:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 927 |             try await coordinatorA.readRefreshCredential(
+ 928 |                 accounts: accounts,
+ 929 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 930 |             )
+ 931 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:935:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 933 |             try await coordinatorB.readRefreshCredential(
+ 934 |                 accounts: accounts,
+ 935 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 936 |             )
+ 937 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:941:26: error: 'nil' requires a contextual type
+ 939 |             oauthBundle(
+ 940 |                 access: "access-a",
+ 941 |                 refresh: nil,
+     |                          `- error: 'nil' requires a contextual type
+ 942 |                 id: nil,
+ 943 |                 accountID: nil
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:942:21: error: 'nil' requires a contextual type
+ 940 |                 access: "access-a",
+ 941 |                 refresh: nil,
+ 942 |                 id: nil,
+     |                     `- error: 'nil' requires a contextual type
+ 943 |                 accountID: nil
+ 944 |             ),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:943:28: error: 'nil' requires a contextual type
+ 941 |                 refresh: nil,
+ 942 |                 id: nil,
+ 943 |                 accountID: nil
+     |                            `- error: 'nil' requires a contextual type
+ 944 |             ),
+ 945 |             basedOn: readA,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:946:33: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 944 |             ),
+ 945 |             basedOn: readA,
+ 946 |             interactionPolicy: .failIfInteractionRequired
+     |                                 `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 947 |         )
+ 948 |         _ = try await coordinatorB.commitRefresh(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:951:26: error: 'nil' requires a contextual type
+ 949 |             oauthBundle(
+ 950 |                 access: "access-b",
+ 951 |                 refresh: nil,
+     |                          `- error: 'nil' requires a contextual type
+ 952 |                 id: nil,
+ 953 |                 accountID: nil
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:952:21: error: 'nil' requires a contextual type
+ 950 |                 access: "access-b",
+ 951 |                 refresh: nil,
+ 952 |                 id: nil,
+     |                     `- error: 'nil' requires a contextual type
+ 953 |                 accountID: nil
+ 954 |             ),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:953:28: error: 'nil' requires a contextual type
+ 951 |                 refresh: nil,
+ 952 |                 id: nil,
+ 953 |                 accountID: nil
+     |                            `- error: 'nil' requires a contextual type
+ 954 |             ),
+ 955 |             basedOn: readB,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:956:33: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 954 |             ),
+ 955 |             basedOn: readB,
+ 956 |             interactionPolicy: .failIfInteractionRequired
+     |                                 `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 957 |         )
+ 958 |         #expect(storeA.rawValue(account: accounts.access) == "access-a")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:961:49: error: value of type 'KeychainStore' has no member 'backendNamespace'
+ 959 |         #expect(storeB.rawValue(account: accounts.access) == "access-b")
+ 960 |         #expect(
+ 961 |             KeychainStore(service: "service-a").backendNamespace
+     |                                                 `- error: value of type 'KeychainStore' has no member 'backendNamespace'
+ 962 |                 == KeychainStore(service: "service-a").backendNamespace
+ 963 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:962:56: error: value of type 'KeychainStore' has no member 'backendNamespace'
+ 960 |         #expect(
+ 961 |             KeychainStore(service: "service-a").backendNamespace
+ 962 |                 == KeychainStore(service: "service-a").backendNamespace
+     |                                                        `- error: value of type 'KeychainStore' has no member 'backendNamespace'
+ 963 |         )
+ 964 |         #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:965:49: error: value of type 'KeychainStore' has no member 'backendNamespace'
+ 963 |         )
+ 964 |         #expect(
+ 965 |             KeychainStore(service: "service-a").backendNamespace
+     |                                                 `- error: value of type 'KeychainStore' has no member 'backendNamespace'
+ 966 |                 != KeychainStore(service: "service-b").backendNamespace
+ 967 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:966:56: error: value of type 'KeychainStore' has no member 'backendNamespace'
+ 964 |         #expect(
+ 965 |             KeychainStore(service: "service-a").backendNamespace
+ 966 |                 != KeychainStore(service: "service-b").backendNamespace
+     |                                                        `- error: value of type 'KeychainStore' has no member 'backendNamespace'
+ 967 |         )
+ 968 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:697:9: warning: no 'async' operations occur within 'await' expression
+ 695 |         )
+ 696 | 
+ 697 |         await #expect(
+     |         `- warning: no 'async' operations occur within 'await' expression
+ 698 |             throws: CredentialBundleError.rollback(
+ 699 |                 flow: .chatGPT,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:714:24: warning: no calls to throwing functions occur within 'try' expression
+ 712 |             )
+ 713 |         }
+ 714 |         let envelope = try #require(
+     |                        `- warning: no calls to throwing functions occur within 'try' expression
+ 715 |             store.rawValue(account: accounts.verifier)
+ 716 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:749:20: warning: no calls to throwing functions occur within 'try' expression
+ 747 |             access: SynchronizedCredentialAccess(store: store)
+ 748 |         )
+ 749 |         let read = try #require(
+     |                    `- warning: no calls to throwing functions occur within 'try' expression
+ 750 |             try await coordinator.readRefreshCredential(
+ 751 |                 accounts: accounts,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:764:9: warning: no 'async' operations occur within 'await' expression
+ 762 |         )
+ 763 | 
+ 764 |         await #expect(
+     |         `- warning: no 'async' operations occur within 'await' expression
+ 765 |             throws: CredentialBundleError.rollback(
+ 766 |                 flow: .chatGPT,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:781:24: warning: no calls to throwing functions occur within 'try' expression
+ 779 |             )
+ 780 |         }
+ 781 |         let envelope = try #require(
+     |                        `- warning: no calls to throwing functions occur within 'try' expression
+ 782 |             store.rawValue(account: accounts.verifier)
+ 783 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:796:20: warning: no calls to throwing functions occur within 'try' expression
+ 794 |         #expect(throws: (any Error).self) { try SecretValue(" \n\t") }
+ 795 |         let exact = try SecretValue(" current-state ")
+ 796 |         let same = try #require(SecretValue.validated(" current-state "))
+     |                    `- warning: no calls to throwing functions occur within 'try' expression
+ 797 |         let trimmed = try #require(SecretValue.validated("current-state"))
+ 798 |         #expect(exact.constantTimeEquals(same))
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:797:23: warning: no calls to throwing functions occur within 'try' expression
+ 795 |         let exact = try SecretValue(" current-state ")
+ 796 |         let same = try #require(SecretValue.validated(" current-state "))
+ 797 |         let trimmed = try #require(SecretValue.validated("current-state"))
+     |                       `- warning: no calls to throwing functions occur within 'try' expression
+ 798 |         #expect(exact.constantTimeEquals(same))
+ 799 |         #expect(exact == same)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:848:20: warning: no calls to throwing functions occur within 'try' expression
+ 846 |         let coordinatorA = CredentialBundleCoordinator(access: access)
+ 847 |         let coordinatorB = CredentialBundleCoordinator(access: access)
+ 848 |         let read = try #require(
+     |                    `- warning: no calls to throwing functions occur within 'try' expression
+ 849 |             try await coordinatorA.readRefreshCredential(
+ 850 |                 accounts: accounts,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:855:9: warning: no 'async' operations occur within 'await' expression
+ 853 |         )
+ 854 |         store.resetAudit()
+ 855 |         await #expect(
+     |         `- warning: no 'async' operations occur within 'await' expression
+ 856 |             throws: CredentialBundleError.preimageChanged(flow: .chatGPT)
+ 857 |         ) {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:871:9: warning: no 'async' operations occur within 'await' expression
+ 869 |         #expect(store.recordedCalls.isEmpty)
+ 870 | 
+ 871 |         await #expect(
+     |         `- warning: no 'async' operations occur within 'await' expression
+ 872 |             throws: CredentialBundleError.preimageChanged(flow: .chatGPT)
+ 873 |         ) {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:893:9: warning: no 'async' operations occur within 'await' expression
+ 891 |         )
+ 892 |         store.resetAudit()
+ 893 |         await #expect(
+     |         `- warning: no 'async' operations occur within 'await' expression
+ 894 |             throws: CredentialBundleError.preimageChanged(flow: .chatGPT)
+ 895 |         ) {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:982:27: error: cannot find 'CredentialBundleCoordinator' in scope
+ 980 |             accounts.accountID: "account-old",
+ 981 |         ])
+ 982 |         let coordinator = CredentialBundleCoordinator(
+     |                           `- error: cannot find 'CredentialBundleCoordinator' in scope
+ 983 |             access: SynchronizedCredentialAccess(store: store)
+ 984 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:983:21: error: cannot find 'SynchronizedCredentialAccess' in scope
+ 981 |         ])
+ 982 |         let coordinator = CredentialBundleCoordinator(
+ 983 |             access: SynchronizedCredentialAccess(store: store)
+     |                     `- error: cannot find 'SynchronizedCredentialAccess' in scope
+ 984 |         )
+ 985 |         let read = try #require(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:988:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 986 |             try await coordinator.readRefreshCredential(
+ 987 |                 accounts: accounts,
+ 988 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 989 |             )
+ 990 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:993:30: error: cannot infer contextual base in reference to member 'delete'
+ 991 |         let before = store.snapshot
+ 992 |         store.resetAudit()
+ 993 |         store.injectFailure(.delete, account: accounts.access, status: status)
+     |                              `- error: cannot infer contextual base in reference to member 'delete'
+ 994 | 
+ 995 |         await #expect(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:996:21: error: cannot find 'CredentialBundleError' in scope
+ 994 | 
+ 995 |         await #expect(
+ 996 |             throws: CredentialBundleError.unauthorizedDelete(status: status)
+     |                     `- error: cannot find 'CredentialBundleError' in scope
+ 997 |         ) {
+ 998 |             try await coordinator.deleteUnauthorizedAccess(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1000:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+ 998 |             try await coordinator.deleteUnauthorizedAccess(
+ 999 |                 basedOn: read,
+1000 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+1001 |             )
+1002 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1021:30: error: cannot infer contextual base in reference to member 'delete'
+1019 |             accounts.accountID: "account-old",
+1020 |         ])
+1021 |         store.injectFailure(.delete, account: accounts.access, status: status)
+     |                              `- error: cannot infer contextual base in reference to member 'delete'
+1022 |         let access = SynchronizedCredentialAccess(store: store)
+1023 |         let coordinator = CredentialBundleCoordinator(access: access)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1022:22: error: cannot find 'SynchronizedCredentialAccess' in scope
+1020 |         ])
+1021 |         store.injectFailure(.delete, account: accounts.access, status: status)
+1022 |         let access = SynchronizedCredentialAccess(store: store)
+     |                      `- error: cannot find 'SynchronizedCredentialAccess' in scope
+1023 |         let coordinator = CredentialBundleCoordinator(access: access)
+1024 |         let writer = OAuthRecordingFailureWriter()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1023:27: error: cannot find 'CredentialBundleCoordinator' in scope
+1021 |         store.injectFailure(.delete, account: accounts.access, status: status)
+1022 |         let access = SynchronizedCredentialAccess(store: store)
+1023 |         let coordinator = CredentialBundleCoordinator(access: access)
+     |                           `- error: cannot find 'CredentialBundleCoordinator' in scope
+1024 |         let writer = OAuthRecordingFailureWriter()
+1025 |         let sink = OAuthRecordingFailureLogSink()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1041:41: error: extra arguments at positions #1, #2, #3, #4 in call
+1039 |         let configuration = URLSessionConfiguration.ephemeral
+1040 |         configuration.protocolClasses = [OAuthInvalidGrantProtocol.self]
+1041 |         let session = OpenAIOAuthSession(
+     |                                         `- error: extra arguments at positions #1, #2, #3, #4 in call
+1042 |             coordinator: coordinator,
+1043 |             accounts: accounts,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Provider/OpenAIOAuthSession.swift:20:12: note: 'init(store:accessTokenAccount:refreshTokenAccount:idTokenAccount:chatGPTAccountIDAccount:tokenEndpoint:session:onPermanentFailure:)' declared here
+ 18 |     private var inFlight: Task<String, Error>?
+ 19 | 
+ 20 |     public init(
+    |            `- note: 'init(store:accessTokenAccount:refreshTokenAccount:idTokenAccount:chatGPTAccountIDAccount:tokenEndpoint:session:onPermanentFailure:)' declared here
+ 21 |         store: any CredentialStore,
+ 22 |         accessTokenAccount: String,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1041:41: error: missing arguments for parameters 'store', 'accessTokenAccount', 'refreshTokenAccount', 'idTokenAccount', 'chatGPTAccountIDAccount' in call
+1039 |         let configuration = URLSessionConfiguration.ephemeral
+1040 |         configuration.protocolClasses = [OAuthInvalidGrantProtocol.self]
+1041 |         let session = OpenAIOAuthSession(
+     |                                         `- error: missing arguments for parameters 'store', 'accessTokenAccount', 'refreshTokenAccount', 'idTokenAccount', 'chatGPTAccountIDAccount' in call
+1042 |             coordinator: coordinator,
+1043 |             accounts: accounts,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopCore/Provider/OpenAIOAuthSession.swift:20:12: note: 'init(store:accessTokenAccount:refreshTokenAccount:idTokenAccount:chatGPTAccountIDAccount:tokenEndpoint:session:onPermanentFailure:)' declared here
+ 18 |     private var inFlight: Task<String, Error>?
+ 19 | 
+ 20 |     public init(
+    |            `- note: 'init(store:accessTokenAccount:refreshTokenAccount:idTokenAccount:chatGPTAccountIDAccount:tokenEndpoint:session:onPermanentFailure:)' declared here
+ 21 |         store: any CredentialStore,
+ 22 |         accessTokenAccount: String,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1052:21: error: cannot find 'CredentialBundleError' in scope
+1050 | 
+1051 |         await #expect(
+1052 |             throws: CredentialBundleError.unauthorizedDelete(status: status)
+     |                     `- error: cannot find 'CredentialBundleError' in scope
+1053 |         ) {
+1054 |             try await session.refreshedAccessToken()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1076:27: error: cannot find 'CredentialBundleCoordinator' in scope
+1074 |             accounts.refresh: "refresh-old",
+1075 |         ])
+1076 |         let coordinator = CredentialBundleCoordinator(
+     |                           `- error: cannot find 'CredentialBundleCoordinator' in scope
+1077 |             access: SynchronizedCredentialAccess(store: store)
+1078 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1077:21: error: cannot find 'SynchronizedCredentialAccess' in scope
+1075 |         ])
+1076 |         let coordinator = CredentialBundleCoordinator(
+1077 |             access: SynchronizedCredentialAccess(store: store)
+     |                     `- error: cannot find 'SynchronizedCredentialAccess' in scope
+1078 |         )
+1079 |         let oldRead = try #require(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1082:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+1080 |             try await coordinator.readRefreshCredential(
+1081 |                 accounts: accounts,
+1082 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+1083 |             )
+1084 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1088:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+1086 |             try await coordinator.readRefreshCredential(
+1087 |                 accounts: accounts,
+1088 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+1089 |             )
+1090 |         )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1095:21: error: 'nil' requires a contextual type
+1093 |                 access: "access-winner",
+1094 |                 refresh: "refresh-winner",
+1095 |                 id: nil,
+     |                     `- error: 'nil' requires a contextual type
+1096 |                 accountID: nil
+1097 |             ),
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1096:28: error: 'nil' requires a contextual type
+1094 |                 refresh: "refresh-winner",
+1095 |                 id: nil,
+1096 |                 accountID: nil
+     |                            `- error: 'nil' requires a contextual type
+1097 |             ),
+1098 |             basedOn: winningRead,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1099:33: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+1097 |             ),
+1098 |             basedOn: winningRead,
+1099 |             interactionPolicy: .failIfInteractionRequired
+     |                                 `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+1100 |         )
+1101 |         store.resetAudit()
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1103:21: error: cannot find 'CredentialBundleError' in scope
+1101 |         store.resetAudit()
+1102 |         await #expect(
+1103 |             throws: CredentialBundleError.preimageChanged(flow: .chatGPT)
+     |                     `- error: cannot find 'CredentialBundleError' in scope
+1104 |         ) {
+1105 |             try await coordinator.deleteUnauthorizedAccess(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1103:66: error: cannot infer contextual base in reference to member 'chatGPT'
+1101 |         store.resetAudit()
+1102 |         await #expect(
+1103 |             throws: CredentialBundleError.preimageChanged(flow: .chatGPT)
+     |                                                                  `- error: cannot infer contextual base in reference to member 'chatGPT'
+1104 |         ) {
+1105 |             try await coordinator.deleteUnauthorizedAccess(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:1107:37: error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+1105 |             try await coordinator.deleteUnauthorizedAccess(
+1106 |                 basedOn: oldRead,
+1107 |                 interactionPolicy: .failIfInteractionRequired
+     |                                     `- error: cannot infer contextual base in reference to member 'failIfInteractionRequired'
+1108 |             )
+1109 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/OpenAIOAuthSessionTests.swift:985:20: warning: no calls to throwing functions occur within 'try' expression
+ 983 |             access: SynchronizedCredentialAccess(store: store)
+ 984 |         )
+ 985 |         let read = try #require(
+     |                    `- warning: no calls to throwing functions occur within 'try' expression
+ 986 |             try await coordinator.readRefreshCredential(
+ 987 |                 accounts: accounts,
+exit_status=1

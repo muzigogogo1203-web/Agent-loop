@@ -1,0 +1,26 @@
+FIXTURE=/private/tmp/agentloop-package-literal.Mae4xS
+==> 输出目录：/private/tmp/agentloop-package-literal.Mae4xS/run-app-literal\npath
+PASS run-app literal-path no-real-build
+==> 输出目录：/private/tmp/agentloop-package-literal.Mae4xS/package-app-literal\npath
+PASS package-app literal-path no-real-build
+FIXTURE=/tmp/agentloop-package-arguments.aVPDN3
+PASS run-app-missing-value exit=2 no-build
+PASS run-app-empty-value exit=2 no-build
+PASS run-app-following-flag exit=2 no-build
+PASS run-app-existing-dir exit=2 no-build
+PASS run-app-existing-link exit=2 no-build
+PASS run-app-dangling-link exit=2 no-build
+PASS run-app-missing-parent exit=2 no-build
+PASS run-app-positive exit=99 stub-only fresh-dir-preserved
+PASS package-app-missing-value exit=2 no-build
+PASS package-app-empty-value exit=2 no-build
+PASS package-app-following-flag exit=2 no-build
+PASS package-app-existing-dir exit=2 no-build
+PASS package-app-existing-link exit=2 no-build
+PASS package-app-dangling-link exit=2 no-build
+PASS package-app-missing-parent exit=2 no-build
+PASS package-app-positive exit=99 stub-only fresh-dir-preserved
+PASS notary-conflict exit=1 no-build no-keychain no-output
+.build/AgentLoop.app/Contents/MacOS/AgentLoop: OK
+dist/Coding 牧场.app/Contents/MacOS/AgentLoop: OK
+PASS total=17 (argument/stub checks only, no real build/signature/App evidence)

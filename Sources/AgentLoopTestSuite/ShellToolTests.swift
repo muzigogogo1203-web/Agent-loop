@@ -11,6 +11,81 @@ private func tempWorkspace() throws -> URL {
     return dir
 }
 
+private actor LoginShellStartBarrier {
+    private let participantCount: Int
+    private var arrivals = 0
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    init(participantCount: Int) {
+        self.participantCount = participantCount
+    }
+
+    func wait() async {
+        precondition(arrivals < participantCount)
+        arrivals += 1
+        if arrivals == participantCount {
+            let pending = waiters
+            waiters.removeAll()
+            for waiter in pending {
+                waiter.resume()
+            }
+            return
+        }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+}
+
+private actor LoginShellCaptureProbe {
+    private var count = 0
+    private var startWaiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseWaiters: [CheckedContinuation<Void, Never>] = []
+    private var released = false
+
+    func capture() async -> [String: String] {
+        count += 1
+        let pendingStarts = startWaiters
+        startWaiters.removeAll()
+        for waiter in pendingStarts {
+            waiter.resume()
+        }
+        await withCheckedContinuation { continuation in
+            if released {
+                continuation.resume()
+            } else {
+                releaseWaiters.append(continuation)
+            }
+        }
+        return [
+            "LOGIN_CAPTURE_MARKER": "single-flight",
+            "PATH": "/single-flight/login/bin",
+        ]
+    }
+
+    func waitUntilCaptureStarts() async {
+        if count > 0 {
+            return
+        }
+        await withCheckedContinuation { continuation in
+            startWaiters.append(continuation)
+        }
+    }
+
+    func releaseCaptures() {
+        released = true
+        let pending = releaseWaiters
+        releaseWaiters.removeAll()
+        for waiter in pending {
+            waiter.resume()
+        }
+    }
+
+    func captureCount() -> Int {
+        count
+    }
+}
+
 @Test func shellRunsCommandInWorkspaceAndReportsExitCode() async throws {
     let workspace = try tempWorkspace()
     let tool = ShellTool(workspaceRoot: workspace)
@@ -45,6 +120,7 @@ private func tempWorkspace() throws -> URL {
         timeout: .milliseconds(300),
         registry: registry
     )
+    _ = await LoginShellEnvironment.shared.environment()
     let clock = ContinuousClock()
     let started = clock.now
     let outcome = await tool.execute(input: ["command": "echo 先输出这句; sleep 30"])
@@ -83,6 +159,7 @@ private func tempWorkspace() throws -> URL {
 @Test func shellRegistryTerminateAllKillsRunning() async throws {
     let registry = ShellProcessRegistry()
     let tool = ShellTool(workspaceRoot: try tempWorkspace(), timeout: .seconds(30), registry: registry)
+    _ = await LoginShellEnvironment.shared.environment()
     let task = Task {
         await tool.execute(input: ["command": "sleep 30"])
     }
@@ -92,18 +169,51 @@ private func tempWorkspace() throws -> URL {
         try await Task.sleep(for: .milliseconds(20))
         waited += 1
     }
-    #expect(registry.activeCount == 1)
+    guard registry.activeCount == 1 else {
+        task.cancel()
+        _ = await task.value
+        Issue.record("expected one registered shell process")
+        return
+    }
     registry.terminateAll()  // 收哨/退出路径
     _ = await task.value
     #expect(registry.activeCount == 0)
 }
 
-@Test func loginShellEnvironmentCapturesPath() async {
-    let env = await LoginShellEnvironment.capture()
-    // 登录 shell 的 PATH 应存在且非空（本机 zsh；失败时返回空表也不崩）
-    if let path = env["PATH"] {
-        #expect(!path.isEmpty)
+@Test func loginShellEnvironmentCapturesPath() async throws {
+    let participantCount = 20
+    let startBarrier = LoginShellStartBarrier(
+        participantCount: participantCount
+    )
+    let probe = LoginShellCaptureProbe()
+    let environment = LoginShellEnvironment(capture: {
+        await probe.capture()
+    })
+    let values = await withTaskGroup(
+        of: [String: String].self,
+        returning: [[String: String]].self
+    ) { group in
+        for _ in 0..<participantCount {
+            group.addTask {
+                await startBarrier.wait()
+                return await environment.environment()
+            }
+        }
+        await probe.waitUntilCaptureStarts()
+        await probe.releaseCaptures()
+        var captured: [[String: String]] = []
+        for await value in group {
+            captured.append(value)
+        }
+        return captured
     }
+    let count = await probe.captureCount()
+    let first = try #require(values.first)
+    #expect(count == 1)
+    #expect(values.count == participantCount)
+    #expect(first["PATH"] == "/single-flight/login/bin")
+    #expect(first["LOGIN_CAPTURE_MARKER"] == "single-flight")
+    #expect(values.allSatisfy { $0 == first })
 }
 
 @Test func dangerousShellSuspendsUnderStandardAutonomy() async throws {
@@ -117,19 +227,34 @@ private func tempWorkspace() throws -> URL {
         cardTitle: "t", cardDescription: "d", expectedOutput: "e",
         assigneeId: nil, maxTurns: 5, workspacePath: workspace.path
     )
-    let mock = MockProvider(script: [
-        TurnResult(content: [.toolUse(id: "s1", name: "run_shell",
-                                      input: ["command": "touch 不该出现的文件"])],
-                   stopReason: .toolUse),
-    ])
-    let runner = CardRunner(db: db, provider: mock, artifactStoreRoot: base.appendingPathComponent("a"))
-    for try await _ in try runner.run(
-        cardId: ids.cardId, companionName: "n", rolePrompt: "r", autonomy: .standard) {}
+    let shellInput: JSONValue = [
+        "command": "touch 不该出现的文件",
+    ]
+    let runId = UUID().uuidString
+    try db.startRun(cardId: ids.cardId, runId: runId)
+    let squad = try #require(try db.squad(forCard: ids.cardId))
+    let gatedShell = ApprovalGateHandler(
+        inner: ShellTool(workspaceRoot: workspace),
+        toolName: "run_shell",
+        autonomy: .standard,
+        db: db,
+        cardId: ids.cardId,
+        runId: runId,
+        campId: squad.campId
+    )
+    let outcome = await gatedShell.execute(input: shellInput)
+    guard case let .blocked(reason, detail) = outcome else {
+        Issue.record("dangerous shell must suspend for explicit approval")
+        return
+    }
 
+    #expect(reason == "needs_human_input")
+    #expect(detail == "等待你批准：跑命令")
     #expect(try db.card(id: ids.cardId)?.status == .blocked)
     #expect(!FileManager.default.fileExists(atPath: workspace.appendingPathComponent("不该出现的文件").path))
     let approvals = try await db.pool.read { database in
         try UserRequestRecord.filter(Column("cardId") == ids.cardId).fetchAll(database)
     }
+    #expect(approvals.count == 1)
     #expect(approvals.first?.kind == .approval)
 }

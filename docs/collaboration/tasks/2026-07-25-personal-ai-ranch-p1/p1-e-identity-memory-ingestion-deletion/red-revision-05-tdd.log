@@ -1,0 +1,18 @@
+P1-E Revision 05 tests-first red evidence
+shell=/bin/bash
+command=swift run RunTests --filter p1e35LegacyEventAppendScopeFirst|recordPlanningTokensSaturatesInsteadOfOverflowing|loginShellEnvironmentCapturesPath|shellRegistryTerminateAllKillsRunning|boardSocketClientDistinguishesTimeoutFromEOF|boardServerFramingForwardsToolCallsWhenSocketsAreAllowed|boardServerRejectsWrongTokenAndMismatchedCard|boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[2/5] Compiling AgentLoopTestSuite ShellToolTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ShellToolTests.swift:116:54: error: argument passed to call that takes no arguments
+114 | @Test func loginShellEnvironmentCapturesPath() async {
+115 |     let probe = LoginShellCaptureProbe()
+116 |     let environment = LoginShellEnvironment(capture: {
+    |                                                      `- error: argument passed to call that takes no arguments
+117 |         await probe.recordCapture()
+118 |         for _ in 0..<100 {
+[3/5] Emitting module AgentLoopTestSuite
+command_code=1
+tee_code=0

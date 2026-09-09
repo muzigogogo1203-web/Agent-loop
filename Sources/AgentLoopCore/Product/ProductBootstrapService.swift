@@ -18,8 +18,8 @@ public struct ProductBootstrapService: Sendable {
 extension AppDatabase {
     @discardableResult
     public func ensureCodingRanchBootstrap() throws -> CodingRanchBootstrapResult {
-        let camp = try ensureDefaultCamp()
         return try pool.write { database in
+            let camp = try Self.ensureDefaultCamp(database)
             if var guide = try CompanionRecord
                 .filter(
                     Column("campId") == camp.id
@@ -32,6 +32,11 @@ extension AppDatabase {
             }
 
             if let existingBase = try CompanionRecord.fetchOne(database, key: CowTemplate.baseCowId) {
+                _ = try CowResidencyStore.synchronizeCompanion(
+                    existingBase,
+                    provisionActiveResidency: existingBase.campId != nil,
+                    database: database
+                )
                 return CodingRanchBootstrapResult(
                     camp: camp,
                     baseCow: existingBase,
@@ -48,6 +53,11 @@ extension AppDatabase {
 
             let baseCow = CowTemplate.baseCow(campId: camp.id)
             try baseCow.insert(database)
+            _ = try CowResidencyStore.synchronizeCompanion(
+                baseCow,
+                provisionActiveResidency: true,
+                database: database
+            )
 
             try Self.appendEvent(
                 database,

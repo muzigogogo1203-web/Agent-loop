@@ -1,0 +1,73 @@
+Building for production...
+warning: '--product' cannot be used with the automatic product 'AgentLoopCore'; building the default target instead
+[0/6] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'AgentLoopCore' complete! (0.18s)
+source.a1b.suppress_recovery_failure_absent=pass
+source.a1b.debug_core_seam=pass total=1 guarded=1
+source.a1b.debug_test_seams=pass total=3 guarded=3
+source.a1b.release_debug_symbol_absent=pass
+source.a1b.planning_tasks=pass
+source.a1b.split_planning_api=pass
+source.a1b.app_planning_entry_delegation=pass
+source.a1b.planning_specialized_api_internal=pass
+source.a1b.generic_durable_work_fixture_not_planning=pass
+source.a1b.planning_ledger_owner_fileprivate=pass count=1
+source.a2.release_seam_symbols=pass matches=0 object=.build/arm64-apple-macosx/release/AgentLoopCore.build/DurableWorkSupervisor.swift.o
+source.a2.debug_guard=pass file=Sources/AgentLoopCore/Work/DurableWorkSupervisor.swift total=17 guarded=17
+source.a2.debug_guard=pass file=Sources/AgentLoopTestSuite/CodingRanchTests.swift total=13 guarded=13
+source.a2.debug_guard=pass file=Sources/AgentLoopTestSuite/DurableWorkTests.swift total=7 guarded=7
+source.a2.debug_seam_symbols=pass matches=144 object=.build/arm64-apple-macosx/debug/AgentLoopCore.build/DurableWorkSupervisor.swift.o
+source.a2.exact_41_names=pass definitions=41 green=41
+source.a2.order_anti_fake_privacy_named_gates=pass unique_function_uses=20
+source.a2.matrix_script_single_hash_delta=pass current=75c12732327ec06a3b3a69d6ff928d7909c0e170fee37067210d16f575d91d5c restored=187da197ea4b0c80e1e437a6b5c576216f7c3491696c45b0f9104a9197401467 temp=/private/tmp/agentloop-a2-matrix-script.JKh4js
+source.a2.artifact_secret_scan=pass matches=0
+source.git_diff_check=pass
+## codex/personal-ai-ranch-p0
+ M AGENTS.md
+ M CLAUDE.md
+ M Package.swift
+ M README.md
+ M Sources/AgentLoopApp/AppStore.swift
+ M Sources/AgentLoopApp/CodingRanchContracts.swift
+ M Sources/AgentLoopApp/CodingRanchStoreAdapter.swift
+ M Sources/AgentLoopApp/MissionScheduler.swift
+ M Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift
+ M Sources/AgentLoopCore/Database/AppDatabase.swift
+ M Sources/AgentLoopCore/Database/EventKind.swift
+ M Sources/AgentLoopCore/Database/ScheduleStore.swift
+ M Sources/AgentLoopCore/Ingestion/FeedService.swift
+ M Sources/AgentLoopCore/Ingestion/IngestionRecords.swift
+ M Sources/AgentLoopCore/Kernel/Orchestrator.swift
+ M Sources/AgentLoopCore/Kernel/Planner.swift
+ M Sources/AgentLoopCore/Rumination/RuminationService.swift
+ M Sources/AgentLoopTestSuite/AskUserTests.swift
+ M Sources/AgentLoopTestSuite/BudgetTests.swift
+ M Sources/AgentLoopTestSuite/CodingRanchTests.swift
+ M Sources/AgentLoopTestSuite/CrashRecoveryTests.swift
+ M Sources/AgentLoopTestSuite/DatabaseTests.swift
+ M Sources/AgentLoopTestSuite/GoldenPathTests.swift
+ M Sources/AgentLoopTestSuite/GuideChatTests.swift
+ M Sources/AgentLoopTestSuite/HaltAndCooldownTests.swift
+ M Sources/AgentLoopTestSuite/KnowledgeGoldenPathTests.swift
+ M Sources/AgentLoopTestSuite/McpTests.swift
+ M Sources/AgentLoopTestSuite/MultiCampTests.swift
+ M Sources/AgentLoopTestSuite/OrchestratorTests.swift
+ M Sources/AgentLoopTestSuite/PlannerTests.swift
+ M Sources/AgentLoopTestSuite/RuntimeProfileTests.swift
+ M Sources/AgentLoopTestSuite/ScheduleTests.swift
+ M docs/collaboration/claude-codex-protocol.md
+ M docs/superpowers/specs/2026-07-04-agentloop-macos-mvp-design.md
+ M docs/superpowers/specs/2026-07-06-agentloop-v2-design.md
+ M docs/superpowers/specs/2026-07-15-coding-ranch-visual-design.md
+?? Sources/AgentLoopCore/Database/DurableWorkStore.swift
+?? Sources/AgentLoopCore/JSON/CanonicalJSON.swift
+?? Sources/AgentLoopCore/Work/
+?? Sources/AgentLoopTestSuite/CanonicalJSONTests.swift
+?? Sources/AgentLoopTestSuite/DurablePlanningTests.swift
+?? Sources/AgentLoopTestSuite/DurableWorkTests.swift
+?? Sources/AgentLoopTestSuite/PlanningTestFixtures.swift
+?? Sources/P1MigrationMatrixRunner/
+?? docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p0/
+?? docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/
+?? docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md
+?? scripts/verify-p1-migrations-sqlite-matrix.sh

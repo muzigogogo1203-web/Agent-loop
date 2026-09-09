@@ -2,41 +2,48 @@ import Testing
 import Foundation
 import AgentLoopCore
 
+private actor BoardTerminalIntentRecorder: EngineBoardTerminalSink {
+    private var storage: [EngineBoardTerminalIntentV1] = []
+
+    func submit(_ intent: EngineBoardTerminalIntentV1) async throws {
+        storage.append(intent)
+    }
+
+    func snapshot() -> [EngineBoardTerminalIntentV1] { storage }
+}
+
+private actor BoardProgressPayloadRecorder: EngineProgressSink {
+    private var storage: [EngineExecutionEventPayloadV1] = []
+
+    func submit(_ payload: EngineExecutionEventPayloadV1) async throws {
+        storage.append(payload)
+    }
+
+    func snapshot() -> [EngineExecutionEventPayloadV1] { storage }
+}
+
 private struct BoardFixture {
-    let db: AppDatabase
-    let ws: URL
-    let store: URL
-    let cardId: String
     let tools: BoardTools
+    let terminal: BoardTerminalIntentRecorder
+    let progress: BoardProgressPayloadRecorder
 }
 
-private func makeBoardFixture() throws -> BoardFixture {
-    let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-    let ws = base.appendingPathComponent("ws")
-    let store = base.appendingPathComponent("artifacts")
-    try FileManager.default.createDirectory(at: ws, withIntermediateDirectories: true)
-    let db = try AppDatabase(path: base.appendingPathComponent("t.sqlite").path)
-    let ids = try db.createSingleCardMission(
-        campName: "c",
-        squadName: "s",
-        goal: "g",
-        cardTitle: "t",
-        cardDescription: "d",
-        expectedOutput: "e",
-        assigneeId: nil,
-        maxTurns: 30,
-        workspacePath: ws.path
+private func makeBoardFixture() -> BoardFixture {
+    let terminal = BoardTerminalIntentRecorder()
+    let progress = BoardProgressPayloadRecorder()
+    return BoardFixture(
+        tools: BoardTools(
+            boardTerminalSink: terminal,
+            progressSink: progress
+        ),
+        terminal: terminal,
+        progress: progress
     )
-    try db.transitionCard(id: ids.cardId, to: .running, eventKind: "card_started", payload: .object([:]))
-    let tools = BoardTools(db: db, cardId: ids.cardId, runId: "run-1", workspaceRoot: ws, artifactStoreRoot: store)
-    return BoardFixture(db: db, ws: ws, store: store, cardId: ids.cardId, tools: tools)
 }
 
-@Test func completeCopiesArtifactBeforeDone() async throws {
-    let fixture = try makeBoardFixture()
-    try "# 清单".write(to: fixture.ws.appendingPathComponent("清单.md"), atomically: true, encoding: .utf8)
-
-    let output = await fixture.tools.complete(input: [
+@Test func completeEmitsTypedHandoffWithoutFilesystemAuthority() async throws {
+    let fixture = makeBoardFixture()
+    let output = try await fixture.tools.complete(input: [
         "outcome": "完成",
         "summary": "已整理",
         "artifacts": [["relativePath": "清单.md", "kind": "markdown", "label": "装备清单"]],
@@ -48,19 +55,20 @@ private func makeBoardFixture() throws -> BoardFixture {
         Issue.record("should complete")
         return
     }
-    let card = try fixture.db.card(id: fixture.cardId)
-    #expect(card?.status == .done)
-    let artifacts = try fixture.db.artifacts(cardId: fixture.cardId)
-    #expect(artifacts.count == 1)
-    #expect(FileManager.default.fileExists(atPath: artifacts[0].path))
-    #expect(artifacts[0].path.hasPrefix(fixture.store.path))
-    #expect(FileManager.default.fileExists(atPath: fixture.ws.appendingPathComponent("清单.md").path))
+    let intents = await fixture.terminal.snapshot()
+    #expect(intents.count == 1)
+    guard case let .completed(handoff) = try #require(intents.first) else {
+        Issue.record("expected one completed intent")
+        return
+    }
+    #expect(handoff.artifacts.map(\.relativePath) == ["清单.md"])
+    #expect(await fixture.progress.snapshot().isEmpty)
 }
 
-@Test func reworkCompletionPreservesPreviousArtifactVersion() async throws {
-    let fixture = try makeBoardFixture()
-    let workspaceArtifact = fixture.ws.appendingPathComponent("交付.md")
-    try "第一版".write(to: workspaceArtifact, atomically: true, encoding: .utf8)
+@Test func repeatedCompletionForwardsTypedIntentsWithoutVersionAuthority()
+    async throws
+{
+    let fixture = makeBoardFixture()
     let input: JSONValue = [
         "outcome": "完成",
         "summary": "已交付",
@@ -68,40 +76,23 @@ private func makeBoardFixture() throws -> BoardFixture {
         "verification": [["method": "重读", "passed": true, "note": "ok"]],
         "risks": [],
     ]
-
-    guard case .completed = await fixture.tools.complete(input: input) else {
+    guard case .completed = try await fixture.tools.complete(input: input) else {
         Issue.record("first completion should succeed")
         return
     }
-    try fixture.db.returnCardForRework(cardId: fixture.cardId, feedback: "补充第二版")
-    try fixture.db.transitionCard(
-        id: fixture.cardId,
-        to: .running,
-        eventKind: EventKind.cardStarted,
-        payload: .object([:])
-    )
-    try "第二版".write(to: workspaceArtifact, atomically: true, encoding: .utf8)
-
-    guard case .completed = await fixture.tools.complete(input: input) else {
-        Issue.record("rework completion should succeed")
+    guard case .completed = try await fixture.tools.complete(input: input) else {
+        Issue.record("second typed intent should succeed")
         return
     }
-
-    let artifacts = try fixture.db.artifacts(cardId: fixture.cardId)
-    #expect(artifacts.count == 2)
-    #expect(Set(artifacts.map(\.path)).count == 2)
-    #expect(artifacts.contains { $0.label == "行动交付" })
-    #expect(artifacts.contains { $0.label == "行动交付 (重做)" })
-    let contents = try Set(artifacts.map { try String(contentsOfFile: $0.path, encoding: .utf8) })
-    #expect(contents == Set(["第一版", "第二版"]))
+    #expect(await fixture.terminal.snapshot().count == 2)
 }
 
-@Test func missingArtifactKeepsCardRunning() async throws {
-    let fixture = try makeBoardFixture()
-    let output = await fixture.tools.complete(input: [
+@Test func invalidArtifactDeclarationDoesNotReachSink() async throws {
+    let fixture = makeBoardFixture()
+    let output = try await fixture.tools.complete(input: [
         "outcome": "完成",
         "summary": "x",
-        "artifacts": [["relativePath": "不存在.md", "kind": "md", "label": "l"]],
+        "artifacts": [["relativePath": "../越界.md", "kind": "md", "label": "l"]],
         "verification": [],
         "risks": [],
     ])
@@ -109,14 +100,13 @@ private func makeBoardFixture() throws -> BoardFixture {
         Issue.record("should error")
         return
     }
-    #expect(message.contains("不存在.md"))
-    #expect(try fixture.db.card(id: fixture.cardId)?.status == .running)
-    #expect(try fixture.db.artifacts(cardId: fixture.cardId).isEmpty)
+    #expect(message.contains("relativePath") || message.contains("路径"))
+    #expect(await fixture.terminal.snapshot().isEmpty)
 }
 
-@Test func invalidHandoffKeepsCardRunning() async throws {
-    let fixture = try makeBoardFixture()
-    let output = await fixture.tools.complete(input: [
+@Test func invalidHandoffDoesNotReachSink() async throws {
+    let fixture = makeBoardFixture()
+    let output = try await fixture.tools.complete(input: [
         "outcome": "",
         "summary": "",
         "artifacts": [],
@@ -127,21 +117,169 @@ private func makeBoardFixture() throws -> BoardFixture {
         Issue.record("should error")
         return
     }
-    #expect(try fixture.db.card(id: fixture.cardId)?.status == .running)
+    #expect(await fixture.terminal.snapshot().isEmpty)
 }
 
-@Test func blockRecordsTypedReason() async throws {
-    let fixture = try makeBoardFixture()
-    let output = await fixture.tools.block(input: ["reason": "needs_human_input", "detail": "缺预算数字"])
+@Test func blockEmitsTypedReason() async throws {
+    let fixture = makeBoardFixture()
+    let output = try await fixture.tools.block(
+        input: ["reason": "needs_human_input", "detail": "缺预算数字"]
+    )
     guard case .blocked = output else { return }
-    let card = try fixture.db.card(id: fixture.cardId)
-    #expect(card?.status == .blocked)
-    #expect(card?.blockedReasonJson?.contains("needs_human_input") == true)
+    let intents = await fixture.terminal.snapshot()
+    guard case let .blocked(reason, detail) = try #require(intents.first) else {
+        Issue.record("expected blocked intent")
+        return
+    }
+    #expect(reason == "needs_human_input")
+    #expect(detail == "缺预算数字")
 }
 
-@Test func progressNoteAppendsEvent() async throws {
-    let fixture = try makeBoardFixture()
-    _ = await fixture.tools.progressNote(input: ["text": "整理到第 8 件"])
-    let events = try fixture.db.events(cardId: fixture.cardId)
-    #expect(events.contains { $0.kind == "progress_note" && $0.payloadJson.contains("第 8 件") })
+@Test func progressNoteEmitsTypedPayload() async throws {
+    let fixture = makeBoardFixture()
+    _ = try await fixture.tools.progressNote(input: ["text": "整理到第 8 件"])
+    #expect(
+        await fixture.progress.snapshot()
+            == [.progress(message: "整理到第 8 件")]
+    )
+}
+
+@Test func p1f1_059RawStringDurablePathCompletionAPIRemoved() async throws {
+    let fixture = makeBoardFixture()
+    let output = try await fixture.tools.complete(input: [
+        "outcome": "完成",
+        "summary": "产物必须交给 terminal sink 和 ArtifactStager",
+        "artifacts": [[
+            "relativePath": "typed-only.md",
+            "kind": "markdown",
+            "label": "typed-only",
+        ]],
+        "verification": [[
+            "method": "readback",
+            "passed": true,
+            "note": "ok",
+        ]],
+        "risks": [],
+    ])
+    guard case let .completed(handoff) = output else {
+        Issue.record("typed Board completion must reach the terminal sink")
+        return
+    }
+    #expect(handoff.artifacts.map(\.relativePath) == ["typed-only.md"])
+    let intents = await fixture.terminal.snapshot()
+    #expect(intents.count == 1)
+    guard case let .completed(recorded) = try #require(intents.first) else {
+        Issue.record("terminal sink must receive the same typed handoff")
+        return
+    }
+    #expect(recorded == handoff)
+}
+
+private final class P1F1D077LockedCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage = 0
+
+    func increment() {
+        lock.lock()
+        storage += 1
+        lock.unlock()
+    }
+
+    var value: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
+}
+
+private actor P1F1D077EventRecorder {
+    private var storage: [EngineExecutionEvent] = []
+
+    func append(_ event: EngineExecutionEvent) {
+        storage.append(event)
+    }
+
+    func snapshot() -> [EngineExecutionEvent] { storage }
+}
+
+private actor P1F1D077ProgressRecorder: EngineProgressSink {
+    private var storage: [EngineExecutionEventPayloadV1] = []
+
+    func submit(_ payload: EngineExecutionEventPayloadV1) async throws {
+        storage.append(payload)
+    }
+
+    func snapshot() -> [EngineExecutionEventPayloadV1] { storage }
+}
+
+@Test func p1f1_077BoardToolsOnlyEmitTerminalProposal() async throws {
+    let executionId = "00000000-0000-4000-8000-000000000077"
+    let router = EngineEventRouterV1(
+        executionId: executionId,
+        runId: "10000000-0000-4000-8000-000000000077",
+        cardId: "20000000-0000-4000-8000-000000000077",
+        nextSequence: 7,
+        initialUsage: .zero
+    )
+    let manifestCalls = P1F1D077LockedCounter()
+    let commits = P1F1D077EventRecorder()
+    let progress = P1F1D077ProgressRecorder()
+    let sink = EngineBoardTerminalRouterSinkV1(
+        router: router,
+        manifestResolver: { _ in
+            manifestCalls.increment()
+            return []
+        },
+        commit: { event in
+            await commits.append(event)
+        }
+    )
+    let tools = BoardTools(
+        boardTerminalSink: sink,
+        progressSink: progress
+    )
+    let input: JSONValue = [
+        "outcome": "implemented",
+        "summary": "Board emitted one typed proposal",
+        "artifacts": [],
+        "noArtifactReason": "This conformance case has no file artifact.",
+        "verification": [[
+            "method": "router receipt",
+            "passed": true,
+            "note": "one terminal intent",
+        ]],
+        "risks": [],
+    ]
+
+    let outcome = try await tools.complete(input: input)
+
+    guard case let .completed(handoff) = outcome else {
+        Issue.record("complete_card must return its accepted handoff")
+        return
+    }
+    #expect(handoff.outcome == "implemented")
+    #expect(manifestCalls.value == 1)
+    #expect(await progress.snapshot().isEmpty)
+
+    let events = await commits.snapshot()
+    #expect(events.count == 1)
+    let event = try #require(events.first)
+    #expect(event.executionId == executionId)
+    #expect(event.sequence == 7)
+    guard case let .terminal(proposal) = event.payload else {
+        Issue.record("Board intent must reach the shared terminal router")
+        return
+    }
+    #expect(proposal.terminalKind == .completed)
+    #expect(proposal.terminalSubtype == nil)
+    #expect(proposal.artifacts.isEmpty)
+    #expect(proposal.payload == .completed(handoff: handoff))
+    #expect(
+        try await router.state()
+            == .accepted(
+                sequence: 7,
+                terminalIdempotencyKey:
+                    "engine.terminal.v1:\(executionId):7"
+            )
+    )
 }

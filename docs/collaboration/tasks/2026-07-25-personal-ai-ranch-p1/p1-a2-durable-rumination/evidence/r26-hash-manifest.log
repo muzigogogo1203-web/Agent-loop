@@ -1,0 +1,125 @@
+section=static_manifest
+manifest_count=206
+manifest_sha=f9d697f35227e6db7df1e8e1b87c4969a184b0a7f65a3d6c70f7c8bfe5d7a22d
+r23_manifest_partition=156_PASS_7_EXPECTED_MISMATCHES
+r24_manifest_partition=172_PASS_6_EXPECTED_MISMATCHES
+r25_manifest_partition=186_PASS_6_EXPECTED_MISMATCHES
+r25_runtime_artifact_count=10
+r25_impl_report_absent=true
+r25_screenshot_absent=true
+git_status_begin
+## codex/personal-ai-ranch-p0
+ M AGENTS.md
+ M CLAUDE.md
+ M Package.swift
+ M README.md
+ M Sources/AgentLoopApp/AppStore.swift
+ M Sources/AgentLoopApp/CodingRanchContracts.swift
+ M Sources/AgentLoopApp/CodingRanchStoreAdapter.swift
+ M Sources/AgentLoopApp/MissionScheduler.swift
+ M Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift
+ M Sources/AgentLoopCore/Database/AppDatabase.swift
+ M Sources/AgentLoopCore/Database/EventKind.swift
+ M Sources/AgentLoopCore/Database/ScheduleStore.swift
+ M Sources/AgentLoopCore/Ingestion/FeedService.swift
+ M Sources/AgentLoopCore/Ingestion/IngestionRecords.swift
+ M Sources/AgentLoopCore/Kernel/Orchestrator.swift
+ M Sources/AgentLoopCore/Kernel/Planner.swift
+ M Sources/AgentLoopCore/Loop/AgentLoop.swift
+ M Sources/AgentLoopCore/Rumination/RuminationService.swift
+ M Sources/AgentLoopTestSuite/AgentLoopTests.swift
+ M Sources/AgentLoopTestSuite/AskUserTests.swift
+ M Sources/AgentLoopTestSuite/BudgetTests.swift
+ M Sources/AgentLoopTestSuite/CodingRanchTests.swift
+ M Sources/AgentLoopTestSuite/CrashRecoveryTests.swift
+ M Sources/AgentLoopTestSuite/DatabaseTests.swift
+ M Sources/AgentLoopTestSuite/GoldenPathTests.swift
+ M Sources/AgentLoopTestSuite/GuideChatTests.swift
+ M Sources/AgentLoopTestSuite/HaltAndCooldownTests.swift
+ M Sources/AgentLoopTestSuite/KnowledgeGoldenPathTests.swift
+ M Sources/AgentLoopTestSuite/McpTests.swift
+ M Sources/AgentLoopTestSuite/MultiCampTests.swift
+ M Sources/AgentLoopTestSuite/OrchestratorTests.swift
+ M Sources/AgentLoopTestSuite/PlannerTests.swift
+ M Sources/AgentLoopTestSuite/RuntimeProfileTests.swift
+ M Sources/AgentLoopTestSuite/ScheduleTests.swift
+ M docs/collaboration/claude-codex-protocol.md
+ M docs/superpowers/specs/2026-07-04-agentloop-macos-mvp-design.md
+ M docs/superpowers/specs/2026-07-06-agentloop-v2-design.md
+ M docs/superpowers/specs/2026-07-15-coding-ranch-visual-design.md
+?? .claude/settings.local.json
+?? Sources/AgentLoopCore/Database/DurableWorkStore.swift
+?? Sources/AgentLoopCore/JSON/CanonicalJSON.swift
+?? Sources/AgentLoopCore/Work/
+?? Sources/AgentLoopTestSuite/CanonicalJSONTests.swift
+?? Sources/AgentLoopTestSuite/DurablePlanningTests.swift
+?? Sources/AgentLoopTestSuite/DurableWorkTests.swift
+?? Sources/AgentLoopTestSuite/PlanningTestFixtures.swift
+?? Sources/P1MigrationMatrixRunner/
+?? docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p0/
+?? docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/
+?? docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md
+?? scripts/verify-p1-migrations-sqlite-matrix.sh
+git_status_end
+section=pre_preview_final_hashes
+source_log_sha=58c90e5840c6c14d529ecb53f1b6ada95d2707a4b99d4c18fedee1c253767b76
+source_log_bytes=2998
+matrix_script_sha=75c12732327ec06a3b3a69d6ff928d7909c0e170fee37067210d16f575d91d5c
+core_sha=c25d7d3bfdb30a370f243f21de06750f15284f57346ad11a44f298d489540275
+test_sha=37fad0b3b123d248f6a52128f5f5d60559587cb8d291b6a6a6da1d615ad87967
+verify_sha=212a205b2baaf8d052513f148199ea8679ab625d0d607255e58a2d6807b61ea8
+bundle_manifest_sha=93637fecd327da8b5e5539a6ecd75a5406e682d4e872861e0047ce2928b5f4c9
+git_status_begin
+## codex/personal-ai-ranch-p0
+ M AGENTS.md
+ M CLAUDE.md
+ M Package.swift
+ M README.md
+ M Sources/AgentLoopApp/AppStore.swift
+ M Sources/AgentLoopApp/CodingRanchContracts.swift
+ M Sources/AgentLoopApp/CodingRanchStoreAdapter.swift
+ M Sources/AgentLoopApp/MissionScheduler.swift
+ M Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift
+ M Sources/AgentLoopCore/Database/AppDatabase.swift
+ M Sources/AgentLoopCore/Database/EventKind.swift
+ M Sources/AgentLoopCore/Database/ScheduleStore.swift
+ M Sources/AgentLoopCore/Ingestion/FeedService.swift
+ M Sources/AgentLoopCore/Ingestion/IngestionRecords.swift
+ M Sources/AgentLoopCore/Kernel/Orchestrator.swift
+ M Sources/AgentLoopCore/Kernel/Planner.swift
+ M Sources/AgentLoopCore/Loop/AgentLoop.swift
+ M Sources/AgentLoopCore/Rumination/RuminationService.swift
+ M Sources/AgentLoopTestSuite/AgentLoopTests.swift
+ M Sources/AgentLoopTestSuite/AskUserTests.swift
+ M Sources/AgentLoopTestSuite/BudgetTests.swift
+ M Sources/AgentLoopTestSuite/CodingRanchTests.swift
+ M Sources/AgentLoopTestSuite/CrashRecoveryTests.swift
+ M Sources/AgentLoopTestSuite/DatabaseTests.swift
+ M Sources/AgentLoopTestSuite/GoldenPathTests.swift
+ M Sources/AgentLoopTestSuite/GuideChatTests.swift
+ M Sources/AgentLoopTestSuite/HaltAndCooldownTests.swift
+ M Sources/AgentLoopTestSuite/KnowledgeGoldenPathTests.swift
+ M Sources/AgentLoopTestSuite/McpTests.swift
+ M Sources/AgentLoopTestSuite/MultiCampTests.swift
+ M Sources/AgentLoopTestSuite/OrchestratorTests.swift
+ M Sources/AgentLoopTestSuite/PlannerTests.swift
+ M Sources/AgentLoopTestSuite/RuntimeProfileTests.swift
+ M Sources/AgentLoopTestSuite/ScheduleTests.swift
+ M docs/collaboration/claude-codex-protocol.md
+ M docs/superpowers/specs/2026-07-04-agentloop-macos-mvp-design.md
+ M docs/superpowers/specs/2026-07-06-agentloop-v2-design.md
+ M docs/superpowers/specs/2026-07-15-coding-ranch-visual-design.md
+?? .claude/settings.local.json
+?? Sources/AgentLoopCore/Database/DurableWorkStore.swift
+?? Sources/AgentLoopCore/JSON/CanonicalJSON.swift
+?? Sources/AgentLoopCore/Work/
+?? Sources/AgentLoopTestSuite/CanonicalJSONTests.swift
+?? Sources/AgentLoopTestSuite/DurablePlanningTests.swift
+?? Sources/AgentLoopTestSuite/DurableWorkTests.swift
+?? Sources/AgentLoopTestSuite/PlanningTestFixtures.swift
+?? Sources/P1MigrationMatrixRunner/
+?? docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p0/
+?? docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/
+?? docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md
+?? scripts/verify-p1-migrations-sqlite-matrix.sh
+git_status_end

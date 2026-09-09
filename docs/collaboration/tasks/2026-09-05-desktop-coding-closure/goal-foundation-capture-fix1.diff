@@ -1,0 +1,1051 @@
+A1 checkpoint3 actual-preimage package
+Original A1 plan c2f0a874...; text amendment is accepted separately and byte-frozen.
+All non-checkpoint sources match completed text/P1D305-entry successor inventory.
+9c45462e0e59668d91030debce66a11f6fc40d7c944ca17764e1f70f4f7a0518  Sources/AgentLoopCore/Domain/DesktopGoalWorkflow.swift
+bf055a97c13e6109a93239508949adad4cb963c26dfbf13a5ed664b2a8421afd  Sources/AgentLoopCore/Database/InputGoalStore.swift
+c9ce30d15621694359e96ffce4fd9b3bb251097d7e42cfd68368147d16c5692e  Sources/AgentLoopTestSuite/DesktopGoalFoundationTests.swift
+024c31b6c80bc78cdf32e6c8f551625311517049ea2dedc650ea21fd3fde7511  Sources/AgentLoopCore/Database/DesktopGoalWorkflowStore.swift
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/goal-foundation-capture-entry-before/DesktopGoalWorkflow.swift	2026-09-06 21:26:52
++++ Sources/AgentLoopCore/Domain/DesktopGoalWorkflow.swift	2026-09-06 21:47:06
+@@ -361,10 +361,164 @@
+             inlineText: originalText,
+             payloadRef: nil,
+             contentHash: CanonicalJSONV1.sha256Hex(Data(originalText.utf8)),
+             candidateCampIds: [],
+             explicitIntent: .createGoal,
+             privacyLevel: context.privacyLevel,
+             parentInputId: nil
+         )
++    }
++}
++
++package enum DesktopGoalOperationOwnerV1: String, Codable, Sendable, Equatable {
++    case userMutation, system, coachAttempt, verificationAttempt
++}
++
++package enum DesktopGoalOperationPhaseV1: String, Codable, Sendable, Equatable {
++    case prepared, committed, failed, redacted
++}
++
++package enum DesktopGoalContextRetentionV1: String, Codable, Sendable, Equatable {
++    case live, redacted
++}
++
++package enum DesktopGoalStageCommandTypeV1: String, Codable, Sendable, Equatable {
++    case inputCapture
++}
++
++package struct DesktopGoalCaptureReceiptV1: Codable, Sendable, Equatable {
++    package let inputId: String
++    package let goalId: String
++    package let sessionId: String
++    package let operationId: String
++    package let captureReceipt: InputCaptureReceiptV1
++
++    package init(inputId: String, goalId: String, sessionId: String, operationId: String,
++                 captureReceipt: InputCaptureReceiptV1) throws {
++        for id in [inputId, goalId, sessionId, operationId] {
++            try CanonicalContractCodingV1.validateCanonicalUUID(id)
++        }
++        let receipt = try DesktopGoalStageReceiptV1(captureReceipt: captureReceipt)
++        guard receipt.inputId == inputId else { throw DesktopGoalFoundationErrorV1.receiptConflict }
++        self.inputId = inputId
++        self.goalId = goalId
++        self.sessionId = sessionId
++        self.operationId = operationId
++        self.captureReceipt = captureReceipt
++    }
++
++    private enum CodingKeys: String, CodingKey { case inputId, goalId, sessionId, operationId, captureReceipt }
++
++    package init(from decoder: Decoder) throws {
++        try InputContractValidationV1.requireExactKeys(decoder, ["inputId", "goalId", "sessionId", "operationId", "captureReceipt"])
++        let values = try decoder.container(keyedBy: CodingKeys.self)
++        try self.init(inputId: values.decode(String.self, forKey: .inputId),
++                      goalId: values.decode(String.self, forKey: .goalId),
++                      sessionId: values.decode(String.self, forKey: .sessionId),
++                      operationId: values.decode(String.self, forKey: .operationId),
++                      captureReceipt: values.decode(InputCaptureReceiptV1.self, forKey: .captureReceipt))
++    }
++}
++
++package struct DesktopGoalStageReceiptV1: Codable, Sendable, Equatable {
++    package let receiptBytes: Data
++    package let receiptHash: String
++    package let inputId: String
++    package let inputVersion: Int
++    package let workId: String
++    package let workVersion: Int
++
++    package init(captureReceipt: InputCaptureReceiptV1) throws {
++        let bytes = try CanonicalContractCodingV1.encode(captureReceipt)
++        let validated = try CanonicalContractCodingV1.decode(InputCaptureReceiptV1.self, from: bytes)
++        guard validated.code == .inputCaptured,
++              let input = validated.refs.first(where: { $0.kind == .input }),
++              let work = validated.refs.first(where: { $0.kind == .durableWork }),
++              let inputVersion = validated.versions.first(where: { $0.kind == .inputProjection }),
++              let workVersion = validated.versions.first(where: { $0.kind == .durableWork }),
++              inputVersion.value == 1, workVersion.value == 1
++        else { throw DesktopGoalFoundationErrorV1.receiptConflict }
++        receiptBytes = bytes
++        receiptHash = CanonicalJSONV1.sha256Hex(bytes)
++        inputId = input.id
++        self.inputVersion = inputVersion.value
++        workId = work.id
++        self.workVersion = workVersion.value
++    }
++
++    private enum CodingKeys: String, CodingKey { case receiptBytes, receiptHash, inputId, inputVersion, workId, workVersion }
++
++    package init(from decoder: Decoder) throws {
++        try InputContractValidationV1.requireExactKeys(decoder, ["receiptBytes", "receiptHash", "inputId", "inputVersion", "workId", "workVersion"])
++        let values = try decoder.container(keyedBy: CodingKeys.self)
++        let bytes = try values.decode(Data.self, forKey: .receiptBytes)
++        try self.init(captureReceipt: CanonicalContractCodingV1.decode(InputCaptureReceiptV1.self, from: bytes))
++        guard try receiptHash == values.decode(String.self, forKey: .receiptHash),
++              try inputId == values.decode(String.self, forKey: .inputId),
++              try inputVersion == values.decode(Int.self, forKey: .inputVersion),
++              try workId == values.decode(String.self, forKey: .workId),
++              try workVersion == values.decode(Int.self, forKey: .workVersion)
++        else { throw DesktopGoalFoundationErrorV1.receiptConflict }
+     }
+ }
++
++package struct DesktopGoalSealedStageV1: Codable, Sendable, Equatable {
++    package let ordinal: Int
++    package let commandType: DesktopGoalStageCommandTypeV1
++    package let commandBytes: Data
++    package let commandHash: String
++    package let envelope: CommandEnvelopeV1
++    package let predecessorReceiptHash: String?
++    package let receipt: DesktopGoalStageReceiptV1?
++
++    package init(intent: DesktopGoalCaptureIntentV1, receipt: DesktopGoalStageReceiptV1? = nil) throws {
++        let command = try intent.captureCommand()
++        try self.init(ordinal: 0, commandType: .inputCapture,
++                      commandBytes: CanonicalContractCodingV1.wholeCommandBytes(envelope: intent.envelope, payload: command),
++                      envelope: intent.envelope, receipt: receipt)
++    }
++
++    private init(ordinal: Int, commandType: DesktopGoalStageCommandTypeV1, commandBytes: Data,
++                 envelope: CommandEnvelopeV1, receipt: DesktopGoalStageReceiptV1?) throws {
++        guard ordinal == 0 else { throw DesktopGoalFoundationErrorV1.stageConflict }
++        try CanonicalJSONV1.validateCanonical(rawUTF8: commandBytes)
++        guard let object = try JSONSerialization.jsonObject(with: commandBytes) as? [String: Any],
++              Set(object.keys) == Set(["envelope", "payload"]), let encodedEnvelope = object["envelope"]
++        else { throw DesktopGoalFoundationErrorV1.stageConflict }
++        let envelopeBytes = try CanonicalJSONV1.canonicalize(rawUTF8: JSONSerialization.data(withJSONObject: encodedEnvelope, options: [.sortedKeys, .withoutEscapingSlashes]))
++        guard try envelopeBytes == CanonicalContractCodingV1.encode(envelope)
++        else { throw DesktopGoalFoundationErrorV1.stageConflict }
++        self.ordinal = ordinal
++        self.commandType = commandType
++        self.commandBytes = commandBytes
++        commandHash = CanonicalJSONV1.sha256Hex(commandBytes)
++        self.envelope = envelope
++        predecessorReceiptHash = nil
++        self.receipt = receipt
++    }
++
++    private enum CodingKeys: String, CodingKey { case ordinal, commandType, commandBytes, commandHash, envelope, predecessorReceiptHash, receipt }
++
++    package init(from decoder: Decoder) throws {
++        try InputContractValidationV1.requireExactKeys(decoder, ["ordinal", "commandType", "commandBytes", "commandHash", "envelope", "predecessorReceiptHash", "receipt"])
++        let values = try decoder.container(keyedBy: CodingKeys.self)
++        guard try values.decodeNil(forKey: .predecessorReceiptHash) else { throw DesktopGoalFoundationErrorV1.stageConflict }
++        try self.init(ordinal: values.decode(Int.self, forKey: .ordinal),
++                      commandType: values.decode(DesktopGoalStageCommandTypeV1.self, forKey: .commandType),
++                      commandBytes: values.decode(Data.self, forKey: .commandBytes),
++                      envelope: values.decode(CommandEnvelopeV1.self, forKey: .envelope),
++                      receipt: values.decodeIfPresent(DesktopGoalStageReceiptV1.self, forKey: .receipt))
++        guard try commandHash == values.decode(String.self, forKey: .commandHash)
++        else { throw DesktopGoalFoundationErrorV1.stageConflict }
++    }
++
++    package func encode(to encoder: Encoder) throws {
++        var values = encoder.container(keyedBy: CodingKeys.self)
++        try values.encode(ordinal, forKey: .ordinal)
++        try values.encode(commandType, forKey: .commandType)
++        try values.encode(commandBytes, forKey: .commandBytes)
++        try values.encode(commandHash, forKey: .commandHash)
++        try values.encode(envelope, forKey: .envelope)
++        try values.encode(predecessorReceiptHash, forKey: .predecessorReceiptHash)
++        try values.encode(receipt, forKey: .receipt)
++    }
++}
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/goal-foundation-capture-entry-before/InputGoalStore.swift	2026-09-06 21:26:52
++++ Sources/AgentLoopCore/Database/InputGoalStore.swift	2026-09-06 21:45:23
+@@ -21,33 +21,40 @@
+         try CanonicalContractCodingV1.validateCanonicalUUID(id)
+         return try database.pool.read { db in
+             try GoalControllerRecord.fetchOne(db, key: id)
+         }
+     }
+ 
+     package func captureAndEnqueueParsing(
+         _ command: CaptureInputCommandV1
++    ) throws -> InputCaptureReceiptV1 {
++        try database.pool.write { db in
++            try captureAndEnqueueParsing(command, in: db)
++        }
++    }
++
++    package func captureAndEnqueueParsing(
++        _ command: CaptureInputCommandV1, in transaction: Database
+     ) throws -> InputCaptureReceiptV1 {
+         let replayPlan = try Self.captureReplayPlan(
+             inputId: command.inputId,
+             auditCampId: command.auditCampId,
+             expectedInputVersion: 0
+         )
+         let prepared = try PreparedDomainCommandV1.make(
+             commandType: .inputCapture,
+             envelope: command.envelope,
+             payload: command,
+             replayPlan: replayPlan
+         )
+-        return try database.pool.write { db in
+-            try eventStore.executeCommand(
++        return try eventStore.executeCommand(
+                 command: prepared,
+                 replayPlan: replayPlan,
+-                database: db
++                database: transaction
+             ) { db in
+                 try Self.requireAvailableCampIDs(
+                     command.candidateCampIds,
+                     in: db
+                 )
+                 let input = try InputEnvelopeRecord(
+                     id: command.inputId,
+                     schemaVersion: 1,
+@@ -103,17 +110,16 @@
+                     branch: .captureInput,
+                     prepared: prepared,
+                     replayPlan: replayPlan,
+                     input: input,
+                     work: enqueued.work,
+                     workInputHash: workHash
+                 )
+             }
+-        }
+     }
+ 
+     package func commitParseResult(
+         _ command: CommitInputParseResultCommandV1,
+         terminalNow: Date
+     ) throws -> InputCaptureReceiptV1 {
+         let replayPlan = try Self.parseResultReplayPlan(
+             inputId: command.input.inputId,
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/goal-foundation-capture-entry-before/DesktopGoalFoundationTests.swift	2026-09-06 21:26:52
++++ Sources/AgentLoopTestSuite/DesktopGoalFoundationTests.swift	2026-09-06 21:38:45
+@@ -725,11 +725,546 @@
+                 #expect(command.inputId == desktopGoalInputID)
+                 #expect(command.sourceType == .text)
+                 #expect(command.sourceDeviceId == desktopGoalDeviceID)
+                 #expect(command.auditCampId == "desktop-camp-a")
+                 #expect(command.initialCampId == "desktop-camp-a")
+                 #expect(command.explicitIntent == .createGoal)
+                 #expect(command.envelope == envelope)
+             }
++        }
++    }
++}
++
++private func desktopCaptureIntent(
++    inputId: String = desktopGoalInputID, goalId: String = desktopGoalGoalID,
++    sessionId: String = desktopGoalSessionID, operationId: String = desktopGoalOperationID,
++    campId: String = "desktop-camp-a", deviceId: String = desktopGoalDeviceID,
++    at: TimeInterval = 100, text: String = "hello", runtime: DesktopCoachRuntimeV1 = .unconfigured,
++    maximumDispatches: Int = 8
++) throws -> DesktopGoalCaptureIntentV1 {
++    let context = try DesktopGoalContextV1(
++        inputId: inputId, goalId: goalId, sessionId: sessionId, coachRuntime: runtime,
++        coachPolicy: DesktopCoachPolicyV1(maximumDispatches: maximumDispatches), budgetTokens: 100_000
++    )
++    let envelope = try CommandEnvelopeV1(
++        idempotencyKey: "desktop-goal:\(operationId):capture:v1", actorType: .user,
++        actorId: "user:local-owner", deviceId: deviceId, correlationId: "desktop-capture-test",
++        causationId: nil, occurredAt: Date(timeIntervalSince1970: at)
++    )
++    return try DesktopGoalCaptureIntentV1(
++        operationId: operationId, campId: campId, expectedCampLifecycleVersion: 1,
++        context: context, originalText: text, envelope: envelope
++    )
++}
++
++private func desktopCaptureSecondIntent(sessionId: String = "20000000-0000-4000-8000-000000000003") throws -> DesktopGoalCaptureIntentV1 {
++    try desktopCaptureIntent(
++        inputId: "20000000-0000-4000-8000-000000000001", goalId: "20000000-0000-4000-8000-000000000002",
++        sessionId: sessionId, operationId: "20000000-0000-4000-8000-000000000004", text: "existing second input"
++    )
++}
++
++private struct DesktopCaptureSQLSnapshot: Equatable {
++    let rows: [String: [[DatabaseValue]]]
++    let counts: [String: Int]
++    let rowHashes: [String: String]
++}
++
++private func desktopCaptureSQLSnapshot(_ database: AppDatabase) throws -> DesktopCaptureSQLSnapshot {
++    try database.pool.read { db in
++        var rows: [String: [[DatabaseValue]]] = [:]
++        var counts: [String: Int] = [:]
++        var hashes: [String: String] = [:]
++        for table in ["desktop_goal_context", "desktop_goal_operation", "input_envelope", "durable_work",
++                      "durable_work_attempt", "domain_event", "event_outbox", "domain_command_receipt",
++                      "goal_controller", "coach_session", "mission", "outcome"] {
++            let fetched = try Row.fetchAll(db, sql: "SELECT * FROM \(table) ORDER BY rowid")
++            rows[table] = fetched.map { Array($0.databaseValues) }
++            counts[table] = fetched.count
++            let printable = fetched.map { row in row.map { "\($0.0)=\($0.1)" } }
++            hashes[table] = try CanonicalContractCodingV1.hash(printable)
+         }
++        return DesktopCaptureSQLSnapshot(rows: rows, counts: counts, rowHashes: hashes)
+     }
+ }
++
++private func desktopCaptureOperationRow(_ database: AppDatabase, operationId: String = desktopGoalOperationID) throws -> Row {
++    try database.pool.read { db in
++        let row = try Row.fetchOne(db, sql: "SELECT * FROM desktop_goal_operation WHERE id=?", arguments: [operationId])
++        return try #require(row)
++    }
++}
++
++private func desktopCaptureStageWire(_ intent: DesktopGoalCaptureIntentV1, receipt: InputCaptureReceiptV1? = nil) throws -> [String: Any] {
++    let command = try intent.captureCommand()
++    let commandBytes = try CanonicalContractCodingV1.wholeCommandBytes(envelope: intent.envelope, payload: command)
++    let envelopeBytes = try CanonicalContractCodingV1.encode(intent.envelope)
++    let envelopeObject = try JSONSerialization.jsonObject(with: envelopeBytes)
++    var result: [String: Any] = [
++        "ordinal": 0, "commandType": "inputCapture", "commandBytes": commandBytes.base64EncodedString(),
++        "commandHash": CanonicalJSONV1.sha256Hex(commandBytes), "envelope": envelopeObject,
++        "predecessorReceiptHash": NSNull(), "receipt": NSNull(),
++    ]
++    if let receipt {
++        let bytes = try CanonicalContractCodingV1.encode(receipt)
++        let inputId = try #require(receipt.refs.first(where: { $0.kind == .input })?.id)
++        let workId = try #require(receipt.refs.first(where: { $0.kind == .durableWork })?.id)
++        let inputVersion = try #require(receipt.versions.first(where: { $0.kind == .inputProjection })?.value)
++        let workVersion = try #require(receipt.versions.first(where: { $0.kind == .durableWork })?.value)
++        result["receipt"] = ["receiptBytes": bytes.base64EncodedString(), "receiptHash": CanonicalJSONV1.sha256Hex(bytes),
++                             "inputId": inputId, "inputVersion": inputVersion, "workId": workId, "workVersion": workVersion]
++    }
++    return result
++}
++
++// Truthful setup for independently exercising seal/append: existing InputGoalStore
++// commits the domain effects; these local carrier rows describe that actual command.
++// They do not claim that the new store has executed any behavior successfully.
++private func desktopCaptureInsertPreparedFixture(
++    _ database: AppDatabase, intent: DesktopGoalCaptureIntentV1,
++    sealed: Bool, receipt: InputCaptureReceiptV1? = nil
++) throws {
++    let contextJSON = try CanonicalContractCodingV1.string(intent.context)
++    let requestJSON = try CanonicalContractCodingV1.string(intent)
++    let stages: [[String: Any]] = sealed ? [try desktopCaptureStageWire(intent, receipt: receipt)] : []
++    let resultBytes = try CanonicalJSONV1.canonicalize(rawUTF8: JSONSerialization.data(withJSONObject: stages, options: [.sortedKeys, .withoutEscapingSlashes]))
++    var safeJSON: String?
++    if let receipt {
++        let receiptObject = try JSONSerialization.jsonObject(with: CanonicalContractCodingV1.encode(receipt))
++        let safeBytes = try desktopTextCanonicalFixture([
++            "inputId": intent.context.inputId, "goalId": intent.context.goalId, "sessionId": intent.context.sessionId,
++            "operationId": intent.operationId, "captureReceipt": receiptObject,
++        ])
++        safeJSON = String(decoding: safeBytes, as: UTF8.self)
++    }
++    try database.pool.write { db in
++        try db.execute(sql: """
++            INSERT INTO desktop_goal_context(inputId,goalId,campId,version,contextJson,contextHash,retentionState,createdAt,updatedAt)
++            VALUES (?,?,?,1,?,?,'live',?,?)
++            """, arguments: [intent.context.inputId, intent.context.goalId, intent.campId, contextJSON,
++                               CanonicalJSONV1.sha256Hex(Data(contextJSON.utf8)), intent.envelope.occurredAt, intent.envelope.occurredAt])
++        try db.execute(sql: """
++            INSERT INTO desktop_goal_operation(id,inputId,kind,ownerKind,version,requestJson,requestHash,phase,resultJson,safeReceiptJson,safeErrorCode,createdAt,updatedAt)
++            VALUES (?,?,'submit','userMutation',?,?,?,'prepared',?,?,NULL,?,?)
++            """, arguments: [intent.operationId, intent.context.inputId, receipt != nil ? 3 : sealed ? 2 : 1, requestJSON,
++                               CanonicalJSONV1.sha256Hex(Data(requestJSON.utf8)), String(decoding: resultBytes, as: UTF8.self), safeJSON,
++                               intent.envelope.occurredAt, intent.envelope.occurredAt])
++    }
++}
++
++private func desktopCaptureParseActual(_ database: AppDatabase, intent: DesktopGoalCaptureIntentV1) throws {
++    let inputStore = InputGoalStore(database: database)
++    let fetchedInput = try inputStore.input(id: intent.context.inputId)
++    let input = try #require(fetchedInput)
++    let workStore = DurableWorkStore(database: database)
++    let fetchedWork = try workStore.activeWork(kind: .inputParsing, aggregateType: "input", aggregateId: input.id)
++    let work = try #require(fetchedWork)
++    let claim = try workStore.claim(workId: work.id, workerId: "desktop-capture-parser", now: Date(timeIntervalSince1970: 110), leaseDuration: 60)
++    let envelope = try desktopTextWorkerEnvelope(database, claim: claim)
++    let command = try CommitInputParseResultCommandV1(
++        envelope: envelope, input: InputHeadV1(inputId: input.id, auditCampId: intent.campId, expectedInputVersion: input.aggregateVersion),
++        claim: WorkClaimV1(claim: claim), result: InputParseResultV1(route: .coaching, candidateCampIds: [], assignedCampId: intent.campId)
++    )
++    _ = try inputStore.commitParseResult(command, terminalNow: Date(timeIntervalSince1970: 120))
++}
++
++extension DesktopGoalFoundationTests {
++    @Test func atomicCaptureCreatesActualInputWorkAndPreparedSubmission() throws {
++        let (database, _) = try desktopTextDatabase()
++        let intent = try desktopCaptureIntent()
++        #expect(throws: Never.self) {
++            let result = try DesktopGoalWorkflowStore(database: database).prepareSubmission(intent)
++            #expect(result.inputId == desktopGoalInputID)
++            #expect(result.goalId == desktopGoalGoalID)
++            #expect(result.sessionId == desktopGoalSessionID)
++            #expect(result.operationId == desktopGoalOperationID)
++            let snapshot = try desktopCaptureSQLSnapshot(database)
++            for table in ["desktop_goal_context", "desktop_goal_operation", "input_envelope", "durable_work",
++                          "domain_command_receipt", "domain_event", "event_outbox"] {
++                #expect(snapshot.counts[table] == 1)
++            }
++            for table in ["goal_controller", "coach_session", "mission", "outcome", "durable_work_attempt"] {
++                #expect(snapshot.counts[table] == 0)
++            }
++            let inputValue = try InputGoalStore(database: database).input(id: desktopGoalInputID)
++            let input = try #require(inputValue)
++            #expect(input.status == .captured)
++            #expect(input.inlineText == "hello")
++            #expect(input.explicitIntent == .createGoal)
++            let workValue = try DurableWorkStore(database: database).activeWork(kind: .inputParsing, aggregateType: "input", aggregateId: desktopGoalInputID)
++            let work = try #require(workValue)
++            #expect(work.state == .queued)
++            #expect(work.attempt == 0)
++            #expect(work.campId == "desktop-camp-a")
++            let row = try desktopCaptureOperationRow(database)
++            let phase: String = row["phase"]
++            let owner: String = row["ownerKind"]
++            let kind: String = row["kind"]
++            let version: Int = row["version"]
++            #expect(phase == "prepared")
++            #expect(owner == "userMutation")
++            #expect(kind == "submit")
++            #expect(version == 3)
++            let stageJSON: String = row["resultJson"]
++            let stages = try CanonicalContractCodingV1.decode([DesktopGoalSealedStageV1].self, from: Data(stageJSON.utf8))
++            #expect(stages.count == 1)
++            let stage = try #require(stages.first)
++            let receipt = try #require(stage.receipt)
++            #expect(stage.ordinal == 0)
++            #expect(stage.commandType == .inputCapture)
++            #expect(stage.predecessorReceiptHash == nil)
++            #expect(stage.envelope == intent.envelope)
++            #expect(receipt.inputId == input.id)
++            #expect(receipt.inputVersion == 1)
++            #expect(receipt.workId == work.id)
++            #expect(receipt.workVersion == 1)
++            let command = try intent.captureCommand()
++            let wholeBytes = try CanonicalContractCodingV1.wholeCommandBytes(envelope: intent.envelope, payload: command)
++            #expect(stage.commandBytes == wholeBytes)
++            #expect(stage.commandHash == CanonicalJSONV1.sha256Hex(wholeBytes))
++            let domainValue = try database.pool.read { db in
++                try DomainCommandReceiptRecordV1.fetchOne(db, key: intent.envelope.idempotencyKey)
++            }
++            let domain = try #require(domainValue)
++            #expect(domain.commandPayloadHash == stage.commandHash)
++            #expect(receipt.receiptBytes == Data(domain.resultJson.utf8))
++            #expect(receipt.receiptHash == domain.resultHash)
++            let decodedDomain = try CanonicalContractCodingV1.decode(InputCaptureReceiptV1.self, from: receipt.receiptBytes)
++            #expect(result.captureReceipt == decodedDomain)
++            let safeJSON: String = row["safeReceiptJson"]
++            let safe = try CanonicalContractCodingV1.decode(DesktopGoalCaptureReceiptV1.self, from: Data(safeJSON.utf8))
++            #expect(safe == result)
++        }
++    }
++
++    @Test func captureReceiptFailureRollsBackEveryCarrierAndDomainWrite() throws {
++        let (database, _) = try desktopTextDatabase()
++        let existing = try desktopCaptureSecondIntent()
++        let existingReceipt = try InputGoalStore(database: database).captureAndEnqueueParsing(existing.captureCommand())
++        try desktopCaptureInsertPreparedFixture(database, intent: existing, sealed: true, receipt: existingReceipt)
++        let before = try desktopCaptureSQLSnapshot(database)
++        try database.pool.write { db in
++            try db.execute(sql: """
++                CREATE TRIGGER desktop_test_abort_capture_receipt
++                BEFORE UPDATE OF safeReceiptJson ON desktop_goal_operation
++                WHEN NEW.id='10000000-0000-4000-8000-000000000004' AND NEW.safeReceiptJson IS NOT NULL
++                BEGIN
++                  SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM input_envelope WHERE id=NEW.inputId)
++                    OR NOT EXISTS(SELECT 1 FROM durable_work WHERE aggregateId=NEW.inputId AND kind='inputParsing')
++                    OR NOT EXISTS(SELECT 1 FROM domain_command_receipt WHERE idempotencyKey='desktop-goal:10000000-0000-4000-8000-000000000004:capture:v1')
++                    THEN RAISE(ABORT,'receipt_before_domain') END;
++                  SELECT RAISE(ABORT,'desktop_capture_receipt_abort');
++                END;
++                """)
++        }
++        let intent = try desktopCaptureIntent()
++        let result = Result { try DesktopGoalWorkflowStore(database: database).prepareSubmission(intent) }
++        switch result {
++        case .success:
++            Issue.record("Expected injected journal receipt failure after actual domain writes")
++        case let .failure(error):
++            let databaseError = try #require(error as? DatabaseError)
++            #expect(databaseError.message == "desktop_capture_receipt_abort")
++        }
++        let after = try desktopCaptureSQLSnapshot(database)
++        #expect(after.counts == before.counts)
++        #expect(after.rows == before.rows)
++        #expect(after.rowHashes == before.rowHashes)
++    }
++
++    @Test func exactReplayBeforeAndAfterRestartOrInputProgressReturnsSameReceipt() throws {
++        let (database, path) = try desktopTextDatabase()
++        let intent = try desktopCaptureIntent()
++        #expect(throws: Never.self) {
++            let store = DesktopGoalWorkflowStore(database: database)
++            let first = try store.prepareSubmission(intent)
++            let before = try desktopCaptureSQLSnapshot(database)
++            let second = try store.prepareSubmission(intent)
++            #expect(second == first)
++            let afterSecond = try desktopCaptureSQLSnapshot(database)
++            #expect(afterSecond == before)
++            try database.pool.close()
++            let reopened = try AppDatabase(path: path)
++            let reopenedStore = DesktopGoalWorkflowStore(database: reopened)
++            let afterRestart = try reopenedStore.prepareSubmission(intent)
++            #expect(afterRestart == first)
++            let beforeProgress = try desktopCaptureSQLSnapshot(reopened)
++            #expect(beforeProgress == before)
++            try desktopCaptureParseActual(reopened, intent: intent)
++            let progressed = try desktopCaptureSQLSnapshot(reopened)
++            #expect(progressed.counts["durable_work_attempt"] == 1)
++            let afterProgress = try reopenedStore.prepareSubmission(intent)
++            #expect(afterProgress == first)
++            let final = try desktopCaptureSQLSnapshot(reopened)
++            #expect(final == progressed)
++            #expect(final.counts["desktop_goal_context"] == 1)
++            #expect(final.counts["desktop_goal_operation"] == 1)
++            #expect(final.counts["input_envelope"] == 1)
++            #expect(final.counts["durable_work"] == 1)
++        }
++    }
++
++    @Test func providerAwareOutputPolicyIsCanonicalAndReplayBound() throws {
++        for runtime in [DesktopCoachRuntimeV1.unconfigured, .selected(profileId: desktopGoalProfileID, model: "unresolved-model")] {
++            let (database, path) = try desktopTextDatabase()
++            let intent = try desktopCaptureIntent(runtime: runtime)
++            #expect(throws: Never.self) {
++                let first = try DesktopGoalWorkflowStore(database: database).prepareSubmission(intent)
++                let before = try desktopCaptureSQLSnapshot(database)
++                let request = try desktopCaptureOperationRow(database)
++                let requestJSON: String = request["requestJson"]
++                let requestHash: String = request["requestHash"]
++                let expectedRequest = try CanonicalContractCodingV1.string(intent)
++                #expect(requestJSON == expectedRequest)
++                #expect(requestHash == CanonicalJSONV1.sha256Hex(Data(requestJSON.utf8)))
++                let contextValue = try database.pool.read { db in
++                    try Row.fetchOne(db, sql: "SELECT * FROM desktop_goal_context WHERE inputId=?", arguments: [desktopGoalInputID])
++                }
++                let contextRow = try #require(contextValue)
++                let contextJSON: String = contextRow["contextJson"]
++                let contextHash: String = contextRow["contextHash"]
++                #expect(contextHash == CanonicalJSONV1.sha256Hex(Data(contextJSON.utf8)))
++                let object = try JSONSerialization.jsonObject(with: Data(contextJSON.utf8))
++                let contextObject = try #require(object as? [String: Any])
++                let coach = try #require(contextObject["coachPolicy"] as? [String: Any])
++                let policy = try #require(coach["outputPolicy"] as? [String: Any])
++                #expect(Set(policy.keys) == Set(["apiRequestedTokens", "kind"]))
++                #expect(policy["apiRequestedTokens"] as? Int == 4_096)
++                #expect(policy["kind"] as? String == "providerAware")
++                #expect(contextObject["remoteConsentReceiptId"] is NSNull)
++                #expect(before.counts["durable_work_attempt"] == 0)
++                #expect(before.counts["coach_session"] == 0)
++                try database.pool.close()
++                let reopened = try AppDatabase(path: path)
++                let store = DesktopGoalWorkflowStore(database: reopened)
++                let replay = try store.prepareSubmission(intent)
++                #expect(replay == first)
++                let unchanged = try desktopCaptureSQLSnapshot(reopened)
++                #expect(unchanged == before)
++                let changed = try desktopCaptureIntent(runtime: runtime, maximumDispatches: 7)
++                let changedContext = try CanonicalContractCodingV1.string(changed.context)
++                let changedRequest = try CanonicalContractCodingV1.string(changed)
++                #expect(CanonicalJSONV1.sha256Hex(Data(changedContext.utf8)) != contextHash)
++                #expect(CanonicalJSONV1.sha256Hex(Data(changedRequest.utf8)) != requestHash)
++                #expect(throws: DesktopGoalFoundationErrorV1.operationConflict) { _ = try store.prepareSubmission(changed) }
++                let afterConflict = try desktopCaptureSQLSnapshot(reopened)
++                #expect(afterConflict == before)
++                // Arrange a later legitimate context revision without altering the sealed original gesture.
++                try reopened.pool.write { db in
++                    try db.execute(sql: "UPDATE desktop_goal_context SET contextJson=?,contextHash=?,version=2 WHERE inputId=? AND version=1",
++                                   arguments: [changedContext, CanonicalJSONV1.sha256Hex(Data(changedContext.utf8)), desktopGoalInputID])
++                }
++                let afterContextRevision = try desktopCaptureSQLSnapshot(reopened)
++                let originalReplay = try store.prepareSubmission(intent)
++                #expect(originalReplay == first)
++                let afterOriginalReplay = try desktopCaptureSQLSnapshot(reopened)
++                #expect(afterOriginalReplay == afterContextRevision)
++                #expect(throws: DesktopGoalFoundationErrorV1.operationConflict) { _ = try store.prepareSubmission(changed) }
++            }
++        }
++    }
++
++    @Test func changedIntentEnvelopeContextOrStageUnderSameIdentityRejectsWithoutWrites() throws {
++        let (database, _) = try desktopTextDatabase()
++        let intent = try desktopCaptureIntent()
++        #expect(throws: Never.self) {
++            let store = DesktopGoalWorkflowStore(database: database)
++            _ = try store.prepareSubmission(intent)
++            let before = try desktopCaptureSQLSnapshot(database)
++            let changed = [
++                try desktopCaptureIntent(text: "hello changed"),
++                try desktopCaptureIntent(runtime: .selected(profileId: desktopGoalProfileID, model: "another-model")),
++                try desktopCaptureIntent(campId: "desktop-camp-b"),
++                try desktopCaptureIntent(deviceId: "30000000-0000-4000-8000-000000000005"),
++                try desktopCaptureIntent(at: 101),
++                try desktopCaptureIntent(goalId: "30000000-0000-4000-8000-000000000002"),
++            ]
++            for candidate in changed {
++                #expect(throws: DesktopGoalFoundationErrorV1.operationConflict) { _ = try store.prepareSubmission(candidate) }
++                let after = try desktopCaptureSQLSnapshot(database)
++                #expect(after == before)
++            }
++        }
++    }
++
++    @Test func duplicateLiveSessionReservationRejectsWithoutAnyNewDomainWrite() throws {
++        let (database, _) = try desktopTextDatabase()
++        let intent = try desktopCaptureIntent()
++        let actualReceipt = try InputGoalStore(database: database).captureAndEnqueueParsing(intent.captureCommand())
++        try desktopCaptureInsertPreparedFixture(database, intent: intent, sealed: true, receipt: actualReceipt)
++        let before = try desktopCaptureSQLSnapshot(database)
++        let conflicting = try desktopCaptureSecondIntent(sessionId: desktopGoalSessionID)
++        #expect(throws: DesktopGoalFoundationErrorV1.contextConflict) {
++            _ = try DesktopGoalWorkflowStore(database: database).prepareSubmission(conflicting)
++        }
++        let after = try desktopCaptureSQLSnapshot(database)
++        #expect(after == before)
++    }
++
++    @Test func sealCaptureStageUsesCASAndPreservesExactCommandIdentity() throws {
++        let (database, _) = try desktopTextDatabase()
++        let intent = try desktopCaptureIntent()
++        _ = try InputGoalStore(database: database).captureAndEnqueueParsing(intent.captureCommand())
++        try desktopCaptureInsertPreparedFixture(database, intent: intent, sealed: false)
++        let store = DesktopGoalWorkflowStore(database: database)
++        let beforeStale = try desktopCaptureSQLSnapshot(database)
++        #expect(throws: DesktopGoalFoundationErrorV1.staleOperationVersion) {
++            _ = try store.sealCaptureStage(operationId: intent.operationId, expectedVersion: 2, intent: intent)
++        }
++        let afterStale = try desktopCaptureSQLSnapshot(database)
++        #expect(afterStale == beforeStale)
++        #expect(throws: Never.self) {
++            let stage = try store.sealCaptureStage(operationId: intent.operationId, expectedVersion: 1, intent: intent)
++            let command = try intent.captureCommand()
++            let bytes = try CanonicalContractCodingV1.wholeCommandBytes(envelope: intent.envelope, payload: command)
++            #expect(stage.ordinal == 0)
++            #expect(stage.commandType == .inputCapture)
++            #expect(stage.commandBytes == bytes)
++            #expect(stage.commandHash == CanonicalJSONV1.sha256Hex(bytes))
++            #expect(stage.envelope == intent.envelope)
++            #expect(stage.predecessorReceiptHash == nil)
++            #expect(stage.receipt == nil)
++            let row = try desktopCaptureOperationRow(database)
++            let version: Int = row["version"]
++            let phase: String = row["phase"]
++            #expect(version == 2)
++            #expect(phase == "prepared")
++            let sealedSnapshot = try desktopCaptureSQLSnapshot(database)
++            let staleExactReplay = try store.sealCaptureStage(operationId: intent.operationId, expectedVersion: 1, intent: intent)
++            #expect(staleExactReplay == stage)
++            let currentExactReplay = try store.sealCaptureStage(operationId: intent.operationId, expectedVersion: 2, intent: intent)
++            #expect(currentExactReplay == stage)
++            let afterExactReplay = try desktopCaptureSQLSnapshot(database)
++            #expect(afterExactReplay == sealedSnapshot)
++            let changed = try desktopCaptureIntent(text: "different sealed text")
++            #expect(throws: DesktopGoalFoundationErrorV1.stageConflict) {
++                _ = try store.sealCaptureStage(operationId: intent.operationId, expectedVersion: 2, intent: changed)
++            }
++            #expect(throws: DesktopGoalFoundationErrorV1.staleOperationVersion) {
++                _ = try store.sealCaptureStage(operationId: intent.operationId, expectedVersion: 99, intent: intent)
++            }
++            let afterRejected = try desktopCaptureSQLSnapshot(database)
++            #expect(afterRejected == sealedSnapshot)
++        }
++    }
++
++    @Test func sealedStageAndReceiptCASIsReplayableButNotReplaceable() throws {
++        let (database, _) = try desktopTextDatabase()
++        let intent = try desktopCaptureIntent()
++        let receipt = try InputGoalStore(database: database).captureAndEnqueueParsing(intent.captureCommand())
++        try desktopCaptureInsertPreparedFixture(database, intent: intent, sealed: true)
++        let other = try desktopCaptureSecondIntent()
++        let otherReceipt = try InputGoalStore(database: database).captureAndEnqueueParsing(other.captureCommand())
++        let before = try desktopCaptureSQLSnapshot(database)
++        #expect(throws: DesktopGoalFoundationErrorV1.staleOperationVersion) {
++            _ = try database.pool.write { db in
++                try DesktopGoalWorkflowStore.appendCaptureReceipt(operationId: intent.operationId, expectedVersion: 1, receipt: receipt, in: db)
++            }
++        }
++        let afterStale = try desktopCaptureSQLSnapshot(database)
++        #expect(afterStale == before)
++        #expect(throws: DesktopGoalFoundationErrorV1.receiptConflict) {
++            _ = try database.pool.write { db in
++                try DesktopGoalWorkflowStore.appendCaptureReceipt(operationId: intent.operationId, expectedVersion: 2, receipt: otherReceipt, in: db)
++            }
++        }
++        let afterWrongFirstReceipt = try desktopCaptureSQLSnapshot(database)
++        #expect(afterWrongFirstReceipt == before)
++        #expect(throws: Never.self) {
++            let appended = try database.pool.write { db in
++                try DesktopGoalWorkflowStore.appendCaptureReceipt(operationId: intent.operationId, expectedVersion: 2, receipt: receipt, in: db)
++            }
++            let receiptBytes = try CanonicalContractCodingV1.encode(receipt)
++            #expect(appended.receiptBytes == receiptBytes)
++            #expect(appended.receiptHash == CanonicalJSONV1.sha256Hex(receiptBytes))
++            #expect(appended.inputId == desktopGoalInputID)
++            #expect(appended.inputVersion == 1)
++            #expect(appended.workVersion == 1)
++            #expect(appended.workId == receipt.refs.first(where: { $0.kind == .durableWork })?.id)
++            let row = try desktopCaptureOperationRow(database)
++            let version: Int = row["version"]
++            let phase: String = row["phase"]
++            #expect(version == 3)
++            #expect(phase == "prepared")
++            let stageJSON: String = row["resultJson"]
++            let stageObjectsValue = try JSONSerialization.jsonObject(with: Data(stageJSON.utf8))
++            let stageObjects = try #require(stageObjectsValue as? [[String: Any]])
++            #expect(stageObjects.count == 1)
++            var actualPrefix = try #require(stageObjects.first)
++            actualPrefix["receipt"] = NSNull()
++            let actualPrefixBytes = try desktopTextCanonicalFixture(actualPrefix)
++            let expectedPrefixBytes = try desktopTextCanonicalFixture(desktopCaptureStageWire(intent))
++            #expect(actualPrefixBytes == expectedPrefixBytes)
++            let safeJSON: String = row["safeReceiptJson"]
++            let safe = try CanonicalContractCodingV1.decode(DesktopGoalCaptureReceiptV1.self, from: Data(safeJSON.utf8))
++            #expect(safe.captureReceipt == receipt)
++            #expect(safe.inputId == intent.context.inputId)
++            #expect(safe.goalId == intent.context.goalId)
++            #expect(safe.sessionId == intent.context.sessionId)
++            #expect(safe.operationId == intent.operationId)
++            let committedStageSnapshot = try desktopCaptureSQLSnapshot(database)
++            let duplicate = try database.pool.write { db in
++                try DesktopGoalWorkflowStore.appendCaptureReceipt(operationId: intent.operationId, expectedVersion: 2, receipt: receipt, in: db)
++            }
++            #expect(duplicate == appended)
++            #expect(throws: DesktopGoalFoundationErrorV1.receiptConflict) {
++                _ = try database.pool.write { db in
++                    try DesktopGoalWorkflowStore.appendCaptureReceipt(operationId: intent.operationId, expectedVersion: 3, receipt: otherReceipt, in: db)
++                }
++            }
++            let afterReceipts = try desktopCaptureSQLSnapshot(database)
++            #expect(afterReceipts == committedStageSnapshot)
++            let exactStage = try DesktopGoalWorkflowStore(database: database).sealCaptureStage(operationId: intent.operationId, expectedVersion: 1, intent: intent)
++            #expect(exactStage.receipt == appended)
++            let afterReseal = try desktopCaptureSQLSnapshot(database)
++            #expect(afterReseal == committedStageSnapshot)
++        }
++    }
++
++    @Test func outputPolicyRejectsUnsupportedOrLegacyJSONWithoutWrites() throws {
++        let (database, _) = try desktopTextDatabase()
++        let intent = try desktopCaptureIntent()
++        let receipt = try InputGoalStore(database: database).captureAndEnqueueParsing(intent.captureCommand())
++        try desktopCaptureInsertPreparedFixture(database, intent: intent, sealed: true, receipt: receipt)
++        let intentBytes = try CanonicalContractCodingV1.encode(intent)
++        let intentObjectValue = try JSONSerialization.jsonObject(with: intentBytes)
++        let intentObject = try #require(intentObjectValue as? [String: Any])
++        let originalContext = try #require(intentObject["context"] as? [String: Any])
++        let originalCoach = try #require(originalContext["coachPolicy"] as? [String: Any])
++        let malformedPolicies: [[String: Any]] = [
++            [:], ["kind": "providerAware"], ["apiRequestedTokens": 4096, "kind": "providerAware", "extra": true],
++            ["apiRequestedTokens": 4096, "kind": "fixed"], ["apiRequestedTokens": "4096", "kind": "providerAware"],
++            ["apiRequestedTokens": 4095, "kind": "providerAware"], ["maximumOutputTokens": 4096, "kind": "providerAware"],
++        ]
++        let before = try desktopCaptureSQLSnapshot(database)
++        for policy in malformedPolicies {
++            var context = originalContext
++            var coach = originalCoach
++            coach["outputPolicy"] = policy
++            context["coachPolicy"] = coach
++            var object = intentObject
++            object["context"] = context
++            let bytes = try desktopTextCanonicalFixture(object)
++            #expect(throws: (any Error).self) {
++                let invalid = try CanonicalContractCodingV1.decode(DesktopGoalCaptureIntentV1.self, from: bytes)
++                _ = try DesktopGoalWorkflowStore(database: database).prepareSubmission(invalid)
++            }
++            let after = try desktopCaptureSQLSnapshot(database)
++            #expect(after == before)
++        }
++        var corruptedContext = originalContext
++        var corruptedCoach = originalCoach
++        corruptedCoach["outputPolicy"] = ["apiRequestedTokens": 4095, "kind": "providerAware"]
++        corruptedContext["coachPolicy"] = corruptedCoach
++        let corruptedBytes = try desktopTextCanonicalFixture(corruptedContext)
++        try database.pool.write { db in
++            try db.execute(sql: "UPDATE desktop_goal_context SET contextJson=?,contextHash=? WHERE inputId=?",
++                           arguments: [String(decoding: corruptedBytes, as: UTF8.self), CanonicalJSONV1.sha256Hex(corruptedBytes), desktopGoalInputID])
++        }
++        let corrupted = try desktopCaptureSQLSnapshot(database)
++        #expect(throws: DesktopGoalFoundationErrorV1.corruptCanonicalPayload) {
++            _ = try DesktopGoalWorkflowStore(database: database).prepareSubmission(intent)
++        }
++        let afterRejectedReplay = try desktopCaptureSQLSnapshot(database)
++        #expect(afterRejectedReplay == corrupted)
++    }
++}
+--- /dev/null	2026-09-06 21:52:29
++++ Sources/AgentLoopCore/Database/DesktopGoalWorkflowStore.swift	2026-09-06 21:48:08
+@@ -0,0 +1,261 @@
++import Foundation
++import GRDB
++
++package struct DesktopGoalWorkflowStore: Sendable {
++    private let database: AppDatabase
++
++    package init(database: AppDatabase) {
++        self.database = database
++    }
++
++    package func prepareSubmission(_ intent: DesktopGoalCaptureIntentV1) throws -> DesktopGoalCaptureReceiptV1 {
++        let requestJSON = try CanonicalContractCodingV1.string(intent)
++        let command = try intent.captureCommand()
++        return try database.pool.write { db in
++            if let row = try Self.operationRow(intent.operationId, in: db) {
++                let stored = try Self.loadOperation(row, in: db)
++                guard stored.requestJSON == requestJSON else { throw DesktopGoalFoundationErrorV1.operationConflict }
++                // Current context revisions do not reinterpret the sealed original request.
++                _ = try Self.requireGraph(intent: stored.intent, in: db)
++                _ = try Self.sealCaptureStage(operationId: intent.operationId, expectedVersion: stored.version, intent: intent, in: db)
++                // Preserve the existing event store's complete receipt/event/outbox replay checks.
++                let receipt = try InputGoalStore(database: database).captureAndEnqueueParsing(command, in: db)
++                guard let sealedRow = try Self.operationRow(intent.operationId, in: db) else { throw DesktopGoalFoundationErrorV1.missingCarrier }
++                let sealedVersion: Int = sealedRow["version"]
++                _ = try Self.appendCaptureReceipt(operationId: intent.operationId, expectedVersion: sealedVersion, receipt: receipt, in: db)
++                return try Self.captureReceipt(intent, receipt)
++            }
++
++            if let context = try Row.fetchOne(db, sql: "SELECT * FROM desktop_goal_context WHERE inputId=?", arguments: [intent.context.inputId]) {
++                try Self.requireLive(context, in: db)
++                throw DesktopGoalFoundationErrorV1.contextConflict
++            }
++            guard try InputEnvelopeRecord.fetchOne(db, key: intent.context.inputId) == nil,
++                  try GoalControllerRecord.fetchOne(db, key: intent.context.goalId) == nil,
++                  try CoachSessionRecord.fetchOne(db, key: intent.context.sessionId) == nil,
++                  try Row.fetchOne(db, sql: "SELECT inputId FROM desktop_goal_context WHERE goalId=?", arguments: [intent.context.goalId]) == nil
++            else { throw DesktopGoalFoundationErrorV1.contextConflict }
++            for row in try Row.fetchAll(db, sql: "SELECT * FROM desktop_goal_context WHERE retentionState='live'") {
++                let context = try Self.decodeContext(row)
++                guard context.sessionId != intent.context.sessionId else { throw DesktopGoalFoundationErrorV1.contextConflict }
++            }
++            _ = try CampLifecycleStore(database: database).requireActiveCampWrite(campId: intent.campId, expectedLifecycleVersion: intent.expectedCampLifecycleVersion, database: db)
++            let contextJSON = try CanonicalContractCodingV1.string(intent.context)
++            try db.execute(sql: """
++                INSERT INTO desktop_goal_context(inputId,goalId,campId,version,contextJson,contextHash,retentionState,createdAt,updatedAt)
++                VALUES (?,?,?,1,?,?,'live',?,?)
++                """, arguments: [intent.context.inputId, intent.context.goalId, intent.campId, contextJSON,
++                                   CanonicalJSONV1.sha256Hex(Data(contextJSON.utf8)), intent.envelope.occurredAt, intent.envelope.occurredAt])
++            try db.execute(sql: """
++                INSERT INTO desktop_goal_operation(id,inputId,kind,ownerKind,version,requestJson,requestHash,phase,resultJson,safeReceiptJson,safeErrorCode,createdAt,updatedAt)
++                VALUES (?,?,'submit','userMutation',1,?,?,'prepared','[]',NULL,NULL,?,?)
++                """, arguments: [intent.operationId, intent.context.inputId, requestJSON,
++                                   CanonicalJSONV1.sha256Hex(Data(requestJSON.utf8)), intent.envelope.occurredAt, intent.envelope.occurredAt])
++            _ = try Self.sealCaptureStage(operationId: intent.operationId, expectedVersion: 1, intent: intent, in: db)
++            let receipt = try InputGoalStore(database: database).captureAndEnqueueParsing(command, in: db)
++            _ = try Self.appendCaptureReceipt(operationId: intent.operationId, expectedVersion: 2, receipt: receipt, in: db)
++            return try Self.captureReceipt(intent, receipt)
++        }
++    }
++
++    package func sealCaptureStage(
++        operationId: String, expectedVersion: Int, intent: DesktopGoalCaptureIntentV1
++    ) throws -> DesktopGoalSealedStageV1 {
++        try database.pool.write { db in
++            try Self.sealCaptureStage(operationId: operationId, expectedVersion: expectedVersion, intent: intent, in: db)
++        }
++    }
++
++    // Shared by the real capture transaction and direct receipt-CAS callers.
++    package static func appendCaptureReceipt(
++        operationId: String, expectedVersion: Int, receipt: InputCaptureReceiptV1,
++        in database: Database
++    ) throws -> DesktopGoalStageReceiptV1 {
++        guard let row = try operationRow(operationId, in: database) else { throw DesktopGoalFoundationErrorV1.missingCarrier }
++        let operation = try loadOperation(row, in: database)
++        try requireVersion(expectedVersion, current: operation.version)
++        guard let stage = operation.stages.first else { throw DesktopGoalFoundationErrorV1.stageConflict }
++        let candidate = try DesktopGoalStageReceiptV1(captureReceipt: receipt)
++        // Even the first attachment must come from this exact committed domain command.
++        guard let actual = try DomainCommandReceiptRecordV1.fetchOne(database, key: operation.intent.envelope.idempotencyKey),
++              actual.commandType == .inputCapture, actual.commandPayloadHash == stage.commandHash,
++              actual.eventCount == 1, actual.resultHash == candidate.receiptHash,
++              Data(actual.resultJson.utf8) == candidate.receiptBytes,
++              candidate.inputId == operation.intent.context.inputId,
++              receipt.hashes.first(where: { $0.kind == .commandPayload })?.hash == stage.commandHash
++        else { throw DesktopGoalFoundationErrorV1.receiptConflict }
++        let input = try requireGraph(intent: operation.intent, in: database)
++        guard let work = try DurableWorkRecord.fetchOne(database, key: candidate.workId),
++              work.kind == .inputParsing, work.aggregateType == "input", work.aggregateId == input.id,
++              work.campId == operation.intent.campId, work.version >= candidate.workVersion,
++              input.aggregateVersion >= candidate.inputVersion,
++              receipt.hashes.first(where: { $0.kind == .inputContent })?.hash == input.contentHash,
++              receipt.hashes.first(where: { $0.kind == .durableWorkInput })?.hash == work.inputHash,
++              CanonicalJSONV1.sha256Hex(Data(work.inputJson.utf8)) == work.inputHash
++        else { throw DesktopGoalFoundationErrorV1.graphScopeMismatch }
++        let workInput = try decode(InputParsingWorkInputV1.self, json: work.inputJson)
++        guard workInput.inputId == input.id, workInput.contentHash == input.contentHash
++        else { throw DesktopGoalFoundationErrorV1.graphScopeMismatch }
++        let safe = try captureReceipt(operation.intent, receipt)
++        if let existing = stage.receipt {
++            guard existing == candidate, operation.safeReceipt == safe
++            else { throw DesktopGoalFoundationErrorV1.receiptConflict }
++            return existing
++        }
++        guard expectedVersion == operation.version else { throw DesktopGoalFoundationErrorV1.staleOperationVersion }
++        guard operation.safeReceipt == nil else { throw DesktopGoalFoundationErrorV1.receiptConflict }
++        let appended = try DesktopGoalSealedStageV1(intent: operation.intent, receipt: candidate)
++        let nextVersion = try CanonicalContractCodingV1.checkedIncrement(operation.version)
++        try database.execute(sql: """
++            UPDATE desktop_goal_operation SET resultJson=?,safeReceiptJson=?,version=?,updatedAt=?
++            WHERE id=? AND version=? AND phase='prepared'
++            """, arguments: [try CanonicalContractCodingV1.string([appended]), try CanonicalContractCodingV1.string(safe),
++                               nextVersion, operation.intent.envelope.occurredAt, operationId, operation.version])
++        guard database.changesCount == 1 else { throw DesktopGoalFoundationErrorV1.staleOperationVersion }
++        return candidate
++    }
++
++    private static func sealCaptureStage(
++        operationId: String, expectedVersion: Int, intent: DesktopGoalCaptureIntentV1, in db: Database
++    ) throws -> DesktopGoalSealedStageV1 {
++        guard let row = try operationRow(operationId, in: db) else { throw DesktopGoalFoundationErrorV1.missingCarrier }
++        let operation = try loadOperation(row, in: db)
++        try requireVersion(expectedVersion, current: operation.version)
++        guard operationId == intent.operationId,
++              try operation.requestJSON == CanonicalContractCodingV1.string(intent)
++        else { throw DesktopGoalFoundationErrorV1.stageConflict }
++        if let stage = operation.stages.first { return stage }
++        guard expectedVersion == operation.version else { throw DesktopGoalFoundationErrorV1.staleOperationVersion }
++        let stage = try DesktopGoalSealedStageV1(intent: intent)
++        let nextVersion = try CanonicalContractCodingV1.checkedIncrement(operation.version)
++        try db.execute(sql: """
++            UPDATE desktop_goal_operation SET resultJson=?,version=?,updatedAt=? WHERE id=? AND version=? AND phase='prepared'
++            """, arguments: [try CanonicalContractCodingV1.string([stage]), nextVersion, intent.envelope.occurredAt, operationId, operation.version])
++        guard db.changesCount == 1 else { throw DesktopGoalFoundationErrorV1.staleOperationVersion }
++        return stage
++    }
++
++    private struct CaptureOperation {
++        let intent: DesktopGoalCaptureIntentV1
++        let requestJSON: String
++        let version: Int
++        let stages: [DesktopGoalSealedStageV1]
++        let safeReceipt: DesktopGoalCaptureReceiptV1?
++    }
++
++    private static func operationRow(_ id: String, in db: Database) throws -> Row? {
++        try CanonicalContractCodingV1.validateCanonicalUUID(id)
++        return try Row.fetchOne(db, sql: "SELECT * FROM desktop_goal_operation WHERE id=?", arguments: [id])
++    }
++
++    private static func requireVersion(_ expected: Int, current: Int) throws {
++        guard expected > 0, expected <= current else { throw DesktopGoalFoundationErrorV1.staleOperationVersion }
++    }
++
++    private static func decode<T: Codable>(_ type: T.Type, json: String) throws -> T {
++        do { return try CanonicalContractCodingV1.decode(type, from: Data(json.utf8)) }
++        catch { throw DesktopGoalFoundationErrorV1.corruptCanonicalPayload }
++    }
++
++    // Retention is checked using raw columns before any user payload is decoded.
++    private static func requireLive(_ row: Row, in db: Database) throws {
++        let inputId: String = row["inputId"]
++        let state: String = row["retentionState"]
++        let contextJSON: String? = row["contextJson"]
++        let input = try Row.fetchOne(db, sql: "SELECT status,retentionState FROM input_envelope WHERE id=?", arguments: [inputId])
++        let status: String? = input?["status"]
++        let retention: String? = input?["retentionState"]
++        if state == "redacted" {
++            guard contextJSON == nil else { throw DesktopGoalFoundationErrorV1.retentionIntegrity }
++            throw DesktopGoalFoundationErrorV1.inputDeleted
++        }
++        guard state == "live", contextJSON != nil,
++              status != "deletedTombstone", retention != "deletedTombstone"
++        else { throw DesktopGoalFoundationErrorV1.retentionIntegrity }
++    }
++
++    private static func decodeContext(_ row: Row) throws -> DesktopGoalContextV1 {
++        guard let json: String = row["contextJson"] else { throw DesktopGoalFoundationErrorV1.retentionIntegrity }
++        let hash: String = row["contextHash"]
++        guard CanonicalJSONV1.sha256Hex(Data(json.utf8)) == hash else { throw DesktopGoalFoundationErrorV1.corruptCanonicalPayload }
++        let context = try decode(DesktopGoalContextV1.self, json: json)
++        let inputId: String = row["inputId"]
++        let goalId: String = row["goalId"]
++        let version: Int = row["version"]
++        guard context.inputId == inputId, context.goalId == goalId, version > 0
++        else { throw DesktopGoalFoundationErrorV1.graphScopeMismatch }
++        return context
++    }
++
++    private static func loadOperation(_ row: Row, in db: Database) throws -> CaptureOperation {
++        let inputId: String = row["inputId"]
++        guard let contextRow = try Row.fetchOne(db, sql: "SELECT * FROM desktop_goal_context WHERE inputId=?", arguments: [inputId])
++        else { throw DesktopGoalFoundationErrorV1.missingCarrier }
++        try requireLive(contextRow, in: db)
++        let phase: String = row["phase"]
++        guard phase != "redacted" else { throw DesktopGoalFoundationErrorV1.retentionIntegrity }
++        let context = try decodeContext(contextRow)
++        let id: String = row["id"]
++        let kind: String = row["kind"]
++        let owner: String = row["ownerKind"]
++        let version: Int = row["version"]
++        let hash: String = row["requestHash"]
++        guard let json: String = row["requestJson"], let stagesJSON: String = row["resultJson"],
++              kind == "submit", owner == "userMutation", phase == "prepared", version > 0,
++              CanonicalJSONV1.sha256Hex(Data(json.utf8)) == hash
++        else { throw DesktopGoalFoundationErrorV1.corruptCanonicalPayload }
++        let intent = try decode(DesktopGoalCaptureIntentV1.self, json: json)
++        let campId: String = contextRow["campId"]
++        guard intent.operationId == id, intent.context.inputId == inputId,
++              intent.context.goalId == context.goalId, intent.context.sessionId == context.sessionId,
++              intent.campId == campId
++        else { throw DesktopGoalFoundationErrorV1.graphScopeMismatch }
++        let stages = try decode([DesktopGoalSealedStageV1].self, json: stagesJSON)
++        guard stages.count <= 1 else { throw DesktopGoalFoundationErrorV1.stageConflict }
++        if let stage = stages.first {
++            let expected = try DesktopGoalSealedStageV1(intent: intent, receipt: stage.receipt)
++            guard stage == expected else { throw DesktopGoalFoundationErrorV1.stageConflict }
++        }
++        let safeJSON: String? = row["safeReceiptJson"]
++        let safe = try safeJSON.map { try decode(DesktopGoalCaptureReceiptV1.self, json: $0) }
++        if let safe {
++            guard safe.inputId == inputId, safe.goalId == context.goalId, safe.sessionId == context.sessionId,
++                  safe.operationId == id, let attached = stages.first?.receipt,
++                  try attached == DesktopGoalStageReceiptV1(captureReceipt: safe.captureReceipt)
++            else { throw DesktopGoalFoundationErrorV1.receiptConflict }
++        } else if stages.first?.receipt != nil { throw DesktopGoalFoundationErrorV1.receiptConflict }
++        guard version >= (stages.isEmpty ? 1 : stages.first?.receipt == nil ? 2 : 3)
++        else { throw DesktopGoalFoundationErrorV1.stageConflict }
++        return CaptureOperation(intent: intent, requestJSON: json, version: version, stages: stages, safeReceipt: safe)
++    }
++
++    private static func captureReceipt(_ intent: DesktopGoalCaptureIntentV1, _ receipt: InputCaptureReceiptV1) throws -> DesktopGoalCaptureReceiptV1 {
++        try DesktopGoalCaptureReceiptV1(inputId: intent.context.inputId, goalId: intent.context.goalId,
++                                       sessionId: intent.context.sessionId, operationId: intent.operationId, captureReceipt: receipt)
++    }
++
++    private static func requireGraph(intent: DesktopGoalCaptureIntentV1, in db: Database) throws -> InputEnvelopeRecord {
++        guard let input = try InputEnvelopeRecord.fetchOne(db, key: intent.context.inputId)
++        else { throw DesktopGoalFoundationErrorV1.graphScopeMismatch }
++        guard input.status != .deletedTombstone, input.retentionState != .deletedTombstone
++        else { throw DesktopGoalFoundationErrorV1.retentionIntegrity }
++        let command = try intent.captureCommand()
++        guard input.campId == intent.campId, input.sourceType == .text,
++              input.sourceDeviceId == intent.envelope.deviceId, input.idempotencyKey == intent.envelope.idempotencyKey,
++              input.connectorId == nil, input.authorId == nil, input.payloadRef == nil, input.parentInputId == nil,
++              input.explicitIntent == .createGoal, input.contentHash == command.contentHash,
++              input.inlineText.map({ Data($0.utf8) }) == Data(intent.originalText.utf8),
++              input.privacyLevel == intent.context.privacyLevel
++        else { throw DesktopGoalFoundationErrorV1.graphScopeMismatch }
++        let goal = try GoalControllerRecord.fetchOne(db, key: intent.context.goalId)
++        if let goal {
++            guard goal.sourceInputId == input.id, goal.campId == intent.campId
++            else { throw DesktopGoalFoundationErrorV1.graphScopeMismatch }
++        } else if input.status == .goalCreated { throw DesktopGoalFoundationErrorV1.graphScopeMismatch }
++        if let session = try CoachSessionRecord.fetchOne(db, key: intent.context.sessionId) {
++            guard goal != nil, session.goalId == intent.context.goalId, session.inputId == input.id
++            else { throw DesktopGoalFoundationErrorV1.graphScopeMismatch }
++        }
++        return input
++    }
++}

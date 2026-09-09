@@ -1,0 +1,38 @@
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test oauthControlledWaitPreservesCooperativeProgress() started.
+◇ Test cliHelpProbeSnapshotPreservesCooperativeProgress() started.
+
+=== FD CHILD BEGIN label=oauth-controlled-wait-progress-child mode=1 pid=96239 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/oauth-controlled-wait-progress-child-A5D610C5-BD09-4434-B808-D27FC82021D6/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/oauth-controlled-wait-progress-child-A5D610C5-BD09-4434-B808-D27FC82021D6/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test oauthControlledWaitPreservesCooperativeProgress() started.
+OAUTH CONTROLLED WAIT PHASES wait=false exact-request=true starts=1 observer-residue=false pending-residue=false
+✘ Test oauthControlledWaitPreservesCooperativeProgress() recorded an issue at OpenAIOAuthSessionTests.swift:762:9: Expectation failed: waitSucceeded
+✘ Test oauthControlledWaitPreservesCooperativeProgress() failed after 0.254 seconds with 1 issue.
+✘ Test run with 1 test in 0 suites failed after 0.255 seconds with 1 issue.
+
+=== FD CHILD PHASE EVIDENCE label=oauth-controlled-wait-progress-child mode=1 pid=96239 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/oauth-controlled-wait-progress-child-A5D610C5-BD09-4434-B808-D27FC82021D6/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/oauth-controlled-wait-progress-child-A5D610C5-BD09-4434-B808-D27FC82021D6/phases.evidence ===
+
+=== FD CHILD END label=oauth-controlled-wait-progress-child mode=1 pid=96239 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/oauth-controlled-wait-progress-child-A5D610C5-BD09-4434-B808-D27FC82021D6/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/oauth-controlled-wait-progress-child-A5D610C5-BD09-4434-B808-D27FC82021D6/phases.evidence read-errors=[] ===
+✘ Test oauthControlledWaitPreservesCooperativeProgress() recorded an issue at OpenAIOAuthSessionTests.swift:769:2: Caught error: childStatus(pid: 96239, status: 256, log: file:///var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/oauth-controlled-wait-progress-child-A5D610C5-BD09-4434-B808-D27FC82021D6/child.log, evidence: file:///var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/oauth-controlled-wait-progress-child-A5D610C5-BD09-4434-B808-D27FC82021D6/phases.evidence)
+✘ Test oauthControlledWaitPreservesCooperativeProgress() failed after 0.378 seconds with 1 issue.
+
+=== FD CHILD BEGIN label=help-probe-progress-child mode=1 pid=96238 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/help-probe-progress-child-2E5B39B1-1B4A-4DCF-85E8-7B81A340A911/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/help-probe-progress-child-2E5B39B1-1B4A-4DCF-85E8-7B81A340A911/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test cliHelpProbeSnapshotPreservesCooperativeProgress() started.
+HELP PROBE PROGRESS PHASES cancelled=true invocations=1 arguments=Optional(["--version"]) entered=true sibling=true rescue=true entry-timeout=false read=Optional(1) read-byte=Optional(199) read-errno=nil read-close-errno=nil write=Optional(1) write-errno=nil write-close-errno=nil controller=true
+✘ Test cliHelpProbeSnapshotPreservesCooperativeProgress() recorded an issue at BlockingProcessOperationTests.swift:640:9: Expectation failed: !((snapshot → BlockingProgressSnapshot(readEntered: true, siblingProgressed: true, rescueUsed: true, entryTimedOut: false, readCount: Optional(1), readByte: Optional(199), readError: nil, readerCloseError: nil, writeCount: Optional(1), writeError: nil, writerCloseError: nil, controllerCompleted: true)).rescueUsed → true → true)
+✘ Test cliHelpProbeSnapshotPreservesCooperativeProgress() failed after 1.015 seconds with 1 issue.
+✘ Test run with 1 test in 0 suites failed after 1.016 seconds with 1 issue.
+
+=== FD CHILD PHASE EVIDENCE label=help-probe-progress-child mode=1 pid=96238 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/help-probe-progress-child-2E5B39B1-1B4A-4DCF-85E8-7B81A340A911/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/help-probe-progress-child-2E5B39B1-1B4A-4DCF-85E8-7B81A340A911/phases.evidence ===
+
+=== FD CHILD END label=help-probe-progress-child mode=1 pid=96238 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/help-probe-progress-child-2E5B39B1-1B4A-4DCF-85E8-7B81A340A911/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/help-probe-progress-child-2E5B39B1-1B4A-4DCF-85E8-7B81A340A911/phases.evidence read-errors=[] ===
+✘ Test cliHelpProbeSnapshotPreservesCooperativeProgress() recorded an issue at BlockingProcessOperationTests.swift:670:2: Caught error: childStatus(pid: 96238, status: 256, log: file:///var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/help-probe-progress-child-2E5B39B1-1B4A-4DCF-85E8-7B81A340A911/child.log, evidence: file:///var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/help-probe-progress-child-2E5B39B1-1B4A-4DCF-85E8-7B81A340A911/phases.evidence)
+✘ Test cliHelpProbeSnapshotPreservesCooperativeProgress() failed after 1.157 seconds with 1 issue.
+✘ Test run with 2 tests in 0 suites failed after 1.158 seconds with 2 issues.

@@ -3,6 +3,8 @@ import CryptoKit
 import Network
 import Security
 import AgentLoopCore
+import AgentLoopApplication
+import GRDB
 
 private final class OpenAIOAuthReloginHandler: @unchecked Sendable {
     @MainActor weak var store: AppStore?
@@ -34,6 +36,177 @@ private struct CredentialPresenceSnapshot: Sendable {
     let chatGPTAccountIDPresent: Bool
 }
 
+/// Preview-only defaults whose currently used read/write surface stays in memory.
+///
+/// `ProfileScopedDefaults` accepts `UserDefaults`, so a process-local subclass
+/// keeps the preview dependency injectable without changing the Core contract.
+/// Its unique superclass suite never selects the normal app domain, and every
+/// API currently used by AppStore/Core is overridden onto the locked dictionary.
+private final class ProcessLocalPreviewUserDefaults:
+    UserDefaults,
+    @unchecked Sendable
+{
+    private let valuesLock = NSLock()
+    private var values: [String: Any] = [:]
+
+    override func object(forKey defaultName: String) -> Any? {
+        valuesLock.withLock { values[defaultName] }
+    }
+
+    override func set(_ value: Any?, forKey defaultName: String) {
+        valuesLock.withLock {
+            values[defaultName] = value
+        }
+    }
+
+    override func set(_ value: Int, forKey defaultName: String) {
+        set(NSNumber(value: value), forKey: defaultName)
+    }
+
+    override func set(_ value: Float, forKey defaultName: String) {
+        set(NSNumber(value: value), forKey: defaultName)
+    }
+
+    override func set(_ value: Double, forKey defaultName: String) {
+        set(NSNumber(value: value), forKey: defaultName)
+    }
+
+    override func set(_ value: Bool, forKey defaultName: String) {
+        set(NSNumber(value: value), forKey: defaultName)
+    }
+
+    override func set(_ url: URL?, forKey defaultName: String) {
+        set(url as Any?, forKey: defaultName)
+    }
+
+    override func removeObject(forKey defaultName: String) {
+        set(nil, forKey: defaultName)
+    }
+
+    override func string(forKey defaultName: String) -> String? {
+        switch object(forKey: defaultName) {
+        case let value as String:
+            return value
+        case let value as NSNumber:
+            return value.stringValue
+        default:
+            return nil
+        }
+    }
+
+    override func integer(forKey defaultName: String) -> Int {
+        switch object(forKey: defaultName) {
+        case let value as NSNumber:
+            return value.intValue
+        case let value as NSString:
+            return value.integerValue
+        default:
+            return 0
+        }
+    }
+
+    override func bool(forKey defaultName: String) -> Bool {
+        switch object(forKey: defaultName) {
+        case let value as NSNumber:
+            return value.boolValue
+        case let value as NSString:
+            return value.boolValue
+        default:
+            return false
+        }
+    }
+
+    override func stringArray(forKey defaultName: String) -> [String]? {
+        object(forKey: defaultName) as? [String]
+    }
+}
+
+private struct AppPlanningRuntimeProfileSource:
+    PlanningRuntimeProfileSource, Sendable
+{
+    let db: AppDatabase
+
+    package func planningRuntimeProfile(
+        id: String
+    ) throws -> RuntimeProfileRecord? {
+        try db.runtimeProfile(id: id)
+    }
+}
+
+private struct AppPlanningModelCatalogSource:
+    PlanningModelCatalogSource, Sendable
+{
+    let defaults: ProfileScopedDefaults
+
+    package func planningCachedCatalog(
+        profileId: String
+    ) throws -> [String]? {
+        defaults.cachedCatalog(profileID: profileId)
+    }
+
+    package func planningModelChoices(
+        profileId: String
+    ) throws -> [String]? {
+        defaults.stringArray(
+            profileID: profileId,
+            suffix: "modelChoices"
+        )
+    }
+
+    package func planningManualModels(
+        profileId: String
+    ) throws -> [String] {
+        defaults.manualModels(profileID: profileId)
+    }
+}
+
+private struct AppPlanningCredentialSource:
+    PlanningCredentialSource, Sendable
+{
+    let keychain: KeychainStore
+
+    package func planningCredential(account: String) throws -> String? {
+        try keychain.get(
+            account: account,
+            interactionPolicy: .failIfInteractionRequired
+        )
+    }
+}
+
+private struct AppPlanningProviderFactory:
+    PlanningProviderFactory, Sendable
+{
+    let tokenRefresher: (@Sendable () async throws -> String)?
+
+    package func makePlanningAPIProvider(
+        format: ProviderAPIFormat,
+        credential: String,
+        model: String,
+        baseURL: URL
+    ) throws -> any LLMProvider {
+        LLMProviderFactory.make(
+            format: format,
+            authScheme: .automatic,
+            credential: credential,
+            model: model,
+            baseURL: baseURL
+        )
+    }
+
+    package func makePlanningOAuthProvider(
+        accessToken: String,
+        accountId: String,
+        model: String
+    ) throws -> any LLMProvider {
+        OpenAIResponsesProvider(
+            accessToken: accessToken,
+            accountID: accountId,
+            model: model,
+            tokenRefresher: tokenRefresher
+        )
+    }
+}
+
 @MainActor @Observable
 final class AppStore {
     struct ActivityItem: Identifiable, Equatable {
@@ -46,17 +219,44 @@ final class AppStore {
         }
     }
 
+    private let userDefaults: UserDefaults
     private let stateDirectoryLock: StateDirectoryLock
+    private let engineRuntimeDirectories:
+        EngineRuntimeDirectoryAuthoritySetV1
+    private let engineExecutionEnvironment: EngineExecutionEnvironmentV1
     let db: AppDatabase
     let keychain: KeychainStore
     private let openAIOAuthSession: OpenAIOAuthSession?
     let artifactStoreRoot: URL
     let reportStoreRoot: URL
+    private let reportStore: ManagedExpeditionReportStore
+    let externalOperationWorkflow: ExternalOperationWorkflowCoordinator
     let orchestrator: Orchestrator
+    let inputWorkflowController: InputWorkflowController
+    let missionWorkflowController: MissionWorkflowController
+    let planningEntryCoordinator: PlanningEntryCoordinator
     let scheduledMissionNotifier: ScheduledMissionNotifier
     let missionScheduler: MissionScheduler
     /// MCP 驿站（M8-D8：绞杀第二刀，领域状态独立成 store）
     let mcp: McpStore
+    var globalVisibleFailure: UserVisibleFailure?
+    var inputCampProjectionByCampId:
+        [String: WorkflowProjection<InputCampSnapshot>] = [:]
+    var inputReviewProjectionByIngestionId:
+        [String: WorkflowProjection<InputReviewSnapshot>] = [:]
+    var missionIndexProjection = WorkflowProjection<MissionIndexSnapshot>()
+    var missionDetailProjectionByMissionId:
+        [String: WorkflowProjection<MissionDetailSnapshot>] = [:]
+    var runtimeProjection: WorkflowProjection<RuntimeWorkflowSnapshot>
+    private(set) var codingRanchBootstrapState:
+        WorkflowLoadState<CodingRanchBootstrapResult>
+    private var applicationStartupGate: ApplicationStartupGate
+    private let synchronousRuntimeBootstrap: SynchronousRuntimeBootstrap
+    private let runtimeBootstrapRequest: RuntimeBootstrapRequest
+    private let codingRanchBootstrapBoundary:
+        ApplicationPostDatabaseBootstrapBoundary
+    private let productBootstrapService: ProductBootstrapService
+    private let failureReporter: FailureReporter
 
     var companions: [CompanionRecord] = []
     /// 营地=频道（M5-0）：全部营地，创建序
@@ -66,6 +266,8 @@ final class AppStore {
     var codingRanchDashboard: CampDashboardViewState?
     var codingRanchInbox = RuminationInboxViewState(loadState: .idle, items: [])
     var ruminationActionError: String?
+    var ruminationActionInFlightIds: Set<String> = []
+    var pendingIngestionDeletion: PendingIngestionDeletionViewState?
     var apiKeyPresent = false
     var webCredentialPresent = false
     var credentialAccessInProgress = false
@@ -73,7 +275,12 @@ final class AppStore {
     var runtimeProfiles: [RuntimeProfileRecord] = []
     var currentRuntimeProfile: RuntimeProfileRecord?
     var preferredCredentialSource: ProviderCredentialSource = .apiKey {
-        didSet { UserDefaults.standard.set(preferredCredentialSource.rawValue, forKey: "preferredCredentialSource") }
+        didSet {
+            userDefaults.set(
+                preferredCredentialSource.rawValue,
+                forKey: "preferredCredentialSource"
+            )
+        }
     }
     var oauthLoginStatus: String?
     var oauthNeedsRelogin = false
@@ -104,6 +311,13 @@ final class AppStore {
     var effectiveDistillModel: String { distillModel.isEmpty ? defaultModel : distillModel }
     var effectivePlannerModel: String { plannerModel.isEmpty ? defaultModel : plannerModel }
 
+    func planningRuntimeSelection() throws -> PlanningEntryRuntimeSelection {
+        try Self.scheduledPlanningRuntimeSelection(
+            database: db,
+            defaults: profileScopedDefaults
+        )
+    }
+
     // MARK: 哨卡（M7）
 
     enum HaltOperationState: Equatable {
@@ -120,8 +334,27 @@ final class AppStore {
     var haltErrorMessage: String?
     var kernelStartupRecoveryPending = false
     var pendingScheduleCatchups: [ScheduleCatchup] = []
-    /// 反刍真实阶段(内存态,UI 展示用;key=ingestionId)
-    var ruminationStages: [String: RuminationStage] = [:]
+    struct LiveRuminationPhase: Sendable, Equatable {
+        let identity: RuminationPhaseIdentity
+        let phase: RuminationPhase
+    }
+
+    /// 反刍真实阶段与 durable identity 的进程内 overlay。
+    var ruminationPhases:
+        [String: LiveRuminationPhase] = [:]
+    var codingRanchReadyCampIds: Set<String> = []
+    var codingRanchIngestionCampIds: [String: String] = [:]
+    var codingRanchInboxCache:
+        [String: RuminationInboxViewState] = [:]
+    var codingRanchDashboardCache:
+        [String: CampDashboardViewState] = [:]
+    private var inputCampTaskByCampId:
+        [String: Task<Void, Never>] = [:]
+    private var inputReviewTaskByIngestionId:
+        [String: Task<Void, Never>] = [:]
+    private var missionIndexTask: Task<Void, Never>?
+    private var missionDetailTaskByMissionId:
+        [String: Task<Void, Never>] = [:]
     /// 设置页「测试连接」状态文案
     var modelConnectionTestStatus: String?
 
@@ -178,7 +411,12 @@ final class AppStore {
     }
     /// 新行动的默认自主档位（M7-D2）
     var defaultAutonomy: MissionAutonomy = .standard {
-        didSet { UserDefaults.standard.set(defaultAutonomy.rawValue, forKey: "defaultAutonomy") }
+        didSet {
+            userDefaults.set(
+                defaultAutonomy.rawValue,
+                forKey: "defaultAutonomy"
+            )
+        }
     }
 
     private struct StoredCredential: Sendable {
@@ -210,18 +448,28 @@ final class AppStore {
 
     /// 默认行动预算（M5-2，spec §13：设置页可改；propose_squad 缺省随之）
     var defaultMissionBudget: Int = KernelDefaults.missionBudget {
-        didSet { UserDefaults.standard.set(defaultMissionBudget, forKey: "defaultMissionBudget") }
+        didSet {
+            userDefaults.set(
+                defaultMissionBudget,
+                forKey: "defaultMissionBudget"
+            )
+        }
     }
 
     nonisolated static let defaultBaseURL = RuntimeProfileBootstrap.defaultAnthropicBaseURL
     var apiBaseURL: String = AppStore.defaultBaseURL {
-        didSet { UserDefaults.standard.set(apiBaseURL, forKey: "apiBaseURL") }
+        didSet { userDefaults.set(apiBaseURL, forKey: "apiBaseURL") }
     }
     var apiFormat: ProviderAPIFormat = .anthropicMessages {
-        didSet { UserDefaults.standard.set(apiFormat.rawValue, forKey: "apiFormat") }
+        didSet { userDefaults.set(apiFormat.rawValue, forKey: "apiFormat") }
     }
     var apiAuthScheme: ProviderAuthScheme = .automatic {
-        didSet { UserDefaults.standard.set(apiAuthScheme.rawValue, forKey: "apiAuthScheme") }
+        didSet {
+            userDefaults.set(
+                apiAuthScheme.rawValue,
+                forKey: "apiAuthScheme"
+            )
+        }
     }
     var apiBaseURLValid: Bool { ProviderEndpoint.normalizedBaseURL(apiBaseURL) != nil }
 
@@ -255,10 +503,49 @@ final class AppStore {
     var feedPanelVisible = true
     var feedNotice: String?
     var selectedCardId: String?
+    var returnAcceptanceError: String?
+    private var viewedReturnArtifactIDs: Set<String> = []
     private var missionTask: Task<Void, Never>?
+    private var pendingManualMissionStart: PendingManualMissionStart?
     private var kernelEventsTask: Task<Void, Never>?
     private var oauthCallbackListener: NWListener?
     private var sentScheduledMissionNotifications: Set<String> = []
+    private var scheduledMissionOutcomeInFlight: Set<String> = []
+    private enum ScheduleMutationKey: Hashable {
+        case template(String)
+        case schedule(String)
+    }
+    private struct SchedulePostCommitRepairCarrier {
+        let generation: UInt64
+        let identity: ScheduleMutationCommittedIdentity
+        let receipt: SchedulePostCommitRepairReceipt
+    }
+    private var scheduleMutationGenerationByKey:
+        [ScheduleMutationKey: UInt64] = [:]
+    private var schedulePostCommitRepairByKey:
+        [ScheduleMutationKey: SchedulePostCommitRepairCarrier] = [:]
+    private enum ScheduleCommandFlightPurpose: Equatable {
+        case mutation
+        case repair(startingReceipt: SchedulePostCommitRepairReceipt)
+    }
+    private struct ScheduleCommandFlight {
+        let attempt: UUID
+        let generation: UInt64
+        let purpose: ScheduleCommandFlightPurpose
+        let task: Task<Void, Never>
+    }
+    private var scheduleCommandFlightByKey:
+        [ScheduleMutationKey: ScheduleCommandFlight] = [:]
+    @MainActor private final class ScheduleCommandCompletion {
+        var committed = false
+    }
+    private var scheduleTemplateRecordById:
+        [String: MissionTemplateRecord] = [:]
+    private var scheduleRecordById: [String: ScheduleRecord] = [:]
+    private var scheduleAuthorizationEvidence: ScheduleAuthorizationReceipt?
+    private var scheduleRegistrationEvidence: ScheduleRegistrationReceipt?
+    private var scheduleMenuTitle = "下次日程：暂无"
+    private let operationTraceFactory = OperationTraceFactory.live
 
     /// 新行动表单草稿（按营地暂存，防切页丢输入——UX 审计 P2）
     struct MissionDraft {
@@ -270,6 +557,7 @@ final class AppStore {
 
     var chatMessages: [(role: String, text: String)] = []
     var chatStreaming = false
+    private var chatCompanionId: String?
     private var chatTask: Task<Void, Never>?
     private var chatCoalescer: DeltaCoalescer?
     private var chatStreamID = 0
@@ -286,7 +574,14 @@ final class AppStore {
     var campId: String?
     var campName = "我的营地"
     var guideCompanion: CompanionRecord?
-    var campNotes: [CampNoteRecord] = []
+    private var memoryKnowledgeProjection =
+        MemoryKnowledgeProjectionCoordinator()
+    var campNotes: [CampNoteRecord] {
+        memoryKnowledgeProjection.visibleCampNotes
+    }
+    var campNotesState: WorkflowLoadState<[CampNoteRecord]> {
+        memoryKnowledgeProjection.visibleCampState
+    }
     var guideMessages: [GuideMessage] = []
     var guideStreamingText: String?
     var guideStreaming = false
@@ -300,17 +595,30 @@ final class AppStore {
     private var guideTask: Task<Void, Never>?
     private var guideCoalescer: DeltaCoalescer?
     private var guideStreamID = 0
+    private var campHomeLoadID = 0
     private var toastTask: Task<Void, Never>?
 
     // MARK: DM 记忆（M4）
 
-    var memoryNotes: [CompanionNoteRecord] = []
+    var memoryNotes: [CompanionNoteRecord] {
+        memoryKnowledgeProjection.visibleMemoryNotes
+    }
+    var memoryNotesState: WorkflowLoadState<[CompanionNoteRecord]> {
+        memoryKnowledgeProjection.visibleMemoryState
+    }
+    var memoryDistillationVisibilityCards:
+        [MemoryDistillationVisibilityCard]
+    {
+        memoryKnowledgeProjection.visibilityCards
+    }
     var memoryDrawerVisible = false
     var distillingMemory = false
     /// 切走沉淀的在途防重（快速来回切换时避免同一增量重复送蒸）
     private var autoDistillInFlight: Set<String> = []
 
     init() {
+        let appDefaults = Self.makeUserDefaults()
+        userDefaults = appDefaults
         let keychainStore = KeychainStore()
         let reloginHandler = OpenAIOAuthReloginHandler()
         let runtimeProfileFailureHandler = RuntimeProfileResolutionFailureHandler()
@@ -327,13 +635,18 @@ final class AppStore {
         keychain = keychainStore
         openAIOAuthSession = openAISession
         let initialAPIFormat = ProviderAPIFormat(
-            rawValue: UserDefaults.standard.string(forKey: "apiFormat") ?? ""
+            rawValue: appDefaults.string(forKey: "apiFormat") ?? ""
         ) ?? .anthropicMessages
         apiFormat = initialAPIFormat
         apiAuthScheme = .automatic
-        UserDefaults.standard.set(ProviderAuthScheme.automatic.rawValue, forKey: "apiAuthScheme")
+        appDefaults.set(
+            ProviderAuthScheme.automatic.rawValue,
+            forKey: "apiAuthScheme"
+        )
         let initialPreferredCredentialSource = ProviderCredentialSource(
-            rawValue: UserDefaults.standard.string(forKey: Self.preferredCredentialSourceKey) ?? ""
+            rawValue: appDefaults.string(
+                forKey: Self.preferredCredentialSourceKey
+            ) ?? ""
         ) ?? .apiKey
         preferredCredentialSource = initialPreferredCredentialSource
         // 开发用状态目录覆盖（UI 预览时指向临时库，避免污染真实数据）
@@ -341,46 +654,172 @@ final class AppStore {
             .map { URL(fileURLWithPath: $0) }
             ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("AgentLoop")
+        let processInspector = DarwinEngineRuntimeProcessInspectorV1()
+        let lockedStateDirectory: StateDirectoryLock
+        let runtimeDirectories: EngineRuntimeDirectoryAuthoritySetV1
         do {
             try FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
-            stateDirectoryLock = try StateDirectoryLock(directoryURL: appSupport)
+            lockedStateDirectory = try StateDirectoryLock(
+                directoryURL: appSupport
+            )
+            runtimeDirectories = try EngineRuntimeDirectoryBootstrapV1
+                .prepareBeforeDatabase(
+                    stateDirectoryLock: lockedStateDirectory,
+                    processInspector: processInspector
+                )
         } catch {
             fatalError("AgentLoop 状态目录初始化失败：\(error.localizedDescription)")
         }
+        stateDirectoryLock = lockedStateDirectory
+        engineRuntimeDirectories = runtimeDirectories
         artifactStoreRoot = appSupport.appendingPathComponent("artifacts")
-        reportStoreRoot = appSupport.appendingPathComponent("reports")
-        let database = try! AppDatabase(path: appSupport.appendingPathComponent("agentloop.sqlite").path)
-        db = database
-        let scopedDefaults = ProfileScopedDefaults()
-        let initialAPIBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
-        let initialAPIKeyPresent = !Self.isUIPreview
-            && Self.nonEmptyCredential(try? keychainStore.get(
-                account: Self.apiKeyAccount,
-                interactionPolicy: .failIfInteractionRequired
-            )) != nil
-        let initialOAuthTokenPresent = !Self.isUIPreview
-            && Self.nonEmptyCredential(try? keychainStore.get(
-                account: Self.oauthAccessTokenAccount,
-                interactionPolicy: .failIfInteractionRequired
-            )) != nil
+        let managedReportRoot = appSupport.appendingPathComponent("reports")
+        reportStoreRoot = managedReportRoot
+        let database: AppDatabase
         do {
-            let seededProfile = try RuntimeProfileBootstrap(
-                db: database,
-                defaults: scopedDefaults
-            ).ensureSeeded(
-                inputs: RuntimeProfileBootstrap.SeedInputs(
-                    apiKeyPresent: initialAPIKeyPresent,
-                    apiFormat: initialAPIFormat,
-                    apiBaseURL: initialAPIBaseURL,
-                    oauthTokenPresent: initialOAuthTokenPresent,
-                    preferredSource: initialPreferredCredentialSource
-                ),
-                fallbackModelChoices: Self.factoryModelChoices
+            database = try AppDatabase(
+                path: appSupport.appendingPathComponent("agentloop.sqlite").path
             )
-            runtimeProfiles = (try? database.runtimeProfiles()) ?? []
-            currentRuntimeProfile = (try? database.defaultProfile()) ?? seededProfile
         } catch {
-            fatalError("运行时供给线初始化失败：\(error.localizedDescription)")
+            fatalError(
+                "AgentLoop 数据库初始化失败：\(String(describing: error))"
+            )
+        }
+        db = database
+        let managedReportStore = ManagedExpeditionReportStore(
+            database: database,
+            reportStoreRoot: managedReportRoot
+        )
+        do {
+            try managedReportStore.recoverPendingWrites()
+        } catch {
+            fatalError(
+                "远征报告恢复失败，应用已停止启动以保留恢复证据：\(String(describing: error))"
+            )
+        }
+        reportStore = managedReportStore
+        let externalCoordinator = ExternalOperationWorkflowCoordinator(
+            store: ApprovalGrantStore(database: database)
+        )
+        externalOperationWorkflow = externalCoordinator
+        let scopedDefaults = ProfileScopedDefaults(defaults: appDefaults)
+        let defaultBaseURL = Self.defaultBaseURL
+        let initialAPIBaseURL =
+            appDefaults.string(forKey: "apiBaseURL")
+            ?? defaultBaseURL
+        let reporter = FailureReporter(database: database)
+        failureReporter = reporter
+        let runtimeResolver = RuntimeCredentialResolver(
+            database: database,
+            defaults: scopedDefaults,
+            credentialAccess: SynchronizedCredentialAccess(
+                store: keychainStore
+            ),
+            accounts: RuntimeCredentialAccounts(
+                apiKey: Self.apiKeyAccount,
+                searchKey: "tavily-api-key",
+                oauth: .live
+            ),
+            defaultBaseURL: defaultBaseURL,
+            tokenRefresher: Self.tokenRefresher(for: openAISession)
+        )
+#if DEBUG
+        let runtimePresence: RuntimeCredentialPresencePort =
+            Self.isUIPreview
+            ? .preview(
+                RuntimeCredentialPresence(
+                    apiKeyPresent: false,
+                    searchKeyPresent: false,
+                    oauthAccessTokenPresent: false,
+                    chatGPTAccountIdPresent: false
+                )
+            )
+            : .live(resolver: runtimeResolver)
+#else
+        let runtimePresence = RuntimeCredentialPresencePort.live(
+            resolver: runtimeResolver
+        )
+#endif
+        let localRuntimeBootstrap = SynchronousRuntimeBootstrap(
+            database: database,
+            defaults: scopedDefaults,
+            resolver: runtimeResolver,
+            reporter: reporter,
+            presence: runtimePresence
+        )
+        let localRuntimeRequest = RuntimeBootstrapRequest(
+            apiFormat: initialAPIFormat,
+            apiBaseURL: initialAPIBaseURL,
+            preferredSource: initialPreferredCredentialSource,
+            fallbackModelChoices: Self.factoryModelChoices,
+            interactionPolicy: .failIfInteractionRequired
+        )
+        let runtimeTrace = OperationTraceFactory.live.generated(
+            operation: .runtimeBootstrap,
+            scope: .fixed(.runtimeBootstrap)
+        )
+        let localRuntimeResult = captureSynchronous(
+            reporter: reporter,
+            trace: runtimeTrace
+        ) {
+            try localRuntimeBootstrap.run(
+                localRuntimeRequest,
+                trace: runtimeTrace
+            )
+        }
+        let localRuntimeProjection = WorkflowProjection(
+            initial: localRuntimeResult
+        )
+        let localRanchBoundary =
+            ApplicationPostDatabaseBootstrapBoundary(reporter: reporter)
+        let localProductBootstrap = ProductBootstrapService(db: database)
+        let ranchTrace = OperationTraceFactory.live.generated(
+            operation: .applicationBootstrap,
+            scope: .fixed(.application)
+        )
+        let localRanchOutcome = localRanchBoundary
+            .ensureCodingRanchBootstrap(trace: ranchTrace) {
+                try localProductBootstrap.ensureBootstrap()
+            }
+        let localRanchProjection = Self.codingRanchBootstrapProjection(
+            localRanchOutcome
+        )
+        let localStartupGate = ApplicationStartupGate(
+            runtime: localRuntimeProjection.state,
+            codingRanch: localRanchProjection.state
+        )
+        let localRuntimeFailure: UserVisibleFailure?
+        switch localRuntimeResult {
+        case .value:
+            localRuntimeFailure = nil
+        case .failed(let failure):
+            localRuntimeFailure = failure
+        }
+        synchronousRuntimeBootstrap = localRuntimeBootstrap
+        runtimeBootstrapRequest = localRuntimeRequest
+        runtimeProjection = localRuntimeProjection
+        codingRanchBootstrapBoundary = localRanchBoundary
+        productBootstrapService = localProductBootstrap
+        codingRanchBootstrapState = localRanchProjection.state
+        applicationStartupGate = localStartupGate
+        globalVisibleFailure =
+            localRanchProjection.visibilityFailure ?? localRuntimeFailure
+        switch localRuntimeResult {
+        case .value(let snapshot):
+            runtimeProfiles = snapshot.profiles
+            currentRuntimeProfile = snapshot.defaultProfile
+            companions = snapshot.companions
+            camps = snapshot.camps
+            apiKeyPresent = snapshot.credentials.apiKeyPresent
+            searchKeyPresent = snapshot.credentials.searchKeyPresent
+            webCredentialPresent =
+                snapshot.credentials.oauthAccessTokenPresent
+                && (
+                    initialAPIFormat != .openAIChatCompletions
+                    || snapshot.credentials.chatGPTAccountIdPresent
+                )
+        case .failed:
+            break
         }
         do {
             let initialMode = try database.dispatchMode()
@@ -392,7 +831,6 @@ final class AppStore {
             campHalted = true
             haltErrorMessage = "无法确认上次的收哨状态。为安全起见，全部行动保持暂停：\(error.localizedDescription)"
         }
-        let defaultBaseURL = Self.defaultBaseURL
         // M8-D5：MCP 敏感 env 从 Keychain 解析（account mcp-<serverId>-<key>）；预览模式不读钥匙串
         let isPreview = ProcessInfo.processInfo.environment["AGENTLOOP_UI_PREVIEW"] == "1"
         kernelStartupRecoveryPending = !isPreview
@@ -403,14 +841,123 @@ final class AppStore {
                 return (try? keychainStore.get(account: "mcp-\(serverId)-\(key)")) ?? nil
             }
         )
+        let dependencyLoader = ContextDependencyLoader(
+            database: database,
+            manager: mcpManager,
+            reporter: reporter,
+            searchCredential: {
+                guard !isPreview else { return nil }
+                return try keychainStore.get(
+                    account: "tavily-api-key",
+                    interactionPolicy: .failIfInteractionRequired
+                )
+            },
+            knowledge: .live(database: database),
+            makeTrace: { operation, scope in
+                OperationTraceFactory.live.generated(
+                    operation: operation,
+                    scope: scope
+                )
+            }
+        )
+        let providerTokenRefresher = Self.tokenRefresher(
+            for: openAISession
+        )
+        let helpProbe = CliHelpProbeV1(
+            processInspector: processInspector
+        )
+        let packagedBridgeExecutablePath = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/AgentLoopBoardBridge")
+            .path
+        let engineEnvironment: EngineExecutionEnvironmentV1
+        do {
+            engineEnvironment = try EngineExecutionEnvironmentV1(
+                database: database,
+                stateDirectoryLock: lockedStateDirectory,
+                artifactStoreRoot: artifactStoreRoot,
+                bridgeExecutablePath: packagedBridgeExecutablePath,
+                boardSocketDirectoryAuthority:
+                    runtimeDirectories.boardSocketDirectoryAuthority,
+                validateCodexManagedPolicy:
+                    EngineCliManagedPolicyValidatorV1.codex(
+                        processInspector: processInspector
+                    ),
+                validateClaudeManagedPolicy:
+                    EngineCliManagedPolicyValidatorV1.claude(
+                        processInspector: processInspector
+                    ),
+                claudeConfigDirectory:
+                    runtimeDirectories.claudeConfigDirectory,
+                cliExecutableDirectory:
+                    runtimeDirectories.cliExecutableDirectory,
+                processInspector: processInspector,
+                dependencyLoader: dependencyLoader,
+                resolveInitialModelLoopProvider: {
+                    profile, companionId, companionModel, modelPolicy in
+                    try Self.resolveInitialEngineProviderAuthority(
+                        profile: profile,
+                        companionId: companionId,
+                        companionModel: companionModel,
+                        modelPolicy: modelPolicy,
+                        database: database,
+                        defaults: scopedDefaults,
+                        keychain: keychainStore,
+                        defaultBaseURL: defaultBaseURL,
+                        tokenRefresher: providerTokenRefresher
+                    )
+                },
+                resolveRecoveryModelLoopProvider: {
+                    profile, companionId, persistedModel in
+                    try Self.resolveRecoveryEngineProviderAuthority(
+                        profile: profile,
+                        companionId: companionId,
+                        persistedModel: persistedModel,
+                        database: database,
+                        defaults: scopedDefaults,
+                        keychain: keychainStore,
+                        defaultBaseURL: defaultBaseURL,
+                        tokenRefresher: providerTokenRefresher
+                    )
+                },
+                helpProbe: helpProbe,
+                makeCliProcessDriver: {
+                    try CliProcessBackend(
+                        processInspector: processInspector
+                    )
+                },
+                clock: { Date() }
+            )
+        } catch {
+            fatalError(
+                "AgentLoop 执行环境初始化失败：\(String(describing: error))"
+            )
+        }
+        engineExecutionEnvironment = engineEnvironment
         mcp = McpStore(db: database, manager: mcpManager, keychain: keychainStore)
-        orchestrator = Orchestrator(
+        let planningProviderResolver = StrictPlanningProviderResolver(
+            profiles: AppPlanningRuntimeProfileSource(db: database),
+            catalogs: AppPlanningModelCatalogSource(defaults: scopedDefaults),
+            credentials: AppPlanningCredentialSource(keychain: keychainStore),
+            factory: AppPlanningProviderFactory(
+                tokenRefresher: Self.tokenRefresher(for: openAISession)
+            )
+        )
+        let legacyRuminationSnapshot: LegacyRuminationStartupSnapshot
+        switch localRuntimeResult {
+        case .value(let snapshot):
+            legacyRuminationSnapshot = snapshot.legacyRuminationSnapshot
+        case .failed:
+            legacyRuminationSnapshot = .legacyProfileUnresolved
+        }
+        let orchestratorInstance = Orchestrator(
             db: database,
+            planningProviderResolver: planningProviderResolver,
             makeProvider: { model, companionId in
                 Self.resolveProvider(
                     model: model,
                     companionId: companionId,
                     db: database,
+                    defaults: scopedDefaults,
                     keychain: keychainStore,
                     defaultBaseURL: defaultBaseURL,
                     tokenRefresher: Self.tokenRefresher(for: openAISession),
@@ -428,23 +975,78 @@ final class AppStore {
                 return key
             },
             mcpManager: mcpManager,
-            requiresStartupRecovery: !isPreview
+            externalOperationWorkflow: externalCoordinator,
+            requiresStartupRecovery: !isPreview,
+            legacyRuminationSnapshot:
+                legacyRuminationSnapshot,
+            contextDependencyLoader: dependencyLoader,
+            reportStore: managedReportStore,
+            engineEnvironment: engineEnvironment
+        )
+        orchestrator = orchestratorInstance
+#if DEBUG
+        let deletionPreviewScenario = Self.p1eDeletionPreviewScenario
+        let activeIngestionDeletionPorts =
+            InputActiveIngestionDeletionPorts.preview(
+                database: database,
+                checkpoint: deletionPreviewScenario
+                    == .storeBeforeEvidenceFailure
+                    ? .beforeEvidenceWrites
+                    : nil,
+                failCommittedRefreshOnce: deletionPreviewScenario
+                    == .refreshAfterCommitOnce
+            )
+#else
+        let activeIngestionDeletionPorts =
+            InputActiveIngestionDeletionPorts.live(database: database)
+#endif
+        inputWorkflowController = InputWorkflowController(
+            database: database,
+            orchestrator: orchestratorInstance,
+            resolver: runtimeResolver,
+            reporter: reporter,
+            activeIngestionDeletionPorts: activeIngestionDeletionPorts
+        )
+        let planningCoordinator = PlanningEntryCoordinator(
+            db: database,
+            orchestrator: orchestratorInstance
+        )
+        planningEntryCoordinator = planningCoordinator
+        missionWorkflowController = MissionWorkflowController(
+            database: database,
+            orchestrator: orchestratorInstance,
+            planningCoordinator: planningCoordinator,
+            reportStoreRoot: reportStoreRoot,
+            selectRuntime: {
+                try AppStore.scheduledPlanningRuntimeSelection(
+                    database: database,
+                    defaults: scopedDefaults
+                )
+            },
+            reporter: reporter,
+            traceFactory: .live,
+            registrationEvaluation: {
+                ScheduleRegistrationEvaluation(
+                    now: Date(),
+                    timeZone: .current
+                )
+            },
+            reportStore: managedReportStore
         )
         let notifier = ScheduledMissionNotifier()
         scheduledMissionNotifier = notifier
-        missionScheduler = MissionScheduler(
-            db: database,
-            orchestrator: orchestrator,
-            plannerModel: { AppStore.scheduledPlannerModelFromDefaults(database: database) }
+        missionScheduler = MissionScheduler()
+        apiBaseURL =
+            appDefaults.string(forKey: "apiBaseURL")
+            ?? Self.defaultBaseURL
+        let storedBudget = appDefaults.integer(
+            forKey: "defaultMissionBudget"
         )
-        try! db.ensureCodingRanchBootstrap()
-        apiBaseURL = UserDefaults.standard.string(forKey: "apiBaseURL") ?? Self.defaultBaseURL
-        let storedBudget = UserDefaults.standard.integer(forKey: "defaultMissionBudget")
         if storedBudget > 0 {
             defaultMissionBudget = storedBudget
         }
         loadModelDefaultsForCurrentProfile()
-        if let storedAutonomy = UserDefaults.standard.string(forKey: "defaultAutonomy"),
+        if let storedAutonomy = appDefaults.string(forKey: "defaultAutonomy"),
            let autonomy = MissionAutonomy(rawValue: storedAutonomy) {
             defaultAutonomy = autonomy
         }
@@ -455,37 +1057,252 @@ final class AppStore {
             ShellProcessRegistry.shared.terminateAll()
         }
         mcp.onToast = { [weak self] message in self?.showToast(message) }
-        missionScheduler.onPendingCatchupsChanged = { [weak self] catchups in
-            self?.pendingScheduleCatchups = catchups
-            if !catchups.isEmpty {
-                self?.showToast("有定时行动错过了触发点，等待你确认是否补跑")
+        missionScheduler.onFire = { [weak self] request, completion in
+            Task { @MainActor [weak self] in
+                guard let self else {
+                    completion()
+                    return
+                }
+                await self.handleScheduledFire(request)
+                completion()
             }
         }
-        missionScheduler.onScheduleFired = { [weak self] missionId in
-            self?.reloadMissionList()
-            self?.notifyScheduledMissionOutcomeIfNeeded(missionId: missionId)
-        }
-        reload(keychainInteractionPolicy: .failIfInteractionRequired)
-        startKernelEventListener(recoverKernel: !Self.isUIPreview)
         // UI 预览模式（开发用）：不做启动领养调度，避免预览时真实派发与钥匙串弹窗
         reloginHandler.store = self
         runtimeProfileFailureHandler.store = self
     }
 
+    private static func codingRanchBootstrapProjection(
+        _ outcome: OperationCommitOutcome<CodingRanchBootstrapResult>
+    ) -> (
+        state: WorkflowLoadState<CodingRanchBootstrapResult>,
+        visibilityFailure: UserVisibleFailure?
+    ) {
+        switch outcome {
+        case .notCommitted(let failure):
+            return (.failed(failure), failure)
+        case .committed(let result):
+            return (.loaded(result), nil)
+        case .committedWithVisibilityFailure(let result, let failure):
+            return (.loaded(result), failure)
+        }
+    }
+
+    var runtimeBootstrapRetryAvailable: Bool {
+        if case .failed = runtimeProjection.state {
+            return true
+        }
+        return false
+    }
+
+    var codingRanchBootstrapRetryAvailable: Bool {
+        if case .failed = codingRanchBootstrapState {
+            return true
+        }
+        return false
+    }
+
+    func activatePostBootstrapDispatchIfReady() {
+        applyStartupGateDecision(
+            applicationStartupGate.claimStartIfReady()
+        )
+    }
+
+    func runCodingRanchBootstrap() {
+        guard case .failed = codingRanchBootstrapState else {
+            return
+        }
+        codingRanchBootstrapState = .loading
+        let trace = operationTraceFactory.generated(
+            operation: .applicationBootstrap,
+            scope: .fixed(.application)
+        )
+        let outcome = codingRanchBootstrapBoundary
+            .ensureCodingRanchBootstrap(trace: trace) {
+                try productBootstrapService.ensureBootstrap()
+            }
+        let projection = Self.codingRanchBootstrapProjection(outcome)
+        codingRanchBootstrapState = projection.state
+        switch projection.state {
+        case .loaded(let result):
+            if case .failed(let runtimeFailure) = runtimeProjection.state {
+                globalVisibleFailure = runtimeFailure
+            } else {
+                globalVisibleFailure = projection.visibilityFailure
+            }
+            applyStartupGateDecision(
+                applicationStartupGate.acceptCodingRanchLoaded(result)
+            )
+        case .failed(let failure):
+            globalVisibleFailure = failure
+        case .idle, .loading:
+            return
+        }
+    }
+
+    func runRuntimeBootstrap() {
+        guard case .failed = runtimeProjection.state else {
+            return
+        }
+        let trace = operationTraceFactory.generated(
+            operation: .runtimeBootstrap,
+            scope: .fixed(.runtimeBootstrap)
+        )
+        let generationCapture = captureSynchronous(
+            reporter: failureReporter,
+            trace: trace
+        ) {
+            try runtimeProjection.beginRefresh()
+        }
+        let generation: WorkflowRequestGeneration
+        switch generationCapture {
+        case .value(let value):
+            generation = value
+        case .failed(let failure):
+            globalVisibleFailure = failure
+            return
+        }
+        let terminal = captureSynchronousLoad(
+            reporter: failureReporter,
+            trace: trace
+        ) {
+            try synchronousRuntimeBootstrap.run(
+                runtimeBootstrapRequest,
+                trace: trace
+            )
+        }
+        let applyCapture = captureSynchronous(
+            reporter: failureReporter,
+            trace: trace
+        ) {
+            try runtimeProjection.applyTerminal(
+                terminal,
+                for: generation
+            )
+        }
+        switch applyCapture {
+        case .value(false):
+            return
+        case .value(true):
+            break
+        case .failed(let failure):
+            globalVisibleFailure = failure
+            return
+        }
+        switch terminal {
+        case .loaded(let snapshot):
+            installRuntimeSnapshot(snapshot)
+            if case .failed(let ranchFailure) = codingRanchBootstrapState {
+                globalVisibleFailure = ranchFailure
+            } else {
+                globalVisibleFailure = nil
+            }
+            applyStartupGateDecision(
+                applicationStartupGate.acceptRuntimeLoaded(snapshot)
+            )
+        case .failed(let failure):
+            globalVisibleFailure = failure
+        case .idle, .loading:
+            return
+        }
+    }
+
+    private func installRuntimeSnapshot(
+        _ snapshot: RuntimeWorkflowSnapshot
+    ) {
+        runtimeProfiles = snapshot.profiles
+        currentRuntimeProfile = snapshot.defaultProfile
+        companions = snapshot.companions
+        camps = snapshot.camps
+        apiKeyPresent = snapshot.credentials.apiKeyPresent
+        searchKeyPresent = snapshot.credentials.searchKeyPresent
+        webCredentialPresent =
+            snapshot.credentials.oauthAccessTokenPresent
+            && (
+                apiFormat != .openAIChatCompletions
+                || snapshot.credentials.chatGPTAccountIdPresent
+            )
+        loadModelDefaultsForCurrentProfile()
+    }
+
+    private func applyStartupGateDecision(
+        _ decision: ApplicationStartupGateDecision
+    ) {
+        switch decision {
+        case .waitingForOther, .alreadyStarted:
+            return
+        case .startNow:
+            startKernelEventListener(recoverKernel: !Self.isUIPreview)
+        }
+    }
+
     /// 环境变量 AGENTLOOP_UI_PREVIEW=1 时为 UI 预览模式：不读钥匙串、不调度任务
     nonisolated static let isUIPreview = ProcessInfo.processInfo.environment["AGENTLOOP_UI_PREVIEW"] == "1"
+
+#if DEBUG
+    private enum P1EDeletionPreviewScenario: String {
+        case storeBeforeEvidenceFailure
+        case refreshAfterCommitOnce
+    }
+
+    nonisolated private static var p1eDeletionPreviewScenario:
+        P1EDeletionPreviewScenario?
+    {
+        guard isUIPreview else { return nil }
+        return P1EDeletionPreviewScenario(
+            rawValue: ProcessInfo.processInfo.environment[
+                "AGENTLOOP_P1E_DELETION_PREVIEW_SCENARIO"
+            ] ?? ""
+        )
+    }
+#endif
+
+    nonisolated private static func makeUserDefaults() -> UserDefaults {
+        guard isUIPreview else {
+            return .standard
+        }
+        let suiteName = [
+            "com.muzi.agentloop.ui-preview",
+            String(ProcessInfo.processInfo.processIdentifier),
+            UUID().uuidString,
+        ].joined(separator: ".")
+        guard let defaults = ProcessLocalPreviewUserDefaults(
+            suiteName: suiteName
+        ) else {
+            fatalError("无法创建进程内 UI 预览偏好存储")
+        }
+        return defaults
+    }
+
+    var profileScopedDefaults: ProfileScopedDefaults {
+        ProfileScopedDefaults(defaults: userDefaults)
+    }
+
     /// 预览直达（截图循环用）：启动即打开指定行动，可选直接进小剧场
     static let previewMissionId = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_MISSION"]
     static let previewTheater = ProcessInfo.processInfo.environment["AGENTLOOP_PREVIEW_THEATER"] == "1"
 
-    nonisolated private static func scheduledPlannerModelFromDefaults(database: AppDatabase) -> String {
-        let defaults = ProfileScopedDefaults()
-        guard let profile = try? database.defaultProfile() else {
-            return KernelDefaults.defaultGuideModel
+    nonisolated private static func scheduledPlanningRuntimeSelection(
+        database: AppDatabase,
+        defaults: ProfileScopedDefaults
+    ) throws -> PlanningEntryRuntimeSelection {
+        guard let profile = try database.defaultProfile() else {
+            throw RecordNotFoundError(
+                table: "runtime_profile(default)",
+                id: "default"
+            )
         }
         let planner = defaults.plannerModel(profileID: profile.id)
-        if !planner.isEmpty { return planner }
-        return defaults.defaultModel(profileID: profile.id, fallback: KernelDefaults.defaultGuideModel)
+        let model = planner.isEmpty
+            ? defaults.defaultModel(
+                profileID: profile.id,
+                fallback: KernelDefaults.defaultGuideModel
+            )
+            : planner
+        return PlanningEntryRuntimeSelection(
+            runtimeProfileId: profile.id,
+            plannerModel: model
+        )
     }
 
     nonisolated private static func nonEmptyCredential(_ value: String?) -> String? {
@@ -494,14 +1311,17 @@ final class AppStore {
         return trimmed
     }
 
-    nonisolated private static func storedProviderCredential(using keychain: KeychainStore) -> StoredCredential? {
+    nonisolated private static func storedProviderCredential(
+        using keychain: KeychainStore,
+        defaults: UserDefaults
+    ) -> StoredCredential? {
         let preferred = ProviderCredentialSource(
-            rawValue: UserDefaults.standard.string(forKey: preferredCredentialSourceKey) ?? ""
+            rawValue: defaults.string(forKey: preferredCredentialSourceKey) ?? ""
         ) ?? .apiKey
         let apiKey = nonEmptyCredential(try? keychain.get(account: apiKeyAccount))
         let chatGPTAccountID = nonEmptyCredential(try? keychain.get(account: oauthChatGPTAccountIDAccount))
         let format = ProviderAPIFormat(
-            rawValue: UserDefaults.standard.string(forKey: "apiFormat") ?? ""
+            rawValue: defaults.string(forKey: "apiFormat") ?? ""
         ) ?? .anthropicMessages
         let rawOAuthToken = nonEmptyCredential(try? keychain.get(account: oauthAccessTokenAccount))
         let oauthToken = format == .openAIChatCompletions && chatGPTAccountID == nil
@@ -517,17 +1337,196 @@ final class AppStore {
         return nil
     }
 
+    nonisolated private static func resolveInitialEngineProviderAuthority(
+        profile: RuntimeProfileRecord,
+        companionId: String,
+        companionModel: String,
+        modelPolicy: CompanionModelPolicy,
+        database: AppDatabase,
+        defaults: ProfileScopedDefaults,
+        keychain: KeychainStore,
+        defaultBaseURL: String,
+        tokenRefresher: (@Sendable () async throws -> String)?
+    ) throws -> EngineModelLoopProviderAuthorityV1 {
+        guard let storedProfile = try database.runtimeProfile(id: profile.id),
+              storedProfile == profile,
+              !profile.kind.isCLI,
+              let companion = try database.companion(id: companionId),
+              companion.model == companionModel,
+              companion.modelPolicy == modelPolicy,
+              companion.runtimeProfileId == profile.id
+                || (companion.runtimeProfileId == nil && profile.isDefault)
+        else {
+            throw EngineAdapterSelectionErrorV1.descriptorMismatch
+        }
+        let effectiveModel: String
+        switch modelPolicy {
+        case .pinned:
+            effectiveModel = companionModel
+        case .inherit:
+            guard let inherited = defaults.string(
+                profileID: profile.id,
+                suffix: "defaultModel"
+            ) else {
+                throw EngineAdapterSelectionErrorV1.descriptorMismatch
+            }
+            effectiveModel = inherited
+        }
+        try validateExactEngineModel(
+            effectiveModel,
+            profile: profile,
+            defaults: defaults
+        )
+        return try deferredEngineProviderAuthority(
+            profile: profile,
+            model: effectiveModel,
+            keychain: keychain,
+            defaultBaseURL: defaultBaseURL,
+            tokenRefresher: tokenRefresher
+        )
+    }
+
+    nonisolated private static func resolveRecoveryEngineProviderAuthority(
+        profile: RuntimeProfileRecord,
+        companionId: String,
+        persistedModel: String,
+        database: AppDatabase,
+        defaults: ProfileScopedDefaults,
+        keychain: KeychainStore,
+        defaultBaseURL: String,
+        tokenRefresher: (@Sendable () async throws -> String)?
+    ) throws -> EngineModelLoopProviderAuthorityV1 {
+        guard let storedProfile = try database.runtimeProfile(id: profile.id),
+              storedProfile == profile,
+              !profile.kind.isCLI,
+              let companion = try database.companion(id: companionId),
+              companion.runtimeProfileId == profile.id
+                || (companion.runtimeProfileId == nil && profile.isDefault)
+        else {
+            throw EngineAdapterSelectionErrorV1.descriptorMismatch
+        }
+        try validateExactEngineModel(
+            persistedModel,
+            profile: profile,
+            defaults: defaults
+        )
+        return try deferredEngineProviderAuthority(
+            profile: profile,
+            model: persistedModel,
+            keychain: keychain,
+            defaultBaseURL: defaultBaseURL,
+            tokenRefresher: tokenRefresher
+        )
+    }
+
+    nonisolated private static func validateExactEngineModel(
+        _ model: String,
+        profile: RuntimeProfileRecord,
+        defaults: ProfileScopedDefaults
+    ) throws {
+        guard !model.isEmpty,
+              model == model.trimmingCharacters(in: .whitespacesAndNewlines),
+              model != "cli-default",
+              let catalog = ModelCatalogService.trustedCatalog(
+                  profile: profile,
+                  defaults: defaults
+              ),
+              catalog.contains(model)
+        else {
+            throw EngineAdapterSelectionErrorV1.descriptorMismatch
+        }
+    }
+
+    nonisolated private static func deferredEngineProviderAuthority(
+        profile: RuntimeProfileRecord,
+        model: String,
+        keychain: KeychainStore,
+        defaultBaseURL: String,
+        tokenRefresher: (@Sendable () async throws -> String)?
+    ) throws -> EngineModelLoopProviderAuthorityV1 {
+        let baseValue = profile.baseURL ?? defaultBaseURL
+        guard let baseURL = ProviderEndpoint.normalizedBaseURL(baseValue) else {
+            throw EngineAdapterSelectionErrorV1.descriptorMismatch
+        }
+        let format: ProviderAPIFormat
+        switch profile.kind {
+        case .anthropicAPI:
+            format = .anthropicMessages
+        case .openAIAPI, .chatGPTOAuth:
+            format = .openAIChatCompletions
+        case .cliCodex, .cliClaude:
+            throw EngineAdapterSelectionErrorV1.descriptorMismatch
+        }
+        return try EngineModelLoopProviderAuthorityV1(
+            profileId: profile.id,
+            effectiveModel: model,
+            makeProvider: {
+                let credential = try exactRuntimeProfileCredential(
+                    profile: profile,
+                    keychain: keychain
+                )
+                return makeProvider(
+                    credential: credential,
+                    format: format,
+                    model: model,
+                    baseURL: baseURL,
+                    tokenRefresher: tokenRefresher
+                )
+            }
+        )
+    }
+
+    nonisolated private static func exactRuntimeProfileCredential(
+        profile: RuntimeProfileRecord,
+        keychain: KeychainStore
+    ) throws -> StoredCredential {
+        guard let account = profile.credentialAccount,
+              !account.isEmpty,
+              let rawValue = try keychain.get(
+                  account: account,
+                  interactionPolicy: .failIfInteractionRequired
+              ),
+              let value = nonEmptyCredential(rawValue)
+        else {
+            throw EngineAdapterSelectionErrorV1.descriptorMismatch
+        }
+        switch profile.kind {
+        case .anthropicAPI, .openAIAPI:
+            return StoredCredential(
+                value: value,
+                source: .apiKey,
+                chatGPTAccountID: nil
+            )
+        case .chatGPTOAuth:
+            guard let rawAccountID = try keychain.get(
+                account: oauthChatGPTAccountIDAccount,
+                interactionPolicy: .failIfInteractionRequired
+            ),
+                  let accountID = nonEmptyCredential(rawAccountID)
+            else {
+                throw EngineAdapterSelectionErrorV1.descriptorMismatch
+            }
+            return StoredCredential(
+                value: value,
+                source: .webLogin,
+                chatGPTAccountID: accountID
+            )
+        case .cliCodex, .cliClaude:
+            throw EngineAdapterSelectionErrorV1.descriptorMismatch
+        }
+    }
+
     nonisolated private static func resolveProvider(
         model requestedModel: String,
         companionId: String?,
         db: AppDatabase,
+        defaults: ProfileScopedDefaults,
         keychain: KeychainStore,
         defaultBaseURL: String,
         tokenRefresher: (@Sendable () async throws -> String)?,
         reportFailure: (@Sendable (String) -> Void)? = nil
     ) -> (any LLMProvider)? {
         guard !Self.isUIPreview else { return nil }
-        let defaults = ProfileScopedDefaults()
         let defaultProfile = try? db.defaultProfile()
         let companion = companionId.flatMap { try? db.companion(id: $0) }
         let profile: RuntimeProfileRecord?
@@ -661,18 +1660,20 @@ final class AppStore {
                 account: "tavily-api-key",
                 interactionPolicy: keychainInteractionPolicy
             )) ?? nil).map { !$0.isEmpty } ?? false)
-        let hasOAuthToken = Self.nonEmptyCredential(
-            try? keychain.get(
-                account: Self.oauthAccessTokenAccount,
-                interactionPolicy: keychainInteractionPolicy
-            )
-        ) != nil
-        let hasChatGPTAccount = Self.nonEmptyCredential(
-            try? keychain.get(
-                account: Self.oauthChatGPTAccountIDAccount,
-                interactionPolicy: keychainInteractionPolicy
-            )
-        ) != nil
+        let hasOAuthToken = !Self.isUIPreview
+            && Self.nonEmptyCredential(
+                try? keychain.get(
+                    account: Self.oauthAccessTokenAccount,
+                    interactionPolicy: keychainInteractionPolicy
+                )
+            ) != nil
+        let hasChatGPTAccount = !Self.isUIPreview
+            && Self.nonEmptyCredential(
+                try? keychain.get(
+                    account: Self.oauthChatGPTAccountIDAccount,
+                    interactionPolicy: keychainInteractionPolicy
+                )
+            ) != nil
         webCredentialPresent = !Self.isUIPreview
             && hasOAuthToken
             && (apiFormat != .openAIChatCompletions || hasChatGPTAccount)
@@ -751,6 +1752,7 @@ final class AppStore {
             model: model,
             companionId: companionId,
             db: db,
+            defaults: profileScopedDefaults,
             keychain: keychain,
             defaultBaseURL: Self.defaultBaseURL,
             tokenRefresher: Self.tokenRefresher(for: openAIOAuthSession),
@@ -790,7 +1792,7 @@ final class AppStore {
     func reconciliationItems(switchingTo profileId: String) -> [ReconciliationItem] {
         (try? db.reconciliationReport(
             switchingTo: profileId,
-            defaults: ProfileScopedDefaults()
+            defaults: profileScopedDefaults
         )) ?? []
     }
 
@@ -806,7 +1808,10 @@ final class AppStore {
             default: return resetSettingScopes.contains(item.id)
             }
         }
-        try? db.applyReconciliation(items: items, defaults: ProfileScopedDefaults())
+        try? db.applyReconciliation(
+            items: items,
+            defaults: profileScopedDefaults
+        )
         setDefaultRuntimeProfile(id: id)
         reload()
     }
@@ -814,7 +1819,11 @@ final class AppStore {
     /// 目录选项(伙伴编辑器/设置/对账共用):OAuth/CLI 只读静态目录;
     /// 官方 API 使用服务端目录 + 手动项;网关使用该档案自己的可编辑目录。
     func catalogChoices(profile: RuntimeProfileRecord) -> [String] {
-        ModelCatalogService.resolvedCatalog(profile: profile, defaults: ProfileScopedDefaults(), fallback: Self.factoryModelChoices)
+        ModelCatalogService.resolvedCatalog(
+            profile: profile,
+            defaults: profileScopedDefaults,
+            fallback: Self.factoryModelChoices
+        )
     }
 
     var currentModelCatalogAllowsManualInput: Bool {
@@ -829,14 +1838,14 @@ final class AppStore {
         guard let profile = currentRuntimeProfile, currentModelCatalogAllowsManualInput else { return }
         let model = rawModel.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !model.isEmpty else { return }
-        let defaults = ProfileScopedDefaults()
+        let defaults = profileScopedDefaults
         defaults.setManualModels(defaults.manualModels(profileID: profile.id) + [model], profileID: profile.id)
         loadModelDefaultsForCurrentProfile()
     }
 
     func removeModelFromCurrentCatalog(_ model: String) {
         guard let profile = currentRuntimeProfile, canRemoveModelFromCurrentCatalog(model) else { return }
-        let defaults = ProfileScopedDefaults()
+        let defaults = profileScopedDefaults
         defaults.setManualModels(defaults.manualModels(profileID: profile.id).filter { $0 != model }, profileID: profile.id)
         if !ModelCatalogService.isOfficialCatalogProfile(profile) {
             let stored = defaults.modelChoices(profileID: profile.id, fallback: Self.factoryModelChoices)
@@ -847,7 +1856,7 @@ final class AppStore {
 
     func resetCurrentModelCatalog() {
         guard let profile = currentRuntimeProfile, currentModelCatalogAllowsManualInput else { return }
-        let defaults = ProfileScopedDefaults()
+        let defaults = profileScopedDefaults
         defaults.setManualModels([], profileID: profile.id)
         if !ModelCatalogService.isOfficialCatalogProfile(profile) {
             defaults.setStringArray(Self.factoryModelChoices, profileID: profile.id, suffix: "modelChoices")
@@ -869,7 +1878,13 @@ final class AppStore {
             return "「\(profile.name)」还没有可用凭据,先保存 API Key"
         }
         do {
-            let models = try await ModelCatalogService().refresh(profile: profile, credential: credential)
+            let models = try await ModelCatalogService(
+                defaults: profileScopedDefaults
+            )
+            .refresh(
+                profile: profile,
+                credential: credential
+            )
             reloadRuntimeProfiles(loadModelDefaults: profile.isDefault)
             return "「\(profile.name)」目录已更新:\(models.count) 个模型"
         } catch {
@@ -896,7 +1911,7 @@ final class AppStore {
 
     private func loadModelDefaultsForCurrentProfile(clampAfterCatalogEdit: Bool = false) {
         guard let profile = currentRuntimeProfile else { return }
-        let defaults = ProfileScopedDefaults()
+        let defaults = profileScopedDefaults
         let choices = catalogChoices(profile: profile)
         modelChoices = choices
         removableCatalogModels = !profile.kind.allowsManualModelEntry ? [] :
@@ -916,7 +1931,11 @@ final class AppStore {
 
     private func persistProfileString(_ value: String, suffix: String) {
         guard let profileId = currentRuntimeProfile?.id else { return }
-        ProfileScopedDefaults().setString(value, profileID: profileId, suffix: suffix)
+        profileScopedDefaults.setString(
+            value,
+            profileID: profileId,
+            suffix: suffix
+        )
     }
 
     private func attachAPIKeyToEmptyDefaultProfileIfNeeded() {
@@ -933,92 +1952,766 @@ final class AppStore {
 
     // MARK: - 定时行动逻辑接线（UI 由 Claude 单独实现）
 
-    func saveScheduledMissionTemplate(_ template: MissionTemplateRecord) -> String? {
-        do {
-            try db.saveMissionTemplate(template)
-            return nil
-        } catch {
-            return readableError(error)
-        }
-    }
-
-    func saveMissionSchedule(_ schedule: ScheduleRecord) {
-        Task { [weak self] in
-            guard let self else { return }
-            if schedule.enabled {
-                await scheduledMissionNotifier.requestAuthorizationOnFirstScheduleEnable()
+    func loadScheduleWorkflow(
+        campId: String
+    ) async -> WorkflowLoadState<ScheduleWorkflowSnapshot> {
+        let trace = operationTraceFactory.generated(
+            operation: .scheduleLoad,
+            scope: .fixed(.scheduleIndex)
+        )
+        let terminal = await missionWorkflowController.loadSchedules(
+            campId: campId,
+            trace: trace
+        )
+        switch terminal {
+        case .loaded(let snapshot):
+            for template in snapshot.templates {
+                scheduleTemplateRecordById[template.record.id] =
+                    template.record
             }
-            do {
-                try db.saveSchedule(schedule)
-                missionScheduler.refresh()
-            } catch {
-                showToast("保存日程失败：\(readableError(error))")
+            for schedule in snapshot.schedules {
+                scheduleRecordById[schedule.record.id] = schedule.record
+            }
+        case .failed(let failure):
+            showToast(failure.message)
+        case .idle, .loading:
+            break
+        }
+        return terminal
+    }
+
+    func saveScheduledMissionTemplate(
+        _ command: ScheduleTemplateDraftCommand
+    ) async -> Bool {
+        let templateId = command.existingId ?? UUID().uuidString
+        let normalized = ScheduleTemplateDraftCommand(
+            existingId: templateId,
+            campId: command.campId,
+            name: command.name,
+            goal: command.goal,
+            companionId: command.companionId,
+            workspacePath: command.workspacePath,
+            budgetText: command.budgetText,
+            autonomy: command.autonomy
+        )
+        return await performScheduleMutation(
+            key: .template(templateId),
+            operation: .scheduleTemplateSave
+        ) { [self] trace in
+            await missionWorkflowController.saveTemplateDraft(
+                normalized,
+                registration: missionScheduler.registrationPort(),
+                trace: trace
+            )
+        }
+    }
+
+    func saveMissionSchedule(
+        _ command: ScheduleDraftCommand,
+        calendar: Calendar
+    ) async -> Bool {
+        let commandKey = ScheduleMutationKey.schedule(
+            "draft:\(UUID().uuidString)"
+        )
+        return await performScheduleMutation(
+            key: commandKey,
+            operation: .scheduleSave
+        ) { [self] trace in
+            await missionWorkflowController.saveScheduleDraft(
+                command,
+                calendar: calendar,
+                registration: missionScheduler.registrationPort(),
+                notifications: scheduledMissionNotifier.port(),
+                trace: trace
+            )
+        }
+    }
+
+    func setMissionScheduleEnabled(
+        id: String,
+        enabled: Bool
+    ) async -> Bool {
+        return await performScheduleMutation(
+            key: .schedule(id),
+            operation: .scheduleEnable
+        ) { [self] trace in
+            await missionWorkflowController.setScheduleEnabled(
+                id: id,
+                enabled: enabled,
+                registration: missionScheduler.registrationPort(),
+                notifications: scheduledMissionNotifier.port(),
+                trace: trace
+            )
+        }
+    }
+
+    func deleteMissionSchedule(id: String) async -> Bool {
+        return await performScheduleMutation(
+            key: .schedule(id),
+            operation: .scheduleDelete
+        ) { [self] trace in
+            await missionWorkflowController.deleteSchedule(
+                id: id,
+                registration: missionScheduler.registrationPort(),
+                trace: trace
+            )
+        }
+    }
+
+    func deleteScheduledMissionTemplate(id: String) async -> Bool {
+        return await performScheduleMutation(
+            key: .template(id),
+            operation: .scheduleTemplateDelete
+        ) { [self] trace in
+            await missionWorkflowController.deleteTemplate(
+                id: id,
+                registration: missionScheduler.registrationPort(),
+                trace: trace
+            )
+        }
+    }
+
+    private func performScheduleMutation(
+        key: ScheduleMutationKey,
+        operation: FailureOperation,
+        action: @escaping @MainActor @Sendable (OperationTrace) async
+            -> ScheduleMutationOutcome
+    ) async -> Bool {
+        let trace = operationTraceFactory.generated(
+            operation: operation,
+            scope: .fixed(.scheduleIndex)
+        )
+        let currentGeneration = scheduleMutationGenerationByKey[key] ?? 0
+        let (generation, overflow) = currentGeneration
+            .addingReportingOverflow(1)
+        guard !overflow else {
+            showToast(
+                failureReporter.capture(
+                    ProjectionContractError.generationOverflow,
+                    trace: trace
+                ).message
+            )
+            return false
+        }
+
+        scheduleCommandFlightByKey[key]?.task.cancel()
+        scheduleMutationGenerationByKey[key] = generation
+        let attempt = UUID()
+        let purpose = ScheduleCommandFlightPurpose.mutation
+        let completion = ScheduleCommandCompletion()
+        let task = Task { @MainActor [self] in
+            guard isCurrentScheduleFlight(
+                key: key,
+                generation: generation,
+                attempt: attempt,
+                purpose: purpose
+            ) else {
+                return
+            }
+            let outcome = await action(trace)
+            completion.committed = applyScheduleMutationOutcome(
+                outcome,
+                originKey: key,
+                generation: generation,
+                attempt: attempt,
+                purpose: purpose
+            )
+            finishScheduleCommandFlight(
+                key: key,
+                generation: generation,
+                attempt: attempt,
+                purpose: purpose
+            )
+        }
+        scheduleCommandFlightByKey[key] = ScheduleCommandFlight(
+            attempt: attempt,
+            generation: generation,
+            purpose: purpose,
+            task: task
+        )
+        await task.value
+        if completion.committed {
+            await refreshScheduleMenuPresentation()
+        }
+        return completion.committed
+    }
+
+    private func retrySchedulePostCommit(key: ScheduleMutationKey) async {
+        guard let carrier = schedulePostCommitRepairByKey[key],
+              scheduleCommandFlightByKey[key] == nil
+        else {
+            return
+        }
+        let currentGeneration = scheduleMutationGenerationByKey[key] ?? 0
+        let (generation, overflow) = currentGeneration
+            .addingReportingOverflow(1)
+        guard !overflow else {
+            let trace = operationTraceFactory.generated(
+                operation: .scheduleRefresh,
+                scope: .fixed(.scheduleIndex)
+            )
+            showToast(
+                failureReporter.capture(
+                    ProjectionContractError.generationOverflow,
+                    trace: trace
+                ).message
+            )
+            return
+        }
+
+        scheduleMutationGenerationByKey[key] = generation
+        let attempt = UUID()
+        let purpose = ScheduleCommandFlightPurpose.repair(
+            startingReceipt: carrier.receipt
+        )
+        let task = Task { @MainActor [self] in
+            guard isCurrentScheduleFlight(
+                key: key,
+                generation: generation,
+                attempt: attempt,
+                purpose: purpose
+            ), schedulePostCommitRepairByKey[key]?.receipt == carrier.receipt
+            else {
+                return
+            }
+            let outcome = await missionWorkflowController
+                .retrySchedulePostCommit(
+                    carrier.receipt,
+                    registration: missionScheduler.registrationPort(),
+                    notifications: scheduledMissionNotifier.port()
+                )
+            applyScheduleRepairOutcome(
+                outcome,
+                originKey: key,
+                generation: generation,
+                attempt: attempt,
+                purpose: purpose
+            )
+            finishScheduleCommandFlight(
+                key: key,
+                generation: generation,
+                attempt: attempt,
+                purpose: purpose
+            )
+        }
+        scheduleCommandFlightByKey[key] = ScheduleCommandFlight(
+            attempt: attempt,
+            generation: generation,
+            purpose: purpose,
+            task: task
+        )
+        await task.value
+    }
+
+    private func applyScheduleMutationOutcome(
+        _ outcome: ScheduleMutationOutcome,
+        originKey: ScheduleMutationKey,
+        generation: UInt64,
+        attempt: UUID,
+        purpose: ScheduleCommandFlightPurpose
+    ) -> Bool {
+        switch outcome {
+        case .notCommitted(let failure):
+            guard isCurrentScheduleFlight(
+                key: originKey,
+                generation: generation,
+                attempt: attempt,
+                purpose: purpose
+            ) else {
+                return false
+            }
+            showToast(failure.message)
+            return false
+        case .committed(let terminal):
+            _ = consumeAndApplyScheduleApplication(
+                terminal.application,
+                originKey: originKey,
+                originPurpose: purpose
+            )
+            return true
+        case .committedWithVisibilityFailure(let terminal):
+            _ = consumeAndApplyScheduleApplication(
+                terminal.application,
+                originKey: originKey,
+                originPurpose: purpose
+            )
+            return true
+        case .committedSuperseded:
+            return true
+        }
+    }
+
+    private func applyScheduleRepairOutcome(
+        _ outcome: SchedulePostCommitRepairOutcome,
+        originKey: ScheduleMutationKey,
+        generation: UInt64,
+        attempt: UUID,
+        purpose: ScheduleCommandFlightPurpose
+    ) {
+        switch outcome {
+        case .repaired(let terminal):
+            _ = consumeAndApplyScheduleApplication(
+                terminal.application,
+                originKey: originKey,
+                originPurpose: purpose
+            )
+        case .stillPending(let terminal):
+            _ = consumeAndApplyScheduleApplication(
+                terminal.application,
+                originKey: originKey,
+                originPurpose: purpose
+            )
+        case .superseded:
+            guard isCurrentScheduleFlight(
+                key: originKey,
+                generation: generation,
+                attempt: attempt,
+                purpose: purpose
+            ) else {
+                return
             }
         }
     }
 
-    func setMissionScheduleEnabled(id: String, enabled: Bool) {
-        Task { [weak self] in
-            guard let self else { return }
-            if enabled {
-                await scheduledMissionNotifier.requestAuthorizationOnFirstScheduleEnable()
+    private func consumeAndApplyScheduleApplication(
+        _ receipt: SchedulePostCommitApplicationReceipt,
+        originKey: ScheduleMutationKey,
+        originPurpose: ScheduleCommandFlightPurpose
+    ) -> Bool {
+        let decision = missionWorkflowController
+            .consumeSchedulePostCommitApplication(receipt)
+        return decision.fold(
+            apply: { [self] program in
+                applyScheduleProgram(
+                    program,
+                    originKey: originKey,
+                    originPurpose: originPurpose
+                )
+                return true
+            },
+            mutationSuperseded: { false },
+            alreadyConsumed: { false }
+        )
+    }
+
+    private func applyScheduleProgram(
+        _ program: SchedulePostCommitCanonicalProgram,
+        originKey: ScheduleMutationKey,
+        originPurpose: ScheduleCommandFlightPurpose
+    ) {
+        var templates = scheduleTemplateRecordById
+        var schedules = scheduleRecordById
+        var repairs = schedulePostCommitRepairByKey
+        var authorization = scheduleAuthorizationEvidence
+        var registration = scheduleRegistrationEvidence
+        var visibleFailure: UserVisibleFailure?
+        var flightKeysToClear: Set<ScheduleMutationKey> = []
+
+        for operation in program.operations {
+            switch operation {
+            case .project(let identity):
+                Self.projectScheduleIdentity(
+                    identity,
+                    templates: &templates,
+                    schedules: &schedules
+                )
+            case .authorizationEvidence(let receipt):
+                authorization = receipt
+            case .registrationEvidence(let receipt):
+                registration = receipt
+            case .clearRepair(let receipt):
+                for key in Array(repairs.keys) where
+                    repairs[key]?.receipt.isSameRepairOwner(as: receipt)
+                        == true
+                {
+                    repairs[key] = nil
+                    guard let flight = scheduleCommandFlightByKey[key],
+                          case .repair(let startingReceipt) = flight.purpose,
+                          startingReceipt.isSameRepairOwner(as: receipt)
+                    else {
+                        continue
+                    }
+                    if key == originKey, flight.purpose == originPurpose {
+                        continue
+                    }
+                    flightKeysToClear.insert(key)
+                }
+            case .installRepair(let identity, let receipt, let failure):
+                visibleFailure = failure
+                for key in Self.scheduleMutationKeys(for: identity) {
+                    repairs[key] = SchedulePostCommitRepairCarrier(
+                        generation: scheduleMutationGenerationByKey[key] ?? 0,
+                        identity: identity,
+                        receipt: receipt
+                    )
+                }
             }
-            do {
-                _ = try db.setScheduleEnabled(id: id, enabled: enabled)
-                missionScheduler.refresh()
-            } catch {
-                showToast("修改日程失败：\(readableError(error))")
+        }
+
+        scheduleTemplateRecordById = templates
+        scheduleRecordById = schedules
+        schedulePostCommitRepairByKey = repairs
+        scheduleAuthorizationEvidence = authorization
+        scheduleRegistrationEvidence = registration
+        if let visibleFailure {
+            globalVisibleFailure = visibleFailure
+            showToast(visibleFailure.message)
+        } else if globalVisibleFailure.map({
+            Self.isScheduleOperation($0.operation)
+        }) == true {
+            globalVisibleFailure = nil
+        }
+        for key in flightKeysToClear {
+            scheduleCommandFlightByKey.removeValue(forKey: key)?.task.cancel()
+        }
+    }
+
+    private func isCurrentScheduleFlight(
+        key: ScheduleMutationKey,
+        generation: UInt64,
+        attempt: UUID,
+        purpose: ScheduleCommandFlightPurpose
+    ) -> Bool {
+        guard let current = scheduleCommandFlightByKey[key] else {
+            return false
+        }
+        return current.generation == generation
+            && current.attempt == attempt
+            && current.purpose == purpose
+    }
+
+    private func finishScheduleCommandFlight(
+        key: ScheduleMutationKey,
+        generation: UInt64,
+        attempt: UUID,
+        purpose: ScheduleCommandFlightPurpose
+    ) {
+        guard isCurrentScheduleFlight(
+            key: key,
+            generation: generation,
+            attempt: attempt,
+            purpose: purpose
+        ) else {
+            return
+        }
+        scheduleCommandFlightByKey[key] = nil
+    }
+
+    private static func scheduleMutationKeys(
+        for identity: ScheduleMutationCommittedIdentity
+    ) -> Set<ScheduleMutationKey> {
+        switch identity {
+        case .templateSaved(let template):
+            return [.template(template.id)]
+        case .templateDeleted(let receipt):
+            return Set(
+                [.template(receipt.template.id)]
+                    + receipt.deletedSchedules.map { .schedule($0.id) }
+            )
+        case .scheduleSaved(let schedule),
+             .scheduleEnablementChanged(let schedule):
+            return [.schedule(schedule.id)]
+        case .scheduleDeleted(let receipt):
+            return [.schedule(receipt.schedule.id)]
+        }
+    }
+
+    private static func projectScheduleIdentity(
+        _ identity: ScheduleMutationCommittedIdentity,
+        templates: inout [String: MissionTemplateRecord],
+        schedules: inout [String: ScheduleRecord]
+    ) {
+        switch identity {
+        case .templateSaved(let template):
+            templates[template.id] = template
+        case .templateDeleted(let receipt):
+            templates[receipt.template.id] = nil
+            for schedule in receipt.deletedSchedules {
+                schedules[schedule.id] = nil
+            }
+        case .scheduleSaved(let schedule),
+             .scheduleEnablementChanged(let schedule):
+            schedules[schedule.id] = schedule
+        case .scheduleDeleted(let receipt):
+            schedules[receipt.schedule.id] = nil
+        }
+    }
+
+    private static func isScheduleOperation(
+        _ operation: FailureOperation
+    ) -> Bool {
+        switch operation {
+        case .scheduleLoad, .scheduleTemplateSave,
+             .scheduleTemplateDelete, .scheduleSave, .scheduleEnable,
+             .scheduleDelete, .scheduleNotification, .scheduleRefresh,
+             .scheduleFire, .scheduleReplay, .scheduleWake,
+             .scheduleBroadcast:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func startScheduleSystem() async {
+        missionScheduler.start()
+        await refreshScheduleRegistrations()
+        let trace = operationTraceFactory.generated(
+            operation: .scheduleLoad,
+            scope: .fixed(.scheduleIndex)
+        )
+        switch await missionWorkflowController.loadStartupMissedFires(
+            now: Date(),
+            timeZone: .current,
+            trace: trace
+        ) {
+        case .loaded(let requests):
+            for request in requests {
+                await executeScheduledFire(request, missed: true)
+            }
+            if !pendingScheduleCatchups.isEmpty {
+                showToast("有定时行动错过了触发点，等待你确认是否补跑")
+            }
+        case .failed(let failure):
+            showToast(failure.message)
+        case .idle, .loading:
+            break
+        }
+    }
+
+    private func handleScheduledFire(_ request: ScheduleFireRequest) async {
+        await executeScheduledFire(request, missed: false)
+    }
+
+    private func executeScheduledFire(
+        _ request: ScheduleFireRequest,
+        missed: Bool
+    ) async {
+        let trace = operationTraceFactory.generated(
+            operation: .scheduleFire,
+            scope: .fixed(.scheduleIndex)
+        )
+        let outcome: OperationCommitOutcome<ScheduleFireCommitResult>
+        if missed {
+            outcome = await missionWorkflowController.recordMissedSchedule(
+                request,
+                trace: trace
+            )
+        } else {
+            outcome = await missionWorkflowController.fireSchedule(
+                request,
+                trace: trace
+            )
+        }
+        switch outcome {
+        case .notCommitted(let failure):
+            showToast(failure.message)
+        case .committed(let result):
+            await applyScheduledFireEffects(result)
+            if missed {
+                await appendScheduleCatchupIfNeeded(result)
+            }
+        case .committedWithVisibilityFailure(let result, let failure):
+            showToast(failure.message)
+            await applyScheduledFireEffects(result)
+            if missed {
+                await appendScheduleCatchupIfNeeded(result)
             }
         }
     }
 
-    func deleteMissionSchedule(id: String) {
-        do {
-            try db.deleteSchedule(id: id)
-            missionScheduler.refresh()
-        } catch {
-            showToast("删除日程失败：\(readableError(error))")
+    private func applyScheduledFireEffects(
+        _ result: ScheduleFireCommitResult
+    ) async {
+        if result.fire.state == .started {
+            let wakeTrace = operationTraceFactory.generated(
+                operation: .scheduleWake,
+                scope: .fixed(.scheduleIndex)
+            )
+            switch await missionWorkflowController.publishScheduleWake(
+                result,
+                trace: wakeTrace
+            ) {
+            case .notCommitted(let failure),
+                 .committedWithVisibilityFailure(_, let failure):
+                showToast(failure.message)
+            case .committed:
+                break
+            }
+        }
+
+        let broadcastTrace = operationTraceFactory.generated(
+            operation: .scheduleBroadcast,
+            scope: .fixed(.scheduleIndex)
+        )
+        switch await missionWorkflowController.publishScheduleBroadcast(
+            result,
+            trace: broadcastTrace
+        ) {
+        case .notCommitted(let failure),
+             .committedWithVisibilityFailure(_, let failure):
+            showToast(failure.message)
+        case .committed:
+            break
+        }
+
+        if let missionId = result.missionId {
+            reloadMissionList()
+            notifyScheduledMissionOutcomeIfNeeded(missionId: missionId)
+        }
+        await refreshScheduleRegistrations()
+    }
+
+    private func appendScheduleCatchupIfNeeded(
+        _ result: ScheduleFireCommitResult
+    ) async {
+        guard result.disposition == .inserted,
+              result.fire.state == .failed,
+              result.fire.errorCode == "schedule_missed_while_offline",
+              let reason = result.fire.errorMessage,
+              reason == "定时行动在应用离线期间错过了触发时间。"
+        else {
+            return
+        }
+        let trace = operationTraceFactory.generated(
+            operation: .scheduleLoad,
+            scope: .fixed(.scheduleIndex)
+        )
+        switch await missionWorkflowController.loadSchedulePresentation(
+            templateId: result.fire.templateId,
+            now: Date(),
+            timeZone: .current,
+            trace: trace
+        ) {
+        case .loaded(let snapshot):
+            guard let template = snapshot.requestedTemplate else { return }
+            let catchup = ScheduleCatchup(
+                fireId: result.fire.id,
+                scheduleId: result.fire.scheduleId,
+                templateId: result.fire.templateId,
+                fireDate: result.fire.scheduledAt,
+                reason: reason,
+                title: template.record.name
+            )
+            if !pendingScheduleCatchups.contains(where: {
+                $0.fireId == catchup.fireId
+            }) {
+                pendingScheduleCatchups.append(catchup)
+            }
+        case .failed(let failure):
+            showToast(failure.message)
+        case .idle, .loading:
+            break
         }
     }
 
-    func scheduleGroups(campId: String) -> [(template: MissionTemplateRecord, schedules: [ScheduleRecord])] {
-        let templates = (try? db.missionTemplates(campId: campId)) ?? []
-        let schedules = (try? db.schedules(campId: campId)) ?? []
-        return templates.map { template in
-            (template, schedules.filter { $0.templateId == template.id })
+    private func refreshScheduleRegistrations() async {
+        let trace = operationTraceFactory.generated(
+            operation: .scheduleRefresh,
+            scope: .fixed(.scheduleIndex)
+        )
+        switch await missionWorkflowController.refreshSchedules(
+            registration: missionScheduler.registrationPort(),
+            trace: trace
+        ) {
+        case .refreshed(let receipt, let supersededRepairs):
+            scheduleRegistrationEvidence = receipt
+            clearScheduleRepairs(supersededRepairs)
+            await refreshScheduleMenuPresentation()
+        case .failed(let failure):
+            showToast(failure.message)
         }
     }
 
-    func deleteScheduledMissionTemplate(id: String) {
-        do {
-            try db.deleteMissionTemplate(id: id)
-            missionScheduler.refresh()
-        } catch {
-            showToast("删除模板失败：\(readableError(error))")
+    private func clearScheduleRepairs(
+        _ receipts: [SchedulePostCommitRepairReceipt]
+    ) {
+        guard !receipts.isEmpty else { return }
+        let keys = Array(schedulePostCommitRepairByKey.keys)
+        for key in keys {
+            guard let carrier = schedulePostCommitRepairByKey[key],
+                  receipts.contains(where: {
+                      carrier.receipt.isSameRepairOwner(as: $0)
+                  })
+            else {
+                continue
+            }
+            schedulePostCommitRepairByKey[key] = nil
+            guard let flight = scheduleCommandFlightByKey[key],
+                  case .repair(let startingReceipt) = flight.purpose,
+                  receipts.contains(where: {
+                      startingReceipt.isSameRepairOwner(as: $0)
+                  })
+            else {
+                continue
+            }
+            scheduleCommandFlightByKey[key] = nil
+            flight.task.cancel()
         }
     }
 
     func runScheduleNow(id: String) {
-        Task { [weak self] in
-            guard let self else { return }
-            await missionScheduler.runNow(scheduleId: id)
-            reloadMissionList()
+        Task { [self] in
+            let trace = operationTraceFactory.generated(
+                operation: .scheduleLoad,
+                scope: .fixed(.scheduleIndex)
+            )
+            switch await missionWorkflowController.prepareRunNow(
+                scheduleId: id,
+                now: Date(),
+                timeZone: .current,
+                trace: trace
+            ) {
+            case .loaded(let request):
+                await executeScheduledFire(request, missed: false)
+            case .failed(let failure):
+                showToast(failure.message)
+            case .idle, .loading:
+                break
+            }
         }
     }
 
     func resolveScheduleCatchup(_ catchup: ScheduleCatchup, run: Bool) {
-        Task { [weak self] in
-            guard let self else { return }
-            await missionScheduler.resolveCatchup(catchup, run: run)
-            reloadMissionList()
+        guard pendingScheduleCatchups.contains(where: {
+            $0.fireId == catchup.fireId
+        }) else {
+            return
+        }
+        guard run else {
+            pendingScheduleCatchups.removeAll {
+                $0.fireId == catchup.fireId
+            }
+            return
+        }
+        Task { [self] in
+            let trace = operationTraceFactory.generated(
+                operation: .scheduleReplay,
+                scope: .fixed(.scheduleIndex)
+            )
+            let outcome = await missionWorkflowController.replaySchedule(
+                ScheduleReplayRequest(originalFireId: catchup.fireId),
+                trace: trace
+            )
+            switch outcome {
+            case .notCommitted(let failure):
+                showToast(failure.message)
+            case .committed(let result):
+                pendingScheduleCatchups.removeAll {
+                    $0.fireId == catchup.fireId
+                }
+                await applyScheduledFireEffects(result)
+            case .committedWithVisibilityFailure(let result, let failure):
+                pendingScheduleCatchups.removeAll {
+                    $0.fireId == catchup.fireId
+                }
+                showToast(failure.message)
+                await applyScheduledFireEffects(result)
+            }
         }
     }
 
     func scheduleCatchupTitle(_ catchup: ScheduleCatchup) -> String {
-        if let name = (try? db.missionTemplate(id: catchup.templateId))?.name {
-            return "定时行动「\(name)」"
-        }
-        return "定时行动"
+        "定时行动「\(catchup.title)」"
     }
 
     /// 设置页「测试连接」:用当前凭据发一次最小请求,人话化报告结果。
@@ -1054,29 +2747,45 @@ final class AppStore {
     }
 
     func nextScheduleMenuTitle(now: Date = Date()) -> String {
-        let items = (try? db.enabledSchedules()) ?? []
-        let calendar = Calendar(identifier: .gregorian)
-        let timeZone = TimeZone.current
-        let next = items.compactMap { item -> (Date, String)? in
-            guard let date = ScheduleMath.nextFireDate(
-                after: now,
-                frequency: item.schedule.frequency,
-                hour: item.schedule.hour,
-                minute: item.schedule.minute,
-                weekday: item.schedule.weekday,
-                calendar: calendar,
-                timeZone: timeZone
-            ) else {
-                return nil
+        _ = now
+        return scheduleMenuTitle
+    }
+
+    private func refreshScheduleMenuPresentation(
+        now: Date = Date(),
+        timeZone: TimeZone = .current
+    ) async {
+        let trace = operationTraceFactory.generated(
+            operation: .scheduleLoad,
+            scope: .fixed(.scheduleIndex)
+        )
+        let terminal = await missionWorkflowController
+            .loadSchedulePresentation(
+                templateId: nil,
+                now: now,
+                timeZone: timeZone,
+                trace: trace
+            )
+        guard case .loaded(let snapshot) = terminal else {
+            if case .failed(let failure) = terminal {
+                showToast(failure.message)
             }
-            return (date, item.template.name)
-        }.min { $0.0 < $1.0 }
-        guard let next else { return "下次日程：暂无" }
+            return
+        }
+        guard let next = snapshot.enabled.min(by: {
+            $0.nextFireDate < $1.nextFireDate
+        }) else {
+            scheduleMenuTitle = "下次日程：暂无"
+            return
+        }
+        let calendar = Calendar(identifier: .gregorian)
         let formatter = DateFormatter()
         formatter.calendar = calendar
         formatter.timeZone = timeZone
         formatter.dateFormat = "M/d HH:mm"
-        return "下次日程：\(formatter.string(from: next.0)) \(next.1)"
+        scheduleMenuTitle =
+            "下次日程：\(formatter.string(from: next.nextFireDate)) "
+            + next.record.template.name
     }
 
     func openProviderAuth() {
@@ -1122,7 +2831,7 @@ final class AppStore {
 
         let state = Self.randomURLSafeString(byteCount: 24)
         let codeVerifier = Self.randomURLSafeString(byteCount: 32)
-        UserDefaults.standard.set(state, forKey: Self.oauthStateKey)
+        userDefaults.set(state, forKey: Self.oauthStateKey)
         try? keychain.set(codeVerifier, account: Self.oauthCodeVerifierAccount)
 
         return OpenAIChatGPTAuth.authorizationURL(
@@ -1192,7 +2901,9 @@ final class AppStore {
             stopOpenAIAuthCallbackListener()
             return
         }
-        guard let expectedState = UserDefaults.standard.string(forKey: Self.oauthStateKey) else {
+        guard let expectedState = userDefaults.string(
+            forKey: Self.oauthStateKey
+        ) else {
             oauthLoginStatus = "网页登录状态已过期，请重新授权"
             stopOpenAIAuthCallbackListener()
             return
@@ -1236,7 +2947,7 @@ final class AppStore {
 
         let state = Self.randomURLSafeString(byteCount: 24)
         let codeVerifier = Self.randomURLSafeString(byteCount: 32)
-        UserDefaults.standard.set(state, forKey: Self.oauthStateKey)
+        userDefaults.set(state, forKey: Self.oauthStateKey)
         try? keychain.set(codeVerifier, account: Self.oauthCodeVerifierAccount)
 
         var components = URLComponents(
@@ -1358,7 +3069,7 @@ final class AppStore {
             try? keychain.delete(account: Self.oauthChatGPTAccountIDAccount)
         }
         try? keychain.delete(account: Self.oauthCodeVerifierAccount)
-        UserDefaults.standard.removeObject(forKey: Self.oauthStateKey)
+        userDefaults.removeObject(forKey: Self.oauthStateKey)
         preferredCredentialSource = .webLogin
         oauthNeedsRelogin = false
         oauthLoginStatus = "网页登录授权已完成"
@@ -1472,8 +3183,27 @@ final class AppStore {
             showToast(missionStartBlockMessage)
             return
         }
-        guard provider(model: effectivePlannerModel) != nil else {
-            missionPhase = .error("请先在设置里保存 API Key 或网页登录授权")
+        let command: PendingManualMissionStart
+        do {
+            let snapshot = ManualMissionStartSnapshot(
+                mission: PlanningMissionStartArguments(
+                    goal: goal,
+                    companionIds: companionIds,
+                    workspacePath: workspacePath,
+                    budgetTokens: defaultMissionBudget,
+                    campId: campId,
+                    autonomy: autonomy ?? defaultAutonomy
+                ),
+                runtime: try planningRuntimeSelection()
+            )
+            command = planningEntryCoordinator.prepareManual(
+                snapshot: snapshot,
+                pending: pendingManualMissionStart,
+                forceNewCommand: false
+            )
+            pendingManualMissionStart = command
+        } catch {
+            missionPhase = .error(readableError(error))
             return
         }
         currentMissionId = nil
@@ -1493,21 +3223,22 @@ final class AppStore {
         missionPhase = .planning
         reloadMissionList()
         missionTask?.cancel()
-        missionTask = Task { [weak self] in
+        missionTask = Task { [weak self, command] in
             guard let self else { return }
             do {
-                let missionId = try await orchestrator.startMission(
-                    goal: goal,
-                    companionIds: companionIds,
-                    workspacePath: workspacePath,
-                    plannerModel: effectivePlannerModel,
-                    budgetTokens: defaultMissionBudget,
-                    campId: campId,
-                    autonomy: autonomy ?? defaultAutonomy
+                let missionId = try await planningEntryCoordinator.startManual(
+                    command
                 )
+                pendingManualMissionStart =
+                    planningEntryCoordinator.clearManualAfterSuccess(
+                        current: pendingManualMissionStart,
+                        completed: command
+                    )
                 currentMissionId = missionId
                 theaterMode = false
-                if let campId { missionDrafts[campId] = nil } // 出发成功才清草稿
+                if let campId = command.snapshot.mission.campId {
+                    missionDrafts[campId] = nil
+                }
                 reloadMission(missionId: missionId)
                 reloadMissionList()
             } catch {
@@ -1524,18 +3255,73 @@ final class AppStore {
         reloadMission(missionId: missionId)
     }
 
-    func closeoutCurrentMission() {
-        guard let currentMissionId else { return }
-        missionTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                try await orchestrator.closeout(currentMissionId, distillModel: effectiveDistillModel)
-                reloadMission(missionId: currentMissionId)
-                reloadMissionList()
-                reloadArtifactLedger()
-            } catch {
-                missionPhase = .error(readableError(error))
+    func closeoutCurrentMission() async -> Bool {
+        guard let currentMissionId else { return false }
+        returnAcceptanceError = nil
+        do {
+            let outcomeStore = OutcomeStore(database: db)
+            if let outcome = try outcomeStore.outcome(
+                missionId: currentMissionId
+            ) {
+                let acceptanceId = UUID().uuidString
+                let deviceId = try LocalCaptureIdentity.live()
+                    .installationID()
+                let envelope = try CommandEnvelopeV1(
+                    idempotencyKey: "acceptance.accept:v1:\(acceptanceId)",
+                    actorType: .user,
+                    actorId: P1DActorID.localOwner,
+                    deviceId: deviceId,
+                    correlationId: "trace:acceptance:\(acceptanceId)",
+                    causationId: nil,
+                    occurredAt: try P1DTimestampV1.canonical(Date())
+                )
+                let command = try AcceptOutcomeCommandV1(
+                    envelope: envelope,
+                    acceptanceId: acceptanceId,
+                    outcome: outcome.currentRef,
+                    expectedOutcomeAggregateVersion:
+                        outcome.aggregateVersion,
+                    subject: AcceptanceSubjectV1.user(
+                        P1DActorID.localOwner
+                    ),
+                    reason: "Accepted in Coding Ranch return summary"
+                )
+                switch AcceptanceWorkflowController
+                    .live(store: outcomeStore)
+                    .accept(command)
+                {
+                case .committed:
+                    reloadMission(missionId: currentMissionId)
+                    reloadMissionList()
+                    reloadArtifactLedger()
+                    return true
+                case .notCommitted(let failure):
+                    returnAcceptanceError = failure.message
+                    return false
+                }
             }
+            guard try !outcomeStore.missionHasActiveContractLink(
+                missionId: currentMissionId
+            ) else {
+                let trace = "trace:acceptance:\(UUID().uuidString)"
+                returnAcceptanceError =
+                    "Contract-linked mission has no deliverable Outcome [trace: \(trace)]"
+                return false
+            }
+            try await orchestrator.closeout(
+                currentMissionId,
+                distillModel: effectiveDistillModel
+            )
+            reloadMission(missionId: currentMissionId)
+            reloadMissionList()
+            reloadArtifactLedger()
+            return true
+        } catch {
+            let trace = "trace:acceptance:\(UUID().uuidString)"
+            let message = "\(readableError(error)) [trace: \(trace)]"
+            returnAcceptanceError = message
+            missionPhase = .error(message)
+            return false
         }
     }
 
@@ -1635,9 +3421,12 @@ final class AppStore {
         missionTask = Task { [weak self] in
             guard let self else { return }
             do {
+                let deviceId = try LocalCaptureIdentity.live()
+                    .installationID()
                 try await orchestrator.answerUserRequest(
                     requestId: requestId,
-                    answerJson: try answerJson(for: answer)
+                    answerJson: try answerJson(for: answer),
+                    deviceId: deviceId
                 )
                 feedNotice = nil
                 if let currentMissionId {
@@ -1684,15 +3473,20 @@ final class AppStore {
                 await orchestrator.recoverAndReconcile()
                 campHalted = await orchestrator.isHalted
                 kernelStartupRecoveryPending = false
-                missionScheduler.start()
+                if let targetCampId =
+                    campId ?? codingRanchDashboard?.campId
+                {
+                    await loadDashboard(campId: targetCampId)
+                }
+                await startScheduleSystem()
             }
             for await event in stream {
-                handleKernelEvent(event)
+                await handleKernelEvent(event)
             }
         }
     }
 
-    private func handleKernelEvent(_ event: KernelEvent) {
+    private func handleKernelEvent(_ event: KernelEvent) async {
         switch event {
         case .planningStarted(let missionId):
             reloadMissionList()
@@ -1723,6 +3517,20 @@ final class AppStore {
                 }
                 missionPhase = .error(message)
             }
+        case .operationFailed(let failure):
+            reloadMissionList()
+            feedNotice = failure.message
+            if let currentMissionId {
+                reloadMission(missionId: currentMissionId)
+            }
+            missionPhase = .error(failure.message)
+        case .contextDegraded(let notice):
+            feedNotice = notice.failure.message
+            if let currentMissionId,
+               currentMissionId == notice.missionId
+            {
+                reloadMission(missionId: currentMissionId)
+            }
         case .campNoteCreated:
             reloadCampKnowledge()
         case .haltStateChanged(let halted):
@@ -1734,6 +3542,28 @@ final class AppStore {
             }
             reloadMissionList()
             if let currentMissionId { reloadMission(missionId: currentMissionId) }
+        case let .ruminationPhase(
+            ingestionId,
+            workId,
+            attempt,
+            phase
+        ):
+            do {
+                let identity = try RuminationPhaseIdentity(
+                    ingestionId: ingestionId,
+                    workId: workId,
+                    attempt: attempt
+                )
+                await applyRuminationPhase(
+                    identity: identity,
+                    phase: phase
+                )
+            } catch {
+                ruminationActionError =
+                    "反刍阶段身份无效，已停止显示实时进度"
+            }
+        case let .ruminationChanged(change):
+            await applyRuminationChange(change)
         }
     }
 
@@ -1809,17 +3639,57 @@ final class AppStore {
 
     /// 收营蒸馏/沉淀产出笔记后刷新营地首页数据
     func reloadCampKnowledge() {
-        let activeCampId: String
-        if let campId {
-            activeCampId = campId
-        } else if let camp = try? db.ensureDefaultCamp() {
-            campId = camp.id
-            campName = camp.name
-            activeCampId = camp.id
-        } else {
+        Task { [self] in
+            let activeCampId: String
+            if let campId {
+                activeCampId = campId
+            } else {
+                let trace = operationTraceFactory.generated(
+                    operation: .inputCampLoad,
+                    scope: .fixed(.application)
+                )
+                switch await inputWorkflowController.ensureDefaultCamp(
+                    trace: trace
+                ) {
+                case .notCommitted(let failure):
+                    showToast(failure.message)
+                    return
+                case .committed(let receipt),
+                     .committedWithVisibilityFailure(let receipt, _):
+                    campId = receipt.camp.id
+                    campName = receipt.camp.name
+                    activeCampId = receipt.camp.id
+                }
+            }
+            let request = memoryKnowledgeProjection.selectGuide(
+                activeCampId
+            )
+            await refreshCampKnowledge(
+                request,
+                operation: .campKnowledgeLoad
+            )
+        }
+    }
+
+    private func refreshCampKnowledge(
+        _ request: MemoryKnowledgeRefreshRequest,
+        operation: FailureOperation
+    ) async {
+        let trace = operationTraceFactory.generated(
+            operation: operation,
+            scope: .fixed(.memoryGuide)
+        )
+        let terminal: WorkflowReadTerminal<[CampNoteRecord]>
+        switch request.owner {
+        case .guide(let ownerCampId):
+            terminal = await inputWorkflowController.loadCampNotes(
+                campId: ownerCampId,
+                trace: trace
+            )
+        case .companion:
             return
         }
-        campNotes = (try? db.campNotes(campId: activeCampId)) ?? []
+        _ = memoryKnowledgeProjection.apply(terminal, for: request)
     }
 
     private func reloadMission(missionId: String, clearNotice: Bool = true) {
@@ -2014,79 +3884,82 @@ final class AppStore {
     }
 
     private func notifyScheduledMissionOutcomeIfNeeded(missionId: String) {
-        guard (try? db.scheduledOrigin(missionId: missionId)) != nil,
-              let mission = try? db.mission(id: missionId) else {
+        let trace = operationTraceFactory.generated(
+            operation: .scheduleLoad,
+            scope: .fixed(.scheduleIndex)
+        )
+        Task { [self] in
+            switch await missionWorkflowController
+                .loadScheduledMissionOutcomePlans(
+                    missionId: missionId,
+                    trace: trace
+                )
+            {
+            case .loaded(let plans):
+                for plan in plans {
+                    await publishScheduledMissionOutcomeIfNeeded(plan)
+                }
+            case .failed(let failure):
+                showToast(failure.message)
+            case .idle, .loading:
+                break
+            }
+        }
+    }
+
+    private func publishScheduledMissionOutcomeIfNeeded(
+        _ plan: ScheduledMissionOutcomePlan
+    ) async {
+        let broadcastKey = "broadcast:\(plan.effectKey)"
+        if !sentScheduledMissionNotifications.contains(broadcastKey),
+           scheduledMissionOutcomeInFlight.insert(broadcastKey).inserted
+        {
+            let trace = operationTraceFactory.generated(
+                operation: .scheduleBroadcast,
+                scope: .fixed(.scheduleIndex)
+            )
+            let outcome = await missionWorkflowController
+                .publishScheduledMissionOutcomeBroadcast(plan, trace: trace)
+            scheduledMissionOutcomeInFlight.remove(broadcastKey)
+            switch outcome {
+            case .notCommitted(let failure):
+                showToast(failure.message)
+            case .committed, .committedWithVisibilityFailure:
+                if plan.broadcastCampId != nil, plan.broadcastText != nil {
+                    sentScheduledMissionNotifications.insert(broadcastKey)
+                    if campId == plan.broadcastCampId {
+                        reloadGuideMessages()
+                    }
+                }
+            }
+        }
+
+        let notificationKey = "notification:\(plan.notification.notificationId)"
+        guard !sentScheduledMissionNotifications.contains(notificationKey),
+              scheduledMissionOutcomeInFlight.insert(notificationKey).inserted
+        else {
             return
         }
-        let title = Self.missionTitle(mission)
-        let campId = (try? db.squad(forMission: missionId))?.campId
-        let events = (try? db.events(missionId: missionId, limit: 200)) ?? []
-
-        if events.contains(where: { $0.kind == EventKind.missionBudgetExhausted }) {
-            emitScheduledMissionNotificationOnce(
-                key: "budget:\(missionId)",
-                missionId: missionId,
-                campId: campId,
-                broadcastText: "定时行动「\(title)」预算用尽，已暂停派发。"
-            ) { notifier in
-                await notifier.postBudgetExhausted(missionId: missionId, title: title)
+        let trace = operationTraceFactory.generated(
+            operation: .scheduleNotification,
+            scope: .fixed(.notification)
+        )
+        let outcome = await missionWorkflowController
+            .submitScheduleNotification(
+                plan.notification,
+                notifications: scheduledMissionNotifier.port(),
+                trace: trace
+            )
+        scheduledMissionOutcomeInFlight.remove(notificationKey)
+        switch outcome {
+        case .notCommitted(let failure):
+            showToast(failure.message)
+        case .committed(let receipt),
+             .committedWithVisibilityFailure(let receipt, _):
+            if receipt.disposition == .submitted {
+                sentScheduledMissionNotifications.insert(notificationKey)
             }
         }
-
-        switch mission.status {
-        case .accepted:
-            emitScheduledMissionNotificationOnce(
-                key: "closeout:\(missionId)",
-                missionId: missionId,
-                campId: campId,
-                broadcastText: "定时行动「\(title)」已收营。"
-            ) { notifier in
-                await notifier.postCloseout(missionId: missionId, title: title)
-            }
-        case .failed:
-            emitScheduledMissionNotificationOnce(
-                key: "failure:\(missionId)",
-                missionId: missionId,
-                campId: campId,
-                broadcastText: "定时行动「\(title)」失败了，请回来查看原因。"
-            ) { notifier in
-                await notifier.postFailure(missionId: missionId, title: title)
-            }
-        case .planning, .executing, .delivering:
-            break
-        }
-    }
-
-    private func emitScheduledMissionNotificationOnce(
-        key: String,
-        missionId: String,
-        campId: String?,
-        broadcastText: String,
-        post: @escaping @MainActor (ScheduledMissionNotifier) async -> Void
-    ) {
-        guard sentScheduledMissionNotifications.insert(key).inserted else { return }
-        if let campId {
-            do {
-                try db.appendGuideBroadcast(campId: campId, text: broadcastText)
-                if self.campId == campId {
-                    reloadGuideMessages()
-                }
-            } catch {
-                showToast("管家播报失败：\(readableError(error))")
-            }
-        }
-        let notifier = scheduledMissionNotifier
-        Task { @MainActor in
-            await post(notifier)
-        }
-    }
-
-    private static func missionTitle(_ mission: MissionRecord) -> String {
-        let refined = mission.goalRefined.trimmingCharacters(in: .whitespacesAndNewlines)
-        let raw = mission.goalRaw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let base = refined.isEmpty ? raw : refined
-        let firstLine = base.split(whereSeparator: \.isNewline).first.map(String.init) ?? base
-        return firstLine.isEmpty ? "未命名行动" : String(firstLine.prefix(36))
     }
 
     func revealArtifact(_ artifact: ArtifactRecord) {
@@ -2097,25 +3970,32 @@ final class AppStore {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
     }
 
+    func revealReturnArtifact(_ artifact: ArtifactSummaryViewState) {
+        viewedReturnArtifactIDs.insert(artifact.id)
+        revealPath(artifact.path)
+    }
+
+    func hasViewedReturnArtifact(id: String) -> Bool {
+        viewedReturnArtifactIDs.contains(id)
+    }
+
     func openPath(_ path: String) {
         NSWorkspace.shared.open(URL(fileURLWithPath: path))
     }
 
-    func reportURL(missionId: String) -> URL {
-        reportStoreRoot.appendingPathComponent("\(missionId).md")
+    func reportURL(missionId: String) -> URL? {
+        do {
+            return try reportStore.reportURL(missionId: missionId)
+        } catch {
+            showToast("报告定位失败：\(readableError(error))")
+            return nil
+        }
     }
 
     @discardableResult
     func ensureReport(missionId: String) -> URL? {
-        let url = reportURL(missionId: missionId)
-        if FileManager.default.fileExists(atPath: url.path) {
-            return url
-        }
         do {
-            let input = try db.expeditionReportInput(missionId: missionId)
-            try FileManager.default.createDirectory(at: reportStoreRoot, withIntermediateDirectories: true)
-            try ExpeditionReport.markdown(input).write(to: url, atomically: true, encoding: .utf8)
-            return url
+            return try reportStore.ensureReport(missionId: missionId)
         } catch {
             showToast("报告生成失败：\(readableError(error))")
             return nil
@@ -2138,48 +4018,50 @@ final class AppStore {
         guard !text.isEmpty, !chatStreaming else {
             return false
         }
-        guard let provider = provider(model: companion.model, companionId: companion.id) else {
-            showToast("请先在设置里保存 API Key 或网页登录授权")
-            return false
-        }
         chatStreamID += 1
         let streamID = chatStreamID
+        chatCompanionId = companion.id
         chatMessages.append((role: "user", text: text))
         chatMessages.append((role: "companion", text: ""))
         let companionMessageIndex = chatMessages.count - 1
         chatStreaming = true
-        let chat = ChatService(db: db, provider: provider)
-        let coalescer = DeltaCoalescer { [weak self] batch in
-            await MainActor.run {
-                guard let self,
-                      self.chatStreamID == streamID,
-                      self.chatMessages.indices.contains(companionMessageIndex) else {
-                    return
-                }
-                self.chatMessages[companionMessageIndex].text += batch
-            }
-        }
-        chatCoalescer = coalescer
-        chatTask = Task {
-            do {
-                for try await event in try chat.send(companionId: companion.id, userText: text) {
-                    if case .textDelta(let text) = event {
-                        await coalescer.push(text)
+        chatCoalescer = nil
+        let trace = operationTraceFactory.generated(
+            operation: .chatSend,
+            scope: .fixed(.application)
+        )
+        chatTask = Task { [self] in
+            let terminal = await inputWorkflowController.sendChat(
+                companionId: companion.id,
+                text: text,
+                model: companion.model,
+                onEvent: { [weak self] event in
+                    guard let self, self.chatStreamID == streamID else {
+                        return
                     }
-                }
-                if Task.isCancelled {
-                    await coalescer.discard()
-                } else {
-                    await coalescer.flush()
-                }
-            } catch is CancellationError {
-                await coalescer.discard()
-            } catch {
-                await coalescer.discard()
-                if chatStreamID == streamID, chatMessages.indices.contains(companionMessageIndex) {
-                    // 人话化错误（UX 审计 P3：不倒原始 error 串）
+                    if case .textDelta(let text) = event {
+                        guard chatMessages.indices.contains(
+                            companionMessageIndex
+                        ) else {
+                            return
+                        }
+                        chatMessages[companionMessageIndex].text += text
+                    }
+                },
+                isOwnedCancellation: { Task.isCancelled },
+                trace: trace
+            )
+            switch terminal {
+            case .finished:
+                break
+            case .cancelled:
+                break
+            case .failed(let failure, _):
+                if chatStreamID == streamID,
+                   chatMessages.indices.contains(companionMessageIndex)
+                {
                     chatMessages[companionMessageIndex].text =
-                        "（没发出去：\(CampCopy.humanizeBlockedDetail(readableError(error)))）"
+                        "（没发出去：\(failure.message)）"
                 }
             }
             if chatStreamID == streamID {
@@ -2231,23 +4113,482 @@ final class AppStore {
         Task {
             await coalescer?.discard()
         }
-        let thread = try? db.findOrCreateDMThread(companionId: companion.id)
-        chatMessages = (thread.flatMap { try? db.messages(threadId: $0.id) } ?? [])
-            .map { (role: $0.role, text: $0.text) }
+        chatCompanionId = companion.id
+        chatMessages = []
+        let loadID = chatStreamID
+        let trace = operationTraceFactory.generated(
+            operation: .chatLoad,
+            scope: .fixed(.application)
+        )
+        Task { [self] in
+            let terminal = await inputWorkflowController.loadChat(
+                companionId: companion.id,
+                trace: trace
+            )
+            guard chatStreamID == loadID,
+                  chatCompanionId == companion.id
+            else {
+                return
+            }
+            switch terminal {
+            case .loaded(let snapshot):
+                chatMessages = snapshot.messages.map {
+                    (role: $0.role, text: $0.text)
+                }
+            case .failed(let failure):
+                showToast(failure.message)
+            case .idle, .loading:
+                return
+            }
+        }
         reloadMemoryNotes(companionId: companion.id)
     }
 
     // MARK: - 营地首页（M4）
 
     func loadCampHome(campId targetCampId: String? = nil) {
-        let camp: CampRecord?
-        if let targetCampId {
-            camp = try? db.camp(id: targetCampId)
-        } else {
-            camp = try? db.ensureDefaultCamp()
+        campHomeLoadID += 1
+        let loadID = campHomeLoadID
+        Task { [self] in
+            let resolvedCampId: String
+            if let targetCampId {
+                resolvedCampId = targetCampId
+            } else {
+                let resolveTrace = operationTraceFactory.generated(
+                    operation: .campCreate,
+                    scope: .fixed(.application)
+                )
+                switch await inputWorkflowController.ensureDefaultCamp(
+                    trace: resolveTrace
+                ) {
+                case .notCommitted(let failure):
+                    if campHomeLoadID == loadID {
+                        showToast(failure.message)
+                    }
+                    return
+                case .committed(let receipt):
+                    resolvedCampId = receipt.camp.id
+                case .committedWithVisibilityFailure(
+                    let receipt,
+                    let failure
+                ):
+                    resolvedCampId = receipt.camp.id
+                    if campHomeLoadID == loadID {
+                        showToast(failure.message)
+                    }
+                }
+            }
+            let trace = operationTraceFactory.generated(
+                operation: .inputCampLoad,
+                scope: .fixed(.application)
+            )
+            let terminal = await inputWorkflowController.loadCamp(
+                campId: resolvedCampId,
+                trace: trace
+            )
+            guard campHomeLoadID == loadID else { return }
+            switch terminal {
+            case .loaded(let snapshot):
+                applyCampHomeSnapshot(snapshot)
+            case .failed(let failure):
+                showToast(failure.message)
+            case .idle, .loading:
+                return
+            }
         }
-        guard let camp else { return }
-        // 切换营地时终止在途向导流，防串台（对齐 DM 的 streamID 语义）
+    }
+
+    @discardableResult
+    func refreshInputCampProjection(
+        campId: String,
+        makeVisible: Bool
+    ) async -> WorkflowLoadState<InputCampSnapshot> {
+        let trace = operationTraceFactory.generated(
+            operation: .inputCampLoad,
+            scope: .fixed(.application)
+        )
+        var projection = inputCampProjectionByCampId[campId]
+            ?? WorkflowProjection<InputCampSnapshot>()
+        let generationCapture = captureSynchronous(
+            reporter: failureReporter,
+            trace: trace
+        ) {
+            try projection.beginRefresh()
+        }
+        let generation: WorkflowRequestGeneration
+        switch generationCapture {
+        case .value(let value):
+            generation = value
+        case .failed(let failure):
+            globalVisibleFailure = failure
+            recordCodingRanchLoadFailure(
+                campId: campId,
+                message: failure.message,
+                makeVisible: makeVisible
+            )
+            return .failed(failure)
+        }
+        inputCampProjectionByCampId[campId] = projection
+
+        inputCampTaskByCampId[campId]?.cancel()
+        let task = Task { [self] in
+            let terminal = await inputWorkflowController.loadCamp(
+                campId: campId,
+                trace: trace
+            )
+            guard var current = inputCampProjectionByCampId[campId]
+            else {
+                return
+            }
+            let applyCapture = captureSynchronous(
+                reporter: failureReporter,
+                trace: trace
+            ) {
+                try current.applyTerminal(
+                    terminal,
+                    for: generation
+                )
+            }
+            switch applyCapture {
+            case .value(false):
+                return
+            case .failed(let failure):
+                globalVisibleFailure = failure
+                return
+            case .value(true):
+                inputCampProjectionByCampId[campId] = current
+            }
+
+            switch terminal {
+            case .loaded(let snapshot):
+                globalVisibleFailure = nil
+                reconcileRuminationLiveStages(with: snapshot)
+                applyInputCampSnapshot(
+                    snapshot,
+                    makeVisible: makeVisible
+                )
+            case .failed(let failure):
+                globalVisibleFailure = failure
+                recordCodingRanchLoadFailure(
+                    campId: campId,
+                    message: failure.message,
+                    makeVisible: makeVisible
+                )
+            case .idle, .loading:
+                return
+            }
+
+            if inputCampProjectionByCampId[campId]?.generation
+                == generation
+            {
+                inputCampTaskByCampId.removeValue(forKey: campId)
+            }
+        }
+        inputCampTaskByCampId[campId] = task
+        await task.value
+        while let currentTask = inputCampTaskByCampId[campId] {
+            await currentTask.value
+        }
+        return inputCampProjectionByCampId[campId]?.state ?? .idle
+    }
+
+    func makeInputOperationTrace(
+        operation: FailureOperation
+    ) -> OperationTrace {
+        operationTraceFactory.generated(
+            operation: operation,
+            scope: .fixed(.application)
+        )
+    }
+
+    func makeMissionOperationTrace(
+        operation: FailureOperation
+    ) -> OperationTrace {
+        operationTraceFactory.generated(
+            operation: operation,
+            scope: .fixed(.missionIndex)
+        )
+    }
+
+    func capturePlanningRuntimeSelection(
+        trace: OperationTrace
+    ) -> SynchronousCaptureResult<PlanningEntryRuntimeSelection> {
+        captureSynchronous(
+            reporter: failureReporter,
+            trace: trace
+        ) {
+            try planningRuntimeSelection()
+        }
+    }
+
+    func refreshMissionDetailProjection(
+        missionId: String
+    ) async -> WorkflowLoadState<MissionDetailSnapshot> {
+        let trace = makeMissionOperationTrace(operation: .missionDetailLoad)
+        var projection = missionDetailProjectionByMissionId[missionId]
+            ?? WorkflowProjection<MissionDetailSnapshot>()
+        let generationCapture = captureSynchronous(
+            reporter: failureReporter,
+            trace: trace
+        ) {
+            try projection.beginRefresh()
+        }
+        let generation: WorkflowRequestGeneration
+        switch generationCapture {
+        case .value(let value):
+            generation = value
+        case .failed(let failure):
+            globalVisibleFailure = failure
+            return .failed(failure)
+        }
+        missionDetailProjectionByMissionId[missionId] = projection
+        missionDetailTaskByMissionId[missionId]?.cancel()
+        let task = Task { [self] in
+            defer {
+                if missionDetailProjectionByMissionId[missionId]?.generation
+                    == generation
+                {
+                    missionDetailTaskByMissionId.removeValue(
+                        forKey: missionId
+                    )
+                }
+            }
+            let terminal = await missionWorkflowController.loadDetail(
+                missionId: missionId,
+                trace: trace
+            )
+            guard var current =
+                missionDetailProjectionByMissionId[missionId]
+            else {
+                return
+            }
+            let applyCapture = captureSynchronous(
+                reporter: failureReporter,
+                trace: trace
+            ) {
+                try current.applyTerminal(terminal, for: generation)
+            }
+            switch applyCapture {
+            case .value(false):
+                return
+            case .failed(let failure):
+                globalVisibleFailure = failure
+                return
+            case .value(true):
+                missionDetailProjectionByMissionId[missionId] = current
+            }
+            switch terminal {
+            case .loaded(let snapshot):
+                if globalVisibleFailure?.operation == .missionDetailLoad {
+                    globalVisibleFailure = nil
+                }
+                guard currentMissionId == missionId else {
+                    return
+                }
+                missionCards = snapshot.cards
+                missionArtifacts = snapshot.artifacts
+                pendingRequests = snapshot.pendingRequests
+                cardCompanions = snapshot.companionsById
+                feedEntries = ActivityFeed.entries(
+                    events: snapshot.events,
+                    cards: snapshot.cards,
+                    companions: snapshot.companionsById
+                )
+                if let selectedCardId,
+                   !snapshot.cards.contains(where: {
+                       $0.id == selectedCardId
+                   })
+                {
+                    self.selectedCardId = nil
+                }
+                switch snapshot.mission.status {
+                case .planning:
+                    missionPhase = .planning
+                case .executing:
+                    missionPhase = .executing
+                case .delivering:
+                    missionPhase = .delivering
+                case .accepted:
+                    missionPhase = .accepted
+                case .failed:
+                    missionPhase = .failed
+                }
+                recomputeAnimStates()
+            case .failed(let failure):
+                globalVisibleFailure = failure
+            case .idle, .loading:
+                return
+            }
+        }
+        missionDetailTaskByMissionId[missionId] = task
+        await task.value
+        while let currentTask = missionDetailTaskByMissionId[missionId] {
+            await currentTask.value
+        }
+        return missionDetailProjectionByMissionId[missionId]?.state ?? .idle
+    }
+
+    func refreshMissionIndexProjection()
+        async -> WorkflowLoadState<MissionIndexSnapshot>
+    {
+        let trace = makeMissionOperationTrace(operation: .missionIndexLoad)
+        var projection = missionIndexProjection
+        let generationCapture = captureSynchronous(
+            reporter: failureReporter,
+            trace: trace
+        ) {
+            try projection.beginRefresh()
+        }
+        let generation: WorkflowRequestGeneration
+        switch generationCapture {
+        case .value(let value):
+            generation = value
+        case .failed(let failure):
+            globalVisibleFailure = failure
+            return .failed(failure)
+        }
+        missionIndexProjection = projection
+        missionIndexTask?.cancel()
+        let task = Task { [self] in
+            defer {
+                if missionIndexProjection.generation == generation {
+                    missionIndexTask = nil
+                }
+            }
+            let terminal = await missionWorkflowController.loadIndex(
+                includeArchived: artifactLedgerIncludeArchived,
+                trace: trace
+            )
+            var current = missionIndexProjection
+            let applyCapture = captureSynchronous(
+                reporter: failureReporter,
+                trace: trace
+            ) {
+                try current.applyTerminal(terminal, for: generation)
+            }
+            switch applyCapture {
+            case .value(false):
+                return
+            case .failed(let failure):
+                globalVisibleFailure = failure
+                return
+            case .value(true):
+                missionIndexProjection = current
+            }
+            switch terminal {
+            case .loaded(let snapshot):
+                if globalVisibleFailure?.operation == .missionIndexLoad {
+                    globalVisibleFailure = nil
+                }
+                missionList = snapshot.missions
+                camps = snapshot.camps
+                missionsByCamp = snapshot.missionsByCamp
+                artifactLedgerItems = snapshot.artifactLedger
+            case .failed(let failure):
+                globalVisibleFailure = failure
+            case .idle, .loading:
+                return
+            }
+        }
+        missionIndexTask = task
+        await task.value
+        while let currentTask = missionIndexTask {
+            await currentTask.value
+        }
+        return missionIndexProjection.state
+    }
+
+    func refreshInputReviewProjection(
+        ingestionId: String
+    ) async -> WorkflowLoadState<InputReviewSnapshot> {
+        let trace = operationTraceFactory.generated(
+            operation: .inputReviewLoad,
+            scope: .fixed(.application)
+        )
+        var projection = inputReviewProjectionByIngestionId[ingestionId]
+            ?? WorkflowProjection<InputReviewSnapshot>()
+        let generationCapture = captureSynchronous(
+            reporter: failureReporter,
+            trace: trace
+        ) {
+            try projection.beginRefresh()
+        }
+        let generation: WorkflowRequestGeneration
+        switch generationCapture {
+        case .value(let value):
+            generation = value
+        case .failed(let failure):
+            globalVisibleFailure = failure
+            return .failed(failure)
+        }
+        inputReviewProjectionByIngestionId[ingestionId] = projection
+
+        inputReviewTaskByIngestionId[ingestionId]?.cancel()
+        let task = Task { [self] in
+            let terminal = await inputWorkflowController.loadReview(
+                ingestionId: ingestionId,
+                trace: trace
+            )
+            guard var current =
+                inputReviewProjectionByIngestionId[ingestionId]
+            else {
+                return
+            }
+            let applyCapture = captureSynchronous(
+                reporter: failureReporter,
+                trace: trace
+            ) {
+                try current.applyTerminal(
+                    terminal,
+                    for: generation
+                )
+            }
+            switch applyCapture {
+            case .value(false):
+                return
+            case .failed(let failure):
+                globalVisibleFailure = failure
+                return
+            case .value(true):
+                inputReviewProjectionByIngestionId[ingestionId] = current
+            }
+
+            switch terminal {
+            case .loaded:
+                if globalVisibleFailure?.operation == .inputReviewLoad {
+                    globalVisibleFailure = nil
+                }
+            case .failed(let failure):
+                globalVisibleFailure = failure
+            case .idle, .loading:
+                return
+            }
+
+            if inputReviewProjectionByIngestionId[ingestionId]?.generation
+                == generation
+            {
+                inputReviewTaskByIngestionId.removeValue(
+                    forKey: ingestionId
+                )
+            }
+        }
+        inputReviewTaskByIngestionId[ingestionId] = task
+        await task.value
+        while let currentTask = inputReviewTaskByIngestionId[ingestionId] {
+            await currentTask.value
+        }
+        return inputReviewProjectionByIngestionId[ingestionId]?.state
+            ?? .idle
+    }
+
+    func invalidateInputReviewProjection(ingestionId: String) {
+        inputReviewTaskByIngestionId.removeValue(forKey: ingestionId)?
+            .cancel()
+        inputReviewProjectionByIngestionId.removeValue(forKey: ingestionId)
+    }
+
+    private func applyCampHomeSnapshot(_ snapshot: InputCampSnapshot) {
+        let camp = snapshot.camp
         if campId != camp.id {
             guideStreamID += 1
             guideTask?.cancel()
@@ -2259,42 +4600,167 @@ final class AppStore {
             guideToolActivity = nil
             Task { await coalescer?.discard() }
         }
+        if let index = camps.firstIndex(where: { $0.id == camp.id }) {
+            camps[index] = camp
+        } else {
+            camps.append(camp)
+            camps.sort { lhs, rhs in
+                if lhs.createdAt != rhs.createdAt {
+                    return lhs.createdAt < rhs.createdAt
+                }
+                return lhs.id < rhs.id
+            }
+        }
+        missionsByCamp[camp.id] = snapshot.missions
         campId = camp.id
         campName = camp.name
-        guideCompanion = try? db.guide(campId: camp.id)
+        guideCompanion = snapshot.guide
         reloadCampKnowledge()
         reloadGuideMessages()
-        reloadMissionList()
     }
 
     /// 建营地（C2）：返回新营地供导航；失败 toast。
-    func createCamp(name: String, guidePrompt: String?) -> CampRecord? {
-        do {
-            let camp = try db.createCamp(name: name, guidePrompt: guidePrompt)
-            reload()
-            return camp
-        } catch {
-            showToast("建营地失败：\(readableError(error))")
+    func createCamp(
+        name: String,
+        guidePrompt: String?
+    ) async -> CampRecord? {
+        let trace = operationTraceFactory.generated(
+            operation: .campCreate,
+            scope: .fixed(.application)
+        )
+        switch await inputWorkflowController.createCamp(
+            name: name,
+            guidePrompt: guidePrompt,
+            trace: trace
+        ) {
+        case .notCommitted(let failure):
+            showToast(failure.message)
             return nil
+        case .committed(let camp):
+            upsertCampProjection(camp)
+            return camp
+        case .committedWithVisibilityFailure(let camp, let failure):
+            upsertCampProjection(camp)
+            showToast(failure.message)
+            return camp
         }
     }
 
     /// 改名（C3）；当前正看这个营地时同步刷新 header。
     func renameCamp(id: String, name: String) {
-        try? db.renameCamp(id: id, name: name)
-        reload()
-        if campId == id, let camp = try? db.camp(id: id) {
-            campName = camp.name
+        let trace = operationTraceFactory.generated(
+            operation: .campRename,
+            scope: .fixed(.application)
+        )
+        Task { [self] in
+            switch await inputWorkflowController.renameCamp(
+                id: id,
+                name: name,
+                trace: trace
+            ) {
+            case .notCommitted(let failure):
+                showToast(failure.message)
+            case .committed, .committedWithVisibilityFailure:
+                if let index = camps.firstIndex(where: { $0.id == id }) {
+                    camps[index].name = name
+                }
+                if campId == id {
+                    campName = name
+                }
+            }
         }
     }
 
-    func setCampArchived(id: String, archived: Bool) {
-        do {
-            try db.setCampArchived(id: id, archived: archived)
-            reload()
-            showToast(archived ? "营地已归档" : "营地已恢复")
-        } catch {
-            showToast("营地状态修改失败：\(readableError(error))")
+    @discardableResult
+    func setCampArchived(
+        id: String,
+        archived: Bool
+    ) async -> Bool {
+        let trace = operationTraceFactory.generated(
+            operation: .campArchive,
+            scope: .fixed(.application)
+        )
+        switch await inputWorkflowController.setCampArchived(
+            id: id,
+            archived: archived,
+            trace: trace
+        ) {
+        case .notCommitted(let failure):
+            showToast(failure.message)
+            return false
+        case .committed(let camp):
+            upsertCampProjection(camp)
+            showToast(archived ? "营地已归档，可随时恢复。" : "营地已恢复。")
+            return true
+        case .committedWithVisibilityFailure(let camp, let failure):
+            upsertCampProjection(camp)
+            showToast(failure.message)
+            return true
+        }
+    }
+
+    @discardableResult
+    func retireCow(id: String) async -> Bool {
+        let trace = operationTraceFactory.generated(
+            operation: .companionRetire,
+            scope: .fixed(.application)
+        )
+        switch await inputWorkflowController.retireCow(
+            id: id,
+            trace: trace
+        ) {
+        case .notCommitted(let failure):
+            showToast(failure.message)
+            return false
+        case .committed:
+            let refreshMessage = await applyCowRetirementProjection(id: id)
+            showToast(
+                refreshMessage
+                    ?? "这只牛已移出牛群，历史记录仍然保留。"
+            )
+            return true
+        case .committedWithVisibilityFailure(_, let failure):
+            globalVisibleFailure = failure
+            _ = await applyCowRetirementProjection(id: id)
+            showToast("这只牛已移出，但界面刷新失败。\n\(failure.message)")
+            return true
+        }
+    }
+
+    private func applyCowRetirementProjection(
+        id: String
+    ) async -> String? {
+        companions.removeAll { $0.id == id }
+        codingRanchDashboardCache.removeAll()
+        guard let visibleCampId = campId else { return nil }
+        switch await refreshInputCampProjection(
+            campId: visibleCampId,
+            makeVisible: true
+        ) {
+        case .failed(let failure):
+            return "这只牛已移出，但界面刷新失败。\n\(failure.message)"
+        case .idle, .loading:
+            recordCodingRanchDiagnostic(
+                ProjectionContractError.invalidTerminal,
+                operation: "retire-cow-refresh"
+            )
+            return "这只牛已移出，但界面刷新尚未完成。"
+        case .loaded:
+            return nil
+        }
+    }
+
+    func upsertCampProjection(_ camp: CampRecord) {
+        if let index = camps.firstIndex(where: { $0.id == camp.id }) {
+            camps[index] = camp
+        } else {
+            camps.append(camp)
+            camps.sort { lhs, rhs in
+                if lhs.createdAt != rhs.createdAt {
+                    return lhs.createdAt < rhs.createdAt
+                }
+                return lhs.id < rhs.id
+            }
         }
     }
 
@@ -2323,61 +4789,99 @@ final class AppStore {
     }
 
     private func reloadGuideMessages() {
-        guard let campId, let thread = try? db.findOrCreateGuideThread(campId: campId) else { return }
-        guideMessages = ((try? db.messages(threadId: thread.id)) ?? []).map {
-            GuideMessage(id: $0.id, role: $0.role, text: $0.text, proposal: $0.proposal)
+        guard let targetCampId = campId else { return }
+        let loadID = guideStreamID
+        let trace = operationTraceFactory.generated(
+            operation: .guideChatLoad,
+            scope: .fixed(.application)
+        )
+        Task { [self] in
+            let terminal = await inputWorkflowController.loadGuideChat(
+                campId: targetCampId,
+                trace: trace
+            )
+            guard campId == targetCampId, guideStreamID == loadID else {
+                return
+            }
+            switch terminal {
+            case .loaded(let snapshot):
+                guideMessages = snapshot.messages.map {
+                    GuideMessage(
+                        id: $0.id,
+                        role: $0.role,
+                        text: $0.text,
+                        proposal: $0.proposal
+                    )
+                }
+            case .failed(let failure):
+                showToast(failure.message)
+            case .idle, .loading:
+                return
+            }
         }
     }
 
     func sendGuideChat(text: String) {
         guard !text.isEmpty, !guideStreaming, let campId else { return }
-        guard canWriteCamp(id: campId, archivedMessage: "营地已归档,恢复后才能继续对话") else { return }
-        guard let provider = provider(model: defaultModel) else {
-            showToast("请先在设置里保存 API Key 或网页登录授权")
-            return
-        }
         guideStreamID += 1
         let streamID = guideStreamID
         guideStreaming = true
         guideStreamingText = ""
         guideToolActivity = nil
-        // 乐观呈现用户消息；后续 reload 时以落库消息为准（全量替换，不会重复）
-        guideMessages.append(GuideMessage(id: "local-user-\(streamID)", role: "user", text: text, proposal: nil))
-        let service = GuideChatService(db: db, provider: provider)
-        let coalescer = DeltaCoalescer { [weak self] batch in
-            await MainActor.run {
-                guard let self, self.guideStreamID == streamID else { return }
-                self.guideStreamingText = (self.guideStreamingText ?? "") + batch
-                self.guideToolActivity = nil
+        guideCoalescer = nil
+        let trace = operationTraceFactory.generated(
+            operation: .guideChatSend,
+            scope: .fixed(.application)
+        )
+        guideTask = Task { [self] in
+            guard await campIsWritable(
+                campId,
+                archivedMessage: "营地已归档,恢复后才能继续对话"
+            ), guideStreamID == streamID else {
+                if guideStreamID == streamID {
+                    guideStreaming = false
+                    guideStreamingText = nil
+                    guideTask = nil
+                }
+                return
             }
-        }
-        guideCoalescer = coalescer
-        guideTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                for try await event in try service.send(campId: campId, userText: text) {
+            guideMessages.append(
+                GuideMessage(
+                    id: "local-user-\(streamID)",
+                    role: "user",
+                    text: text,
+                    proposal: nil
+                )
+            )
+            let terminal = await inputWorkflowController.sendGuideChat(
+                campId: campId,
+                text: text,
+                model: defaultModel,
+                onEvent: { [weak self] event in
+                    guard let self, self.guideStreamID == streamID else {
+                        return
+                    }
                     switch event {
                     case .textDelta(let delta):
-                        await coalescer.push(delta)
+                        guideStreamingText = (guideStreamingText ?? "") + delta
+                        guideToolActivity = nil
                     case .toolActivity(let name):
-                        await coalescer.flush()
-                        if guideStreamID == streamID {
-                            guideToolActivity = Self.humanGuideToolName(name)
-                        }
+                        guideToolActivity = Self.humanGuideToolName(name)
                     case .proposalCreated:
-                        await coalescer.flush()
-                        if guideStreamID == streamID {
-                            reloadGuideMessages()
-                        }
+                        reloadGuideMessages()
                     case .finished:
                         break
                     }
-                }
-                await coalescer.flush()
-            } catch {
-                await coalescer.discard()
+                },
+                isOwnedCancellation: { Task.isCancelled },
+                trace: trace
+            )
+            switch terminal {
+            case .finished, .cancelled:
+                break
+            case .failed(let failure, _):
                 if guideStreamID == streamID {
-                    showToast("营地管家这会儿联系不上：\(readableError(error))")
+                    showToast(failure.message)
                 }
             }
             if guideStreamID == streamID {
@@ -2397,18 +4901,26 @@ final class AppStore {
             showToast(missionStartBlockMessage)
             return
         }
-        guard provider(model: defaultModel) != nil else {
-            showToast("请先在设置里保存 API Key 或网页登录授权")
+        let captured: CapturedProposalMissionStart
+        do {
+            captured = try planningEntryCoordinator.captureConfirmedProposal(
+                messageId: messageId,
+                runtime: planningRuntimeSelection(),
+                fallbackBudget: defaultMissionBudget,
+                autonomy: defaultAutonomy
+            )
+        } catch {
+            showToast("建队失败：\(readableError(error))")
             return
         }
         confirmingProposals.insert(messageId)
-        Task { [weak self] in
+        Task { [weak self, captured] in
             guard let self else { return }
             do {
-                let missionId = try await orchestrator.confirmSquadProposal(
-                    messageId: messageId, plannerModel: effectivePlannerModel,
-                    fallbackBudget: defaultMissionBudget,
-                    autonomy: defaultAutonomy)
+                let missionId =
+                    try await planningEntryCoordinator.startConfirmedProposal(
+                        captured
+                    )
                 reloadGuideMessages()
                 reloadMissionList()
                 navigateToMissionId = missionId
@@ -2443,59 +4955,219 @@ final class AppStore {
         distillingGuideChat = true
         Task { [weak self] in
             guard let self else { return }
-            let note = await MemoryDistillService(db: db, provider: provider).distillGuideChat(campId: campId)
+            let terminal = await MemoryDistillService(db: db, provider: provider)
+                .distillGuideChat(campId: campId)
             distillingGuideChat = false
-            reloadCampKnowledge()
-            showToast(note != nil ? "已沉淀 1 条营地笔记" : "这段对话暂时没什么可记的")
+            switch terminal {
+            case .noEligibleInput:
+                showToast("这段对话还没有可沉淀的内容")
+            case .skipped:
+                showToast("这段对话暂时没什么可记的")
+            case .created(let record):
+                let request = memoryKnowledgeProjection
+                    .beginCommittedRefresh(record)
+                await refreshCampKnowledge(
+                    request,
+                    operation: .campKnowledgeLoad
+                )
+                showToast("已沉淀 1 条营地笔记")
+            case .failed(let failure):
+                showToast(failure.message)
+            }
         }
     }
 
     // MARK: - 营地笔记 CRUD（M4）
 
     func saveCampNoteEdits(_ note: CampNoteRecord) {
-        guard canWriteCamp(id: note.campId, archivedMessage: "营地已归档,恢复后才能编辑笔记") else { return }
         var updated = note
         updated.updatedAt = Date()
-        do {
-            try db.saveCampNote(updated)
-            reloadCampKnowledge()
-        } catch {
-            showToast("笔记保存失败：\(readableError(error))")
+        Task { [self] in
+            guard await campIsWritable(
+                note.campId,
+                archivedMessage: "营地已归档,恢复后才能编辑笔记"
+            ) else { return }
+            let trace = operationTraceFactory.generated(
+                operation: .campNoteSave,
+                scope: .fixed(.application)
+            )
+            switch await inputWorkflowController.saveCampNote(
+                updated,
+                trace: trace
+            ) {
+            case .notCommitted(let failure):
+                showToast(failure.message)
+            case .committed(let record):
+                let request = memoryKnowledgeProjection
+                    .beginCommittedRefresh(record)
+                await refreshCampKnowledge(
+                    request,
+                    operation: .campKnowledgeLoad
+                )
+            case .committedWithVisibilityFailure(
+                let record,
+                let failure
+            ):
+                let request = memoryKnowledgeProjection
+                    .beginCommittedRefresh(record)
+                await refreshCampKnowledge(
+                    request,
+                    operation: .campKnowledgeLoad
+                )
+                showToast(failure.message)
+            }
         }
     }
 
     func deleteCampNote(id: String) {
-        do {
-            guard let note = try db.pool.read({ database in
-                try CampNoteRecord.fetchOne(database, key: id)
-            }) else {
-                throw RecordNotFoundError(table: "camp_note", id: id)
+        guard let note = campNotes.first(where: { $0.id == id }) else {
+            showToast("笔记不存在或已被删除")
+            return
+        }
+        Task { [self] in
+            guard await campIsWritable(
+                note.campId,
+                archivedMessage: "营地已归档,恢复后才能删除笔记"
+            ) else { return }
+            let trace = operationTraceFactory.generated(
+                operation: .campNoteDelete,
+                scope: .fixed(.application)
+            )
+            switch await inputWorkflowController.deleteCampNote(
+                id: id,
+                trace: trace
+            ) {
+            case .notCommitted(let failure):
+                showToast(failure.message)
+            case .committed, .committedWithVisibilityFailure:
+                let request = memoryKnowledgeProjection
+                    .beginGuideRefresh(campId: note.campId)
+                await refreshCampKnowledge(
+                    request,
+                    operation: .campKnowledgeLoad
+                )
             }
-            guard canWriteCamp(id: note.campId, archivedMessage: "营地已归档,恢复后才能删除笔记") else { return }
-            try db.deleteCampNote(id: id)
-            reloadCampKnowledge()
-        } catch {
-            showToast("笔记删除失败：\(readableError(error))")
         }
     }
 
     func toggleCampNotePin(_ note: CampNoteRecord) {
-        guard canWriteCamp(id: note.campId, archivedMessage: "营地已归档,恢复后才能编辑笔记") else { return }
         var updated = note
         updated.pinned.toggle()
         updated.updatedAt = Date()
-        do {
-            try db.saveCampNote(updated)
-            reloadCampKnowledge()
-        } catch {
-            showToast("笔记保存失败：\(readableError(error))")
+        Task { [self] in
+            guard await campIsWritable(
+                note.campId,
+                archivedMessage: "营地已归档,恢复后才能编辑笔记"
+            ) else { return }
+            let trace = operationTraceFactory.generated(
+                operation: .campNotePin,
+                scope: .fixed(.application)
+            )
+            switch await inputWorkflowController.pinCampNote(
+                updated,
+                trace: trace
+            ) {
+            case .notCommitted(let failure):
+                showToast(failure.message)
+            case .committed(let record):
+                let request = memoryKnowledgeProjection
+                    .beginCommittedRefresh(record)
+                await refreshCampKnowledge(
+                    request,
+                    operation: .campKnowledgeLoad
+                )
+            case .committedWithVisibilityFailure(
+                let record,
+                let failure
+            ):
+                let request = memoryKnowledgeProjection
+                    .beginCommittedRefresh(record)
+                await refreshCampKnowledge(
+                    request,
+                    operation: .campKnowledgeLoad
+                )
+                showToast(failure.message)
+            }
         }
+    }
+
+    private func campIsWritable(
+        _ campId: String,
+        archivedMessage: String
+    ) async -> Bool {
+        let trace = operationTraceFactory.generated(
+            operation: .campWritableRead,
+            scope: .fixed(.application)
+        )
+        switch await inputWorkflowController.campWritable(
+            id: campId,
+            trace: trace
+        ) {
+        case .loaded(true):
+            return true
+        case .loaded(false):
+            showToast(archivedMessage)
+        case .failed(let failure):
+            showToast(failure.message)
+        case .idle, .loading:
+            showToast("营地状态暂时不可用")
+        }
+        return false
     }
 
     // MARK: - 伙伴记忆（M4）
 
     func reloadMemoryNotes(companionId: String) {
-        memoryNotes = (try? db.companionNotes(companionId: companionId)) ?? []
+        let request = memoryKnowledgeProjection.selectCompanion(companionId)
+        Task { [self] in
+            await refreshMemoryNotes(
+                request,
+                operation: .memoryNoteLoad
+            )
+        }
+    }
+
+    private func refreshMemoryNotes(
+        _ request: MemoryKnowledgeRefreshRequest,
+        operation: FailureOperation
+    ) async {
+        let trace = operationTraceFactory.generated(
+            operation: operation,
+            scope: .fixed(.memoryDM)
+        )
+        let terminal: WorkflowReadTerminal<[CompanionNoteRecord]>
+        switch request.owner {
+        case .companion(let companionId):
+            terminal = await inputWorkflowController.loadMemoryNotes(
+                companionId: companionId,
+                trace: trace
+            )
+        case .guide:
+            return
+        }
+        _ = memoryKnowledgeProjection.apply(terminal, for: request)
+    }
+
+    func retryMemoryDistillationVisibility(cardId: UUID) {
+        guard let request = memoryKnowledgeProjection
+            .beginVisibilityRetry(cardId: cardId)
+        else {
+            return
+        }
+        Task { [self] in
+            switch request.owner {
+            case .companion:
+                await refreshMemoryNotes(
+                    request,
+                    operation: .memoryNoteLoad
+                )
+            case .guide:
+                await refreshCampKnowledge(
+                    request,
+                    operation: .campKnowledgeLoad
+                )
+            }
+        }
     }
 
     func distillMemoryNow(companion: CompanionRecord) {
@@ -2507,11 +5179,25 @@ final class AppStore {
         distillingMemory = true
         Task { [weak self] in
             guard let self else { return }
-            let note = await MemoryDistillService(db: db, provider: provider)
+            let terminal = await MemoryDistillService(db: db, provider: provider)
                 .distillDM(companionId: companion.id, minMessages: 1)
             distillingMemory = false
-            reloadMemoryNotes(companionId: companion.id)
-            showToast(note != nil ? "已记住这段对话" : "暂时没什么要记的")
+            switch terminal {
+            case .noEligibleInput:
+                showToast("还没有可沉淀的对话")
+            case .skipped:
+                showToast("暂时没什么要记的")
+            case .created(let record):
+                let request = memoryKnowledgeProjection
+                    .beginCommittedRefresh(record)
+                await refreshMemoryNotes(
+                    request,
+                    operation: .memoryNoteLoad
+                )
+                showToast("已记住这段对话")
+            case .failed(let failure):
+                showToast(failure.message)
+            }
         }
     }
 
@@ -2522,11 +5208,24 @@ final class AppStore {
         guard autoDistillInFlight.insert(companionId).inserted else { return }
         Task { [weak self] in
             guard let self else { return }
-            let note = await MemoryDistillService(db: db, provider: provider)
+            let terminal = await MemoryDistillService(db: db, provider: provider)
                 .distillDM(companionId: companionId, minMessages: MemoryDistillService.autoMinMessages)
             autoDistillInFlight.remove(companionId)
-            if note != nil {
+            switch terminal {
+            case .noEligibleInput:
+                break
+            case .skipped:
+                showToast("这段私聊暂时没有值得长期记住的内容")
+            case .created(let record):
+                let request = memoryKnowledgeProjection
+                    .beginCommittedRefresh(record)
+                await refreshMemoryNotes(
+                    request,
+                    operation: .memoryNoteLoad
+                )
                 showToast("这段私聊已沉淀为记忆")
+            case .failed(let failure):
+                showToast(failure.message)
             }
         }
     }
@@ -2534,21 +5233,98 @@ final class AppStore {
     func saveMemoryEdits(_ note: CompanionNoteRecord) {
         var updated = note
         updated.updatedAt = Date()
-        try? db.saveCompanionNote(updated)
-        reloadMemoryNotes(companionId: note.companionId)
+        Task { [self] in
+            let trace = operationTraceFactory.generated(
+                operation: .memoryNoteSave,
+                scope: .fixed(.application)
+            )
+            switch await inputWorkflowController.saveMemoryNote(
+                updated,
+                trace: trace
+            ) {
+            case .notCommitted(let failure):
+                showToast(failure.message)
+            case .committed(let record):
+                let request = memoryKnowledgeProjection
+                    .beginCommittedRefresh(record)
+                await refreshMemoryNotes(
+                    request,
+                    operation: .memoryNoteLoad
+                )
+            case .committedWithVisibilityFailure(
+                let record,
+                let failure
+            ):
+                let request = memoryKnowledgeProjection
+                    .beginCommittedRefresh(record)
+                await refreshMemoryNotes(
+                    request,
+                    operation: .memoryNoteLoad
+                )
+                showToast(failure.message)
+            }
+        }
     }
 
     func deleteMemoryNote(id: String, companionId: String) {
-        try? db.deleteCompanionNote(id: id)
-        reloadMemoryNotes(companionId: companionId)
+        Task { [self] in
+            let trace = operationTraceFactory.generated(
+                operation: .memoryNoteDelete,
+                scope: .fixed(.application)
+            )
+            switch await inputWorkflowController.deleteMemoryNote(
+                id: id,
+                companionId: companionId,
+                trace: trace
+            ) {
+            case .notCommitted(let failure):
+                showToast(failure.message)
+            case .committed, .committedWithVisibilityFailure:
+                let request = memoryKnowledgeProjection
+                    .beginCompanionRefresh(companionId: companionId)
+                await refreshMemoryNotes(
+                    request,
+                    operation: .memoryNoteLoad
+                )
+            }
+        }
     }
 
     func toggleMemoryPin(_ note: CompanionNoteRecord) {
         var updated = note
         updated.pinned.toggle()
         updated.updatedAt = Date()
-        try? db.saveCompanionNote(updated)
-        reloadMemoryNotes(companionId: note.companionId)
+        Task { [self] in
+            let trace = operationTraceFactory.generated(
+                operation: .memoryNotePin,
+                scope: .fixed(.application)
+            )
+            switch await inputWorkflowController.pinMemoryNote(
+                updated,
+                trace: trace
+            ) {
+            case .notCommitted(let failure):
+                showToast(failure.message)
+            case .committed(let record):
+                let request = memoryKnowledgeProjection
+                    .beginCommittedRefresh(record)
+                await refreshMemoryNotes(
+                    request,
+                    operation: .memoryNoteLoad
+                )
+            case .committedWithVisibilityFailure(
+                let record,
+                let failure
+            ):
+                let request = memoryKnowledgeProjection
+                    .beginCommittedRefresh(record)
+                await refreshMemoryNotes(
+                    request,
+                    operation: .memoryNoteLoad
+                )
+                showToast(failure.message)
+            }
+        }
     }
 
     // MARK: - Toast
@@ -2570,6 +5346,84 @@ final class AppStore {
         case "propose_squad": return "营地管家在拟组队提案…"
         default: return "营地管家在忙…"
         }
+    }
+}
+
+@MainActor
+extension AppStore {
+    @discardableResult
+    func executeRuminationCommand(
+        ingestionId: String,
+        expectedCampId: String? = nil
+    ) async throws -> DurableWorkRecord {
+        guard let targetCampId =
+            expectedCampId
+                ?? codingRanchIngestionCampIds[ingestionId]
+        else {
+            throw RuminationStartRecoveryRequiredError(
+                ingestionId: ingestionId
+            )
+        }
+
+        guard let runtime = runtimeProjection.lastLoadedValue else {
+            throw RuminationStartRecoveryRequiredError(
+                ingestionId: ingestionId
+            )
+        }
+        let runtimeProfileId: String
+        let model: String
+        switch runtime.legacyRuminationSnapshot {
+        case .valid(let profileId, let selectedModel):
+            runtimeProfileId = profileId
+            model = selectedModel
+        case .legacyProfileUnresolved, .legacyModelUnavailable,
+             .legacyProfileCLIUnsupported:
+            throw RuminationStartRecoveryRequiredError(
+                ingestionId: ingestionId
+            )
+        }
+        let trace = operationTraceFactory.generated(
+            operation: .inputRuminationStart,
+            scope: .fixed(.application)
+        )
+        switch await inputWorkflowController.startRumination(
+            ingestionId: ingestionId,
+            expectedCampId: targetCampId,
+            model: model,
+            runtimeProfileId: runtimeProfileId,
+            trace: trace
+        ) {
+        case .notCommitted(let failure):
+            globalVisibleFailure = failure
+            throw UserVisibleOperationError(failure: failure)
+        case .committed(let receipt):
+            applyRuminationStartReceipt(receipt)
+            if globalVisibleFailure?.operation == .inputRuminationStart {
+                globalVisibleFailure = nil
+            }
+            return receipt.work
+        case .committedWithVisibilityFailure(let receipt, let failure):
+            applyRuminationStartReceipt(receipt)
+            globalVisibleFailure = failure
+            let message = receipt.refreshedCamp == nil
+                ? "反刍已经开始，但界面刷新失败。请切换营地或稍后重试。"
+                : failure.message
+            ruminationActionError = message
+            showToast(message)
+            return receipt.work
+        }
+    }
+
+    func applyRuminationStartReceipt(
+        _ receipt: InputRuminationStartReceipt
+    ) {
+        guard let snapshot = receipt.refreshedCamp else { return }
+        let targetCampId = snapshot.camp.id
+        reconcileRuminationLiveStages(with: snapshot)
+        applyInputCampSnapshot(
+            snapshot,
+            makeVisible: campId == targetCampId
+        )
     }
 }
 

@@ -1,0 +1,83 @@
+(lldb) target create ".build/arm64-apple-macosx/debug/RunTests"
+Current executable set to '/Users/muzi/Agent-loop/.build/arm64-apple-macosx/debug/RunTests' (arm64).
+(lldb) breakpoint set --file BoardServerTests.swift --line 295
+Breakpoint 1: where = RunTests`static BoardServerTests.connectClientWithRetry(path:timeout:) + 792 at BoardServerTests.swift:295:23, address = 0x0000000100e03614
+(lldb) run --filter boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses() started.
+2026-08-26 11:49:45.590363-0700 RunTests[13856:7424036] [logging-persist] cannot open file at line 51044 of [f0ca7bba1c]
+2026-08-26 11:49:45.590384-0700 RunTests[13856:7424036] [logging-persist] os_unix.c:51044: (2) open(/private/var/db/DetachedSignatures) - No such file or directory
+Process 13856 launched: '/Users/muzi/Agent-loop/.build/arm64-apple-macosx/debug/RunTests' (arm64)
+Process 13856 stopped
+* thread #6, name = 'Task 1022', queue = 'com.apple.root.default-qos.cooperative', stop reason = breakpoint 1.1
+    frame #0: 0x0000000100e03614 RunTests`static BoardServerTests.connectClientWithRetry(path="/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/al-7F196498/5E5720CA6B4F4E41.sock", timeout=2) at BoardServerTests.swift:295:23
+   292 	            do {
+   293 	                return try BoardSocketTestClient(path: path)
+   294 	            } catch BoardToolServerError.socketSetupFailed(let message)
+-> 295 	                where message.contains("Connection refused") && Date() < deadline {
+    	                      ^
+   296 	                usleep(10_000)
+   297 	            }
+   298 	        }
+Target 0: (RunTests) stopped.
+(lldb) thread backtrace -c 6
+* thread #6, name = 'Task 1022', queue = 'com.apple.root.default-qos.cooperative', stop reason = breakpoint 1.1
+  * frame #0: 0x0000000100e03614 RunTests`static BoardServerTests.connectClientWithRetry(path="/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/al-7F196498/5E5720CA6B4F4E41.sock", timeout=2) at BoardServerTests.swift:295:23
+    frame #1: 0x0000000100e00a10 RunTests`BoardServerTests.boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses() at BoardServerTests.swift:158:34
+    frame #2: 0x0000000100dffe84 RunTests`$s18AgentLoopTestSuite16BoardServerTestsV05boardf17HandlerBlockKeepsF26AliveUntilConnectionCloses0C0fMp_7__localfMu0_ #1 @Sendable (_0=nil) in static BoardServerTests.$s18AgentLoopTestSuite16BoardServerTestsV05boardf17HandlerBlockKeepsF26AliveUntilConnectionCloses0C0fMp_16Z6faf2eb1ff45ec3fMu_@Sendable () in static BoardServerTests.$s18AgentLoopTestSuite16BoardServerTestsV05boardf17HandlerBlockKeepsF26AliveUntilConnectionCloses0C0fMp_16Z6faf2eb1ff45ec3fMu_@Sendable () at @__swiftmacro_18AgentLoopTestSuite16BoardServerTestsV05boardf17HandlerBlockKeepsF26AliveUntilConnectionCloses0C0fMp_.swift:5:217
+    frame #3: 0x0000000100dffaf4 RunTests`static BoardServerTests.$s18AgentLoopTestSuite16BoardServerTestsV05boardf17HandlerBlockKeepsF26AliveUntilConnectionCloses0C0fMp_16Z6faf2eb1ff45ec3fMu_@Sendable () at @__swiftmacro_18AgentLoopTestSuite16BoardServerTestsV05boardf17HandlerBlockKeepsF26AliveUntilConnectionCloses0C0fMp_.swift:7:13
+    frame #4: 0x0000000100e01f78 RunTests`implicit closure #1 in static BoardServerTests.$s18AgentLoopTestSuite16BoardServerTestsV05boardf17HandlerBlockKeepsF26AliveUntilConnectionCloses0C0fMp_24generator6faf2eb1ff45ec3fMu_@Sendable ($base$=AgentLoopTestSuite.BoardServerTests) at @__swiftmacro_18AgentLoopTestSuite16BoardServerTestsV05boardf17HandlerBlockKeepsF26AliveUntilConnectionCloses0C0fMp_.swift:0
+(lldb) process status
+Process 13856 stopped
+* thread #6, name = 'Task 1022', queue = 'com.apple.root.default-qos.cooperative', stop reason = breakpoint 1.1
+    frame #0: 0x0000000100e03614 RunTests`static BoardServerTests.connectClientWithRetry(path="/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/al-7F196498/5E5720CA6B4F4E41.sock", timeout=2) at BoardServerTests.swift:295:23
+   292 	            do {
+   293 	                return try BoardSocketTestClient(path: path)
+   294 	            } catch BoardToolServerError.socketSetupFailed(let message)
+-> 295 	                where message.contains("Connection refused") && Date() < deadline {
+    	                      ^
+   296 	                usleep(10_000)
+   297 	            }
+   298 	        }
+(lldb) script import subprocess; p=lldb.debugger.GetSelectedTarget().GetProcess(); print(subprocess.run(["lsof","-nP","-p",str(p.GetProcessID())],capture_output=True,text=True).stdout)
+COMMAND    PID USER   FD   TYPE             DEVICE   SIZE/OFF                NODE NAME
+RunTests 13856 muzi  cwd    DIR               1,15        576           324957334 /Users/muzi/Agent-loop
+RunTests 13856 muzi  txt    REG               1,15   68167696           340366847 /Users/muzi/Agent-loop/.build/arm64-apple-macosx/debug/RunTests
+RunTests 13856 muzi  txt    REG               1,15      73936           338046902 /Library/Preferences/Logging/.plist-cache.5h1d9jSM
+RunTests 13856 muzi  txt    REG               1,15    2300384 1152921500312563530 /usr/lib/dyld
+RunTests 13856 muzi  txt    REG               1,15     234224           334693076 /private/var/db/timezone/tz/2026c.1.0/icutz/icutz44l.dat
+RunTests 13856 muzi  txt    REG               1,15      32768           340370818 /Users/muzi/Agent-loop/.build/t/bBE670D57/test.sqlite-shm
+RunTests 13856 muzi  txt    REG               1,15   10074976           267584001 /Library/Developer/CommandLineTools/Library/Developer/Frameworks/Testing.framework/Versions/A/Testing
+RunTests 13856 muzi  txt    REG               1,15   34147264 1152921500312573996 /usr/share/icu/icudt76l.dat
+RunTests 13856 muzi  txt    REG               1,14 2680684544              416443 /System/Volumes/Preboot/Cryptexes/OS/System/Library/dyld/dyld_shared_cache_arm64e
+RunTests 13856 muzi  txt    REG               1,14 2677161984              416445 /System/Volumes/Preboot/Cryptexes/OS/System/Library/dyld/dyld_shared_cache_arm64e.01
+RunTests 13856 muzi    0r   CHR               16,3        0t0                 779 /dev/ttys003
+RunTests 13856 muzi    1w   CHR               16,3        0t0                 779 /dev/ttys003
+RunTests 13856 muzi    2w   CHR               16,3      0t502                 779 /dev/ttys003
+RunTests 13856 muzi    3r   REG               1,15       4096           340370815 /Users/muzi/Agent-loop/.build/t/bBE670D57/test.sqlite
+RunTests 13856 muzi    4r   REG               1,15    1783992           340370817 /Users/muzi/Agent-loop/.build/t/bBE670D57/test.sqlite-wal
+RunTests 13856 muzi    5u  unix 0x42409ffffe74344c        0t0                     /var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/al-7F196498/5E5720CA6B4F4E41.sock
+RunTests 13856 muzi    6u  unix 0xae9c1fbd77804e7d        0t0                     ->0x53706a14359162a8
+RunTests 13856 muzi    7u   REG               1,15       4096           340370815 /Users/muzi/Agent-loop/.build/t/bBE670D57/test.sqlite
+RunTests 13856 muzi    8u   REG               1,15    1783992           340370817 /Users/muzi/Agent-loop/.build/t/bBE670D57/test.sqlite-wal
+RunTests 13856 muzi    9u   REG               1,15      32768           340370818 /Users/muzi/Agent-loop/.build/t/bBE670D57/test.sqlite-shm
+RunTests 13856 muzi   10u  unix 0xe4fc7d7fa79134c1        0t0                     ->(none)
+RunTests 13856 muzi   11u  unix 0x53706a14359162a8        0t0                     /var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/al-7F196498/5E5720CA6B4F4E41.sock
+
+(lldb) continue
+Process 13856 resuming
+Process 13856 stopped
+* thread #6, name = 'Task 1022', queue = 'com.apple.root.default-qos.cooperative', stop reason = breakpoint 1.1
+    frame #0: 0x0000000100e03614 RunTests`static BoardServerTests.connectClientWithRetry(path="/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/al-0A459304/BB579771A3474216.sock", timeout=2) at BoardServerTests.swift:295:23
+   292 	            do {
+   293 	                return try BoardSocketTestClient(path: path)
+   294 	            } catch BoardToolServerError.socketSetupFailed(let message)
+-> 295 	                where message.contains("Connection refused") && Date() < deadline {
+    	                      ^
+   296 	                usleep(10_000)
+   297 	            }
+   298 	        }
+Target 0: (RunTests) stopped.

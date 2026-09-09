@@ -1,0 +1,87 @@
+phase=step2-failure-first
+cwd=/Users/muzi/Agent-loop
+command=swift run RunTests --filter 'observabilityMigrationExactDDLAndConstraints|observabilityMigrationRollbackLeavesV12ScheduleUntouched'
+env.DYLD_LIBRARY_PATH=unset
+env.DYLD_FALLBACK_LIBRARY_PATH=unset
+env.DYLD_INSERT_LIBRARIES=unset
+env.SWIFT_EXEC=unset
+env.SDKROOT=unset
+--- command output begin ---
+[0/1] Planning build
+Building for debugging...
+[0/5] Write sources
+[1/5] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/8] Emitting module AgentLoopTestSuite
+[4/8] Compiling AgentLoopTestSuite FailureVisibilityTests.swift
+[5/8] Compiling AgentLoopTestSuite DatabaseTests.swift
+[6/27] Compiling AgentLoopTestSuite SupportTests.swift
+[7/27] Compiling AgentLoopTestSuite HaltAndCooldownTests.swift
+[8/27] Compiling AgentLoopTestSuite MultiCampTests.swift
+[9/27] Compiling AgentLoopTestSuite ScheduleTests.swift
+[10/27] Compiling AgentLoopTestSuite ShellToolTests.swift
+[11/27] Compiling AgentLoopTestSuite DurableWorkTests.swift
+[12/27] Compiling AgentLoopTestSuite GuideChatTests.swift
+[13/27] Compiling AgentLoopTestSuite BudgetTests.swift
+[14/27] Compiling AgentLoopTestSuite CodingRanchTests.swift
+[15/27] Compiling AgentLoopTestSuite OrchestratorTests.swift
+[16/27] Compiling AgentLoopTestSuite PlanningTestFixtures.swift
+[17/27] Compiling AgentLoopTestSuite AgentLoopTests.swift
+[18/27] Compiling AgentLoopTestSuite AnthropicProviderTests.swift
+[19/27] Compiling AgentLoopTestSuite AskUserTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[20/27] Compiling AgentLoopTestSuite BoardServerTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[21/27] Compiling AgentLoopTestSuite CrashRecoveryTests.swift
+[22/27] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+[23/27] Compiling AgentLoopTestSuite ContextCompactionTests.swift
+[24/27] Compiling AgentLoopTestSuite ContextPacketTests.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[24/27] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[25/27] Linking RunTests
+[26/27] Applying RunTests
+Build of product 'RunTests' complete! (37.05s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() started.
+◇ Test observabilityMigrationExactDDLAndConstraints() started.
+✘ Test observabilityMigrationExactDDLAndConstraints() recorded an issue at FailureVisibilityTests.swift:34:2: Caught error: missing required migration v13-p1-observability; actual final migration is v12-p1-schedule-fire
+✘ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() recorded an issue at FailureVisibilityTests.swift:106:2: Caught error: missing required migration v13-p1-observability; actual final migration is v12-p1-schedule-fire
+✘ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() failed after 0.001 seconds with 1 issue.
+✘ Test observabilityMigrationExactDDLAndConstraints() failed after 0.001 seconds with 1 issue.
+✘ Test run with 2 tests in 0 suites failed after 0.002 seconds with 2 issues.
+zsh:16: read-only variable: status

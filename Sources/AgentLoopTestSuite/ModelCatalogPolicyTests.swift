@@ -105,10 +105,15 @@ private func policyCompanion(model: String) -> CompanionRecord {
     let db = try policyTempDB()
     let defaults = ProfileScopedDefaults(defaults: catalogDefaults())
     try db.applyReconciliation(items: [], defaults: defaults)
-    try db.applyReconciliation(items: [
-        ReconciliationItem(scope: .defaultModel, model: "bad", profileId: "ghost", profileName: "ghost"),
-        ReconciliationItem(scope: .companion(id: "no-such-cow", name: "?"), model: "bad", profileId: "ghost", profileName: "ghost"),
-    ], defaults: defaults)
+    do {
+        try db.applyReconciliation(items: [
+            ReconciliationItem(scope: .defaultModel, model: "bad", profileId: "ghost", profileName: "ghost"),
+            ReconciliationItem(scope: .companion(id: "no-such-cow", name: "?"), model: "bad", profileId: "ghost", profileName: "ghost"),
+        ], defaults: defaults)
+        Issue.record("missing reconciliation profile must fail")
+    } catch let error as RuntimeProfileStoreError {
+        #expect(error == .profileNotFound("ghost"))
+    }
     #expect(defaults.string(profileID: "ghost", suffix: "defaultModel") == nil)
 }
 

@@ -21,7 +21,7 @@ import AgentLoopCore
     print("spike: ensureRunning start \(Date())")
     await manager.ensureRunning(serverIds: [server.id])
     print("spike: ensureRunning done \(Date()) status=\(await manager.status(serverId: server.id))")
-    let tools = await manager.assembledTools(campId: camp.id)
+    let tools = try await manager.assembledTools(campId: camp.id)
     print("spike: tools=\(tools.map(\.def.name))")
     #expect(!tools.isEmpty)
     await manager.stopAll()

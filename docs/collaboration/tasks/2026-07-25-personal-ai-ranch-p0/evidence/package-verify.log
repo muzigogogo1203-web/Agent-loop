@@ -1,0 +1,186 @@
+P0 package rebuild and integrity transcript
+date=2026-07-25T18:41:37Z
+source_head=02334ec8d21533be81d93d39191bc7d9b9c24f7f
+worktree=/private/tmp/agentloop-p0-package-verify.XFrtdg
+
+$ /private/tmp/agentloop-p0-package-verify.XFrtdg/scripts/package-app.sh --version 1.1.0
+==> swift build -c release
+Building for production...
+[0/13] Write sources
+[4/13] Copying PrivacyInfo.xcprivacy
+[5/13] Copying Info.plist
+[6/13] Write sources
+[7/13] Copying RanchArt
+[8/13] Write swift-version--1AB21518FC5DEDBE.txt
+[10/14] Compiling GRDB Configuration.swift
+[11/15] Compiling AgentLoopCore ChatService.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[12/17] Compiling AgentLoopTestSuite AgentLoopTests.swift
+/private/tmp/agentloop-p0-package-verify.XFrtdg/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/private/tmp/agentloop-p0-package-verify.XFrtdg/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[13/18] Compiling RunTests main.swift
+[13/18] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[14/18] Linking RunTests
+[16/18] Compiling AgentLoopApp AgentLoopApp.swift
+[16/18] Write Objects.LinkFileList
+[17/18] Linking AgentLoopApp
+Build complete! (143.03s)
+==> icon
+==> codesign (ad-hoc;è·¨æœºé¦–å¯éœ€å³é”®æ‰“å¼€è¿‡ Gatekeeper)
+dist/Coding ç‰§åœº.app: replacing existing signature
+==> zip
+==> æœªé…ç½® NOTARY_PROFILE,è·³è¿‡å…¬è¯(è„šæœ¬å¤´æ³¨é‡Šæœ‰ä¸€æ¬¡æ€§é…ç½®æ–¹æ³•)
+==> DMG
+æ‰“åŒ…å®Œæˆ:dist/Coding ç‰§åœº.app(v1.1.0 build 128)
+  - dist/CodingRanch-1.1.0.zip
+  - dist/CodingRanch-1.1.0.dmg
+Executable=/private/tmp/agentloop-p0-package-verify.XFrtdg/dist/Coding ç‰§åœº.app/Contents/MacOS/AgentLoop
+Identifier=com.muzi.agentloop
+Format=app bundle with Mach-O thin (arm64)
+[exit_code=0]
+
+$ /usr/bin/codesign --verify --deep --strict --verbose=2 /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/Coding\ ç‰§åœº.app
+/private/tmp/agentloop-p0-package-verify.XFrtdg/dist/Coding ç‰§åœº.app: valid on disk
+/private/tmp/agentloop-p0-package-verify.XFrtdg/dist/Coding ç‰§åœº.app: satisfies its Designated Requirement
+[exit_code=0]
+
+$ /usr/bin/codesign -d --entitlements :- /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/Coding\ ç‰§åœº.app
+Executable=/private/tmp/agentloop-p0-package-verify.XFrtdg/dist/Coding ç‰§åœº.app/Contents/MacOS/AgentLoop
+warning: Specifying ':' in the path is deprecated and will not work in a future release
+[exit_code=0]
+
+$ /usr/bin/unzip -t /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/CodingRanch-1.1.0.zip
+Archive:  /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/CodingRanch-1.1.0.zip
+    testing: Coding ç?§å?º.app/       OK
+    testing: Coding ç?§å?º.app/Contents/   OK
+    testing: Coding ç?§å?º.app/Contents/_CodeSignature/   OK
+    testing: Coding ç?§å?º.app/Contents/_CodeSignature/CodeResources   OK
+    testing: Coding ç?§å?º.app/Contents/_CodeSignature/._CodeResources   OK
+    testing: Coding ç?§å?º.app/Contents/.__CodeSignature   OK
+    testing: Coding ç?§å?º.app/Contents/MacOS/   OK
+    testing: Coding ç?§å?º.app/Contents/MacOS/AgentLoop   OK
+    testing: Coding ç?§å?º.app/Contents/MacOS/._AgentLoop   OK
+    testing: Coding ç?§å?º.app/Contents/._MacOS   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowStridePink.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowStridePink.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowStrideBlue.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowStrideBlue.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelPanoramaDay.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelPanoramaDay.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSleepAmber.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSleepAmber.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSideGreen.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSideGreen.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowStrideAmber.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowStrideAmber.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowStrideTeal.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowStrideTeal.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowStridePurple.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowStridePurple.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSidePurple.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSidePurple.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelPastureNight.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelPastureNight.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSideCoral.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSideCoral.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowStrideGreen.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowStrideGreen.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSideTeal.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSideTeal.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSleepPink.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSleepPink.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSleepBlue.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSleepBlue.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSleepCoral.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSleepCoral.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelPanoramaNight.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelPanoramaNight.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelBarnNight.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelBarnNight.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelBarnDay.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelBarnDay.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelPastureDay.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelPastureDay.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowStrideCoral.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowStrideCoral.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSleepGreen.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSleepGreen.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSideAmber.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSideAmber.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSleepPurple.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSleepPurple.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSleepTeal.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSleepTeal.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSidePink.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSidePink.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/PixelCowSideBlue.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/RanchArt/._PixelCowSideBlue.png   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AgentLoop_AgentLoopApp.bundle/._RanchArt   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/._AgentLoop_AgentLoopApp.bundle   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/AppIcon.icns   OK
+    testing: Coding ç?§å?º.app/Contents/Resources/._AppIcon.icns   OK
+    testing: Coding ç?§å?º.app/Contents/._Resources   OK
+    testing: Coding ç?§å?º.app/Contents/Info.plist   OK
+    testing: Coding ç?§å?º.app/Contents/._Info.plist   OK
+    testing: Coding ç?§å?º.app/._Contents   OK
+No errors detected in compressed data of /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/CodingRanch-1.1.0.zip.
+[exit_code=0]
+
+$ /usr/bin/hdiutil verify /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/CodingRanch-1.1.0.dmg
+æ­£åœ¨æ£€æŸ¥â€œProtective Master Boot Recordï¼ˆMBRï¼š0ï¼‰â€çš„æ ¡éªŒå’Œâ€¦
+Protective Master Boot Recordï¼ˆMBRï¼š0ï¼‰ï¼šå·²éªŒè¯CRC32 $0E2CF6A7
+æ­£åœ¨æ£€æŸ¥â€œGPT Headerï¼ˆPrimary GPT Headerï¼š1ï¼‰â€çš„æ ¡éªŒå’Œâ€¦
+    GPT Headerï¼ˆPrimary GPT Headerï¼š1ï¼‰ï¼šå·²éªŒè¯CRC32 $B5CA0772
+æ­£åœ¨æ£€æŸ¥â€œGPT Partition Dataï¼ˆPrimary GPT Tableï¼š2ï¼‰â€çš„æ ¡éªŒå’Œâ€¦
+GPT Partition Dataï¼ˆPrimary GPT Tableï¼šå·²éªŒè¯CRC32 $C69B1824
+æ­£åœ¨æ£€æŸ¥â€œï¼ˆApple_Freeï¼š3ï¼‰â€çš„æ ¡éªŒå’Œâ€¦
+                      ï¼ˆApple_Freeï¼š3ï¼‰ï¼šå·²éªŒè¯CRC32 $00000000
+æ­£åœ¨æ£€æŸ¥â€œdisk imageï¼ˆApple_APFSï¼š4ï¼‰â€çš„æ ¡éªŒå’Œâ€¦
+            disk imageï¼ˆApple_APFSï¼š4ï¼‰ï¼šå·²éªŒè¯CRC32 $48565584
+æ­£åœ¨æ£€æŸ¥â€œï¼ˆApple_Freeï¼š5ï¼‰â€çš„æ ¡éªŒå’Œâ€¦
+                      ï¼ˆApple_Freeï¼š5ï¼‰ï¼šå·²éªŒè¯CRC32 $00000000
+æ­£åœ¨æ£€æŸ¥â€œGPT Partition Dataï¼ˆBackup GPT Tableï¼š6ï¼‰â€çš„æ ¡éªŒå’Œâ€¦
+GPT Partition Dataï¼ˆBackup GPT Tableï¼šï¼šå·²éªŒè¯CRC32 $C69B1824
+æ­£åœ¨æ£€æŸ¥â€œGPT Headerï¼ˆBackup GPT Headerï¼š7ï¼‰â€çš„æ ¡éªŒå’Œâ€¦
+     GPT Headerï¼ˆBackup GPT Headerï¼š7ï¼‰ï¼šå·²éªŒè¯CRC32 $36193711
+å·²éªŒè¯CRC32 $7EBF059F
+hdiutil: verify: checksum of "/private/tmp/agentloop-p0-package-verify.XFrtdg/dist/CodingRanch-1.1.0.dmg" is VALID
+[exit_code=0]
+
+$ /usr/bin/shasum -a 256 /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/CodingRanch-1.1.0.zip /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/CodingRanch-1.1.0.dmg
+54e719075f75e57738abdbfef5bf342ec33cb6d78c2d519ace115b2dd2078638  /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/CodingRanch-1.1.0.zip
+9b5787ccba205b1ad7dd49b927467b3556137287ee2a488132e3109fa1547a14  /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/CodingRanch-1.1.0.dmg
+[exit_code=0]
+
+$ /usr/libexec/PlistBuddy -c Print\ :CFBundleIdentifier /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/Coding\ ç‰§åœº.app/Contents/Info.plist
+com.muzi.agentloop
+[exit_code=0]
+
+$ /usr/libexec/PlistBuddy -c Print\ :CFBundleShortVersionString /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/Coding\ ç‰§åœº.app/Contents/Info.plist
+1.1.0
+[exit_code=0]
+
+$ /usr/libexec/PlistBuddy -c Print\ :CFBundleVersion /private/tmp/agentloop-p0-package-verify.XFrtdg/dist/Coding\ ç‰§åœº.app/Contents/Info.plist
+128
+[exit_code=0]
+removed_verified_temp_worktree=/private/tmp/agentloop-p0-package-verify.XFrtdg

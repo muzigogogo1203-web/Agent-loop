@@ -1,0 +1,563 @@
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-board-fd-before/BoardServerTests.swift	2026-09-06 01:36:59
++++ Sources/AgentLoopTestSuite/BoardServerTests.swift	2026-09-06 01:40:48
+@@ -431,7 +431,35 @@
+         try socketAuthority.close()
+     }
+ }
++
++private enum BoardFDChildMode: String {
++    case blockedHandler = "blocked-handler"
++    case acceptLoop = "accept-loop"
++    case blockedHandlerLeakProof = "blocked-handler-leak-proof"
+ 
++    var request: OwnedSelfExecTestRequest {
++        let acceptLoop = self == .acceptLoop
++        return OwnedSelfExecTestRequest(
++            label: acceptLoop ? "board-fd-accept-loop-child" : "board-fd-blocked-handler-child",
++            filter: acceptLoop
++                ? "boardServerStopWakesBlockedAcceptLoopAndReleasesListener"
++                : "boardServerStopWaitsForBlockedHandlerThenCloses",
++            modeEnvironmentKey: "AGENTLOOP_BOARD_FD_CHILD_MODE",
++            mode: rawValue,
++            evidenceEnvironmentKey: "AGENTLOOP_BOARD_FD_CHILD_EVIDENCE",
++            expectedEvidence: Data((acceptLoop ? "accept-loop:100\n" : "blocked-handler:20\n").utf8),
++            containment: .seconds(60)
++        )
++    }
++}
++
++private enum BoardFDIsolationError: Error {
++    case invalidChildMode
++    case invalidEvidencePath
++    case childCannotBindSocket
++    case systemCall(operation: String, descriptor: Int32, errorNumber: Int32)
++}
++
+ @Suite(.serialized) struct BoardServerTests {
+     @Test func boardServerForwardsProgressAndCompleteTools() async throws {
+         let harness = try Self.makeBoardHarness(startServer: false)
+@@ -738,9 +766,81 @@
+         try made.close()
+     }
+ 
+-    @Test func boardServerStopWaitsForBlockedHandlerThenCloses() throws {
++    @Test func boardServerStopWaitsForBlockedHandlerThenCloses() async throws {
++        try await Self.runBoardFDTest(.blockedHandler)
++    }
++
++    private static func runBoardFDTest(_ expectedMode: BoardFDChildMode) async throws {
++        let environment = ProcessInfo.processInfo.environment
++        if let rawMode = environment["AGENTLOOP_BOARD_FD_CHILD_MODE"] {
++            guard let mode = BoardFDChildMode(rawValue: rawMode),
++                  mode == expectedMode
++                    || (expectedMode == .blockedHandler && mode == .blockedHandlerLeakProof)
++            else { throw BoardFDIsolationError.invalidChildMode }
++            let evidence = try boardFDChildEvidenceURL(mode: mode, environment: environment)
++            guard agentLoopCanBindListenerSocket() else {
++                throw BoardFDIsolationError.childCannotBindSocket
++            }
++            switch mode {
++            case .blockedHandler, .blockedHandlerLeakProof:
++                try blockedHandlerFDCountBody(mode: mode)
++            case .acceptLoop:
++                try acceptLoopFDCountBody()
++            }
++            try mode.request.expectedEvidence.write(to: evidence, options: .withoutOverwriting)
++            return
++        }
+         guard agentLoopCanBindListenerSocket() else { return }
+-        let baseline = Self.fileDescriptorCount()
++        try await runOwnedSelfExecTest(expectedMode.request)
++    }
++
++    private static func boardFDChildEvidenceURL(
++        mode: BoardFDChildMode, environment: [String: String]
++    ) throws -> URL {
++        guard let path = environment["AGENTLOOP_BOARD_FD_CHILD_EVIDENCE"],
++              path.hasPrefix("/"), !path.utf8.contains(0)
++        else { throw BoardFDIsolationError.invalidEvidencePath }
++        let evidence = URL(fileURLWithPath: path)
++        let base = evidence.deletingLastPathComponent()
++        let prefix = mode.request.label + "-"
++        guard evidence.standardizedFileURL.path == path,
++              evidence.lastPathComponent == "phases.evidence",
++              base.lastPathComponent.hasPrefix(prefix),
++              UUID(uuidString: String(base.lastPathComponent.dropFirst(prefix.count))) != nil,
++              base.deletingLastPathComponent().standardizedFileURL
++                == FileManager.default.temporaryDirectory.standardizedFileURL
++        else { throw BoardFDIsolationError.invalidEvidencePath }
++        return evidence
++    }
++
++    private static func blockedHandlerFDCountBody(mode: BoardFDChildMode) throws {
++        let baseline = try Self.fileDescriptorCount()
++        var injectedDescriptors: [Int32] = []
++        defer {
++            for descriptor in injectedDescriptors {
++                let result = Darwin.close(descriptor)
++                let failure = errno
++                if result != 0 {
++                    Issue.record(BoardFDIsolationError.systemCall(
++                        operation: "close injected FD", descriptor: descriptor,
++                        errorNumber: failure
++                    ))
++                }
++            }
++        }
++        if mode == .blockedHandlerLeakProof {
++            for _ in 0..<32 {
++                let descriptor = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
++                let failure = errno
++                guard descriptor >= 0 else {
++                    throw BoardFDIsolationError.systemCall(
++                        operation: "open injected FD", descriptor: descriptor,
++                        errorNumber: failure
++                    )
++                }
++                injectedDescriptors.append(descriptor)
++            }
++        }
+         for _ in 0..<20 {
+             let queue = DispatchQueue(label: "board-handler-test")
+             queue.suspend()
+@@ -799,12 +899,17 @@
+             server = nil
+             harness = nil
+         }
+-        #expect(Self.fileDescriptorCount() - baseline < 10)
++        let finalCount = try Self.fileDescriptorCount()
++        print("BOARD FD MEASUREMENT mode=\(mode.rawValue) pid=\(getpid()) baseline=\(baseline) final=\(finalCount) delta=\(finalCount - baseline) iterations=20")
++        #expect(finalCount - baseline < 10)
+     }
+ 
+-    @Test func boardServerStopWakesBlockedAcceptLoopAndReleasesListener() throws {
+-        guard agentLoopCanBindListenerSocket() else { return }
+-        let baseline = Self.fileDescriptorCount()
++    @Test func boardServerStopWakesBlockedAcceptLoopAndReleasesListener() async throws {
++        try await Self.runBoardFDTest(.acceptLoop)
++    }
++
++    private static func acceptLoopFDCountBody() throws {
++        let baseline = try Self.fileDescriptorCount()
+         for _ in 0..<100 {
+             var server: BoardToolServer?
+             var harness: P1F1D078BoardHarness?
+@@ -835,7 +940,57 @@
+             #expect(weakServer == nil)
+             #expect(!FileManager.default.fileExists(atPath: socketPath))
+         }
+-        #expect(Self.fileDescriptorCount() - baseline < 10)
++        let finalCount = try Self.fileDescriptorCount()
++        print("BOARD FD MEASUREMENT mode=accept-loop pid=\(getpid()) baseline=\(baseline) final=\(finalCount) delta=\(finalCount - baseline) iterations=100")
++        #expect(finalCount - baseline < 10)
++    }
++
++    @Test func boardFDIsolatedLeakStillFailsParent() async throws {
++        guard ProcessInfo.processInfo.environment["AGENTLOOP_BOARD_FD_CHILD_MODE"] == nil else {
++            throw BoardFDIsolationError.invalidChildMode
++        }
++        guard agentLoopCanBindListenerSocket() else { return }
++        do {
++            try await runOwnedSelfExecTest(BoardFDChildMode.blockedHandlerLeakProof.request)
++            Issue.record("held-FD child must fail the original descriptor-growth assertion")
++        } catch OwnedSelfExecTestError.childStatus(let pid, let status, let log, let evidence) {
++            try #require(pid > 0)
++            try #require(status != 0)
++            var readFailures: [any Error] = []
++            var logData = Data()
++            var completion = Data()
++            do { logData = try Data(contentsOf: log) }
++            catch { readFailures.append(error) }
++            do { completion = try Data(contentsOf: evidence) }
++            catch { readFailures.append(error) }
++            if let primary = readFailures.first {
++                throw OwnedSelfExecTestFailure(
++                    pid: pid, status: status, log: log, evidence: evidence,
++                    primary: primary, cleanupFailures: Array(readFailures.dropFirst())
++                )
++            }
++            let contents = String(decoding: logData, as: UTF8.self)
++            let lines = contents.split(separator: "\n")
++            let issues = lines.filter { $0.contains("recorded an issue") }
++            try #require(issues.count == 1)
++            let issue = try #require(issues.first)
++            try #require(issue.contains("Expectation failed:"))
++            try #require(issue.contains("finalCount - baseline"))
++            try #require(issue.contains("< 10"))
++            let measurements = lines.filter {
++                $0.hasPrefix("BOARD FD MEASUREMENT mode=blocked-handler-leak-proof pid=\(pid) ")
++            }
++            try #require(measurements.count == 1)
++            let measurement = try #require(measurements.first)
++            try #require(measurement.contains("iterations=20"))
++            let deltaField = try #require(measurement.split(separator: " ").first {
++                $0.hasPrefix("delta=")
++            })
++            let delta = try #require(Int(deltaField.dropFirst("delta=".count)))
++            try #require(delta >= 10)
++            try #require(completion == Data("blocked-handler:20\n".utf8))
++            try FileManager.default.removeItem(at: log.deletingLastPathComponent())
++        }
+     }
+ 
+     @Test func boardServerDefinitionsExposeExactlyFourBoardTools() throws {
+@@ -1690,8 +1845,8 @@
+         }
+     }
+ 
+-    private static func fileDescriptorCount() -> Int {
+-        (try? FileManager.default.contentsOfDirectory(atPath: "/dev/fd").count) ?? 0
++    private static func fileDescriptorCount() throws -> Int {
++        try FileManager.default.contentsOfDirectory(atPath: "/dev/fd").count
+     }
+ 
+     private static func connectClientWithRetry(path: String, timeout: TimeInterval = 2) throws -> BoardSocketTestClient {
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-board-fd-before/CliBackendTests.swift	2026-09-06 01:36:59
++++ Sources/AgentLoopTestSuite/CliBackendTests.swift	2026-09-06 01:39:51
+@@ -3686,10 +3686,7 @@
+     case invalidEvidence
+     case descriptorOccupied(Int32)
+     case systemCall(String, Int32)
+-    case childStatus(Int32, URL)
+-    case childTimeout
+     case deliberateChildFailure
+-    case unresolvedChild(pid_t, String, URL)
+ }
+ 
+ private struct P1F1D075FDCleanupError: Error {
+@@ -3737,10 +3734,43 @@
+     #expect(Darwin.fcntl(source, F_GETFD) >= 0)
+ }
+ 
+-private let p1f1d075FDOutputLock = NSLock()
++struct OwnedSelfExecTestRequest: Sendable {
++    let label: String
++    let filter: String
++    let modeEnvironmentKey: String
++    let mode: String
++    let evidenceEnvironmentKey: String
++    let expectedEvidence: Data
++    let containment: Duration
++}
+ 
+-private func p1f1d075EmitFDChildEvidence(
+-    mode: P1F1D075FDChildMode,
++enum OwnedSelfExecTestError: Error {
++    case invalidRequest
++    case invalidExecutable
++    case invalidEvidence
++    case systemCall(String, Int32)
++    case childStatus(pid: pid_t, status: Int32, log: URL, evidence: URL)
++    case childTimeout
++    case unresolvedChild(pid_t, String, URL)
++}
++
++struct OwnedSelfExecTestFailure: Error, CustomStringConvertible {
++    let pid: pid_t
++    let status: Int32?
++    let log: URL
++    let evidence: URL
++    let primary: any Error
++    let cleanupFailures: [any Error]
++
++    var description: String {
++        "owned self-exec pid=\(pid) raw-status=\(status.map(String.init) ?? "unreaped") log=\(log.path) evidence=\(evidence.path) primary=\(primary) cleanup=\(cleanupFailures)"
++    }
++}
++
++private let ownedSelfExecTestOutputLock = NSLock()
++
++private func emitOwnedSelfExecTestEvidence(
++    request: OwnedSelfExecTestRequest,
+     pid: pid_t,
+     status: Int32?,
+     log: URL,
+@@ -3757,31 +3787,44 @@
+         do { evidenceData = try Data(contentsOf: evidence) }
+         catch { failures.append(error) }
+     }
+-    let context = "mode=\(mode.rawValue) pid=\(pid) raw-status=\(status.map { String($0) } ?? "unreaped") log=\(log.path) evidence=\(evidence.path)"
++    let context = "label=\(request.label) mode=\(request.mode) pid=\(pid) raw-status=\(status.map { String($0) } ?? "unreaped") log=\(log.path) evidence=\(evidence.path)"
+     var output = Data("\n=== FD CHILD BEGIN \(context) ===\n".utf8)
+     output.append(logData)
+     output.append(Data("\n=== FD CHILD PHASE EVIDENCE \(context) ===\n".utf8))
+     output.append(evidenceData)
+     output.append(Data("\n=== FD CHILD END \(context) read-errors=\(failures) ===\n".utf8))
+     do {
+-        try p1f1d075FDOutputLock.withLock {
++        try ownedSelfExecTestOutputLock.withLock {
+             try FileHandle.standardOutput.write(contentsOf: output)
+         }
+     } catch { failures.append(error) }
+     if let primary = failures.first {
+-        throw P1F1D075FDCleanupError(
++        throw OwnedSelfExecTestFailure(
++            pid: pid, status: status, log: log, evidence: evidence,
+             primary: primary, cleanupFailures: Array(failures.dropFirst())
+         )
+     }
+ }
+ 
+ private func p1f1d075RunFDChild(mode: P1F1D075FDChildMode) async throws {
++    try await runOwnedSelfExecTest(OwnedSelfExecTestRequest(
++        label: "p1f1d-075-fd-child",
++        filter: "p1f1_075CLIHelpCapabilityMismatchIsUnsupported",
++        modeEnvironmentKey: "AGENTLOOP_075_FD_CHILD_MODE",
++        mode: mode.rawValue,
++        evidenceEnvironmentKey: "AGENTLOOP_075_FD_CHILD_EVIDENCE",
++        expectedEvidence: Data("live-drain\nsurviving-run\nsurviving-abort\n".utf8),
++        containment: .seconds(15)
++    ))
++}
++
++func runOwnedSelfExecTest(_ request: OwnedSelfExecTestRequest) async throws {
+     try await withCheckedThrowingContinuation {
+         (continuation: CheckedContinuation<Void, any Error>) in
+         let worker = Thread {
+             let result: Result<Void, any Error>
+             do {
+-                try p1f1d075RunFDChildBlocking(mode: mode)
++                try runOwnedSelfExecTestBlocking(request)
+                 result = .success(())
+             } catch {
+                 result = .failure(error)
+@@ -3794,7 +3837,16 @@
+     }
+ }
+ 
+-private func p1f1d075RunFDChildBlocking(mode: P1F1D075FDChildMode) throws {
++private func runOwnedSelfExecTestBlocking(_ request: OwnedSelfExecTestRequest) throws {
++    guard !request.label.isEmpty, !request.label.contains("/"),
++          !request.filter.isEmpty, !request.mode.isEmpty,
++          !request.modeEnvironmentKey.isEmpty, !request.evidenceEnvironmentKey.isEmpty,
++          !request.modeEnvironmentKey.contains("="),
++          !request.evidenceEnvironmentKey.contains("="),
++          [request.label, request.filter, request.mode, request.modeEnvironmentKey,
++           request.evidenceEnvironmentKey].allSatisfy({ !$0.utf8.contains(0) }),
++          !request.expectedEvidence.isEmpty, request.containment > .zero
++    else { throw OwnedSelfExecTestError.invalidRequest }
+     let executable = URL(
+         fileURLWithPath: CommandLine.arguments[0],
+         relativeTo: URL(fileURLWithPath: FileManager.default.currentDirectoryPath,
+@@ -3802,9 +3854,9 @@
+     ).standardizedFileURL.path
+     guard executable.hasPrefix("/"),
+           FileManager.default.isExecutableFile(atPath: executable)
+-    else { throw P1F1D075ClosedStdioFixtureError.invalidExecutable }
++    else { throw OwnedSelfExecTestError.invalidExecutable }
+     let base = FileManager.default.temporaryDirectory
+-        .appendingPathComponent("p1f1d-075-fd-child-\(UUID().uuidString)")
++        .appendingPathComponent("\(request.label)-\(UUID().uuidString)")
+     try FileManager.default.createDirectory(at: base, withIntermediateDirectories: false)
+     let log = base.appendingPathComponent("child.log")
+     let evidence = base.appendingPathComponent("phases.evidence")
+@@ -3819,7 +3871,7 @@
+ 
+     func check(_ code: Int32, _ operation: String) throws {
+         guard code == 0 else {
+-            throw P1F1D075FDFixtureError.systemCall(operation, code)
++            throw OwnedSelfExecTestError.systemCall(operation, code)
+         }
+     }
+     // Mark ownership consumed before close/destroy: never retry a numeric FD.
+@@ -3829,21 +3881,21 @@
+             let ownedFD = logFD
+             logFD = -1
+             if Darwin.close(ownedFD) != 0 {
+-                failures.append(P1F1D075FDFixtureError.systemCall("close parent log", errno))
++                failures.append(OwnedSelfExecTestError.systemCall("close parent log", errno))
+             }
+         }
+         if actionsInitialized {
+             actionsInitialized = false
+             let code = posix_spawn_file_actions_destroy(&actions)
+             if code != 0 {
+-                failures.append(P1F1D075FDFixtureError.systemCall("destroy file actions", code))
++                failures.append(OwnedSelfExecTestError.systemCall("destroy file actions", code))
+             }
+         }
+         if attributesInitialized {
+             attributesInitialized = false
+             let code = posix_spawnattr_destroy(&attributes)
+             if code != 0 {
+-                failures.append(P1F1D075FDFixtureError.systemCall("destroy spawn attributes", code))
++                failures.append(OwnedSelfExecTestError.systemCall("destroy spawn attributes", code))
+             }
+         }
+         return failures
+@@ -3862,11 +3914,11 @@
+             if failure == EINTR { continue }
+             if failure == ECHILD {
+                 ownsChild = false
+-                throw P1F1D075FDFixtureError.unresolvedChild(
++                throw OwnedSelfExecTestError.unresolvedChild(
+                     pid, "waitpid ECHILD: ownership lost, reap unconfirmed", log
+                 )
+             }
+-            throw P1F1D075FDFixtureError.systemCall("waitpid pid=\(pid) log=\(log.path)", failure)
++            throw OwnedSelfExecTestError.systemCall("waitpid pid=\(pid) log=\(log.path)", failure)
+         }
+     }
+     func terminateAndReapOwnedChild() throws {
+@@ -3874,7 +3926,7 @@
+         // Reconfirm an unreaped direct child before sending any signal.
+         do { if try pollChild() { return } }
+         catch {
+-            throw P1F1D075FDFixtureError.unresolvedChild(
++            throw OwnedSelfExecTestError.unresolvedChild(
+                 pid, "cleanup cannot confirm ownership: \(error)", log
+             )
+         }
+@@ -3885,17 +3937,18 @@
+                 let reaped: Bool
+                 do { reaped = try pollChild() }
+                 catch {
+-                    throw P1F1D075FDCleanupError(
+-                        primary: P1F1D075FDFixtureError.systemCall("kill owned child \(pid)", failure),
+-                        cleanupFailures: [P1F1D075FDFixtureError.unresolvedChild(
++                    throw OwnedSelfExecTestFailure(
++                        pid: pid, status: status, log: log, evidence: evidence,
++                        primary: OwnedSelfExecTestError.systemCall("kill owned child \(pid)", failure),
++                        cleanupFailures: [OwnedSelfExecTestError.unresolvedChild(
+                             pid, "post-kill-error wait could not confirm reap: \(error)", log
+                         )]
+                     )
+                 }
+                 if reaped {
+-                    throw P1F1D075FDFixtureError.systemCall("kill owned child \(pid)", failure)
++                    throw OwnedSelfExecTestError.systemCall("kill owned child \(pid)", failure)
+                 }
+-                throw P1F1D075FDFixtureError.unresolvedChild(
++                throw OwnedSelfExecTestError.unresolvedChild(
+                     pid, "SIGKILL failed errno=\(failure); termination/reap unconfirmed", log
+                 )
+             }
+@@ -3911,7 +3964,7 @@
+             let failure = errno
+             if failure == EINTR { continue }
+             if failure == ECHILD { ownsChild = false }
+-            throw P1F1D075FDFixtureError.unresolvedChild(
++            throw OwnedSelfExecTestError.unresolvedChild(
+                 pid, "cleanup waitpid errno=\(failure); reap unconfirmed", log
+             )
+         }
+@@ -3920,17 +3973,17 @@
+     do {
+         logFD = Darwin.open(log.path, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0o600)
+         guard logFD >= 0 else {
+-            throw P1F1D075FDFixtureError.systemCall("create exclusive child log", errno)
++            throw OwnedSelfExecTestError.systemCall("create exclusive child log", errno)
+         }
+         if logFD < 3 {
+             let normalized = Darwin.fcntl(logFD, F_DUPFD_CLOEXEC, 3)
+             guard normalized >= 3 else {
+-                throw P1F1D075FDFixtureError.systemCall("normalize child log", errno)
++                throw OwnedSelfExecTestError.systemCall("normalize child log", errno)
+             }
+             let original = logFD
+             logFD = normalized
+             guard Darwin.close(original) == 0 else {
+-                throw P1F1D075FDFixtureError.systemCall("close original child log", errno)
++                throw OwnedSelfExecTestError.systemCall("close original child log", errno)
+             }
+         }
+         try check(posix_spawn_file_actions_init(&actions), "initialize file actions")
+@@ -3947,9 +4000,9 @@
+         try check(posix_spawn_file_actions_addclose(&actions, logFD), "close child auxiliary log")
+         var arguments = try p1f1d075CStringVector([
+             "/usr/bin/env",
+-            "AGENTLOOP_075_FD_CHILD_MODE=\(mode.rawValue)",
+-            "AGENTLOOP_075_FD_CHILD_EVIDENCE=\(evidence.path)",
+-            executable, "--filter", "p1f1_075CLIHelpCapabilityMismatchIsUnsupported",
++            "\(request.modeEnvironmentKey)=\(request.mode)",
++            "\(request.evidenceEnvironmentKey)=\(evidence.path)",
++            executable, "--filter", request.filter,
+         ])
+         defer { p1f1d075FreeCStringVector(arguments) }
+         let started = ContinuousClock.now
+@@ -3961,33 +4014,38 @@
+         ownsChild = true
+         let setupCleanup = releaseSpawnResources()
+         if let primary = setupCleanup.first {
+-            throw P1F1D075FDCleanupError(primary: primary, cleanupFailures: Array(setupCleanup.dropFirst()))
++            throw OwnedSelfExecTestFailure(
++                pid: pid, status: status, log: log, evidence: evidence,
++                primary: primary, cleanupFailures: Array(setupCleanup.dropFirst())
++            )
+         }
+         while try !pollChild() {
+-            if started.duration(to: .now) >= .seconds(15) {
+-                throw P1F1D075FDFixtureError.childTimeout
++            if started.duration(to: .now) >= request.containment {
++                throw OwnedSelfExecTestError.childTimeout
+             }
+             Thread.sleep(forTimeInterval: 0.01)
+         }
+         guard let status else {
+-            throw P1F1D075FDFixtureError.unresolvedChild(pid, "missing reaped status", log)
++            throw OwnedSelfExecTestError.unresolvedChild(pid, "missing reaped status", log)
+         }
+         guard status == 0 else {
+-            throw P1F1D075FDFixtureError.childStatus(status, log)
++            throw OwnedSelfExecTestError.childStatus(
++                pid: pid, status: status, log: log, evidence: evidence
++            )
+         }
+         let completion: Data
+         do { completion = try Data(contentsOf: evidence) }
+         catch {
+-            throw P1F1D075FDCleanupError(
+-                primary: P1F1D075FDFixtureError.invalidEvidence,
++            throw OwnedSelfExecTestFailure(
++                pid: pid, status: status, log: log, evidence: evidence,
++                primary: OwnedSelfExecTestError.invalidEvidence,
+                 cleanupFailures: [error]
+             )
+         }
+-        guard mode == .drain,
+-              completion == Data("live-drain\nsurviving-run\nsurviving-abort\n".utf8)
+-        else { throw P1F1D075FDFixtureError.invalidEvidence }
+-        try p1f1d075EmitFDChildEvidence(
+-            mode: mode, pid: pid, status: status, log: log,
++        guard completion == request.expectedEvidence
++        else { throw OwnedSelfExecTestError.invalidEvidence }
++        try emitOwnedSelfExecTestEvidence(
++            request: request, pid: pid, status: status, log: log,
+             evidence: evidence, requireEvidence: true
+         )
+         try FileManager.default.removeItem(at: base)
+@@ -3997,13 +4055,21 @@
+         do { try terminateAndReapOwnedChild() }
+         catch { failures.append(error) }
+         do {
+-            try p1f1d075EmitFDChildEvidence(
+-                mode: mode, pid: pid, status: status, log: log,
++            try emitOwnedSelfExecTestEvidence(
++                request: request, pid: pid, status: status, log: log,
+                 evidence: evidence, requireEvidence: false
+             )
+         } catch { failures.append(error) }
+-        if failures.isEmpty { throw primary }
+-        throw P1F1D075FDCleanupError(primary: primary, cleanupFailures: failures)
++        if failures.isEmpty,
++           let childError = primary as? OwnedSelfExecTestError,
++           case .childStatus = childError
++        {
++            throw primary
++        }
++        throw OwnedSelfExecTestFailure(
++            pid: pid, status: status, log: log, evidence: evidence,
++            primary: primary, cleanupFailures: failures
++        )
+     }
+ }
+ 
+@@ -4011,7 +4077,7 @@
+     do {
+         try await p1f1d075RunFDChild(mode: .expectedFailure)
+         Issue.record("deliberately failing FD child must fail its parent invocation")
+-    } catch P1F1D075FDFixtureError.childStatus(let status, let log) {
++    } catch OwnedSelfExecTestError.childStatus(_, let status, let log, _) {
+         try #require(status != 0)
+         let contents = try String(contentsOf: log, encoding: .utf8)
+         try #require(contents.contains("deliberateChildFailure"))

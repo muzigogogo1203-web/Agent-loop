@@ -1,0 +1,105 @@
+COMMAND=swift run RunTests --filter boardFDIsolatedLeakStillFailsParent
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Compiling AgentLoopTestSuite BoardServerTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[4/6] Emitting module AgentLoopTestSuite
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (19.52s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardFDIsolatedLeakStillFailsParent() started.
+
+=== FD CHILD BEGIN label=board-fd-blocked-handler-child mode=blocked-handler-leak-proof pid=28742 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-FE39E89C-DD21-4774-A7E1-86C0CCBBB7B9/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-FE39E89C-DD21-4774-A7E1-86C0CCBBB7B9/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerStopWaitsForBlockedHandlerThenCloses() started.
+BOARD FD MEASUREMENT mode=blocked-handler-leak-proof pid=28742 baseline=4 final=36 delta=32 iterations=20
+✘ Test boardServerStopWaitsForBlockedHandlerThenCloses() recorded an issue at BoardServerTests.swift:904:9: Expectation failed: (finalCount - baseline → 32) < 10
+✘ Test boardServerStopWaitsForBlockedHandlerThenCloses() failed after 2.342 seconds with 1 issue.
+✘ Suite BoardServerTests failed after 2.343 seconds with 1 issue.
+✘ Test run with 1 test in 1 suite failed after 2.343 seconds with 1 issue.
+
+=== FD CHILD PHASE EVIDENCE label=board-fd-blocked-handler-child mode=blocked-handler-leak-proof pid=28742 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-FE39E89C-DD21-4774-A7E1-86C0CCBBB7B9/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-FE39E89C-DD21-4774-A7E1-86C0CCBBB7B9/phases.evidence ===
+blocked-handler:20
+
+=== FD CHILD END label=board-fd-blocked-handler-child mode=blocked-handler-leak-proof pid=28742 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-FE39E89C-DD21-4774-A7E1-86C0CCBBB7B9/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-FE39E89C-DD21-4774-A7E1-86C0CCBBB7B9/phases.evidence read-errors=[] ===
+✔ Test boardFDIsolatedLeakStillFailsParent() passed after 2.460 seconds.
+✔ Suite BoardServerTests passed after 2.460 seconds.
+✔ Test run with 1 test in 1 suite passed after 2.461 seconds.
+COMMAND_EXIT=0
+COMMAND=swift run RunTests --filter boardServerStopWaitsForBlockedHandlerThenCloses
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.15s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerStopWaitsForBlockedHandlerThenCloses() started.
+
+=== FD CHILD BEGIN label=board-fd-blocked-handler-child mode=blocked-handler pid=28755 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-DFA6E0D4-38DA-434E-B881-D0940EAC3E25/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-DFA6E0D4-38DA-434E-B881-D0940EAC3E25/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerStopWaitsForBlockedHandlerThenCloses() started.
+BOARD FD MEASUREMENT mode=blocked-handler pid=28755 baseline=4 final=4 delta=0 iterations=20
+✔ Test boardServerStopWaitsForBlockedHandlerThenCloses() passed after 2.345 seconds.
+✔ Suite BoardServerTests passed after 2.345 seconds.
+✔ Test run with 1 test in 1 suite passed after 2.345 seconds.
+
+=== FD CHILD PHASE EVIDENCE label=board-fd-blocked-handler-child mode=blocked-handler pid=28755 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-DFA6E0D4-38DA-434E-B881-D0940EAC3E25/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-DFA6E0D4-38DA-434E-B881-D0940EAC3E25/phases.evidence ===
+blocked-handler:20
+
+=== FD CHILD END label=board-fd-blocked-handler-child mode=blocked-handler pid=28755 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-DFA6E0D4-38DA-434E-B881-D0940EAC3E25/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-DFA6E0D4-38DA-434E-B881-D0940EAC3E25/phases.evidence read-errors=[] ===
+✔ Test boardServerStopWaitsForBlockedHandlerThenCloses() passed after 2.490 seconds.
+✔ Suite BoardServerTests passed after 2.491 seconds.
+✔ Test run with 1 test in 1 suite passed after 2.491 seconds.
+COMMAND_EXIT=0
+COMMAND=swift run RunTests --filter boardServerStopWakesBlockedAcceptLoopAndReleasesListener
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.16s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() started.
+
+=== FD CHILD BEGIN label=board-fd-accept-loop-child mode=accept-loop pid=28767 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-accept-loop-child-4C660511-27EC-4B4A-9EFB-D04F2A2A5913/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-accept-loop-child-4C660511-27EC-4B4A-9EFB-D04F2A2A5913/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() started.
+BOARD FD MEASUREMENT mode=accept-loop pid=28767 baseline=4 final=4 delta=0 iterations=100
+✔ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() passed after 0.338 seconds.
+✔ Suite BoardServerTests passed after 0.338 seconds.
+✔ Test run with 1 test in 1 suite passed after 0.338 seconds.
+
+=== FD CHILD PHASE EVIDENCE label=board-fd-accept-loop-child mode=accept-loop pid=28767 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-accept-loop-child-4C660511-27EC-4B4A-9EFB-D04F2A2A5913/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-accept-loop-child-4C660511-27EC-4B4A-9EFB-D04F2A2A5913/phases.evidence ===
+accept-loop:100
+
+=== FD CHILD END label=board-fd-accept-loop-child mode=accept-loop pid=28767 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-accept-loop-child-4C660511-27EC-4B4A-9EFB-D04F2A2A5913/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-accept-loop-child-4C660511-27EC-4B4A-9EFB-D04F2A2A5913/phases.evidence read-errors=[] ===
+✔ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() passed after 0.482 seconds.
+✔ Suite BoardServerTests passed after 0.482 seconds.
+✔ Test run with 1 test in 1 suite passed after 0.482 seconds.
+COMMAND_EXIT=0

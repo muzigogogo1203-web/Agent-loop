@@ -1,0 +1,693 @@
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cli-fixture-cleanup-before/CliBackendTests.swift	2026-09-06 00:43:44
++++ Sources/AgentLoopTestSuite/CliBackendTests.swift	2026-09-06 00:51:55
+@@ -260,7 +260,15 @@
+ {
+     guard agentLoopCanBindListenerSocket() else { return }
+     let harness = try CliMechanicsHarness(identity: "152")
+-    defer { harness.remove() }
++    var removalAllowed = true
++    defer {
++        if removalAllowed {
++            do { try harness.removeChecked() }
++            catch { Issue.record(error) }
++        } else {
++            Issue.record("retained CLI mechanics fixture: \(harness.base.path)")
++        }
++    }
+     let request = try harness.request(
+         command: "/bin/sh",
+         arguments: [
+@@ -277,35 +285,41 @@
+         processInspector: harness.processInspector,
+         codeSignatureRevalidator: signatureRevalidator
+     )
+-    let completion = StreamCompletion<[CliProcessFrameV1]>()
+-    let consumer = Task {
+-        do {
+-            var frames: [CliProcessFrameV1] = []
+-            for try await frame in backend.launch(request) {
+-                frames.append(frame)
+-            }
+-            await completion.finish(.success(frames))
+-        } catch {
+-            await completion.finish(.failure(error))
++    removalAllowed = false
++    let report = await cliMechanicsRunOwned(backend: backend, request: request) {
++        frames, _ in
++        var result: Result<[CliProcessFrameV1], any Error>?
++        for _ in 0..<200 {
++            if let value = await frames.completedResult() {
++                result = value
++                break
++            }
++            try await Task.sleep(for: .milliseconds(10))
+         }
+-    }
+-
+-    var result: Result<[CliProcessFrameV1], Error>?
+-    for _ in 0..<200 {
+-        if let value = await completion.value() {
+-            result = value
+-            break
++        guard let result else {
++            throw CliMechanicsFixtureFailure.watchdog
+         }
+-        try await Task.sleep(for: .milliseconds(10))
++        switch result {
++        case .success:
++            throw CliMechanicsFixtureFailure.heldPipeCleanupReportedCertain
++        case let .failure(error):
++            guard let backendError = error as? CliProcessBackendError,
++                  case .pipeDrainIncomplete = backendError
++            else {
++                throw error
++            }
++        }
+     }
+-    guard let result else {
+-        consumer.cancel()
+-        Issue.record("CLI mechanics stream did not finish before watchdog")
+-        return
++    let failures = cliMechanicsAssessCleanup(
++        report, harness: harness, expected: .pipeDrainIncomplete,
++        removalAllowed: &removalAllowed
++    )
++    if failures.primary != nil || !failures.cleanupFailures.isEmpty {
++        throw failures
+     }
+-    switch result {
++    switch report.stream {
+     case .success:
+-        Issue.record("held pipe cleanup was reported as certain")
++        throw CliMechanicsFixtureFailure.heldPipeCleanupReportedCertain
+     case let .failure(error):
+         guard let backendError = error as? CliProcessBackendError,
+               case .pipeDrainIncomplete = backendError
+@@ -313,7 +327,6 @@
+             throw error
+         }
+     }
+-    consumer.cancel()
+     #expect(
+         !FileManager.default.fileExists(atPath: harness.socketURL.path)
+     )
+@@ -460,7 +473,15 @@
+ {
+     guard agentLoopCanBindListenerSocket() else { return }
+     let harness = try CliMechanicsHarness(identity: "346")
+-    defer { harness.remove() }
++    var removalAllowed = true
++    defer {
++        if removalAllowed {
++            do { try harness.removeChecked() }
++            catch { Issue.record(error) }
++        } else {
++            Issue.record("retained CLI mechanics fixture: \(harness.base.path)")
++        }
++    }
+     let request = try harness.request(
+         command: "/bin/sh",
+         arguments: [
+@@ -480,28 +501,27 @@
+         codeSignatureRevalidator: signatureRevalidator
+     )
+     _ = await LoginShellEnvironment.shared.environment()
+-    let frames = CliMechanicsFrameRecorder()
+-    let consumer = Task {
+-        do {
+-            for try await frame in backend.launch(request) {
+-                await frames.append(frame)
+-            }
+-            await frames.finish()
+-        } catch {
+-            await frames.finish(error: error)
+-        }
++    removalAllowed = false
++    let report = await cliMechanicsRunOwned(backend: backend, request: request) {
++        frames, cancellation in
++        try await frames.waitForStdout("ready")
++        _ = try await cancellation.cancel().get()
+     }
+-    try await frames.waitForStdout("ready")
++    let failures = cliMechanicsAssessCleanup(
++        report, harness: harness, expected: .exited,
++        removalAllowed: &removalAllowed
++    )
++    if failures.primary != nil || !failures.cleanupFailures.isEmpty {
++        throw failures
++    }
++    let evidence = try #require(report.cancellation).get()
+ 
+-    let evidence = try await backend.cancel(executionId: request.executionId)
+-    await consumer.value
+-
+     #expect(evidence.termSent)
+     #expect(evidence.killSent)
+     #expect(evidence.stdoutEOF)
+     #expect(evidence.stderrEOF)
+     #expect(evidence.childReaped)
+-    #expect(await frames.failure() == nil)
++    #expect(report.streamFailure == nil)
+     #expect(
+         !FileManager.default.fileExists(atPath: harness.socketURL.path)
+     )
+@@ -513,7 +533,15 @@
+ {
+     guard agentLoopCanBindListenerSocket() else { return }
+     let harness = try CliMechanicsHarness(identity: "372")
+-    defer { harness.remove() }
++    var removalAllowed = true
++    defer {
++        if removalAllowed {
++            do { try harness.removeChecked() }
++            catch { Issue.record(error) }
++        } else {
++            Issue.record("retained CLI mechanics fixture: \(harness.base.path)")
++        }
++    }
+     let request = try harness.request(
+         command: "/bin/sh",
+         arguments: [
+@@ -533,22 +561,21 @@
+         codeSignatureRevalidator: signatureRevalidator
+     )
+     _ = await LoginShellEnvironment.shared.environment()
+-    let frames = CliMechanicsFrameRecorder()
+-    let consumer = Task {
+-        do {
+-            for try await frame in backend.launch(request) {
+-                await frames.append(frame)
+-            }
+-            await frames.finish()
+-        } catch {
+-            await frames.finish(error: error)
+-        }
++    removalAllowed = false
++    let report = await cliMechanicsRunOwned(backend: backend, request: request) {
++        frames, cancellation in
++        try await frames.waitForStdout("ready")
++        _ = try await cancellation.cancel().get()
+     }
+-    try await frames.waitForStdout("ready")
++    let failures = cliMechanicsAssessCleanup(
++        report, harness: harness, expected: .exited,
++        removalAllowed: &removalAllowed
++    )
++    if failures.primary != nil || !failures.cleanupFailures.isEmpty {
++        throw failures
++    }
++    let evidence = try #require(report.cancellation).get()
+ 
+-    let evidence = try await backend.cancel(executionId: request.executionId)
+-    await consumer.value
+-
+     #expect(evidence.pid > 0)
+     #expect(evidence.processGroupID == evidence.pid)
+     #expect(evidence.termSent)
+@@ -556,7 +583,93 @@
+     #expect(evidence.stdoutEOF)
+     #expect(evidence.stderrEOF)
+     #expect(evidence.childReaped)
+-    #expect(await frames.failure() == nil)
++    #expect(report.streamFailure == nil)
++    #expect(signatureRevalidator.snapshot() == [.cli, .boardBridge])
++}
++
++@Test func cliProcessBackendFixtureFailureStillJoinsRealCleanup()
++    async throws
++{
++    guard agentLoopCanBindListenerSocket() else { return }
++    let harness = try CliMechanicsHarness(identity: "347")
++    var removalAllowed = true
++    defer {
++        if removalAllowed {
++            do { try harness.removeChecked() }
++            catch { Issue.record(error) }
++        } else {
++            Issue.record("retained CLI mechanics fixture: \(harness.base.path)")
++        }
++    }
++    let request = try harness.request(
++        command: "/bin/sh",
++        arguments: [
++            "-c",
++            "trap '' TERM; printf '%s\\n' 'ready'; while :; do sleep 1; done",
++        ]
++    )
++    let signatureRevalidator = CliMechanicsSignatureRevalidator(
++        expectedCLI: request.cliExecutableAuthority,
++        expectedBoardBridge: request.bridgeExecutableAuthority
++    )
++    let backend = try CliProcessBackend(
++        terminationGrace: .milliseconds(50),
++        killGrace: .seconds(1),
++        pipeDrainGrace: .seconds(1),
++        processInspector: harness.processInspector,
++        codeSignatureRevalidator: signatureRevalidator
++    )
++    _ = await LoginShellEnvironment.shared.environment()
++    removalAllowed = false
++    let report = await cliMechanicsRunOwned(backend: backend, request: request) {
++        frames, _ in
++        try await frames.waitForStdout("ready")
++        let groups = harness.processInspector.continuedProcessGroups()
++        try #require(groups.count == 1)
++        let pid = groups[0]
++        try #require(pid > 0)
++        try #require(Darwin.getpgid(pid) == pid)
++        try #require(Darwin.kill(pid, 0) == 0)
++        throw CliMechanicsForcedBodyFailure.afterReady
++    }
++    let failures = cliMechanicsAssessCleanup(
++        report, harness: harness, expected: .exited,
++        removalAllowed: &removalAllowed
++    )
++    do {
++        let evidence = try #require(report.cancellation).get()
++        try #require(evidence.pid > 0)
++        try #require(evidence.processGroupID == evidence.pid)
++        try #require(evidence.termSent)
++        try #require(evidence.killSent)
++        try #require(evidence.childReaped)
++        try #require(evidence.stdoutEOF)
++        try #require(evidence.stderrEOF)
++        let joinedFrames = try report.stream.get()
++        try #require(joinedFrames.contains {
++            if case .exited = $0 { true } else { false }
++        })
++    } catch {
++        throw CliMechanicsCleanupError(
++            primary: failures.primary,
++            cleanupFailures: failures.cleanupFailures + [
++                CliMechanicsFixtureFailure.cleanup(
++                    operation: "forced-error regression cleanup evidence", error: error
++                ),
++            ],
++            retainedFixturePath: failures.retainedFixturePath
++        )
++    }
++    // Only proven cleanup allows the deliberate primary error to be expected.
++    // An actual readiness/body error is still thrown unchanged in this aggregate.
++    guard failures.primary as? CliMechanicsForcedBodyFailure == .afterReady,
++          failures.cleanupFailures.isEmpty
++    else {
++        throw failures
++    }
++    #expect(failures.primary as? CliMechanicsForcedBodyFailure == .afterReady)
++    #expect(failures.cleanupFailures.isEmpty)
++    #expect(removalAllowed)
+     #expect(signatureRevalidator.snapshot() == [.cli, .boardBridge])
+ }
+ 
+@@ -585,6 +698,7 @@
+ {
+     private let lock = NSLock()
+     private var authority: CliExecutableAuthorityV1?
++    private var continuedGroups: [Int32] = []
+ 
+     func select(_ authority: CliExecutableAuthorityV1) {
+         lock.withLock { self.authority = authority }
+@@ -626,11 +740,20 @@
+     }
+ 
+     func send(signal: Int32, processGroupId: Int32) throws {
+-        guard Darwin.kill(-processGroupId, signal) == 0 || errno == ESRCH else {
++        let result = Darwin.kill(-processGroupId, signal)
++        let failure = errno
++        guard result == 0 || failure == ESRCH else {
+             throw EngineContextValidationErrorV1()
+         }
++        if result == 0, signal == SIGCONT {
++            lock.withLock { continuedGroups.append(processGroupId) }
++        }
+     }
+ 
++    func continuedProcessGroups() -> [Int32] {
++        lock.withLock { continuedGroups }
++    }
++
+     func processGroupExists(_ processGroupId: Int32) throws -> Bool {
+         if Darwin.kill(-processGroupId, 0) == 0 { return true }
+         if errno == ESRCH { return false }
+@@ -866,22 +989,58 @@
+         }
+         try? FileManager.default.removeItem(at: base)
+     }
++
++    func removeChecked() throws {
++        var failures: [any Error] = []
++        var retainedFixturePath: String?
++        do {
++            try socketDirectoryAuthority.close()
++        } catch {
++            failures.append(CliMechanicsFixtureFailure.cleanup(
++                operation: "close socket directory authority fixture=\(base.path)",
++                error: error
++            ))
++        }
++        do {
++            try FileManager.default.removeItem(at: base)
++        } catch {
++            retainedFixturePath = base.path
++            failures.append(CliMechanicsFixtureFailure.cleanup(
++                operation: "remove fixture \(base.path)", error: error
++            ))
++        }
++        if !failures.isEmpty {
++            throw CliMechanicsCleanupError(
++                primary: nil, cleanupFailures: failures,
++                retainedFixturePath: retainedFixturePath
++            )
++        }
++    }
+ }
+ 
+ private actor CliMechanicsFrameRecorder {
+     private var frames: [CliProcessFrameV1] = []
+     private var storedError: (any Error)?
+     private var didFinish = false
++    private var storedResult: Result<[CliProcessFrameV1], any Error>?
+ 
+     func append(_ frame: CliProcessFrameV1) {
+         frames.append(frame)
+     }
+ 
+-    func finish(error: (any Error)? = nil) {
+-        storedError = error
++    func finish(result: Result<[CliProcessFrameV1], any Error>) {
++        storedResult = result
++        switch result {
++        case .success: storedError = nil
++        case let .failure(error): storedError = error
++        }
+         didFinish = true
+     }
+ 
++    func completedResult() -> Result<[CliProcessFrameV1], any Error>? {
++        storedResult
++    }
++
+     func waitForStdout(_ expected: String) async throws {
+         let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+         while !frames.contains(.stdoutLine(expected)),
+@@ -897,23 +1056,292 @@
+             )
+         }
+     }
++}
+ 
+-    func failure() -> String? {
+-        storedError.map { String(describing: $0) }
++private actor CliMechanicsCancellationOwner {
++    private let backend: CliProcessBackend
++    private let executionId: String
++    private var task: Task<Result<CliProcessExitEvidenceV1, any Error>, Never>?
++
++    init(backend: CliProcessBackend, executionId: String) {
++        self.backend = backend
++        self.executionId = executionId
+     }
++
++    func cancel() async -> Result<CliProcessExitEvidenceV1, any Error> {
++        if let task { return await task.value }
++        let backend = backend
++        let executionId = executionId
++        let created = Task {
++            do {
++                return Result<CliProcessExitEvidenceV1, any Error>.success(
++                    try await backend.cancel(executionId: executionId)
++                )
++            } catch {
++                return Result<CliProcessExitEvidenceV1, any Error>.failure(error)
++            }
++        }
++        task = created
++        return await created.value
++    }
++
++    func resultIfRequested() async
++        -> Result<CliProcessExitEvidenceV1, any Error>?
++    {
++        guard let task else { return nil }
++        return await task.value
++    }
+ }
+-private actor StreamCompletion<Value> {
+-    private var stored: Result<Value, Error>?
+ 
+-    func finish(_ result: Result<Value, Error>) {
+-        stored = result
++private struct CliMechanicsOwnedStreamReport {
++    let body: Result<Void, any Error>
++    let cancellation: Result<CliProcessExitEvidenceV1, any Error>?
++    let stream: Result<[CliProcessFrameV1], any Error>
++
++    var streamFailure: String? {
++        if case let .failure(error) = stream { return String(describing: error) }
++        return nil
+     }
++}
+ 
+-    func value() -> Result<Value, Error>? {
+-        stored
++private func cliMechanicsRunOwned(
++    backend: CliProcessBackend,
++    request: CliProcessLaunchRequestV1,
++    body: @Sendable (
++        CliMechanicsFrameRecorder, CliMechanicsCancellationOwner
++    ) async throws -> Void
++) async -> CliMechanicsOwnedStreamReport {
++    let frames = CliMechanicsFrameRecorder()
++    let cancellation = CliMechanicsCancellationOwner(
++        backend: backend, executionId: request.executionId
++    )
++    // Synchronous registration must precede both consumption and cancellation.
++    let stream = backend.launch(request)
++    let consumer = Task {
++        var received: [CliProcessFrameV1] = []
++        let result: Result<[CliProcessFrameV1], any Error>
++        do {
++            for try await frame in stream {
++                received.append(frame)
++                await frames.append(frame)
++            }
++            result = .success(received)
++        } catch {
++            result = .failure(error)
++        }
++        await frames.finish(result: result)
++        return result
+     }
++
++    let bodyResult: Result<Void, any Error>
++    do {
++        try await body(frames, cancellation)
++        bodyResult = .success(())
++    } catch {
++        bodyResult = .failure(error)
++    }
++    if await frames.completedResult() == nil {
++        _ = await cancellation.cancel()
++    }
++    // Keep this consumer uncancelled and joined: onTermination alone is unjoined.
++    let streamResult = await consumer.value
++    return CliMechanicsOwnedStreamReport(
++        body: bodyResult,
++        cancellation: await cancellation.resultIfRequested(),
++        stream: streamResult
++    )
+ }
+ 
++private enum CliMechanicsForcedBodyFailure: Error, Equatable {
++    case afterReady
++}
++
++private enum CliMechanicsFixtureFailure: Error, CustomStringConvertible {
++    case watchdog
++    case heldPipeCleanupReportedCertain
++    case missingCancellation(String)
++    case missingExitedFrame(String)
++    case continuationIdentity(executionId: String, groups: [Int32])
++    case cancellationIdentity(executionId: String, observed: Int32, pid: Int32, group: Int32)
++    case observation(operation: String, executionId: String, pid: Int32?, result: Int32, errorNumber: Int32)
++    case cleanup(operation: String, error: any Error)
++
++    var description: String {
++        switch self {
++        case .watchdog:
++            return "CLI mechanics stream did not finish before watchdog"
++        case .heldPipeCleanupReportedCertain:
++            return "held pipe cleanup was reported as certain"
++        case let .missingCancellation(executionId):
++            return "missing cancellation evidence execution=\(executionId)"
++        case let .missingExitedFrame(executionId):
++            return "joined CLI stream has no exited frame execution=\(executionId)"
++        case let .continuationIdentity(executionId, groups):
++            return "expected exactly one positive continued PID execution=\(executionId) groups=\(groups)"
++        case let .cancellationIdentity(executionId, observed, pid, group):
++            return "cancellation identity mismatch execution=\(executionId) observed=\(observed) evidencePID=\(pid) evidenceGroup=\(group)"
++        case let .observation(operation, executionId, pid, result, errorNumber):
++            return "\(operation) execution=\(executionId) pid=\(pid.map(String.init) ?? "none") result=\(result) errno=\(errorNumber)"
++        case let .cleanup(operation, error):
++            return "\(operation): \(error)"
++        }
++    }
++}
++
++private struct CliMechanicsCleanupError: Error, CustomStringConvertible {
++    let primary: (any Error)?
++    let cleanupFailures: [any Error]
++    let retainedFixturePath: String?
++
++    var description: String {
++        var parts: [String] = []
++        if let primary { parts.append("primary: \(primary)") }
++        for (index, error) in cleanupFailures.enumerated() {
++            parts.append("cleanup[\(index)]: \(error)")
++        }
++        if let retainedFixturePath {
++            parts.append("retained fixture: \(retainedFixturePath)")
++        }
++        return parts.joined(separator: "; ")
++    }
++}
++
++private enum CliMechanicsExpectedTerminal {
++    case exited
++    case pipeDrainIncomplete
++
++    func accepts(_ result: Result<[CliProcessFrameV1], any Error>) -> Bool {
++        switch (self, result) {
++        case let (.exited, .success(frames)):
++            return frames.contains {
++                if case .exited = $0 { true } else { false }
++            }
++        case let (.pipeDrainIncomplete, .failure(error)):
++            guard let backendError = error as? CliProcessBackendError,
++                  case .pipeDrainIncomplete = backendError
++            else { return false }
++            return true
++        default:
++            return false
++        }
++    }
++}
++
++private func cliMechanicsAssessCleanup(
++    _ report: CliMechanicsOwnedStreamReport,
++    harness: CliMechanicsHarness,
++    expected: CliMechanicsExpectedTerminal,
++    removalAllowed: inout Bool
++) -> CliMechanicsCleanupError {
++    var failures = cliMechanicsObserveResources(report, harness: harness)
++    // Removal depends only on actual resource observations, even on a body error.
++    removalAllowed = failures.isEmpty
++    let terminalAllowed = expected.accepts(report.stream)
++    switch report.cancellation {
++    case let .some(.failure(error)):
++        let completedRace = error as? CliProcessBackendError
++            == .processNotRegistered(harness.executionId)
++        if !(completedRace && removalAllowed && terminalAllowed) {
++            failures.append(CliMechanicsFixtureFailure.cleanup(
++                operation: "cancel execution=\(harness.executionId)", error: error
++            ))
++        }
++    case nil:
++        if case .exited = expected {
++            failures.append(CliMechanicsFixtureFailure.missingCancellation(harness.executionId))
++        }
++    case .some(.success):
++        break
++    }
++    if !terminalAllowed {
++        switch report.stream {
++        case let .failure(error):
++            failures.append(CliMechanicsFixtureFailure.cleanup(
++                operation: "joined stream execution=\(harness.executionId)", error: error
++            ))
++        case .success:
++            if case .pipeDrainIncomplete = expected {
++                failures.append(CliMechanicsFixtureFailure.heldPipeCleanupReportedCertain)
++            } else {
++                failures.append(CliMechanicsFixtureFailure.missingExitedFrame(harness.executionId))
++            }
++        }
++    }
++    let primary: (any Error)?
++    if case let .failure(error) = report.body { primary = error }
++    else { primary = nil }
++    return CliMechanicsCleanupError(
++        primary: primary, cleanupFailures: failures,
++        retainedFixturePath: removalAllowed ? nil : harness.base.path
++    )
++}
++
++private func cliMechanicsObserveResources(
++    _ report: CliMechanicsOwnedStreamReport,
++    harness: CliMechanicsHarness
++) -> [any Error] {
++    let groups = harness.processInspector.continuedProcessGroups()
++    let executionId = harness.executionId
++    print("CLI fixture cleanup execution=\(executionId) continuedPIDs=\(groups) fixture=\(harness.base.path)")
++    var failures: [any Error] = []
++    if groups.count == 1, let pid = groups.first, pid > 0 {
++        if case let .some(.success(evidence)) = report.cancellation,
++           evidence.pid != pid || evidence.processGroupID != pid
++        {
++            failures.append(CliMechanicsFixtureFailure.cancellationIdentity(
++                executionId: executionId, observed: pid,
++                pid: evidence.pid, group: evidence.processGroupID
++            ))
++        }
++        for (operation, target) in [("kill(pid, 0)", pid), ("kill(-pgid, 0)", -pid)] {
++            let result = Darwin.kill(target, 0)
++            let failure = result == 0 ? 0 : errno
++            if result != -1 || failure != ESRCH {
++                failures.append(CliMechanicsFixtureFailure.observation(
++                    operation: operation, executionId: executionId, pid: pid,
++                    result: result, errorNumber: failure
++                ))
++            }
++        }
++        var information = siginfo_t()
++        while true {
++            // WNOWAIT must remain: this probe never reaps another owner's child.
++            let result = Darwin.waitid(
++                P_PID, id_t(pid), &information, WEXITED | WNOHANG | WNOWAIT
++            )
++            let failure = result == 0 ? 0 : errno
++            if result == -1, failure == EINTR { continue }
++            if result != -1 || failure != ECHILD {
++                failures.append(CliMechanicsFixtureFailure.observation(
++                    operation: "waitid(WEXITED|WNOHANG|WNOWAIT)",
++                    executionId: executionId, pid: pid,
++                    result: result, errorNumber: failure
++                ))
++            }
++            break
++        }
++    } else {
++        failures.append(CliMechanicsFixtureFailure.continuationIdentity(
++            executionId: executionId, groups: groups
++        ))
++    }
++    var information = stat()
++    let (socketResult, socketFailure) = harness.socketURL.path.withCString {
++        let result = Darwin.lstat($0, &information)
++        let failure = errno
++        return (result, result == 0 ? 0 : failure)
++    }
++    if socketResult != -1 || socketFailure != ENOENT {
++        failures.append(CliMechanicsFixtureFailure.observation(
++            operation: "lstat socket=\(harness.socketURL.path)",
++            executionId: executionId, pid: groups.count == 1 ? groups.first : nil,
++            result: socketResult, errorNumber: socketFailure
++        ))
++    }
++    print("CLI fixture resource observations execution=\(executionId) failures=\(failures.count)")
++    return failures
++}
++
+ private let p1f1dCLIWorkspace = URL(
+     fileURLWithPath: "/tmp/p1f1d-cli-workspace"
+ )

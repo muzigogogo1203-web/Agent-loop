@@ -1,0 +1,43 @@
+Building for debugging...
+[0/5] Write sources
+[1/5] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/9] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+[4/9] Compiling AgentLoopTestSuite CliBackendTests.swift
+[5/9] Compiling AgentLoopTestSuite CliMechanicsFixture.swift
+[6/9] Emitting module AgentLoopTestSuite
+[7/12] Compiling AgentLoopTestSuite BlockingProcessOperationTests.swift
+[8/12] Compiling AgentLoopTestSuite BoardServerTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[9/12] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1530:12: warning: no calls to throwing functions occur within 'try' expression
+1528 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1529 |     }
+1530 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1531 |         profile: profile,
+1532 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7854:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7852 |                 progressSink: P1F1DProgressRecorder(),
+7853 |                 modelLoopDriver: try #require(
+7854 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7855 |                 ),
+7856 |                 cliProcessDriver: nil,
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[10/14] Emitting module RunTests
+[11/14] Compiling RunTests main.swift
+[11/14] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[12/14] Linking RunTests
+[13/14] Applying RunTests
+Build of product 'RunTests' complete! (51.08s)

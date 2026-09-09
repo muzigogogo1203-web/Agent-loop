@@ -1,0 +1,25 @@
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite ExecutionEngineConformanceTests started.
+◇ Test p1f1_065ControlledWaitsPreserveCooperativeProgress() started.
+
+=== FD CHILD BEGIN label=065-controlled-wait-child mode=1 pid=62767 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/065-controlled-wait-child-639BA6DF-00DB-411F-ABAE-071826247294/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/065-controlled-wait-child-639BA6DF-00DB-411F-ABAE-071826247294/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite ExecutionEngineConformanceTests started.
+◇ Test p1f1_065ControlledWaitsPreserveCooperativeProgress() started.
+065 CONTROLLED WAIT PHASES gate-cancelled=true gate-entry=1 gate-release=1 gate-sibling=true gate-rescue=true gate-entry-timeout=false socket-cancelled=true socket-entry=true socket-lines=["first-result", "second-result"] socket-eof=true socket-sibling=true socket-rescue=true socket-entry-timeout=false controllers-and-siblings-joined=true
+✘ Test p1f1_065ControlledWaitsPreserveCooperativeProgress() recorded an issue at ExecutionEngineConformanceTests.swift:7924:9: Expectation failed: (!gateControl.rescueUsed → false) && (!socketControl.rescueUsed → <not evaluated>)
+✘ Test p1f1_065ControlledWaitsPreserveCooperativeProgress() failed after 2.024 seconds with 1 issue.
+✘ Suite ExecutionEngineConformanceTests failed after 2.024 seconds with 1 issue.
+✘ Test run with 1 test in 1 suite failed after 2.024 seconds with 1 issue.
+
+=== FD CHILD PHASE EVIDENCE label=065-controlled-wait-child mode=1 pid=62767 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/065-controlled-wait-child-639BA6DF-00DB-411F-ABAE-071826247294/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/065-controlled-wait-child-639BA6DF-00DB-411F-ABAE-071826247294/phases.evidence ===
+
+=== FD CHILD END label=065-controlled-wait-child mode=1 pid=62767 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/065-controlled-wait-child-639BA6DF-00DB-411F-ABAE-071826247294/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/065-controlled-wait-child-639BA6DF-00DB-411F-ABAE-071826247294/phases.evidence read-errors=[] ===
+✘ Test p1f1_065ControlledWaitsPreserveCooperativeProgress() recorded an issue at ExecutionEngineConformanceTests.swift:8572:6: Caught error: childStatus(pid: 62767, status: 256, log: file:///var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/065-controlled-wait-child-639BA6DF-00DB-411F-ABAE-071826247294/child.log, evidence: file:///var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/065-controlled-wait-child-639BA6DF-00DB-411F-ABAE-071826247294/phases.evidence)
+✘ Test p1f1_065ControlledWaitsPreserveCooperativeProgress() failed after 2.188 seconds with 1 issue.
+✘ Suite ExecutionEngineConformanceTests failed after 2.188 seconds with 1 issue.
+✘ Test run with 1 test in 1 suite failed after 2.189 seconds with 1 issue.

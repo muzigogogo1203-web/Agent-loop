@@ -1,0 +1,93 @@
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/goal-foundation-source-boundary-before.swift	2026-09-06 22:08:12
++++ Sources/AgentLoopTestSuite/DurablePlanningTests.swift	2026-09-06 22:08:12
+@@ -2468,16 +2468,25 @@
+     "Sources/AgentLoopCore/Provider/OpenAIResponsesProvider.swift",
+ ]
+ 
+ // The 2026-09-05 desktop Coding closure added one opt-in runtime lifecycle
+ // logger for the approved bounded diagnosis. Keep it separate from every
+ // byte-frozen historical P1 allowlist and manifest.
+ private let desktopCodingClosureRuntimeDiagnosticsSuccessorFiles: Set<String> = [
+     "Sources/AgentLoopCore/Observability/RuntimeLifecycleDiagnostics.swift",
++]
++
++// 2026-09-05 desktop Coding closure A1 foundation only.
++// Separate from frozen manifests and the runtime-diagnostics singleton.
++private let desktopCodingClosureA1FoundationSuccessorFiles20260905: Set<String> = [
++    "Sources/AgentLoopCore/Domain/DesktopGoalWorkflow.swift",
++    "Sources/AgentLoopCore/Database/DesktopGoalWorkflowStore.swift",
++    "Sources/AgentLoopTestSuite/DesktopGoalFoundationTests.swift",
++    "Sources/AgentLoopTestSuite/DesktopGoalMigrationTests.swift",
+ ]
+ 
+ // The 2026-09-06 desktop Coding closure packaging review approved this exact
+ // development launcher successor. Keep the historical A4 manifest unchanged;
+ // package-historical-gate-plan.md records its separately pinned identity.
+ private let desktopCodingClosureDevelopmentPackagingSuccessorFiles20260906: Set<String> = [
+     "scripts/run-app.sh",
+ ]
+@@ -5628,16 +5637,46 @@
+         manifestPaths.intersection(
+             desktopCodingClosureRuntimeDiagnosticsSuccessorFiles
+         ).isEmpty
+     )
+     for path in desktopCodingClosureRuntimeDiagnosticsSuccessorFiles {
+         try a3RequireRegularNonSymlink(
+             root.appendingPathComponent(path)
+         )
++    }
++    #expect(desktopCodingClosureA1FoundationSuccessorFiles20260905.count == 4)
++    #expect(
++        desktopCodingClosureA1FoundationSuccessorFiles20260905 == [
++            "Sources/AgentLoopCore/Domain/DesktopGoalWorkflow.swift",
++            "Sources/AgentLoopCore/Database/DesktopGoalWorkflowStore.swift",
++            "Sources/AgentLoopTestSuite/DesktopGoalFoundationTests.swift",
++            "Sources/AgentLoopTestSuite/DesktopGoalMigrationTests.swift",
++        ]
++    )
++    #expect(
++        desktopCodingClosureA1FoundationSuccessorFiles20260905
++            .intersection(manifestPaths).isEmpty
++    )
++    let historicalSourcePaths = originalA3Allowlist
++        .union(a4HistoricalManifestExclusions)
++        .union(p1bExactAllowlist)
++        .union(p1cExactAllowlist)
++        .union(p1dExactAllowlist)
++        .union(p1eExactAllowlist)
++        .union(p1f1ExactAllowlist)
++        .union(r9fStateRootIsolationTestFiles)
++        .union(r9fProviderCompletionHandleFiles)
++        .union(desktopCodingClosureRuntimeDiagnosticsSuccessorFiles)
++    #expect(
++        desktopCodingClosureA1FoundationSuccessorFiles20260905
++            .intersection(historicalSourcePaths).isEmpty
++    )
++    for path in desktopCodingClosureA1FoundationSuccessorFiles20260905 {
++        try a3RequireRegularNonSymlink(root.appendingPathComponent(path))
+     }
+     let liveEntries = entries.filter {
+         !a4HistoricalManifestExclusions.contains($0.path)
+             && !p1bSuccessorExclusions.contains($0.path)
+             && !p1cSuccessorExclusions.contains($0.path)
+             && !p1dSuccessorExclusions.contains($0.path)
+             && !p1eSuccessorExclusions.contains($0.path)
+             && !p1f1SuccessorExclusions.contains($0.path)
+@@ -5653,16 +5692,17 @@
+             && !p1bExactAllowlist.contains($0)
+             && !p1cExactAllowlist.contains($0)
+             && !p1dExactAllowlist.contains($0)
+             && !p1eExactAllowlist.contains($0)
+             && !p1f1ExactAllowlist.contains($0)
+             && !r9fStateRootIsolationTestFiles.contains($0)
+             && !r9fProviderCompletionHandleFiles.contains($0)
+             && !desktopCodingClosureRuntimeDiagnosticsSuccessorFiles.contains($0)
++            && !desktopCodingClosureA1FoundationSuccessorFiles20260905.contains($0)
+     }
+     enumerated.append("Package.resolved")
+     enumerated.removeAll {
+         a4HistoricalManifestExclusions.contains($0)
+     }
+     enumerated.sort()
+     #expect(enumerated.count == 102)
+     #expect(enumerated == liveEntries.map(\.path))

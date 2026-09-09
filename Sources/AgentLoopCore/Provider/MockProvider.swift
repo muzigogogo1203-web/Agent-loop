@@ -1,5 +1,5 @@
 /// Scripted-replay test double. Single-consumer: early cancellation still consumes a script entry and bumps callCount.
-public actor MockProvider: LLMProvider {
+public actor MockProvider: LLMProvider, LLMProviderRunDrivingV1 {
     private var script: [TurnResult]
     public private(set) var callCount = 0
     public private(set) var recordedHistories: [[APIMessage]] = []
@@ -11,20 +11,38 @@ public actor MockProvider: LLMProvider {
 
     public nonisolated func streamTurn(system: String, history: [APIMessage], tools: [ToolDef],
                                        toolChoice: ToolChoice, maxTokens: Int) -> AsyncThrowingStream<ProviderEvent, Error> {
-        AsyncThrowingStream { continuation in
-            Task {
-                let turn = await self.next(
-                    system: system, history: history, tools: tools, toolChoice: toolChoice)
-                guard let turn else {
-                    continuation.finish(throwing: ProviderError.malformedStream("mock script exhausted"))
-                    return
-                }
-                for block in turn.content {
-                    if case .text(let t) = block { continuation.yield(.textDelta(t)) }
-                }
-                continuation.yield(.turn(turn))
-                continuation.finish()
+        startTurn(
+            system: system,
+            history: history,
+            tools: tools,
+            toolChoice: toolChoice,
+            maxTokens: maxTokens
+        ).events
+    }
+
+    package nonisolated func startTurn(
+        system: String,
+        history: [APIMessage],
+        tools: [ToolDef],
+        toolChoice: ToolChoice,
+        maxTokens: Int
+    ) -> LLMProviderTurnRunV1 {
+        makeLLMProviderTurnRunV1 { continuation in
+            let turn = await self.next(
+                system: system,
+                history: history,
+                tools: tools,
+                toolChoice: toolChoice
+            )
+            guard let turn else {
+                throw ProviderError.malformedStream("mock script exhausted")
             }
+            for block in turn.content {
+                if case .text(let text) = block {
+                    continuation.yield(.textDelta(text))
+                }
+            }
+            continuation.yield(.turn(turn))
         }
     }
 

@@ -1,0 +1,23 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Emitting module AgentLoopTestSuite
+[4/6] Compiling AgentLoopTestSuite DurableWorkTests.swift
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (17.78s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite A2DurableRuminationTests started.
+◇ Test directMissionAndProposalStartsAreRejectedWhileHalted() started.
+◇ Test startupBootstrapGateBlocksDispatchUntilRecoveryCompletes() started.
+◇ Test activeRuminationFencesDiscardDeleteAndArchiveRaces() started.
+✔ Test directMissionAndProposalStartsAreRejectedWhileHalted() passed after 0.057 seconds.
+✔ Test startupBootstrapGateBlocksDispatchUntilRecoveryCompletes() passed after 0.078 seconds.
+✔ Test activeRuminationFencesDiscardDeleteAndArchiveRaces() passed after 0.319 seconds.
+✔ Suite A2DurableRuminationTests passed after 0.319 seconds.
+✔ Test run with 3 tests in 1 suite passed after 0.319 seconds.

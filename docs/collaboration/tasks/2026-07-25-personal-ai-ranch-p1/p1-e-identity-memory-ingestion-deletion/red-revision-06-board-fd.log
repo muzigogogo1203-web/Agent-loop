@@ -1,0 +1,31 @@
+command=swift run RunTests --filter boardServerFramingForwardsToolCallsWhenSocketsAreAllowed|boardServerRejectsWrongTokenAndMismatchedCard|boardSocketClientDistinguishesTimeoutFromEOF
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() started.
+✔ Test boardServerFramingForwardsToolCallsWhenSocketsAreAllowed() passed after 0.093 seconds.
+◇ Test boardSocketClientDistinguishesTimeoutFromEOF() started.
+✔ Test boardSocketClientDistinguishesTimeoutFromEOF() passed after 5.108 seconds.
+◇ Test boardServerRejectsWrongTokenAndMismatchedCard() started.
+✔ Test boardServerRejectsWrongTokenAndMismatchedCard() passed after 0.089 seconds.
+✔ Suite BoardServerTests passed after 5.292 seconds.
+✔ Test run with 3 tests in 1 suite passed after 5.292 seconds.
+descriptor_iteration=1 command=swift run RunTests --filter boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses() started.
+✘ Test boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses() recorded an issue at BoardServerTests.swift:175:9: Expectation failed: (Self.fileDescriptorCount() - baseline → 15) < 10
+✘ Test boardServerHandlerBlockKeepsServerAliveUntilConnectionCloses() failed after 8.430 seconds with 1 issue.
+✘ Suite BoardServerTests failed after 8.430 seconds with 1 issue.
+✘ Test run with 1 test in 1 suite failed after 8.430 seconds with 1 issue.
+command_code=1
+tee_code=0

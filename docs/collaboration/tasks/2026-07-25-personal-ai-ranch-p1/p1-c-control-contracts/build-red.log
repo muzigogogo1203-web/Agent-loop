@@ -1,0 +1,467 @@
+COMMAND: swift build --product AgentLoopApp
+CWD: /Users/muzi/Agent-loop
+BRANCH: codex/personal-ai-ranch-p0
+HEAD: 02334ec8d21533be81d93d39191bc7d9b9c24f7f
+START_UTC: 2026-08-26T00:51:52Z
+[0/1] Planning build
+Building for debugging...
+[0/5] Write sources
+[1/5] Write swift-version--1AB21518FC5DEDBE.txt
+[3/41] Compiling AgentLoopApp CowRosterView.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:175:23: error: extra argument 'missionDraft' in call
+173 |             ),
+174 |         ],
+175 |         missionDraft: MissionDraftViewState(
+    |                       `- error: extra argument 'missionDraft' in call
+176 |             draftId: "draft-1", ingestionId: "ingestion-review", campId: "camp-1", cow: baseCow,
+177 |             goal: "制作一个三人使用的七天喝水打卡单页",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:181:68: error: missing argument for parameter 'startCapability' in call
+179 |             knowledge: [MissionKnowledgeItemViewState(id: "note-1", title: "低摩擦打卡的三个原则", sourceLabel: "主动喂牛")],
+180 |             deliverableType: "单页 HTML", workspacePath: "~/Desktop/drink-water",
+181 |             isNewcomer: true, canStart: true, startBlockReason: nil
+    |                                                                    `- error: missing argument for parameter 'startCapability' in call
+182 |         ),
+183 |         source: SourceViewState(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/CodingRanchContracts.swift:188:8: note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+186 | }
+187 | 
+188 | struct MissionDraftViewState: Sendable, Equatable {
+    |        `- note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+189 |     /// 草稿交付物类型的统一默认值(产品语义:以验收清单界定的成果)
+190 |     static let defaultDeliverableType = "可验证成果"
+[4/41] Compiling AgentLoopApp FeedComposerView.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:175:23: error: extra argument 'missionDraft' in call
+173 |             ),
+174 |         ],
+175 |         missionDraft: MissionDraftViewState(
+    |                       `- error: extra argument 'missionDraft' in call
+176 |             draftId: "draft-1", ingestionId: "ingestion-review", campId: "camp-1", cow: baseCow,
+177 |             goal: "制作一个三人使用的七天喝水打卡单页",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:181:68: error: missing argument for parameter 'startCapability' in call
+179 |             knowledge: [MissionKnowledgeItemViewState(id: "note-1", title: "低摩擦打卡的三个原则", sourceLabel: "主动喂牛")],
+180 |             deliverableType: "单页 HTML", workspacePath: "~/Desktop/drink-water",
+181 |             isNewcomer: true, canStart: true, startBlockReason: nil
+    |                                                                    `- error: missing argument for parameter 'startCapability' in call
+182 |         ),
+183 |         source: SourceViewState(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/CodingRanchContracts.swift:188:8: note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+186 | }
+187 | 
+188 | struct MissionDraftViewState: Sendable, Equatable {
+    |        `- note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+189 |     /// 草稿交付物类型的统一默认值(产品语义:以验收清单界定的成果)
+190 |     static let defaultDeliverableType = "可验证成果"
+[5/41] Compiling AgentLoopApp CodingRanchPreviewFixtures.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:175:23: error: extra argument 'missionDraft' in call
+173 |             ),
+174 |         ],
+175 |         missionDraft: MissionDraftViewState(
+    |                       `- error: extra argument 'missionDraft' in call
+176 |             draftId: "draft-1", ingestionId: "ingestion-review", campId: "camp-1", cow: baseCow,
+177 |             goal: "制作一个三人使用的七天喝水打卡单页",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:181:68: error: missing argument for parameter 'startCapability' in call
+179 |             knowledge: [MissionKnowledgeItemViewState(id: "note-1", title: "低摩擦打卡的三个原则", sourceLabel: "主动喂牛")],
+180 |             deliverableType: "单页 HTML", workspacePath: "~/Desktop/drink-water",
+181 |             isNewcomer: true, canStart: true, startBlockReason: nil
+    |                                                                    `- error: missing argument for parameter 'startCapability' in call
+182 |         ),
+183 |         source: SourceViewState(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/CodingRanchContracts.swift:188:8: note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+186 | }
+187 | 
+188 | struct MissionDraftViewState: Sendable, Equatable {
+    |        `- note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+189 |     /// 草稿交付物类型的统一默认值(产品语义:以验收清单界定的成果)
+190 |     static let defaultDeliverableType = "可验证成果"
+[6/41] Compiling AgentLoopApp MissionDraftConfirmationView.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:175:23: error: extra argument 'missionDraft' in call
+173 |             ),
+174 |         ],
+175 |         missionDraft: MissionDraftViewState(
+    |                       `- error: extra argument 'missionDraft' in call
+176 |             draftId: "draft-1", ingestionId: "ingestion-review", campId: "camp-1", cow: baseCow,
+177 |             goal: "制作一个三人使用的七天喝水打卡单页",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:181:68: error: missing argument for parameter 'startCapability' in call
+179 |             knowledge: [MissionKnowledgeItemViewState(id: "note-1", title: "低摩擦打卡的三个原则", sourceLabel: "主动喂牛")],
+180 |             deliverableType: "单页 HTML", workspacePath: "~/Desktop/drink-water",
+181 |             isNewcomer: true, canStart: true, startBlockReason: nil
+    |                                                                    `- error: missing argument for parameter 'startCapability' in call
+182 |         ),
+183 |         source: SourceViewState(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/CodingRanchContracts.swift:188:8: note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+186 | }
+187 | 
+188 | struct MissionDraftViewState: Sendable, Equatable {
+    |        `- note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+189 |     /// 草稿交付物类型的统一默认值(产品语义:以验收清单界定的成果)
+190 |     static let defaultDeliverableType = "可验证成果"
+[7/44] Compiling AgentLoopApp Theme.swift
+[8/44] Compiling AgentLoopApp TrophyCenterView.swift
+[9/44] Compiling AgentLoopApp resource_bundle_accessor.swift
+[10/44] Compiling AgentLoopApp CompanionAvatarView.swift
+[11/44] Compiling AgentLoopApp FeedView.swift
+[12/44] Compiling AgentLoopApp McpStationSection.swift
+[13/44] Compiling AgentLoopApp NoteListPane.swift
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[14/44] Compiling AgentLoopApp McpStore.swift
+[15/44] Compiling AgentLoopApp MissionScheduler.swift
+[16/44] Compiling AgentLoopApp ScheduledMissionNotifications.swift
+[17/44] Compiling AgentLoopApp CampHomeView.swift
+[18/44] Compiling AgentLoopApp CodingRanchCommonViews.swift
+[19/44] Compiling AgentLoopApp CodingRanchHomeView.swift
+[20/44] Compiling AgentLoopApp CodingRanchLiveHosts.swift
+[21/44] Compiling AgentLoopApp CodingRanchOnboardingView.swift
+[22/44] Compiling AgentLoopApp TypingIndicatorView.swift
+[23/44] Compiling AgentLoopApp DMChatView.swift
+[24/44] Compiling AgentLoopApp RootView.swift
+[25/44] Compiling AgentLoopApp RuntimeProfileViews.swift
+[26/44] Compiling AgentLoopApp ScheduleManagerView.swift
+[27/44] Compiling AgentLoopApp SettingsView.swift
+[28/44] Compiling AgentLoopApp TaskRunView.swift
+[29/44] Compiling AgentLoopApp AgentLoopApp.swift
+[30/44] Compiling AgentLoopApp AppStore.swift
+[31/44] Compiling AgentLoopApp CodingRanchContracts.swift
+[32/44] Compiling AgentLoopApp CodingRanchStoreAdapter.swift
+[33/44] Emitting module AgentLoopApp
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:175:23: error: extra argument 'missionDraft' in call
+173 |             ),
+174 |         ],
+175 |         missionDraft: MissionDraftViewState(
+    |                       `- error: extra argument 'missionDraft' in call
+176 |             draftId: "draft-1", ingestionId: "ingestion-review", campId: "camp-1", cow: baseCow,
+177 |             goal: "制作一个三人使用的七天喝水打卡单页",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:181:68: error: missing argument for parameter 'startCapability' in call
+179 |             knowledge: [MissionKnowledgeItemViewState(id: "note-1", title: "低摩擦打卡的三个原则", sourceLabel: "主动喂牛")],
+180 |             deliverableType: "单页 HTML", workspacePath: "~/Desktop/drink-water",
+181 |             isNewcomer: true, canStart: true, startBlockReason: nil
+    |                                                                    `- error: missing argument for parameter 'startCapability' in call
+182 |         ),
+183 |         source: SourceViewState(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/CodingRanchContracts.swift:188:8: note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+186 | }
+187 | 
+188 | struct MissionDraftViewState: Sendable, Equatable {
+    |        `- note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+189 |     /// 草稿交付物类型的统一默认值(产品语义:以验收清单界定的成果)
+190 |     static let defaultDeliverableType = "可验证成果"
+[34/44] Compiling AgentLoopApp RanchArtView.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:175:23: error: extra argument 'missionDraft' in call
+173 |             ),
+174 |         ],
+175 |         missionDraft: MissionDraftViewState(
+    |                       `- error: extra argument 'missionDraft' in call
+176 |             draftId: "draft-1", ingestionId: "ingestion-review", campId: "camp-1", cow: baseCow,
+177 |             goal: "制作一个三人使用的七天喝水打卡单页",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:181:68: error: missing argument for parameter 'startCapability' in call
+179 |             knowledge: [MissionKnowledgeItemViewState(id: "note-1", title: "低摩擦打卡的三个原则", sourceLabel: "主动喂牛")],
+180 |             deliverableType: "单页 HTML", workspacePath: "~/Desktop/drink-water",
+181 |             isNewcomer: true, canStart: true, startBlockReason: nil
+    |                                                                    `- error: missing argument for parameter 'startCapability' in call
+182 |         ),
+183 |         source: SourceViewState(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/CodingRanchContracts.swift:188:8: note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+186 | }
+187 | 
+188 | struct MissionDraftViewState: Sendable, Equatable {
+    |        `- note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+189 |     /// 草稿交付物类型的统一默认值(产品语义:以验收清单界定的成果)
+190 |     static let defaultDeliverableType = "可验证成果"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:895:9: error: generic parameter 'R' could not be inferred
+893 | struct RuminationViews_Previews: PreviewProvider {
+894 |     static var previews: some View {
+895 |         Group {
+    |         `- error: generic parameter 'R' could not be inferred
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+897 |                 .frame(width: 860, height: 620)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:895:9: error: generic parameter 'C' could not be inferred
+893 | struct RuminationViews_Previews: PreviewProvider {
+894 |     static var previews: some View {
+895 |         Group {
+    |         `- error: generic parameter 'C' could not be inferred
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+897 |                 .frame(width: 860, height: 620)
+
+SwiftUI.Group.init:2:31: note: in call to initializer
+1 | generic struct Group {
+2 | @inlinable nonisolated public init<R, C>(@TableColumnBuilder<R, C> content: () -> Content) where R == Content.TableRowValue, C == Content.TableColumnSortComparator}
+  |                               `- note: in call to initializer
+3 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:898:18: error: cannot convert value of type 'some View' to expected argument type 'TableColumn<R, C, Content, Label>'
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+897 |                 .frame(width: 860, height: 620)
+898 |                 .previewDisplayName("待反刍")
+    |                  `- error: cannot convert value of type 'some View' to expected argument type 'TableColumn<R, C, Content, Label>'
+899 | 
+900 |             RuminationProgressView(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:896:13: error: generic parameter 'Content' could not be inferred
+894 |     static var previews: some View {
+895 |         Group {
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+    |             `- error: generic parameter 'Content' could not be inferred
+897 |                 .frame(width: 860, height: 620)
+898 |                 .previewDisplayName("待反刍")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:896:13: error: generic parameter 'Label' could not be inferred
+894 |     static var previews: some View {
+895 |         Group {
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+    |             `- error: generic parameter 'Label' could not be inferred
+897 |                 .frame(width: 860, height: 620)
+898 |                 .previewDisplayName("待反刍")
+
+SwiftUI.TableColumnBuilder.buildExpression:2:20: note: in call to function 'buildExpression'
+1 | generic struct TableColumnBuilder {
+2 | public static func buildExpression<Content, Label>(_ column: TableColumn<RowValue, Sort, Content, Label>) -> TableColumn<RowValue, Sort, Content, Label> where Content : View, Label : View}
+  |                    `- note: in call to function 'buildExpression'
+3 | 
+[35/44] Compiling AgentLoopApp ReturnSummaryView.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:175:23: error: extra argument 'missionDraft' in call
+173 |             ),
+174 |         ],
+175 |         missionDraft: MissionDraftViewState(
+    |                       `- error: extra argument 'missionDraft' in call
+176 |             draftId: "draft-1", ingestionId: "ingestion-review", campId: "camp-1", cow: baseCow,
+177 |             goal: "制作一个三人使用的七天喝水打卡单页",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:181:68: error: missing argument for parameter 'startCapability' in call
+179 |             knowledge: [MissionKnowledgeItemViewState(id: "note-1", title: "低摩擦打卡的三个原则", sourceLabel: "主动喂牛")],
+180 |             deliverableType: "单页 HTML", workspacePath: "~/Desktop/drink-water",
+181 |             isNewcomer: true, canStart: true, startBlockReason: nil
+    |                                                                    `- error: missing argument for parameter 'startCapability' in call
+182 |         ),
+183 |         source: SourceViewState(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/CodingRanchContracts.swift:188:8: note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+186 | }
+187 | 
+188 | struct MissionDraftViewState: Sendable, Equatable {
+    |        `- note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+189 |     /// 草稿交付物类型的统一默认值(产品语义:以验收清单界定的成果)
+190 |     static let defaultDeliverableType = "可验证成果"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:895:9: error: generic parameter 'R' could not be inferred
+893 | struct RuminationViews_Previews: PreviewProvider {
+894 |     static var previews: some View {
+895 |         Group {
+    |         `- error: generic parameter 'R' could not be inferred
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+897 |                 .frame(width: 860, height: 620)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:895:9: error: generic parameter 'C' could not be inferred
+893 | struct RuminationViews_Previews: PreviewProvider {
+894 |     static var previews: some View {
+895 |         Group {
+    |         `- error: generic parameter 'C' could not be inferred
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+897 |                 .frame(width: 860, height: 620)
+
+SwiftUI.Group.init:2:31: note: in call to initializer
+1 | generic struct Group {
+2 | @inlinable nonisolated public init<R, C>(@TableColumnBuilder<R, C> content: () -> Content) where R == Content.TableRowValue, C == Content.TableColumnSortComparator}
+  |                               `- note: in call to initializer
+3 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:898:18: error: cannot convert value of type 'some View' to expected argument type 'TableColumn<R, C, Content, Label>'
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+897 |                 .frame(width: 860, height: 620)
+898 |                 .previewDisplayName("待反刍")
+    |                  `- error: cannot convert value of type 'some View' to expected argument type 'TableColumn<R, C, Content, Label>'
+899 | 
+900 |             RuminationProgressView(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:896:13: error: generic parameter 'Content' could not be inferred
+894 |     static var previews: some View {
+895 |         Group {
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+    |             `- error: generic parameter 'Content' could not be inferred
+897 |                 .frame(width: 860, height: 620)
+898 |                 .previewDisplayName("待反刍")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:896:13: error: generic parameter 'Label' could not be inferred
+894 |     static var previews: some View {
+895 |         Group {
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+    |             `- error: generic parameter 'Label' could not be inferred
+897 |                 .frame(width: 860, height: 620)
+898 |                 .previewDisplayName("待反刍")
+
+SwiftUI.TableColumnBuilder.buildExpression:2:20: note: in call to function 'buildExpression'
+1 | generic struct TableColumnBuilder {
+2 | public static func buildExpression<Content, Label>(_ column: TableColumn<RowValue, Sort, Content, Label>) -> TableColumn<RowValue, Sort, Content, Label> where Content : View, Label : View}
+  |                    `- note: in call to function 'buildExpression'
+3 | 
+[36/44] Compiling AgentLoopApp RuminationViews.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:175:23: error: extra argument 'missionDraft' in call
+173 |             ),
+174 |         ],
+175 |         missionDraft: MissionDraftViewState(
+    |                       `- error: extra argument 'missionDraft' in call
+176 |             draftId: "draft-1", ingestionId: "ingestion-review", campId: "camp-1", cow: baseCow,
+177 |             goal: "制作一个三人使用的七天喝水打卡单页",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:181:68: error: missing argument for parameter 'startCapability' in call
+179 |             knowledge: [MissionKnowledgeItemViewState(id: "note-1", title: "低摩擦打卡的三个原则", sourceLabel: "主动喂牛")],
+180 |             deliverableType: "单页 HTML", workspacePath: "~/Desktop/drink-water",
+181 |             isNewcomer: true, canStart: true, startBlockReason: nil
+    |                                                                    `- error: missing argument for parameter 'startCapability' in call
+182 |         ),
+183 |         source: SourceViewState(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/CodingRanchContracts.swift:188:8: note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+186 | }
+187 | 
+188 | struct MissionDraftViewState: Sendable, Equatable {
+    |        `- note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+189 |     /// 草稿交付物类型的统一默认值(产品语义:以验收清单界定的成果)
+190 |     static let defaultDeliverableType = "可验证成果"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:895:9: error: generic parameter 'R' could not be inferred
+893 | struct RuminationViews_Previews: PreviewProvider {
+894 |     static var previews: some View {
+895 |         Group {
+    |         `- error: generic parameter 'R' could not be inferred
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+897 |                 .frame(width: 860, height: 620)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:895:9: error: generic parameter 'C' could not be inferred
+893 | struct RuminationViews_Previews: PreviewProvider {
+894 |     static var previews: some View {
+895 |         Group {
+    |         `- error: generic parameter 'C' could not be inferred
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+897 |                 .frame(width: 860, height: 620)
+
+SwiftUI.Group.init:2:31: note: in call to initializer
+1 | generic struct Group {
+2 | @inlinable nonisolated public init<R, C>(@TableColumnBuilder<R, C> content: () -> Content) where R == Content.TableRowValue, C == Content.TableColumnSortComparator}
+  |                               `- note: in call to initializer
+3 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:898:18: error: cannot convert value of type 'some View' to expected argument type 'TableColumn<R, C, Content, Label>'
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+897 |                 .frame(width: 860, height: 620)
+898 |                 .previewDisplayName("待反刍")
+    |                  `- error: cannot convert value of type 'some View' to expected argument type 'TableColumn<R, C, Content, Label>'
+899 | 
+900 |             RuminationProgressView(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:896:13: error: generic parameter 'Content' could not be inferred
+894 |     static var previews: some View {
+895 |         Group {
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+    |             `- error: generic parameter 'Content' could not be inferred
+897 |                 .frame(width: 860, height: 620)
+898 |                 .previewDisplayName("待反刍")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:896:13: error: generic parameter 'Label' could not be inferred
+894 |     static var previews: some View {
+895 |         Group {
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+    |             `- error: generic parameter 'Label' could not be inferred
+897 |                 .frame(width: 860, height: 620)
+898 |                 .previewDisplayName("待反刍")
+
+SwiftUI.TableColumnBuilder.buildExpression:2:20: note: in call to function 'buildExpression'
+1 | generic struct TableColumnBuilder {
+2 | public static func buildExpression<Content, Label>(_ column: TableColumn<RowValue, Sort, Content, Label>) -> TableColumn<RowValue, Sort, Content, Label> where Content : View, Label : View}
+  |                    `- note: in call to function 'buildExpression'
+3 | 
+[37/44] Compiling AgentLoopApp CompanionEditorView.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:175:23: error: extra argument 'missionDraft' in call
+173 |             ),
+174 |         ],
+175 |         missionDraft: MissionDraftViewState(
+    |                       `- error: extra argument 'missionDraft' in call
+176 |             draftId: "draft-1", ingestionId: "ingestion-review", campId: "camp-1", cow: baseCow,
+177 |             goal: "制作一个三人使用的七天喝水打卡单页",
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/Fixtures/CodingRanchPreviewFixtures.swift:181:68: error: missing argument for parameter 'startCapability' in call
+179 |             knowledge: [MissionKnowledgeItemViewState(id: "note-1", title: "低摩擦打卡的三个原则", sourceLabel: "主动喂牛")],
+180 |             deliverableType: "单页 HTML", workspacePath: "~/Desktop/drink-water",
+181 |             isNewcomer: true, canStart: true, startBlockReason: nil
+    |                                                                    `- error: missing argument for parameter 'startCapability' in call
+182 |         ),
+183 |         source: SourceViewState(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/CodingRanchContracts.swift:188:8: note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+186 | }
+187 | 
+188 | struct MissionDraftViewState: Sendable, Equatable {
+    |        `- note: 'init(draftId:ingestionId:campId:cow:goal:acceptance:knowledge:deliverableType:workspacePath:isNewcomer:canStart:startBlockReason:startCapability:)' declared here
+189 |     /// 草稿交付物类型的统一默认值(产品语义:以验收清单界定的成果)
+190 |     static let defaultDeliverableType = "可验证成果"
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:895:9: error: generic parameter 'R' could not be inferred
+893 | struct RuminationViews_Previews: PreviewProvider {
+894 |     static var previews: some View {
+895 |         Group {
+    |         `- error: generic parameter 'R' could not be inferred
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+897 |                 .frame(width: 860, height: 620)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:895:9: error: generic parameter 'C' could not be inferred
+893 | struct RuminationViews_Previews: PreviewProvider {
+894 |     static var previews: some View {
+895 |         Group {
+    |         `- error: generic parameter 'C' could not be inferred
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+897 |                 .frame(width: 860, height: 620)
+
+SwiftUI.Group.init:2:31: note: in call to initializer
+1 | generic struct Group {
+2 | @inlinable nonisolated public init<R, C>(@TableColumnBuilder<R, C> content: () -> Content) where R == Content.TableRowValue, C == Content.TableColumnSortComparator}
+  |                               `- note: in call to initializer
+3 | 
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:898:18: error: cannot convert value of type 'some View' to expected argument type 'TableColumn<R, C, Content, Label>'
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+897 |                 .frame(width: 860, height: 620)
+898 |                 .previewDisplayName("待反刍")
+    |                  `- error: cannot convert value of type 'some View' to expected argument type 'TableColumn<R, C, Content, Label>'
+899 | 
+900 |             RuminationProgressView(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:896:13: error: generic parameter 'Content' could not be inferred
+894 |     static var previews: some View {
+895 |         Group {
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+    |             `- error: generic parameter 'Content' could not be inferred
+897 |                 .frame(width: 860, height: 620)
+898 |                 .previewDisplayName("待反刍")
+
+/Users/muzi/Agent-loop/Sources/AgentLoopApp/Views/CodingRanch/RuminationViews.swift:896:13: error: generic parameter 'Label' could not be inferred
+894 |     static var previews: some View {
+895 |         Group {
+896 |             RuminationInboxView(state: CodingRanchPreviewFixtures.inbox, onOpen: { _ in })
+    |             `- error: generic parameter 'Label' could not be inferred
+897 |                 .frame(width: 860, height: 620)
+898 |                 .previewDisplayName("待反刍")
+
+SwiftUI.TableColumnBuilder.buildExpression:2:20: note: in call to function 'buildExpression'
+1 | generic struct TableColumnBuilder {
+2 | public static func buildExpression<Content, Label>(_ column: TableColumn<RowValue, Sort, Content, Label>) -> TableColumn<RowValue, Sort, Content, Label> where Content : View, Label : View}
+  |                    `- note: in call to function 'buildExpression'
+3 | 
+[38/44] Compiling AgentLoopApp AskUserPromptView.swift
+[39/44] Compiling AgentLoopApp CardDetailInspector.swift
+[40/44] Compiling AgentLoopApp CardRowView.swift
+[41/44] Compiling AgentLoopApp CodingPastureTheaterView.swift
+FINISH_UTC: 2026-08-26T00:52:02Z
+ACTUAL_EXIT: 1
+RESULT: FAILED

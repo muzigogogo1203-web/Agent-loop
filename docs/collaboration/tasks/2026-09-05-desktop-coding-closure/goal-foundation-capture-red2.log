@@ -1,0 +1,22 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Compiling AgentLoopTestSuite DesktopGoalFoundationTests.swift
+[4/6] Emitting module AgentLoopTestSuite
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (22.80s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite DesktopGoalFoundationTests started.
+◇ Test sealedStageAndReceiptCASIsReplayableButNotReplaceable() started.
+✘ Test sealedStageAndReceiptCASIsReplayableButNotReplaceable() recorded an issue at DesktopGoalFoundationTests.swift:1158:9: Expectation failed: expected error "staleOperationVersion" of type DesktopGoalFoundationErrorV1, but "checkpoint3" of type DesktopGoalStoreNotImplemented was thrown instead
+✘ Test sealedStageAndReceiptCASIsReplayableButNotReplaceable() recorded an issue at DesktopGoalFoundationTests.swift:1165:9: Expectation failed: expected error "receiptConflict" of type DesktopGoalFoundationErrorV1, but "checkpoint3" of type DesktopGoalStoreNotImplemented was thrown instead
+✘ Test sealedStageAndReceiptCASIsReplayableButNotReplaceable() recorded an issue at DesktopGoalFoundationTests.swift:1172:9: Expectation failed: an error was thrown when none was expected: "checkpoint3" of type DesktopGoalStoreNotImplemented
+✘ Test sealedStageAndReceiptCASIsReplayableButNotReplaceable() failed after 0.140 seconds with 3 issues.
+✘ Suite DesktopGoalFoundationTests failed after 0.140 seconds with 3 issues.
+✘ Test run with 1 test in 1 suite failed after 0.140 seconds with 3 issues.

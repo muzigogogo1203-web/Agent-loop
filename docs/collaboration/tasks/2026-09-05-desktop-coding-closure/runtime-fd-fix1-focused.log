@@ -1,0 +1,50 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Compiling AgentLoopTestSuite CliBackendTests.swift
+[4/6] Emitting module AgentLoopTestSuite
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (83.79s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test p1f1d075FDClaimRejectsOccupiedTargetWithoutClosingIt() started.
+◇ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() started.
+◇ Test p1f1d075FDChildFailureReachesParent() started.
+✔ Test p1f1d075FDClaimRejectsOccupiedTargetWithoutClosingIt() passed after 0.002 seconds.
+
+=== FD CHILD BEGIN mode=expected-failure pid=7935 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-FC9AB0A3-2564-4691-9DC3-523B94E2C17D/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-FC9AB0A3-2564-4691-9DC3-523B94E2C17D/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() started.
+✘ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() recorded an issue at CliBackendTests.swift:3911:2: Caught error: deliberateChildFailure
+✘ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() failed after 0.001 seconds with 1 issue.
+✘ Test run with 1 test in 0 suites failed after 0.001 seconds with 1 issue.
+
+=== FD CHILD PHASE EVIDENCE mode=expected-failure pid=7935 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-FC9AB0A3-2564-4691-9DC3-523B94E2C17D/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-FC9AB0A3-2564-4691-9DC3-523B94E2C17D/phases.evidence ===
+
+=== FD CHILD END mode=expected-failure pid=7935 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-FC9AB0A3-2564-4691-9DC3-523B94E2C17D/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-FC9AB0A3-2564-4691-9DC3-523B94E2C17D/phases.evidence read-errors=[] ===
+✔ Test p1f1d075FDChildFailureReachesParent() passed after 0.456 seconds.
+
+=== FD CHILD BEGIN mode=drain pid=7934 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-6AEC76CC-808E-4FE8-83E5-A53ACF567A71/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-6AEC76CC-808E-4FE8-83E5-A53ACF567A71/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() started.
+✔ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() passed after 3.149 seconds.
+✔ Test run with 1 test in 0 suites passed after 3.157 seconds.
+
+=== FD CHILD PHASE EVIDENCE mode=drain pid=7934 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-6AEC76CC-808E-4FE8-83E5-A53ACF567A71/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-6AEC76CC-808E-4FE8-83E5-A53ACF567A71/phases.evidence ===
+live-drain
+surviving-run
+surviving-abort
+
+=== FD CHILD END mode=drain pid=7934 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-6AEC76CC-808E-4FE8-83E5-A53ACF567A71/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-6AEC76CC-808E-4FE8-83E5-A53ACF567A71/phases.evidence read-errors=[] ===
+✔ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() passed after 51.104 seconds.
+✔ Test run with 3 tests in 0 suites passed after 51.105 seconds.

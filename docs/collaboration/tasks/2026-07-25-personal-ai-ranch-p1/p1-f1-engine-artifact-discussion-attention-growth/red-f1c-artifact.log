@@ -1,0 +1,73 @@
+exact19_filter=p1f1_043ExistingBlobVerifiedBeforeWorkspaceRead|p1f1_044WorkspaceSourceScopeSizeHashValidated|p1f1_045StagingFsyncRenameThenReferenceCommit|p1f1_046RenameBeforeRowCrashRecovers|p1f1_047PrepareCrashWindowsNeverReferenceMissingBlob|p1f1_048MissingOrCorruptBlobInvalidatesProposal|p1f1_049GCUsesExactThreeContentHashRootSets|p1f1_050ProposalHashNeverKeepsBlobAlive|p1f1_051SharedBlobAndAgeBoundaryRetained|p1f1_052DeletedTombstoneRestagesBytesWithCAS|p1f1_053TypedManagedOriginCreatesAtomically|p1f1_054TypedExternalOriginCreatesAtomically|p1f1_055LegacyUpgradeRequiresVerifierEvidence|p1f1_056OriginRedactionTerminalDispositionLocks|p1f1_057VerifierNoFollowClassificationMatrix|p1f1_058VerifierHardlinkCrossCampConcurrentSnapshotMatrix|p1f1_059RawStringDurablePathCompletionAPIRemoved|p1f1_060ManagedExpeditionReportIsOnlyWriterAndRegistryOwner|p1f1_061ManagedReportCursorRecoversWithoutLostFile
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test p1f1_059RawStringDurablePathCompletionAPIRemoved() started.
+◇ Test p1f1_061ManagedReportCursorRecoversWithoutLostFile() started.
+◇ Test p1f1_057VerifierNoFollowClassificationMatrix() started.
+◇ Suite P1F1ArtifactStorageOriginTests started.
+◇ Test p1f1_060ManagedExpeditionReportIsOnlyWriterAndRegistryOwner() started.
+◇ Suite P1F1ArtifactBlobStoreTests started.
+◇ Test p1f1_043ExistingBlobVerifiedBeforeWorkspaceRead() started.
+◇ Test p1f1_053TypedManagedOriginCreatesAtomically() started.
+◇ Test p1f1_058VerifierHardlinkCrossCampConcurrentSnapshotMatrix() started.
+✘ Test p1f1_061ManagedReportCursorRecoversWithoutLostFile() recorded an issue at HarvestTests.swift:295:9: Expectation failed: expected error of type P1F1ReportInjectedFailure, but "ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.regenerateReport)" was thrown instead
+✘ Test p1f1_057VerifierNoFollowClassificationMatrix() recorded an issue at ArtifactOwnershipVerifierTests.swift:128:2: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.verifyOwnership)
+✘ Test p1f1_057VerifierNoFollowClassificationMatrix() failed after 0.207 seconds with 1 issue.
+✘ Test p1f1_060ManagedExpeditionReportIsOnlyWriterAndRegistryOwner() recorded an issue at HarvestTests.swift:246:2: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.ensureReport)
+✘ Test p1f1_060ManagedExpeditionReportIsOnlyWriterAndRegistryOwner() failed after 0.209 seconds with 1 issue.
+✘ Test p1f1_058VerifierHardlinkCrossCampConcurrentSnapshotMatrix() recorded an issue at ArtifactOwnershipVerifierTests.swift:212:2: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.verifyOwnership)
+✘ Test p1f1_058VerifierHardlinkCrossCampConcurrentSnapshotMatrix() failed after 0.215 seconds with 1 issue.
+✘ Test p1f1_061ManagedReportCursorRecoversWithoutLostFile() recorded an issue at HarvestTests.swift:274:2: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.recoverPendingWrites)
+✘ Test p1f1_061ManagedReportCursorRecoversWithoutLostFile() failed after 0.216 seconds with 2 issues.
+✘ Test p1f1_059RawStringDurablePathCompletionAPIRemoved() recorded an issue at BoardToolsTests.swift:178:21: Caught error: nonempty legacy Board completion must fail before mutation
+✘ Test p1f1_053TypedManagedOriginCreatesAtomically() recorded an issue at ArtifactStorageOriginTests.swift:309:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.prepare)
+✘ Test p1f1_053TypedManagedOriginCreatesAtomically() failed after 0.243 seconds with 1 issue.
+◇ Test p1f1_054TypedExternalOriginCreatesAtomically() started.
+✘ Test p1f1_043ExistingBlobVerifiedBeforeWorkspaceRead() recorded an issue at ArtifactBlobStoreTests.swift:433:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.prepare)
+✘ Test p1f1_043ExistingBlobVerifiedBeforeWorkspaceRead() failed after 0.244 seconds with 1 issue.
+◇ Test p1f1_044WorkspaceSourceScopeSizeHashValidated() started.
+✘ Test p1f1_059RawStringDurablePathCompletionAPIRemoved() failed after 0.265 seconds with 1 issue.
+✘ Test p1f1_054TypedExternalOriginCreatesAtomically() recorded an issue at ArtifactStorageOriginTests.swift:454:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.insertWorkspaceExternalArtifact)
+✘ Test p1f1_054TypedExternalOriginCreatesAtomically() failed after 0.099 seconds with 1 issue.
+◇ Test p1f1_055LegacyUpgradeRequiresVerifierEvidence() started.
+✘ Test p1f1_044WorkspaceSourceScopeSizeHashValidated() recorded an issue at ArtifactBlobStoreTests.swift:457:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.prepare)
+✘ Test p1f1_044WorkspaceSourceScopeSizeHashValidated() failed after 0.143 seconds with 1 issue.
+◇ Test p1f1_045StagingFsyncRenameThenReferenceCommit() started.
+✘ Test p1f1_055LegacyUpgradeRequiresVerifierEvidence() recorded an issue at ArtifactStorageOriginTests.swift:512:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.verifyOwnership)
+✘ Test p1f1_055LegacyUpgradeRequiresVerifierEvidence() failed after 0.131 seconds with 1 issue.
+◇ Test p1f1_056OriginRedactionTerminalDispositionLocks() started.
+✘ Test p1f1_045StagingFsyncRenameThenReferenceCommit() recorded an issue at ArtifactBlobStoreTests.swift:508:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.prepare)
+✘ Test p1f1_045StagingFsyncRenameThenReferenceCommit() failed after 0.224 seconds with 1 issue.
+◇ Test p1f1_046RenameBeforeRowCrashRecovers() started.
+✘ Test p1f1_056OriginRedactionTerminalDispositionLocks() recorded an issue at ArtifactStorageOriginTests.swift:575:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.verifyOwnership)
+✘ Test p1f1_056OriginRedactionTerminalDispositionLocks() failed after 0.162 seconds with 1 issue.
+✘ Suite P1F1ArtifactStorageOriginTests failed after 0.637 seconds with 4 issues.
+✘ Test p1f1_046RenameBeforeRowCrashRecovers() recorded an issue at ArtifactBlobStoreTests.swift:534:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.recoverPreparation)
+✘ Test p1f1_046RenameBeforeRowCrashRecovers() failed after 0.122 seconds with 1 issue.
+◇ Test p1f1_047PrepareCrashWindowsNeverReferenceMissingBlob() started.
+✘ Test p1f1_047PrepareCrashWindowsNeverReferenceMissingBlob() recorded an issue at ArtifactBlobStoreTests.swift:563:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.prepare)
+✘ Test p1f1_047PrepareCrashWindowsNeverReferenceMissingBlob() failed after 0.118 seconds with 1 issue.
+◇ Test p1f1_048MissingOrCorruptBlobInvalidatesProposal() started.
+✘ Test p1f1_048MissingOrCorruptBlobInvalidatesProposal() recorded an issue at ArtifactBlobStoreTests.swift:619:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.prepare)
+✘ Test p1f1_048MissingOrCorruptBlobInvalidatesProposal() failed after 0.120 seconds with 1 issue.
+◇ Test p1f1_049GCUsesExactThreeContentHashRootSets() started.
+✘ Test p1f1_049GCUsesExactThreeContentHashRootSets() recorded an issue at ArtifactBlobStoreTests.swift:663:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.collectGarbage)
+✘ Test p1f1_049GCUsesExactThreeContentHashRootSets() failed after 0.183 seconds with 1 issue.
+◇ Test p1f1_050ProposalHashNeverKeepsBlobAlive() started.
+✘ Test p1f1_050ProposalHashNeverKeepsBlobAlive() recorded an issue at ArtifactBlobStoreTests.swift:703:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.collectGarbage)
+✘ Test p1f1_050ProposalHashNeverKeepsBlobAlive() failed after 0.119 seconds with 1 issue.
+◇ Test p1f1_051SharedBlobAndAgeBoundaryRetained() started.
+✘ Test p1f1_051SharedBlobAndAgeBoundaryRetained() recorded an issue at ArtifactBlobStoreTests.swift:721:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.collectGarbage)
+✘ Test p1f1_051SharedBlobAndAgeBoundaryRetained() failed after 0.151 seconds with 1 issue.
+◇ Test p1f1_052DeletedTombstoneRestagesBytesWithCAS() started.
+✘ Test p1f1_052DeletedTombstoneRestagesBytesWithCAS() recorded an issue at ArtifactBlobStoreTests.swift:757:6: Caught error: ArtifactCapabilityUnavailableErrorV1(capability: AgentLoopCore.ArtifactCapabilityV1.prepare)
+✘ Test p1f1_052DeletedTombstoneRestagesBytesWithCAS() failed after 0.111 seconds with 1 issue.
+✘ Suite P1F1ArtifactBlobStoreTests failed after 1.540 seconds with 10 issues.
+✘ Test run with 19 tests in 2 suites failed after 1.540 seconds with 20 issues.
+exact19_command_status=1
+exact19_tee_status=0
+exact19_validator_status=0

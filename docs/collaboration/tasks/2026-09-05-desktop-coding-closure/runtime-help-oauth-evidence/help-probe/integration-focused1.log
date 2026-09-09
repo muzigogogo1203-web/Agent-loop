@@ -1,0 +1,141 @@
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite ExecutionEngineConformanceTests started.
+◇ Test cliProcessBackendFinishesWithinGraceWhenGrandchildHoldsPipe() started.
+◇ Test a3Revision02EntryBoundaryRemainsByteExact() started.
+◇ Test cliProcessBackendCancellationEscalatesAfterGrace() started.
+◇ Test cliProcessBackendUsesInjectedEnvironmentExactlyOnce() started.
+◇ Test p1f1_065CancellationCleansProcessAndCommitsOnce() started.
+◇ Test cliProcessBackendFixtureFailureStillJoinsRealCleanup() started.
+◇ Test blockingProcessOperationPreservesCooperativeProgress() started.
+◇ Test cliProcessBackendCapturesFinalLineWithoutNewline() started.
+◇ Test cliProcessBackendCancellationReturnsCheckedEvidence() started.
+◇ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() started.
+◇ Test cliProcessBackendRejectsInjectedEnvironmentNULBeforeSpawn() started.
+◇ Test oauthPermanentUnauthorizedDeleteFailureNeverReportsCleanRelogin() started.
+✔ Test cliProcessBackendRejectsInjectedEnvironmentNULBeforeSpawn() passed after 0.013 seconds.
+✔ Test oauthPermanentUnauthorizedDeleteFailureNeverReportsCleanRelogin() passed after 0.026 seconds.
+✔ Test a3Revision02EntryBoundaryRemainsByteExact() passed after 0.033 seconds.
+
+=== FD CHILD BEGIN label=blocking-process-progress-child mode=1 pid=97251 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/blocking-process-progress-child-1D70B582-9097-4CCD-844E-926366AC916D/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/blocking-process-progress-child-1D70B582-9097-4CCD-844E-926366AC916D/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test blockingProcessOperationPreservesCooperativeProgress() started.
+BLOCKING PROGRESS PHASES cancelled=true operation=1 entered=true sibling=true rescue=false entry-timeout=false read=Optional(1) read-byte=Optional(165) read-errno=nil read-close-errno=nil write=Optional(1) write-errno=nil write-close-errno=nil controller=true
+✔ Test blockingProcessOperationPreservesCooperativeProgress() passed after 0.003 seconds.
+✔ Test run with 1 test in 0 suites passed after 0.004 seconds.
+
+=== FD CHILD PHASE EVIDENCE label=blocking-process-progress-child mode=1 pid=97251 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/blocking-process-progress-child-1D70B582-9097-4CCD-844E-926366AC916D/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/blocking-process-progress-child-1D70B582-9097-4CCD-844E-926366AC916D/phases.evidence ===
+blocking-progress-ok
+
+=== FD CHILD END label=blocking-process-progress-child mode=1 pid=97251 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/blocking-process-progress-child-1D70B582-9097-4CCD-844E-926366AC916D/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/blocking-process-progress-child-1D70B582-9097-4CCD-844E-926366AC916D/phases.evidence read-errors=[] ===
+✔ Test blockingProcessOperationPreservesCooperativeProgress() passed after 0.165 seconds.
+✔ Test cliProcessBackendCapturesFinalLineWithoutNewline() passed after 0.788 seconds.
+CLI fixture cleanup execution=00000000-0000-4000-8000-000000000347 continuedPIDs=[97254] fixture=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/c-347-A346
+CLI fixture resource observations execution=00000000-0000-4000-8000-000000000347 failures=0
+✔ Test cliProcessBackendFixtureFailureStillJoinsRealCleanup() passed after 1.299 seconds.
+CLI fixture cleanup execution=00000000-0000-4000-8000-000000000372 continuedPIDs=[97253] fixture=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/c-372-DADB
+CLI fixture resource observations execution=00000000-0000-4000-8000-000000000372 failures=0
+✔ Test cliProcessBackendCancellationReturnsCheckedEvidence() passed after 1.811 seconds.
+✔ Test cliProcessBackendUsesInjectedEnvironmentExactlyOnce() passed after 2.219 seconds.
+CLI fixture cleanup execution=00000000-0000-4000-8000-000000000152 continuedPIDs=[97256] fixture=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/c-152-B424
+CLI fixture resource observations execution=00000000-0000-4000-8000-000000000152 failures=0
+✘ Test cliProcessBackendFinishesWithinGraceWhenGrandchildHoldsPipe() recorded an issue at CliBackendTests.swift:258:2: Caught error: primary: CLI mechanics stream did not finish before watchdog; cleanup[0]: held pipe cleanup was reported as certain
+✘ Test cliProcessBackendFinishesWithinGraceWhenGrandchildHoldsPipe() failed after 2.323 seconds with 1 issue.
+CLI fixture cleanup execution=00000000-0000-4000-8000-000000000346 continuedPIDs=[97257] fixture=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/c-346-3CAE
+CLI fixture resource observations execution=00000000-0000-4000-8000-000000000346 failures=0
+✘ Test cliProcessBackendCancellationEscalatesAfterGrace() recorded an issue at CliBackendTests.swift:474:2: Caught error: primary: processLaunchFailed("process did not become ready")
+✘ Test cliProcessBackendCancellationEscalatesAfterGrace() failed after 3.151 seconds with 1 issue.
+
+=== FD CHILD BEGIN label=p1f1d-075-fd-child mode=drain pid=97258 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-E54442B7-B2DB-4403-A510-B4FE0D3B4F8E/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-E54442B7-B2DB-4403-A510-B4FE0D3B4F8E/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() started.
+✔ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() passed after 3.033 seconds.
+✔ Test run with 1 test in 0 suites passed after 3.034 seconds.
+
+=== FD CHILD PHASE EVIDENCE label=p1f1d-075-fd-child mode=drain pid=97258 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-E54442B7-B2DB-4403-A510-B4FE0D3B4F8E/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-E54442B7-B2DB-4403-A510-B4FE0D3B4F8E/phases.evidence ===
+live-drain
+surviving-run
+surviving-abort
+
+=== FD CHILD END label=p1f1d-075-fd-child mode=drain pid=97258 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-E54442B7-B2DB-4403-A510-B4FE0D3B4F8E/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-E54442B7-B2DB-4403-A510-B4FE0D3B4F8E/phases.evidence read-errors=[] ===
+065-resume-readiness outcome=observed polls=2429/3000 interval-us=1000 elapsed=3.3829325 seconds
+✘ Test p1f1_065CancellationCleansProcessAndCommitsOnce() recorded an issue at ExecutionEngineConformanceTests.swift:8517:9: Expectation failed: ((streamReport.terminalError as? CliProcessBackendError) → .processCleanupFailed("spawned process or pipe cleanup failed")) == (expectedAbortError → .processLaunchFailed("injected resume dispatch failure"))
+↳ 065 controlled stream terminal mismatch; actual=Optional(AgentLoopCore.CliProcessBackendError.processCleanupFailed("spawned process or pipe cleanup failed")) frames=[]
+✘ Test p1f1_065CancellationCleansProcessAndCommitsOnce() recorded an issue at ExecutionEngineConformanceTests.swift:8522:9: Expectation failed: ((publicationReport.terminalError as? CliProcessBackendError) → .processCleanupFailed("spawned process or pipe cleanup failed")) == (expectedAbortError → .processLaunchFailed("injected resume dispatch failure"))
+↳ 065 cancellation terminal mismatch; actual=Optional(AgentLoopCore.CliProcessBackendError.processCleanupFailed("spawned process or pipe cleanup failed"))
+✘ Test p1f1_065CancellationCleansProcessAndCommitsOnce() recorded an issue at ExecutionEngineConformanceTests.swift:8535:9: Expectation failed: (publicationReport.resources → P1F1D065CleanupPublicationObservation(cleanupRemoved: true, socketRemoved: true, registryEmpty: false, directoryClose: AgentLoopTestSuite.(unknown context at $10308d1c0).P1F1D065DirectoryCloseObservation.notAttempted)).registryEmpty → false
+↳ 065 process registry retained an entry after joined failure
+✘ Test p1f1_065CancellationCleansProcessAndCommitsOnce() recorded an issue at ExecutionEngineConformanceTests.swift:8539:9: Expectation failed: (publicationReport.resources.directoryClose → .notAttempted) == .closed
+↳ 065 socket directory authority did not close after joined failure
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 fixture-root=/tmp/al65-gate-4c826605
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 launch-called
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 launch-returned
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 readiness-start observed=false
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 signal=19 group=97271 target=-97271 result=0 errno=0
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 readiness-end observed=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 cancel-start
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 signal=15 group=97271 target=-97271 result=0 errno=0
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 signal=9 group=97271 target=-97271 result=0 errno=0
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 cancel-result success=true pid=97271 group=97271 status=137 term=true kill=true stdoutEOF=true stderrEOF=true childReaped=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 stream-join-start
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 stream-exited status=137
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 stream-join-result success=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 final-signal-count=3 assessment-execution=00000000-0000-4000-8000-000000000065
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 final-signal=19 group=97271 target=-97271 result=0 errno=0
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 final-signal=15 group=97271 target=-97271 result=0 errno=0
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 final-signal=9 group=97271 target=-97271 result=0 errno=0
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 observation=successful-SIGCONT-identity result=1 errno=0 passed=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 observation=cancellation-identity result=97271 errno=0 passed=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 observation=cancellation-childReaped result=1 errno=0 passed=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 observation=cancellation-stdoutEOF result=1 errno=0 passed=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 observation=cancellation-stderrEOF result=1 errno=0 passed=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 observation=kill(97271,0) result=-1 errno=3 passed=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 observation=kill(-97271,0) result=-1 errno=3 passed=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 observation=waitid(WEXITED|WNOHANG|WNOWAIT) result=-1 errno=10 passed=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 observation=socket-lstat result=-1 errno=2 passed=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 observation=registry-activeCount result=0 errno=0 passed=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 final-stream-exited status=137
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 observation=joined-stream-exited result=1 errno=0 passed=true
+065-cold fixture=8C012859-757F-4F37-B0CB-EB1C3A3F36F8 execution=00000000-0000-4000-8000-000000000065 cleanup-certified=true retained-root=none
+✘ Test p1f1_065CancellationCleansProcessAndCommitsOnce() failed after 14.595 seconds with 4 issues.
+◇ Test p1f1_065ColdGateForcedFailureStillJoinsCleanup() started.
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 fixture-root=/tmp/al65-cold-error-c0da39d3
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 launch-called
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 launch-returned
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 readiness-start observed=false successfulContinuations=0
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 signal=19 group=97354 target=-97354 result=0 errno=0
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 readiness-end observed=true successfulContinuations=1
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 body-error category=forcedFailure.afterReady
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 cancel-start
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 signal=15 group=97354 target=-97354 result=0 errno=0
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 signal=9 group=97354 target=-97354 result=0 errno=0
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 cancel-result success=true pid=97354 group=97354 status=137 term=true kill=true stdoutEOF=true stderrEOF=true childReaped=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 stream-join-start
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 stream-exited status=137
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 stream-join-result success=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 final-signal-count=3 assessment-execution=00000000-0000-4000-8000-000000000865
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 final-signal=19 group=97354 target=-97354 result=0 errno=0
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 final-signal=15 group=97354 target=-97354 result=0 errno=0
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 final-signal=9 group=97354 target=-97354 result=0 errno=0
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 observation=successful-SIGCONT-identity result=1 errno=0 passed=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 observation=cancellation-identity result=97354 errno=0 passed=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 observation=cancellation-childReaped result=1 errno=0 passed=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 observation=cancellation-stdoutEOF result=1 errno=0 passed=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 observation=cancellation-stderrEOF result=1 errno=0 passed=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 observation=kill(97354,0) result=-1 errno=3 passed=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 observation=kill(-97354,0) result=-1 errno=3 passed=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 observation=waitid(WEXITED|WNOHANG|WNOWAIT) result=-1 errno=10 passed=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 observation=socket-lstat result=-1 errno=2 passed=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 observation=registry-activeCount result=0 errno=0 passed=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 final-stream-exited status=137
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 observation=joined-stream-exited result=1 errno=0 passed=true
+065-cold fixture=94525AAC-6281-4E83-8561-3FA5AA9F35D8 execution=00000000-0000-4000-8000-000000000865 cleanup-certified=true retained-root=none
+✔ Test p1f1_065ColdGateForcedFailureStillJoinsCleanup() passed after 5.568 seconds.
+✘ Suite ExecutionEngineConformanceTests failed after 20.166 seconds with 4 issues.
+✔ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() passed after 33.194 seconds.
+✘ Test run with 13 tests in 1 suite failed after 33.196 seconds with 6 issues.

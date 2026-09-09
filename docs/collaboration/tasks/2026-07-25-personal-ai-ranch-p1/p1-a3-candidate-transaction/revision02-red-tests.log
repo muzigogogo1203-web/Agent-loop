@@ -1,0 +1,69 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[3/6] Emitting module AgentLoopTestSuite
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:599:24: error: cannot find type 'A3CandidatePostCommitObservationForTesting' in scope
+ 597 | 
+ 598 |     func record(
+ 599 |         _ observation: A3CandidatePostCommitObservationForTesting,
+     |                        `- error: cannot find type 'A3CandidatePostCommitObservationForTesting' in scope
+ 600 |         evidence: A3PreDispatchEvidence?,
+ 601 |         captureFailure: String?
+[4/6] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:599:24: error: cannot find type 'A3CandidatePostCommitObservationForTesting' in scope
+ 597 | 
+ 598 |     func record(
+ 599 |         _ observation: A3CandidatePostCommitObservationForTesting,
+     |                        `- error: cannot find type 'A3CandidatePostCommitObservationForTesting' in scope
+ 600 |         evidence: A3PreDispatchEvidence?,
+ 601 |         captureFailure: String?
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:945:5: warning: no calls to throwing functions occur within 'try' expression
+ 943 |     _ fixture: R01FailureFirstFixture
+ 944 | ) throws -> Int {
+ 945 |     try fixture.database.pool.writeWithoutTransaction { database in
+     |     `- warning: no calls to throwing functions occur within 'try' expression
+ 946 |         database.totalChangesCount
+ 947 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:964:28: error: value of type 'Orchestrator' has no member 'armA3CandidatePostCommitObserverForTesting'
+ 962 |         tickInterval: nil
+ 963 |     )
+ 964 |     try await orchestrator.armA3CandidatePostCommitObserverForTesting {
+     |                            `- error: value of type 'Orchestrator' has no member 'armA3CandidatePostCommitObserverForTesting'
+ 965 |         observation in
+ 966 |         var evidence: A3PreDispatchEvidence?
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:1005:24: error: value of type 'Orchestrator' has no member 'clearA3CandidatePostCommitObserverForTesting'
+1003 | 
+1004 | private func shutdownA3Orchestrator(_ orchestrator: Orchestrator) async {
+1005 |     await orchestrator.clearA3CandidatePostCommitObserverForTesting()
+     |                        `- error: value of type 'Orchestrator' has no member 'clearA3CandidatePostCommitObserverForTesting'
+1006 |     _ = await orchestrator.shutdown()
+1007 | }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2476:32: error: value of type 'Orchestrator' has no member 'armA3CandidatePostCommitObserverForTesting'
+2474 |             tickInterval: nil
+2475 |         )
+2476 |         try await orchestrator.armA3CandidatePostCommitObserverForTesting {
+     |                                `- error: value of type 'Orchestrator' has no member 'armA3CandidatePostCommitObserverForTesting'
+2477 |             observation in
+2478 |             await probe.record(
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2480:27: error: 'nil' requires a contextual type
+2478 |             await probe.record(
+2479 |                 observation,
+2480 |                 evidence: nil,
+     |                           `- error: 'nil' requires a contextual type
+2481 |                 captureFailure: nil
+2482 |             )
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DurablePlanningTests.swift:2481:33: error: 'nil' requires a contextual type
+2479 |                 observation,
+2480 |                 evidence: nil,
+2481 |                 captureFailure: nil
+     |                                 `- error: 'nil' requires a contextual type
+2482 |             )
+2483 |         }

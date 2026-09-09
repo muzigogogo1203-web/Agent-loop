@@ -1,0 +1,18 @@
+# One new authoritative runtime observation
+
+2026-09-06 approximately05:17 PDT. Root admits one default, unfiltered `AGENTLOOP_RUNTIME_DIAGNOSTICS=1 swift run RunTests` after current reviewed repairs and actual focused success. No source writer or other parent-owned compiler/test is active. Capture full stdout/stderr, actual PID/window/exit, twelve targeted source hashes plus full Sources/scripts/package input hashes and live resources; retain every issue and exact parent/owned-child lifecycle events. This is not permission for repeated unchanged runs.
+
+## Changed evidence since prior default full
+
+- Prior full remains1091tests/31suites/fourissues/exit1, retained runtime-combined-full.log. No failure is relabeled as a pass.
+- Cold065 cleanup now owns cancel+streamjoin even when its body fails, with actual process/group/reap/EOF/socket/registry certification before teardown. Independently reviewed source and forced-primary regression; current-hash focused rerun passed2tests/18.375s/exit0,PID60926,actualcoldchildren60957/60967 fullycertified andabsent afterwards. This does not assert a cause for the old readiness delay.
+- Reviewed069 sequential decomposition removed the measured compiler resource explosion without changing its scenarios or coverage. Fixed phase markers remain. Normal compilation now completes rather than consuming24GB.
+- A newly reproduced CLI error-provenance defect now has a reviewed exact-generation production repair and meaningful regression. Current CLI source08f56a49c3293d246d4d57e2bfc600ecc5e9461002940916b0c7acf6a1e8719e/testf7089c930283b0277721f3642a31491fef458006a5b20266b7119f5422c681f3. Normal build20.41s and0696.297s/exit0 atPID60855: both shared joins ended and stubborn uncanceled consumer actually printed process_group_still_alive. Source review approved; independent focused-evidence reading is also in progress. Existing cancel/joins and original errors are retained, not skipped to get green.
+- Halt pre-cancellation observability now covers the previously missing interval and passed independent source/correlated-observation review. Its focused0.253s pass measured coordinator→persistence0.400208ms, not a proof about the old863.437ms delay. The new full run can capture the real selected intervals if it fails again.
+- Host resources have materially improved: approximately29GiB available, VMpressure1, swapused~3.8GiB rather than the prior1.2GiB disk/18GiB swap or runaway compiler. The scoped fixes, new diagnostics and improved operating conditions justify a fresh full observation; no timeout or suite serialization was changed.
+
+## Execution limits
+
+Root keeps all source frozen during this run, uses exact owned process identities for any necessary observation, and monitors resource headroom. If available disk falls below6GiB, stop only the validated owned test/compiler tree after capturing identities and preserve the actual intentional exit; do not delete caches/data or kill unrelated apps. No global FD overwrite, guessed PID cleanup, paid Provider, real DB/App, secret, commit or release actions.
+
+After completion, copy the complete authoritative output to verify.log while preserving the prior named full log. Extract lifecycle records using actual new PID/window and actual owned child identities from this output; never reuse old UUIDs. A green focused result or incomplete full capture does not clear the runtime gate. If this full result is red, isolate its actual failing paths using these new observations instead of immediately rerunning. If green, independent evidence review still precedes product-stage entry, and strict current App build/packaging/user acceptance remain separate future gates.

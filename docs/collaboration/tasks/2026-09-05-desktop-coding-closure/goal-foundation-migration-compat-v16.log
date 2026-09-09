@@ -1,0 +1,36 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1ECampLifecycleMigrationTests started.
+◇ Test p1e01V16MigrationIsImmediateSuccessor() started.
+✘ Test p1e01V16MigrationIsImmediateSuccessor() recorded an issue at CampLifecycleMigrationTests.swift:289:9: Expectation failed: (v17 → 18) == (migrations.count - 1 → 19)
+✘ Test p1e01V16MigrationIsImmediateSuccessor() failed after 0.001 seconds with 1 issue.
+◇ Test p1e02V16SchemaObjectCountsAndDDL() started.
+✔ Test p1e02V16SchemaObjectCountsAndDDL() passed after 0.072 seconds.
+◇ Test p1e03CompanionCowResidencyBackfillReplay() started.
+✔ Test p1e03CompanionCowResidencyBackfillReplay() passed after 0.068 seconds.
+◇ Test p1e04NilAndCorruptCampBackfillMatrix() started.
+✔ Test p1e04NilAndCorruptCampBackfillMatrix() passed after 0.150 seconds.
+◇ Test p1e05ArchivedWorkClosureAndLifecycleBinding() started.
+✔ Test p1e05ArchivedWorkClosureAndLifecycleBinding() passed after 0.069 seconds.
+◇ Test p1e06LegacyPoisonDiagnosticsRollback() started.
+✔ Test p1e06LegacyPoisonDiagnosticsRollback() passed after 0.018 seconds.
+◇ Test p1e07DurableChildFKRebuildUsesFinalNames() started.
+✔ Test p1e07DurableChildFKRebuildUsesFinalNames() passed after 0.068 seconds.
+◇ Test p1e08LegacyChatNoteScopeBackfill() started.
+✔ Test p1e08LegacyChatNoteScopeBackfill() passed after 0.069 seconds.
+◇ Test p1e09LegacyEventScopeExhaustiveBackfill() started.
+✔ Test p1e09LegacyEventScopeExhaustiveBackfill() passed after 0.072 seconds.
+◇ Test p1e10LegacyScopeMalformedRollback() started.
+✔ Test p1e10LegacyScopeMalformedRollback() passed after 0.077 seconds.
+◇ Test p1e11V16GuardDropOrdering() started.
+✔ Test p1e11V16GuardDropOrdering() passed after 0.016 seconds.
+◇ Test p1e12V16FailureBoundaryRestoresV15() started.
+✔ Test p1e12V16FailureBoundaryRestoresV15() passed after 0.318 seconds.
+◇ Test p1e13V16RedactionAndAppendOnlyGuards() started.
+✔ Test p1e13V16RedactionAndAppendOnlyGuards() passed after 0.070 seconds.
+✘ Suite P1ECampLifecycleMigrationTests failed after 1.075 seconds with 1 issue.
+✘ Test run with 13 tests in 1 suite failed after 1.076 seconds with 1 issue.

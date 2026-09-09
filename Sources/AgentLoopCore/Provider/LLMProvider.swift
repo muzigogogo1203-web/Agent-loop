@@ -65,3 +65,44 @@ public protocol LLMProvider: Sendable {
                     toolChoice: ToolChoice, maxTokens: Int)
         -> AsyncThrowingStream<ProviderEvent, Error>
 }
+
+package struct LLMProviderTurnRunV1: Sendable {
+    package let events: AsyncThrowingStream<ProviderEvent, Error>
+    package let completion: Task<Void, Error>
+}
+
+package protocol LLMProviderRunDrivingV1: LLMProvider {
+    func startTurn(
+        system: String,
+        history: [APIMessage],
+        tools: [ToolDef],
+        toolChoice: ToolChoice,
+        maxTokens: Int
+    ) -> LLMProviderTurnRunV1
+}
+
+package func makeLLMProviderTurnRunV1(
+    operation: @escaping @Sendable (
+        AsyncThrowingStream<ProviderEvent, Error>.Continuation
+    ) async throws -> Void
+) -> LLMProviderTurnRunV1 {
+    let (events, continuation) =
+        AsyncThrowingStream<ProviderEvent, Error>.makeStream()
+    let completion: Task<Void, Error> = Task {
+        do {
+            try await operation(continuation)
+            continuation.finish()
+        } catch {
+            continuation.finish(throwing: error)
+            throw error
+        }
+    }
+    continuation.onTermination = { termination in
+        guard case .cancelled = termination else { return }
+        completion.cancel()
+    }
+    return LLMProviderTurnRunV1(
+        events: events,
+        completion: completion
+    )
+}

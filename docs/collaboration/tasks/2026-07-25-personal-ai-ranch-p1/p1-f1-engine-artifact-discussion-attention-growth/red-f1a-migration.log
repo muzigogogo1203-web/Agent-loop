@@ -1,0 +1,36 @@
+P1-F1 F1A PURE RED — 2026-08-27
+shell=/bin/bash
+COMMAND: swift run RunTests --filter p1f1_001V17CanonicalLiteralMatchesStageAuthority|p1f1_002V17FreshAndEveryPredecessorReplayToExactCheckpoint|p1f1_003V17LegacyArtifactsBackfillUnresolvedWithoutFilesystem|p1f1_004V17LegacyOriginCountCampAndAttestationHashes|p1f1_005V17BackfillPhaseBarrierFailureRollsBack|p1f1_006V17EngineExecutionConstraintMatrix|p1f1_007V17EngineSessionProposalAndArtifactConstraintMatrix|p1f1_008V17OriginConstraintAndRedactionMatrix|p1f1_009V17DiscussionAttentionGrowthConstraintMatrix|p1f1_010V17ProposalArtifactRedactionGuardMatrix|p1f1_011V17DiscussionTurnRedactionGuardMatrix|p1f1_012V17RejectDeleteAndAppendOnlyGuardMatrix|p1f1_013V17ProposalBlobCleanupGraphForeignKeys|p1f1_014V17TriggerOrdinalFailureRollsBackV16Snapshot|p1f1_015V17RepeatedMigrateIsByteStable|p1f1_016V17DualSQLiteCarrierSentinels
+manifest_count=16
+expected_root=v17 product seam absent
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[2/5] Emitting module AgentLoopTestSuite
+[3/5] Compiling AgentLoopTestSuite SQLiteMigrationCompatibilityTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/SQLiteMigrationCompatibilityTests.swift:771:23: error: cannot find 'p1F1EngineCoordinationMigrationSQL' in scope
+ 769 |     @Test func p1f1_001V17CanonicalLiteralMatchesStageAuthority() throws {
+ 770 |         let authority = try p1f1StageV17SQL()
+ 771 |         let runtime = p1F1EngineCoordinationMigrationSQL
+     |                       `- error: cannot find 'p1F1EngineCoordinationMigrationSQL' in scope
+ 772 |         #expect(runtime == authority)
+ 773 |         #expect(Data(runtime.utf8).count == 29_934)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/SQLiteMigrationCompatibilityTests.swift:938:20: error: cannot find type 'P1F1MigrationIntegrityError' in scope
+ 936 |             try p1f1MigrateToV17(queue)
+ 937 |             throw P1F1SQLiteTestError.expectedFailure("dangling legacy artifact")
+ 938 |         } catch is P1F1MigrationIntegrityError {
+     |                    `- error: cannot find type 'P1F1MigrationIntegrityError' in scope
+ 939 |             // The typed barrier error is the contract.
+ 940 |         } catch {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/SQLiteMigrationCompatibilityTests.swift:1650:19: error: cannot find 'p1F1EngineCoordinationMigrationSQL' in scope
+1648 |                 PRAGMA foreign_keys=ON;
+1649 |                 BEGIN IMMEDIATE;
+1650 |                 \(p1F1EngineCoordinationMigrationSQL)
+     |                   `- error: cannot find 'p1F1EngineCoordinationMigrationSQL' in scope
+1651 |                 COMMIT;
+1652 |                 SELECT
+command_code=1
+tee_code=0
+red_evidence_status=expected_capability_red

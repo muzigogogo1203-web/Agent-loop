@@ -1,0 +1,23 @@
+{
+  "at": "2026-09-08T22:53:02.470904000+08:00",
+  "command": [
+    "ruby",
+    "docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-halt-gate-evidence-check.rb",
+    "/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-runtime-halt-gate-focused1-20260908-36899-88b8u6/test.log",
+    "/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-runtime-halt-gate-focused1-20260908-36899-88b8u6/events-admitted.ndjson",
+    "36904"
+  ],
+  "pins": {
+    "docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-halt-gate-focused1-scope-review.md": "fa815e3a5d3d092b974d1760256fd6f162bd5d474945a75197ad385afd4f3a1f",
+    "docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-halt-gate-evidence-check.rb": "d4c882c2290b772dd7df7f8a4f7310c561860ce8ed8c92010e67164e4c4e6a8c",
+    "docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-halt-gate-focused1-result.json": "81a438c7e3e2da3397a292af26e32e39f5948f555466c4e600345abe501eeb15"
+  },
+  "raw_directory": "/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-runtime-halt-gate-retained-check-20260908-39211-123ky30",
+  "stdout": "{\n  \"execution\": \"04FDA128-75DA-4AEE-B71A-2402BFAF9880\",\n  \"parent_pid\": 36904,\n  \"branch\": \"already_open\",\n  \"stages\": {\n    \"haltGateActorOpenEntered\": {\n      \"mono\": 168906342060125,\n      \"value\": 0\n    },\n    \"haltGateStateOpenEntered\": {\n      \"mono\": 168906342062041,\n      \"value\": 0\n    },\n    \"haltGateOpenLockReturned\": {\n      \"mono\": 168906342064333,\n      \"value\": 0\n    },\n    \"haltGateOpenResumeAttempt\": {\n      \"mono\": 168906342065750,\n      \"value\": 0\n    },\n    \"haltGateOpenResumeReturned\": {\n      \"mono\": 168906342067208,\n      \"value\": 0\n    },\n    \"haltGateActorOpenSucceeded\": {\n      \"mono\": 168906342068666,\n      \"value\": 0\n    },\n    \"haltGateActorWaitEntered\": {\n      \"mono\": 168906342075833,\n      \"value\": 0\n    },\n    \"haltGateStateWaitEntered\": {\n      \"mono\": 168906342077333,\n      \"value\": 0\n    },\n    \"haltGateWaitContinuationEntered\": {\n      \"mono\": 168906342080166,\n      \"value\": 0\n    },\n    \"haltGateWaitLockReturned\": {\n      \"mono\": 168906342084250,\n      \"value\": 1\n    },\n    \"haltGateWaitResumeAttempt\": {\n      \"mono\": 168906342086250,\n      \"value\": 1\n    },\n    \"haltGateWaitResumeReturned\": {\n      \"mono\": 168906342089833,\n      \"value\": 1\n    },\n    \"haltGateStateWaitSucceeded\": {\n      \"mono\": 168906342094250,\n      \"value\": 0\n    },\n    \"haltGateActorWaitSucceeded\": {\n      \"mono\": 168906342097958,\n      \"value\": 0\n    }\n  },\n  \"coverage\": \"PASS\",\n  \"runtime_gate\": \"NOT_EVALUATED\"\n}\n",
+  "stderr": "",
+  "exit": 0,
+  "signal": null,
+  "live_test_invocations": 0,
+  "original_harness_exit": 1,
+  "original_scope_ok": false
+}

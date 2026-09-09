@@ -1,0 +1,29 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1907:12: warning: no calls to throwing functions occur within 'try' expression
+ 1905 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+ 1906 |     }
+ 1907 |     return try CliEngineAdapter(
+      |            `- warning: no calls to throwing functions occur within 'try' expression
+ 1908 |         profile: profile,
+ 1909 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:9159:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+ 9157 |                 progressSink: P1F1DProgressRecorder(),
+ 9158 |                 modelLoopDriver: try #require(
+ 9159 |                     selectedTransport.modelLoopDriver
+      |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+ 9160 |                 ),
+ 9161 |                 cliProcessDriver: nil,
+[4/6] Emitting module AgentLoopTestSuite
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[5/8] Emitting module RunTests
+[5/8] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[6/8] Linking RunTests
+[7/8] Applying RunTests
+Build of product 'RunTests' complete! (27.48s)

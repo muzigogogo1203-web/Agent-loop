@@ -1,0 +1,210 @@
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-halt-gate-before/Sources/AgentLoopCore/Kernel/Orchestrator.swift	2026-09-08 22:25:41
++++ Sources/AgentLoopCore/Kernel/Orchestrator.swift	2026-09-08 22:38:11
+@@ -14,6 +14,13 @@
+           let owner = UUID(uuidString: executionId),
+           owner.uuidString == executionId
+     else { return }
++    RuntimeLifecycleDiagnostics.event(stage, owner: owner, value: value)
++}
++
++private func haltGateDiagnosticEvent(
++    _ stage: RuntimeLifecycleStage, owner: UUID?, value: Int = 0
++) {
++    guard let owner else { return }
+     RuntimeLifecycleDiagnostics.event(stage, owner: owner, value: value)
+ }
+ 
+@@ -565,14 +572,25 @@
+ 
+ private final class EngineExecutionStartGateStateV1: @unchecked Sendable {
+     private let lock = NSLock()
++    private let diagnosticOwner: UUID?
+     private var opened = false
+     private var canceled = false
+     private var waiter: CheckedContinuation<Void, Error>?
+ 
++    init(diagnosticOwner: UUID? = nil) {
++        self.diagnosticOwner = diagnosticOwner
++    }
++
+     func waitUntilOpened() async throws {
++        haltGateDiagnosticEvent(
++            .haltGateStateWaitEntered, owner: diagnosticOwner
++        )
+         try Task.checkCancellation()
+         try await withTaskCancellationHandler {
+             try await withCheckedThrowingContinuation { continuation in
++                haltGateDiagnosticEvent(
++                    .haltGateWaitContinuationEntered, owner: diagnosticOwner
++                )
+                 let outcome = lock.withLock { () -> Result<Void, Error>? in
+                     if opened { return .success(()) }
+                     if canceled { return .failure(CancellationError()) }
+@@ -582,14 +600,45 @@
+                     waiter = continuation
+                     return nil
+                 }
+-                if let outcome { continuation.resume(with: outcome) }
++                let outcomeValue: Int
++                if let outcome {
++                    switch outcome {
++                    case .success:
++                        outcomeValue = 1
++                    case .failure:
++                        outcomeValue = 2
++                    }
++                } else {
++                    outcomeValue = 0
++                }
++                haltGateDiagnosticEvent(
++                    .haltGateWaitLockReturned, owner: diagnosticOwner,
++                    value: outcomeValue
++                )
++                if let outcome {
++                    haltGateDiagnosticEvent(
++                        .haltGateWaitResumeAttempt, owner: diagnosticOwner,
++                        value: outcomeValue
++                    )
++                    continuation.resume(with: outcome)
++                    haltGateDiagnosticEvent(
++                        .haltGateWaitResumeReturned, owner: diagnosticOwner,
++                        value: outcomeValue
++                    )
++                }
+             }
+         } onCancel: {
+             cancel()
+         }
++        haltGateDiagnosticEvent(
++            .haltGateStateWaitSucceeded, owner: diagnosticOwner
++        )
+     }
+ 
+     func open() throws {
++        haltGateDiagnosticEvent(
++            .haltGateStateOpenEntered, owner: diagnosticOwner
++        )
+         let current: CheckedContinuation<Void, Error>? = try lock.withLock {
+             if canceled { return nil }
+             guard !opened else {
+@@ -600,10 +649,26 @@
+             waiter = nil
+             return current
+         }
++        let waiterValue = current == nil ? 0 : 1
++        haltGateDiagnosticEvent(
++            .haltGateOpenLockReturned, owner: diagnosticOwner,
++            value: waiterValue
++        )
++        haltGateDiagnosticEvent(
++            .haltGateOpenResumeAttempt, owner: diagnosticOwner,
++            value: waiterValue
++        )
+         current?.resume()
++        haltGateDiagnosticEvent(
++            .haltGateOpenResumeReturned, owner: diagnosticOwner,
++            value: waiterValue
++        )
+     }
+ 
+     func cancel() {
++        haltGateDiagnosticEvent(
++            .haltGateCancelEntered, owner: diagnosticOwner
++        )
+         let current = lock.withLock { () -> CheckedContinuation<Void, Error>? in
+             guard !opened, !canceled else { return nil }
+             canceled = true
+@@ -611,7 +676,20 @@
+             waiter = nil
+             return current
+         }
++        let waiterValue = current == nil ? 0 : 1
++        haltGateDiagnosticEvent(
++            .haltGateCancelLockReturned, owner: diagnosticOwner,
++            value: waiterValue
++        )
++        haltGateDiagnosticEvent(
++            .haltGateCancelResumeAttempt, owner: diagnosticOwner,
++            value: waiterValue
++        )
+         current?.resume(throwing: CancellationError())
++        haltGateDiagnosticEvent(
++            .haltGateCancelResumeReturned, owner: diagnosticOwner,
++            value: waiterValue
++        )
+     }
+ 
+     func snapshotWaiterCount() -> Int {
+@@ -620,16 +698,41 @@
+ }
+ 
+ package actor EngineExecutionStartGateV1 {
+-    private nonisolated let state = EngineExecutionStartGateStateV1()
++    private nonisolated let state: EngineExecutionStartGateStateV1
++    private nonisolated let diagnosticOwner: UUID?
+ 
+-    package init() {}
++    package init(diagnosticExecutionId: String? = nil) {
++        let owner: UUID?
++        if RuntimeLifecycleDiagnostics.isEnabled,
++           let executionId = diagnosticExecutionId,
++           let candidate = UUID(uuidString: executionId),
++           candidate.uuidString == executionId {
++            owner = candidate
++        } else {
++            owner = nil
++        }
++        diagnosticOwner = owner
++        state = EngineExecutionStartGateStateV1(diagnosticOwner: owner)
++    }
+ 
+     package func waitUntilOpened() async throws {
++        haltGateDiagnosticEvent(
++            .haltGateActorWaitEntered, owner: diagnosticOwner
++        )
+         try await state.waitUntilOpened()
++        haltGateDiagnosticEvent(
++            .haltGateActorWaitSucceeded, owner: diagnosticOwner
++        )
+     }
+ 
+     package func open() throws {
++        haltGateDiagnosticEvent(
++            .haltGateActorOpenEntered, owner: diagnosticOwner
++        )
+         try state.open()
++        haltGateDiagnosticEvent(
++            .haltGateActorOpenSucceeded, owner: diagnosticOwner
++        )
+     }
+ 
+     package func snapshotWaiterCount() -> Int {
+@@ -1738,7 +1841,9 @@
+             primaryToJoin = attempt.primary?.task
+         }
+         let childToken = EngineExecutionCompletionChildTokenV1()
+-        let gate = EngineExecutionStartGateV1()
++        let gate = EngineExecutionStartGateV1(
++            diagnosticExecutionId: executionId
++        )
+         let generation = entry.generation
+         let attemptToken = attempt.token
+         let handle = entry.handle
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-halt-gate-before/Sources/AgentLoopCore/Observability/RuntimeLifecycleDiagnostics.swift	2026-09-08 22:25:41
++++ Sources/AgentLoopCore/Observability/RuntimeLifecycleDiagnostics.swift	2026-09-08 22:37:23
+@@ -59,6 +59,15 @@
+     case haltInstalledCancellationQueued, haltInstalledCancellationStarted
+     case haltInstalledGateOpenCalled, haltInstalledGateOpenReturned
+     case haltInstalledGateWaitCalled, haltInstalledGateWaitReturned
++    case haltGateActorWaitEntered, haltGateActorWaitSucceeded
++    case haltGateActorOpenEntered, haltGateActorOpenSucceeded
++    case haltGateStateWaitEntered, haltGateWaitContinuationEntered
++    case haltGateWaitLockReturned, haltGateWaitResumeAttempt, haltGateWaitResumeReturned
++    case haltGateStateWaitSucceeded
++    case haltGateStateOpenEntered, haltGateOpenLockReturned
++    case haltGateOpenResumeAttempt, haltGateOpenResumeReturned
++    case haltGateCancelEntered, haltGateCancelLockReturned
++    case haltGateCancelResumeAttempt, haltGateCancelResumeReturned
+     case haltCancellationObserverCalled, haltCancellationObserverReturned
+     case haltCancellationResolveCalled, haltCancellationStateEntered
+     case haltCancellationStateSelected, haltCancellationResolverCalled

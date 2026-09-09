@@ -1,0 +1,28 @@
+diff --git a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cold-gate-fix2-before/ExecutionEngineConformanceTests.swift b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+index a45452f..608d16e 100644
+--- a/docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cold-gate-fix2-before/ExecutionEngineConformanceTests.swift
++++ b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+@@ -5775,9 +5775,11 @@ struct ExecutionEngineConformanceTests {
+             }
+             try #require(continued.count == 1)
+             let pid = continued[0].group
+-            try #require(pid > 0)
++            let hasPositivePID: Bool = pid > 0
++            try #require(hasPositivePID)
+             try #require(Darwin.getpgid(pid) == pid)
+-            try #require(Darwin.kill(pid, 0) == 0)
++            let isProcessAlive: Bool = Darwin.kill(pid, 0) == 0
++            try #require(isProcessAlive)
+             throw P1F1D065ColdForcedFailure.afterReady
+         }
+         var assessment = p1f1d065AssessColdCleanup(
+@@ -5790,7 +5792,8 @@ struct ExecutionEngineConformanceTests {
+             let frames = try report.cleanup.stream.get()
+             try #require(evidence.termSent)
+             try #require(evidence.killSent)
+-            try #require(evidence.pid > 0)
++            let hasPositiveEvidencePID: Bool = evidence.pid > 0
++            try #require(hasPositiveEvidencePID)
+             try #require(evidence.processGroupID == evidence.pid)
+             let continued = harness.processInspector.signalObservations().filter {
+                 $0.signal == SIGCONT && $0.result == 0

@@ -10,9 +10,22 @@ private func budgetTempDB() throws -> AppDatabase {
 }
 
 private func budgetArtifactRoot() throws -> URL {
-    let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-    try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-    return dir
+    let stateRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "budget-state-\(UUID().uuidString)",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: stateRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
+    let artifacts = stateRoot.appendingPathComponent("artifacts", isDirectory: true)
+    try FileManager.default.createDirectory(
+        at: artifacts,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
+    return artifacts
 }
 
 private func budgetDoneTurn() -> TurnResult {
@@ -76,6 +89,9 @@ private actor BudgetHangingProvider: LLMProvider {
 
     let orch = Orchestrator(
         db: db,
+        planningProviderResolver: TestPlanningProviderResolver(
+            provider: MockProvider(script: [budgetDoneTurn()])
+        ),
         makeProvider: { _, _ in MockProvider(script: [budgetDoneTurn()]) },
         artifactStoreRoot: try budgetArtifactRoot(),
         tickInterval: nil
@@ -96,20 +112,28 @@ private actor BudgetHangingProvider: LLMProvider {
     let ids = try db.createSingleCardMission(
         campName: "c", squadName: "s", goal: "g", cardTitle: "t",
         cardDescription: "d", expectedOutput: "o", assigneeId: companion.id, maxTurns: 5)
+    _ = try attachP1F1DispatchContext(
+        db: db,
+        missionId: ids.missionId,
+        companionId: companion.id
+    )
     try drainBudget(db, missionId: ids.missionId)
 
     let orch = Orchestrator(
         db: db,
+        planningProviderResolver: TestPlanningProviderResolver(
+            provider: MockProvider(script: [budgetDoneTurn()])
+        ),
         makeProvider: { _, _ in MockProvider(script: [budgetDoneTurn()]) },
         artifactStoreRoot: try budgetArtifactRoot(),
         tickInterval: nil
     )
-    await orch.reconcile()
+    await orch.recoverAndReconcile()
     #expect(try db.card(id: ids.cardId)?.status == .ready)
 
     // 三选：加预算 → 立即恢复派发并跑完
     try await orch.addBudget(missionId: ids.missionId, tokens: 100_000)
-    await orch.waitUntilIdle()
+    try await orch.waitUntilIdle()
     #expect(try db.card(id: ids.cardId)?.status == .done)
     #expect(try budgetEvents(db, missionId: ids.missionId, kind: "budget_added") == 1)
 
@@ -144,6 +168,9 @@ private actor BudgetHangingProvider: LLMProvider {
 
     let orch = Orchestrator(
         db: db,
+        planningProviderResolver: TestPlanningProviderResolver(
+            provider: MockProvider(script: [])
+        ),
         makeProvider: { _, _ in MockProvider(script: []) },
         artifactStoreRoot: try budgetArtifactRoot(),
         tickInterval: nil
@@ -174,6 +201,9 @@ private actor BudgetHangingProvider: LLMProvider {
 
     let orch = Orchestrator(
         db: db,
+        planningProviderResolver: TestPlanningProviderResolver(
+            provider: MockProvider(script: [])
+        ),
         makeProvider: { _, _ in MockProvider(script: []) },
         artifactStoreRoot: try budgetArtifactRoot(),
         tickInterval: nil
@@ -197,11 +227,19 @@ private actor BudgetHangingProvider: LLMProvider {
         let ids = try db.createSingleCardMission(
             campName: "c", squadName: "s\(index)", goal: "g\(index)", cardTitle: "t\(index)",
             cardDescription: "d", expectedOutput: "o", assigneeId: companion.id, maxTurns: 5)
+        _ = try attachP1F1DispatchContext(
+            db: db,
+            missionId: ids.missionId,
+            companionId: companion.id
+        )
         cardIds.append(ids.cardId)
     }
 
     let orch = Orchestrator(
         db: db,
+        planningProviderResolver: TestPlanningProviderResolver(
+            provider: BudgetHangingProvider()
+        ),
         makeProvider: { _, _ in BudgetHangingProvider() },
         artifactStoreRoot: try budgetArtifactRoot(),
         tickInterval: nil

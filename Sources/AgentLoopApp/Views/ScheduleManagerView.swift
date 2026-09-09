@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import AgentLoopCore
+import AgentLoopApplication
 
 /// M10:日程管理(营地内 sheet)——任务模板 + 定时日程 + 立即试跑 + 补跑处理。
 struct ScheduleManagerView: View {
@@ -11,15 +12,15 @@ struct ScheduleManagerView: View {
     @State private var groups: [ScheduleGroup] = []
     @State private var editingTemplate: TemplateDraft?
     @State private var editingSchedule: ScheduleDraft?
-    @State private var deletingTemplate: MissionTemplateRecord?
+    @State private var deletingTemplate: ScheduleTemplateProjection?
     @State private var residencyHintVisible = false
 
     private static let residencyHintShownKey = "scheduleResidencyHintShown"
 
     struct ScheduleGroup: Identifiable {
-        var id: String { template.id }
-        let template: MissionTemplateRecord
-        let schedules: [ScheduleRecord]
+        var id: String { template.record.id }
+        let template: ScheduleTemplateProjection
+        let schedules: [ScheduleRecordProjection]
     }
 
     var body: some View {
@@ -46,31 +47,45 @@ struct ScheduleManagerView: View {
         }
         .frame(minWidth: 560, idealWidth: 640, minHeight: 460, idealHeight: 560)
         .background(Camp.canvas)
-        .onAppear(perform: reload)
+        .task { await reload() }
         .sheet(item: $editingTemplate) { draft in
-            TemplateEditorSheet(campId: campId, draft: draft) { record in
-                if let record {
-                    if let error = store.saveScheduledMissionTemplate(record) {
-                        store.showToast("保存模板失败:\(error)")
-                    }
+            TemplateEditorSheet(campId: campId, draft: draft) { command in
+                guard let command else {
+                    editingTemplate = nil
+                    return
                 }
-                editingTemplate = nil
-                reload()
+                Task { @MainActor in
+                    guard await store.saveScheduledMissionTemplate(command)
+                    else {
+                        return
+                    }
+                    editingTemplate = nil
+                    await reload()
+                }
             }
             .environment(store)
         }
         .sheet(item: $editingSchedule) { draft in
-            ScheduleEditorSheet(draft: draft) { record in
-                if let record {
-                    store.saveMissionSchedule(record)
-                    if record.enabled { maybeShowResidencyHint() }
+            ScheduleEditorSheet(draft: draft) { command in
+                guard let command else {
+                    editingSchedule = nil
+                    return
                 }
-                editingSchedule = nil
-                scheduleReloadSoon()
+                Task { @MainActor in
+                    guard await store.saveMissionSchedule(
+                        command,
+                        calendar: .current
+                    ) else {
+                        return
+                    }
+                    if command.enabled { maybeShowResidencyHint() }
+                    editingSchedule = nil
+                    await reload()
+                }
             }
         }
         .confirmationDialog(
-            "删除模板「\(deletingTemplate?.name ?? "")」?",
+            "删除模板「\(deletingTemplate?.record.name ?? "")」?",
             isPresented: Binding(
                 get: { deletingTemplate != nil },
                 set: { if !$0 { deletingTemplate = nil } }
@@ -79,10 +94,15 @@ struct ScheduleManagerView: View {
         ) {
             Button("删除模板与其日程", role: .destructive) {
                 if let template = deletingTemplate {
-                    store.deleteScheduledMissionTemplate(id: template.id)
+                    Task { @MainActor in
+                        if await store.deleteScheduledMissionTemplate(
+                            id: template.record.id
+                        ) {
+                            await reload()
+                        }
+                    }
                 }
                 deletingTemplate = nil
-                reload()
             }
             Button("再想想", role: .cancel) { deletingTemplate = nil }
         } message: {
@@ -186,22 +206,22 @@ struct ScheduleManagerView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(group.template.name)
+                    Text(group.template.record.name)
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(Camp.ink)
-                    Text(group.template.goal)
+                    Text(group.template.record.goal)
                         .font(.caption)
                         .foregroundStyle(Camp.inkSecondary)
                         .lineLimit(2)
                 }
                 Spacer()
                 CampChip(
-                    text: "\((group.template.budgetTokens ?? 0) / 1000)k 预算",
+                    text: "\(group.template.budgetTokens / 1000)k 预算",
                     color: Camp.moss,
                     icon: "creditcard"
                 )
                 CampChip(
-                    text: group.template.autonomy.displayName,
+                    text: group.template.record.autonomy.displayName,
                     color: Camp.stone,
                     icon: "shield"
                 )
@@ -211,19 +231,23 @@ struct ScheduleManagerView: View {
                     .font(.caption)
                     .foregroundStyle(Camp.inkSecondary)
             } else {
-                ForEach(group.schedules, id: \.id) { schedule in
-                    scheduleRow(schedule, template: group.template)
+                ForEach(group.schedules, id: \.record.id) { schedule in
+                    scheduleRow(schedule)
                 }
             }
             HStack(spacing: 8) {
                 Button {
-                    editingSchedule = ScheduleDraft(templateId: group.template.id)
+                    editingSchedule = ScheduleDraft(
+                        templateId: group.template.record.id
+                    )
                 } label: {
                     Label("添加日程", systemImage: "clock.badge.plus")
                 }
                 .buttonStyle(CampSecondaryButtonStyle())
                 Button {
-                    editingTemplate = TemplateDraft(record: group.template)
+                    editingTemplate = TemplateDraft(
+                        projection: group.template
+                    )
                 } label: {
                     Label("编辑模板", systemImage: "square.and.pencil")
                 }
@@ -240,12 +264,15 @@ struct ScheduleManagerView: View {
         .campCard()
     }
 
-    private func scheduleRow(_ schedule: ScheduleRecord, template: MissionTemplateRecord) -> some View {
-        HStack(spacing: 10) {
+    private func scheduleRow(
+        _ projection: ScheduleRecordProjection
+    ) -> some View {
+        let schedule = projection.record
+        return HStack(spacing: 10) {
             Image(systemName: schedule.enabled ? "clock.fill" : "clock")
                 .foregroundStyle(schedule.enabled ? Camp.ember : Camp.stone)
             VStack(alignment: .leading, spacing: 2) {
-                Text(Self.describe(schedule))
+                Text(Self.describe(projection))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Camp.ink)
                 Text(nextFireText(schedule))
@@ -262,16 +289,26 @@ struct ScheduleManagerView: View {
             Toggle("", isOn: Binding(
                 get: { schedule.enabled },
                 set: { enabled in
-                    store.setMissionScheduleEnabled(id: schedule.id, enabled: enabled)
-                    if enabled { maybeShowResidencyHint() }
-                    scheduleReloadSoon()
+                    Task { @MainActor in
+                        guard await store.setMissionScheduleEnabled(
+                            id: schedule.id,
+                            enabled: enabled
+                        ) else {
+                            return
+                        }
+                        if enabled { maybeShowResidencyHint() }
+                        await reload()
+                    }
                 }
             ))
             .toggleStyle(.switch)
             .labelsHidden()
             Button {
-                store.deleteMissionSchedule(id: schedule.id)
-                reload()
+                Task { @MainActor in
+                    if await store.deleteMissionSchedule(id: schedule.id) {
+                        await reload()
+                    }
+                }
             } label: {
                 Image(systemName: "trash")
             }
@@ -282,17 +319,19 @@ struct ScheduleManagerView: View {
         .padding(.vertical, 4)
     }
 
-    private func reload() {
-        groups = store.scheduleGroups(campId: campId).map {
-            ScheduleGroup(template: $0.template, schedules: $0.schedules)
-        }
-    }
-
-    /// 门面方法内部是异步落库;稍等一拍再刷新列表,避免读到旧值。
-    private func scheduleReloadSoon() {
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(200))
-            reload()
+    private func reload() async {
+        switch await store.loadScheduleWorkflow(campId: campId) {
+        case .loaded(let snapshot):
+            groups = snapshot.templates.map { template in
+                ScheduleGroup(
+                    template: template,
+                    schedules: snapshot.schedules.filter {
+                        $0.record.templateId == template.record.id
+                    }
+                )
+            }
+        case .failed, .idle, .loading:
+            break
         }
     }
 
@@ -322,11 +361,16 @@ struct ScheduleManagerView: View {
         return "下次:\(Self.stamp(next))"
     }
 
-    static func describe(_ schedule: ScheduleRecord) -> String {
+    static func describe(_ projection: ScheduleRecordProjection) -> String {
+        let schedule = projection.record
         let time = String(format: "%02d:%02d", schedule.hour, schedule.minute)
         switch schedule.frequency {
         case .daily: return "每天 \(time)"
-        case .weekly: return "每\(weekdayName(schedule.weekday ?? 2)) \(time)"
+        case .weekly:
+            guard let weekday = projection.validatedWeekday else {
+                return "每周 \(time)"
+            }
+            return "每\(weekdayName(weekday)) \(time)"
         }
     }
 
@@ -365,12 +409,13 @@ struct TemplateDraft: Identifiable {
         isNew = true
     }
 
-    init(record: MissionTemplateRecord) {
+    init(projection: ScheduleTemplateProjection) {
+        let record = projection.record
         id = record.id
         name = record.name
         goal = record.goal
-        companionId = (try? record.companionIds().first) ?? ""
-        budgetText = "\(record.budgetTokens ?? KernelDefaults.missionBudget)"
+        companionId = projection.primaryCompanionId
+        budgetText = "\(projection.budgetTokens)"
         autonomy = record.autonomy
         workspacePath = record.workspacePath ?? ""
         isNew = false
@@ -380,10 +425,9 @@ struct TemplateDraft: Identifiable {
 private struct TemplateEditorSheet: View {
     let campId: String
     @State var draft: TemplateDraft
-    var onFinish: (MissionTemplateRecord?) -> Void
+    var onFinish: (ScheduleTemplateDraftCommand?) -> Void
 
     @Environment(AppStore.self) private var store
-    @State private var validationMessage: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -455,12 +499,6 @@ private struct TemplateEditorSheet: View {
                 }
             }
 
-            if let validationMessage {
-                Label(validationMessage, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(Camp.charcoalRed)
-            }
-
             HStack {
                 Spacer()
                 Button("取消") { onFinish(nil) }
@@ -496,39 +534,18 @@ private struct TemplateEditorSheet: View {
     }
 
     private func save() {
-        let budget = Int(draft.budgetText.trimmingCharacters(in: .whitespaces))
-        do {
-            let record: MissionTemplateRecord
-            if draft.isNew {
-                record = try MissionTemplateRecord.new(
-                    name: draft.name.trimmingCharacters(in: .whitespacesAndNewlines),
-                    goal: draft.goal.trimmingCharacters(in: .whitespacesAndNewlines),
-                    companionIds: draft.companionId.isEmpty ? [] : [draft.companionId],
-                    workspacePath: draft.workspacePath.isEmpty ? nil : draft.workspacePath,
-                    budgetTokens: budget,
-                    autonomy: draft.autonomy,
-                    campId: campId
-                )
-            } else {
-                record = MissionTemplateRecord(
-                    id: draft.id,
-                    name: draft.name.trimmingCharacters(in: .whitespacesAndNewlines),
-                    goal: draft.goal.trimmingCharacters(in: .whitespacesAndNewlines),
-                    companionIdsJson: try MissionTemplateRecord.companionIdsJSON(
-                        draft.companionId.isEmpty ? [] : [draft.companionId]
-                    ),
-                    workspacePath: draft.workspacePath.isEmpty ? nil : draft.workspacePath,
-                    budgetTokens: budget,
-                    autonomy: draft.autonomy,
-                    campId: campId,
-                    createdAt: Date()
-                )
-            }
-            _ = try record.validateForScheduledMission()
-            onFinish(record)
-        } catch {
-            validationMessage = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
-        }
+        onFinish(
+            ScheduleTemplateDraftCommand(
+                existingId: draft.id,
+                campId: campId,
+                name: draft.name,
+                goal: draft.goal,
+                companionId: draft.companionId,
+                workspacePath: draft.workspacePath,
+                budgetText: draft.budgetText,
+                autonomy: draft.autonomy
+            )
+        )
     }
 }
 
@@ -539,18 +556,20 @@ struct ScheduleDraft: Identifiable {
     var templateId: String
     var frequency: ScheduleFrequency = .daily
     var weekday = 2
-    var time = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
+    var time: Date
     var enabled = true
 
     init(templateId: String) {
         id = UUID().uuidString
         self.templateId = templateId
+        time = Calendar.current.startOfDay(for: Date())
+            .addingTimeInterval(9 * 60 * 60)
     }
 }
 
 private struct ScheduleEditorSheet: View {
     @State var draft: ScheduleDraft
-    var onFinish: (ScheduleRecord?) -> Void
+    var onFinish: (ScheduleDraftCommand?) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -597,12 +616,10 @@ private struct ScheduleEditorSheet: View {
                     .buttonStyle(CampSecondaryButtonStyle())
                     .keyboardShortcut(.cancelAction)
                 Button("保存") {
-                    let components = Calendar.current.dateComponents([.hour, .minute], from: draft.time)
-                    onFinish(ScheduleRecord.new(
+                    onFinish(ScheduleDraftCommand(
                         templateId: draft.templateId,
                         frequency: draft.frequency,
-                        hour: components.hour ?? 9,
-                        minute: components.minute ?? 0,
+                        selectedTime: draft.time,
                         weekday: draft.frequency == .weekly ? draft.weekday : nil,
                         enabled: draft.enabled
                     ))

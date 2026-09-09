@@ -1,0 +1,122 @@
+P0 privacy scan
+Date: 2026-07-25
+Scope: all P0 text deliverables (root guidance, protocol, master/historical
+specs, and docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p0)
+
+Method
+------
+All P0 text deliverables and non-JPEG task artifacts were scanned with ripgrep
+PCRE2 patterns for:
+
+1. credential-shaped values (`sk-…`, long Bearer values, OAuth/API key query values);
+2. email addresses;
+3. HTTP(S) URLs containing query strings;
+4. session/account/credential labels followed by concrete long values.
+
+The output file itself was excluded so the documented patterns cannot match
+their own description. Matches, if any, were counted by filename without
+printing candidate secret values.
+
+Executed command shape (repeated once per pattern):
+
+    task_dir='docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p0'
+    root_files=(AGENTS.md CLAUDE.md README.md
+      docs/collaboration/claude-codex-protocol.md
+      docs/superpowers/specs/2026-07-04-agentloop-macos-mvp-design.md
+      docs/superpowers/specs/2026-07-06-agentloop-v2-design.md
+      docs/superpowers/specs/2026-07-15-coding-ranch-visual-design.md
+      docs/superpowers/specs/2026-07-25-personal-ai-ranch-master-spec.md)
+    { printf '%s\0' "${root_files[@]}"
+      find "$task_dir" -type f ! -name '*.jpg' ! -name 'privacy-scan.txt' -print0
+    } |
+      xargs -0 rg -l --pcre2 '<pattern>' |
+      sort -u |
+      wc -l
+
+The exact four PCRE2 patterns were:
+
+    (?i)(sk-[A-Za-z0-9_-]{16,}|bearer\s+[A-Za-z0-9._~+/-]{16,}|(?:access_token|refresh_token|api_key|oauth_code|authorization_code|state|code)=[A-Za-z0-9._~+/%-]{8,})
+    (?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}
+    https?://[^[:space:]<>"`?]+\?[^[:space:]<>"`]+
+    (?i)(?:session|account|credential)[^\r\n]{0,40}[=:][[:space:]]*[A-Za-z0-9._~+/-]{12,}
+
+Result
+------
+credential_like_files=0
+email_files=0
+query_url_files=0
+account_value_files=0
+
+The sole persisted CLI session line is:
+
+session id: [redacted ephemeral session]
+
+The three UI screenshots are JPEG files, not text-scan inputs. They are private
+local test evidence captured from Ranch product pages; no credential, account,
+OAuth, Keychain, or settings screen was intentionally captured. This scan does
+not claim OCR-based proof for binary images and does not make them public.
+
+Conclusion
+----------
+PASS for the text artifacts in scope. No credential-shaped value, email,
+query-bearing callback URL, or concrete session/account value was detected.
+
+Post-Round-4 rescan
+-------------------
+The same scan was rerun after the frozen Round 4 review and blocker/status
+documents were added.
+
+Raw counts:
+
+credential_like_files=1
+email_files=0
+query_url_files=0
+account_value_files=0
+
+The sole raw credential-pattern match was manually classified without printing
+any candidate value: `p1-plan.md:1671` contains the schema/state assertion
+`dispatchState=terminal`. The broad query-parameter alternative matched the
+`state=terminal` substring inside that identifier. It is product-contract text,
+not a credential, callback, account, or session value.
+
+Net result after classification:
+
+credential_like_files=0
+email_files=0
+query_url_files=0
+account_value_files=0
+
+Conclusion remains PASS for all text artifacts currently in scope.
+
+Final P0 acceptance rescan
+--------------------------
+The same filename-only scan was rerun on 2026-07-26 after Review08,
+`acceptance.md`, final-audit evidence, and all P0 status documents were
+present. The scan still excluded this report and the three private JPEGs.
+
+Raw matching files:
+
+credential_like_files=2
+email_files=0
+query_url_files=0
+account_value_files=1
+
+All raw matches were manually classified without exposing any credential:
+
+- `p1-plan.md:2477` is the schema assertion `dispatchState=terminal`;
+- `p1-stage-spec.md:2065` and `:2074` are the normative state tokens
+  `state=tombstoned` and `state=rejected`;
+- `p1-stage-spec.md:6305` and `:6345` compare the schema field
+  `sessionScopeHash` with `OLD.sessionScopeHash`.
+
+These are product-contract identifiers and fixed state tokens, not secrets,
+callback parameters, accounts, sessions, or credential values.
+
+Final net result:
+
+credential_like_files=0
+email_files=0
+query_url_files=0
+account_value_files=0
+
+Conclusion: PASS for every final P0 text artifact in scope.

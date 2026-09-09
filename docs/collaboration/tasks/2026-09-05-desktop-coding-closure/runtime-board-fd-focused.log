@@ -1,0 +1,170 @@
+COMMAND=swift run RunTests --filter p1f1d075FD
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/7] Emitting module AgentLoopTestSuite
+[4/7] Compiling AgentLoopTestSuite CliBackendTests.swift
+[5/7] Compiling AgentLoopTestSuite BoardServerTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[5/8] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[6/8] Linking RunTests
+[7/8] Applying RunTests
+Build of product 'RunTests' complete! (19.57s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test p1f1d075FDChildFailureReachesParent() started.
+◇ Test p1f1d075FDClaimRejectsOccupiedTargetWithoutClosingIt() started.
+✔ Test p1f1d075FDClaimRejectsOccupiedTargetWithoutClosingIt() passed after 0.002 seconds.
+
+=== FD CHILD BEGIN label=p1f1d-075-fd-child mode=expected-failure pid=26409 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-5A211783-A657-4291-82E8-29B10DF8DB17/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-5A211783-A657-4291-82E8-29B10DF8DB17/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() started.
+✘ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() recorded an issue at CliBackendTests.swift:4485:2: Caught error: deliberateChildFailure
+✘ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() failed after 0.001 seconds with 1 issue.
+✘ Test run with 1 test in 0 suites failed after 0.001 seconds with 1 issue.
+
+=== FD CHILD PHASE EVIDENCE label=p1f1d-075-fd-child mode=expected-failure pid=26409 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-5A211783-A657-4291-82E8-29B10DF8DB17/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-5A211783-A657-4291-82E8-29B10DF8DB17/phases.evidence ===
+
+=== FD CHILD END label=p1f1d-075-fd-child mode=expected-failure pid=26409 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-5A211783-A657-4291-82E8-29B10DF8DB17/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-5A211783-A657-4291-82E8-29B10DF8DB17/phases.evidence read-errors=[] ===
+✔ Test p1f1d075FDChildFailureReachesParent() passed after 0.132 seconds.
+✔ Test run with 2 tests in 0 suites passed after 0.133 seconds.
+COMMAND_EXIT=0
+COMMAND=swift run RunTests --filter p1f1_075CLIHelpCapabilityMismatchIsUnsupported
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.15s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() started.
+
+=== FD CHILD BEGIN label=p1f1d-075-fd-child mode=drain pid=26422 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-C185864F-64F2-4A17-9719-7BB3669D8844/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-C185864F-64F2-4A17-9719-7BB3669D8844/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() started.
+✔ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() passed after 3.043 seconds.
+✔ Test run with 1 test in 0 suites passed after 3.043 seconds.
+
+=== FD CHILD PHASE EVIDENCE label=p1f1d-075-fd-child mode=drain pid=26422 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-C185864F-64F2-4A17-9719-7BB3669D8844/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-C185864F-64F2-4A17-9719-7BB3669D8844/phases.evidence ===
+live-drain
+surviving-run
+surviving-abort
+
+=== FD CHILD END label=p1f1d-075-fd-child mode=drain pid=26422 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-C185864F-64F2-4A17-9719-7BB3669D8844/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-C185864F-64F2-4A17-9719-7BB3669D8844/phases.evidence read-errors=[] ===
+✔ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() passed after 33.536 seconds.
+✔ Test run with 1 test in 0 suites passed after 33.536 seconds.
+COMMAND_EXIT=0
+COMMAND=swift run RunTests --filter boardFDIsolatedLeakStillFailsParent
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.15s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardFDIsolatedLeakStillFailsParent() started.
+
+=== FD CHILD BEGIN label=board-fd-blocked-handler-child mode=blocked-handler-leak-proof pid=26564 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-7C083F8E-A33C-4727-A629-79A0019CE532/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-7C083F8E-A33C-4727-A629-79A0019CE532/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerStopWaitsForBlockedHandlerThenCloses() started.
+BOARD FD MEASUREMENT mode=blocked-handler-leak-proof pid=26564 baseline=4 final=36 delta=32 iterations=20
+✘ Test boardServerStopWaitsForBlockedHandlerThenCloses() recorded an issue at BoardServerTests.swift:904:9: Expectation failed: (finalCount - baseline → 32) < 10
+✘ Test boardServerStopWaitsForBlockedHandlerThenCloses() failed after 2.363 seconds with 1 issue.
+✘ Suite BoardServerTests failed after 2.363 seconds with 1 issue.
+✘ Test run with 1 test in 1 suite failed after 2.363 seconds with 1 issue.
+
+=== FD CHILD PHASE EVIDENCE label=board-fd-blocked-handler-child mode=blocked-handler-leak-proof pid=26564 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-7C083F8E-A33C-4727-A629-79A0019CE532/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-7C083F8E-A33C-4727-A629-79A0019CE532/phases.evidence ===
+blocked-handler:20
+
+=== FD CHILD END label=board-fd-blocked-handler-child mode=blocked-handler-leak-proof pid=26564 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-7C083F8E-A33C-4727-A629-79A0019CE532/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-7C083F8E-A33C-4727-A629-79A0019CE532/phases.evidence read-errors=[] ===
+✔ Test boardFDIsolatedLeakStillFailsParent() passed after 2.504 seconds.
+✔ Suite BoardServerTests passed after 2.505 seconds.
+✔ Test run with 1 test in 1 suite passed after 2.505 seconds.
+COMMAND_EXIT=0
+COMMAND=swift run RunTests --filter boardServerStopWaitsForBlockedHandlerThenCloses
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerStopWaitsForBlockedHandlerThenCloses() started.
+
+=== FD CHILD BEGIN label=board-fd-blocked-handler-child mode=blocked-handler pid=26580 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-7845B120-B418-4BE2-9359-49E7278487F2/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-7845B120-B418-4BE2-9359-49E7278487F2/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerStopWaitsForBlockedHandlerThenCloses() started.
+BOARD FD MEASUREMENT mode=blocked-handler pid=26580 baseline=4 final=4 delta=0 iterations=20
+✔ Test boardServerStopWaitsForBlockedHandlerThenCloses() passed after 2.391 seconds.
+✔ Suite BoardServerTests passed after 2.392 seconds.
+✔ Test run with 1 test in 1 suite passed after 2.392 seconds.
+
+=== FD CHILD PHASE EVIDENCE label=board-fd-blocked-handler-child mode=blocked-handler pid=26580 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-7845B120-B418-4BE2-9359-49E7278487F2/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-7845B120-B418-4BE2-9359-49E7278487F2/phases.evidence ===
+blocked-handler:20
+
+=== FD CHILD END label=board-fd-blocked-handler-child mode=blocked-handler pid=26580 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-7845B120-B418-4BE2-9359-49E7278487F2/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-blocked-handler-child-7845B120-B418-4BE2-9359-49E7278487F2/phases.evidence read-errors=[] ===
+✔ Test boardServerStopWaitsForBlockedHandlerThenCloses() passed after 2.534 seconds.
+✔ Suite BoardServerTests passed after 2.534 seconds.
+✔ Test run with 1 test in 1 suite passed after 2.534 seconds.
+COMMAND_EXIT=0
+COMMAND=swift run RunTests --filter boardServerStopWakesBlockedAcceptLoopAndReleasesListener
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() started.
+
+=== FD CHILD BEGIN label=board-fd-accept-loop-child mode=accept-loop pid=26595 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-accept-loop-child-1059F3F8-0E73-4BAB-B8D2-023908D21CF3/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-accept-loop-child-1059F3F8-0E73-4BAB-B8D2-023908D21CF3/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite BoardServerTests started.
+◇ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() started.
+BOARD FD MEASUREMENT mode=accept-loop pid=26595 baseline=4 final=4 delta=0 iterations=100
+✔ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() passed after 0.336 seconds.
+✔ Suite BoardServerTests passed after 0.336 seconds.
+✔ Test run with 1 test in 1 suite passed after 0.336 seconds.
+
+=== FD CHILD PHASE EVIDENCE label=board-fd-accept-loop-child mode=accept-loop pid=26595 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-accept-loop-child-1059F3F8-0E73-4BAB-B8D2-023908D21CF3/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-accept-loop-child-1059F3F8-0E73-4BAB-B8D2-023908D21CF3/phases.evidence ===
+accept-loop:100
+
+=== FD CHILD END label=board-fd-accept-loop-child mode=accept-loop pid=26595 raw-status=0 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-accept-loop-child-1059F3F8-0E73-4BAB-B8D2-023908D21CF3/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/board-fd-accept-loop-child-1059F3F8-0E73-4BAB-B8D2-023908D21CF3/phases.evidence read-errors=[] ===
+✔ Test boardServerStopWakesBlockedAcceptLoopAndReleasesListener() passed after 0.488 seconds.
+✔ Suite BoardServerTests passed after 0.488 seconds.
+✔ Test run with 1 test in 1 suite passed after 0.488 seconds.
+COMMAND_EXIT=0
+COMMAND=swift run RunTests --filter a3Revision02EntryBoundaryRemainsByteExact
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test a3Revision02EntryBoundaryRemainsByteExact() started.
+✔ Test a3Revision02EntryBoundaryRemainsByteExact() passed after 0.049 seconds.
+✔ Test run with 1 test in 0 suites passed after 0.049 seconds.
+COMMAND_EXIT=0

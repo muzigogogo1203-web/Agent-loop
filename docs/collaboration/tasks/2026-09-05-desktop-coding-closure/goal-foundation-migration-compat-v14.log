@@ -1,0 +1,28 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.37s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1CControlContractMigrationTests started.
+◇ Test controlContractMigrationExactDDLAndConstraints() started.
+✔ Test controlContractMigrationExactDDLAndConstraints() passed after 0.053 seconds.
+◇ Test controlContractMigrationReplaysFromFreshAndV11Twice() started.
+✔ Test controlContractMigrationReplaysFromFreshAndV11Twice() passed after 0.077 seconds.
+◇ Test controlContractMigrationRollbackLeavesV13Untouched() started.
+✔ Test controlContractMigrationRollbackLeavesV13Untouched() passed after 0.029 seconds.
+◇ Test controlContractAppendOnlyTablesRejectNoopUpdateAndDelete() started.
+✔ Test controlContractAppendOnlyTablesRejectNoopUpdateAndDelete() passed after 0.025 seconds.
+◇ Test controlContractSchemaHasExactInboxRedactionShape() started.
+✔ Test controlContractSchemaHasExactInboxRedactionShape() passed after 0.026 seconds.
+◇ Test inputSchemaHasNoParseAttemptColumn() started.
+✔ Test inputSchemaHasNoParseAttemptColumn() passed after 0.022 seconds.
+◇ Test inputSchemaRejectsDeletedStatusWithActiveRetention() started.
+✔ Test inputSchemaRejectsDeletedStatusWithActiveRetention() passed after 0.026 seconds.
+◇ Test activeInputRequiresExactlyOneInlineOrPayloadRef() started.
+✔ Test activeInputRequiresExactlyOneInlineOrPayloadRef() passed after 0.026 seconds.
+◇ Test inputSchemaRejectsTombstoneRetentionWithLiveStatus() started.
+✔ Test inputSchemaRejectsTombstoneRetentionWithLiveStatus() passed after 0.023 seconds.
+✔ Suite P1CControlContractMigrationTests passed after 0.311 seconds.
+✔ Test run with 9 tests in 1 suite passed after 0.312 seconds.

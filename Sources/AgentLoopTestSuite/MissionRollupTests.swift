@@ -19,7 +19,8 @@ import AgentLoopCore
     #expect(MissionStatus.rollup(current: .executing, cards: [.canceled]) == .failed)
 }
 
-@Test func rollupTerminalStatesSticky() {
-    #expect(MissionStatus.rollup(current: .accepted, cards: [.todo]) == .accepted)
+@Test func rollupAcceptedReworkResumesExecutingAndFailedRemainsSticky() {
+    #expect(MissionStatus.rollup(current: .accepted, cards: [.todo]) == .executing)
+    #expect(MissionStatus.rollup(current: .accepted, cards: [.done]) == .accepted)
     #expect(MissionStatus.rollup(current: .failed, cards: [.done]) == .failed)
 }

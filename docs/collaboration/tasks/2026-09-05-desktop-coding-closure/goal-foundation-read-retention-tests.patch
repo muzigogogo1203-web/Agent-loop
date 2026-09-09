@@ -1,0 +1,269 @@
+*** Begin Patch
+*** Update File: /Users/muzi/Agent-loop/Sources/AgentLoopCore/Domain/DesktopGoalWorkflow.swift
+@@
+         try values.encode(receipt, forKey: .receipt)
+     }
+ }
++
++package struct DesktopGoalOperationSnapshotV1: Sendable, Equatable {
++    package let operationId: String
++    package let inputId: String
++    package let owner: DesktopGoalOperationOwnerV1
++    package let kind: String
++    package let version: Int
++    package let phase: DesktopGoalOperationPhaseV1
++    package let requestHash: String
++    package let intent: DesktopGoalCaptureIntentV1?
++    package let stages: [DesktopGoalSealedStageV1]
++    package let safeReceipt: DesktopGoalCaptureReceiptV1?
++}
++
++package struct DesktopGoalFoundationSnapshotV1: Sendable, Equatable {
++    package let context: DesktopGoalContextV1
++    package let contextVersion: Int
++    package let input: InputEnvelopeRecord
++    package let goal: GoalControllerRecord?
++    package let session: CoachSessionRecord?
++    package let operations: [DesktopGoalOperationSnapshotV1]
++    package let work: [DurableWorkRecord]
++}
++
++package enum DesktopGoalFoundationReadV1: Sendable, Equatable {
++    case live(DesktopGoalFoundationSnapshotV1)
++    case deleted(inputId: String, goalId: String)
++}
+*** Update File: /Users/muzi/Agent-loop/Sources/AgentLoopCore/Database/DesktopGoalWorkflowStore.swift
+@@
+ import Foundation
+ import GRDB
++
++// Read/retention integration RED scaffold: no successful snapshot is fabricated.
++private enum DesktopGoalReadNotImplemented: Error { case integrationCheckpoint }
+@@
+     package init(database: AppDatabase) {
+         self.database = database
+     }
++
++    package func snapshot(inputId: String, campId: String) throws -> DesktopGoalFoundationReadV1 {
++        throw DesktopGoalReadNotImplemented.integrationCheckpoint
++    }
++
++    package func list(campId: String) throws -> [DesktopGoalFoundationReadV1] {
++        throw DesktopGoalReadNotImplemented.integrationCheckpoint
++    }
+*** Update File: /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/DesktopGoalFoundationTests.swift
+@@
+         let afterAppend = try desktopCaptureSQLSnapshot(database)
+         #expect(afterAppend == corrupted)
+     }
+ }
++
++// Real command setup shared by read and retention tests; no successful row is invented.
++private func desktopReadOpenActualSession(_ database: AppDatabase, intent: DesktopGoalCaptureIntentV1) throws {
++    try desktopCaptureParseActual(database, intent: intent)
++    let inputStore = InputGoalStore(database: database)
++    let inputValue = try inputStore.input(id: intent.context.inputId)
++    let input = try #require(inputValue)
++    _ = try inputStore.convertToGoal(ConvertInputToGoalCommandV1(
++        envelope: desktopTextUserEnvelope("desktop-read-convert", at: 130),
++        input: InputHeadV1(inputId: input.id, auditCampId: intent.campId, expectedInputVersion: input.aggregateVersion),
++        activeParsingBranch: .none, goalId: intent.context.goalId, title: "Read fixture", rawIntent: intent.originalText
++    ))
++    let goalValue = try inputStore.goal(id: intent.context.goalId)
++    let goal = try #require(goalValue)
++    _ = try CoachUnderstandingStore(database: database).openCoachSession(OpenCoachSessionCommandV1(
++        envelope: desktopTextUserEnvelope("desktop-read-open", at: 140),
++        goal: GoalHeadV1(goalId: goal.id, campId: goal.campId, expectedGoalVersion: goal.aggregateVersion),
++        sourceInputId: input.id, sessionId: intent.context.sessionId, nextQuestionId: desktopTextQuestionID
++    ))
++}
++
++private func desktopReadLive(_ value: DesktopGoalFoundationReadV1) throws -> DesktopGoalFoundationSnapshotV1 {
++    guard case let .live(snapshot) = value else {
++        Issue.record("Expected an actual live foundation")
++        throw DesktopGoalFoundationErrorV1.graphScopeMismatch
++    }
++    return snapshot
++}
++
++extension DesktopGoalFoundationTests {
++    @Test func scopedReadRejectsCrossCampBrokenAndUnownedGraphs() throws {
++        let (database, path) = try desktopTextDatabase()
++        try database.pool.write { db in
++            try db.execute(sql: "INSERT INTO camp(id,name,archived,createdAt) VALUES ('desktop-camp-b','Second camp',0,1)")
++            try CampLifecycleStore.insertInitialActive(campId: "desktop-camp-b", at: Date(timeIntervalSince1970: 1), database: db)
++        }
++        let first = try desktopCaptureIntent()
++        let second = try desktopCaptureSecondIntent()
++        let otherCamp = try desktopCaptureIntent(
++            inputId: "30000000-0000-4000-8000-000000000001", goalId: "30000000-0000-4000-8000-000000000002",
++            sessionId: "30000000-0000-4000-8000-000000000003", operationId: "30000000-0000-4000-8000-000000000004", campId: "desktop-camp-b"
++        )
++        let legacy = try desktopCaptureIntent(
++            inputId: "40000000-0000-4000-8000-000000000001", goalId: "40000000-0000-4000-8000-000000000002",
++            sessionId: "40000000-0000-4000-8000-000000000003", operationId: "40000000-0000-4000-8000-000000000004"
++        )
++        let store = DesktopGoalWorkflowStore(database: database)
++        _ = try store.prepareSubmission(second) // Equal createdAt; insertion order must not decide the list.
++        let firstReceipt = try store.prepareSubmission(first)
++        _ = try store.prepareSubmission(otherCamp)
++        _ = try InputGoalStore(database: database).captureAndEnqueueParsing(legacy.captureCommand())
++        let beforeReads = try desktopCaptureSQLSnapshot(database)
++        #expect(throws: Never.self) {
++            let initial = try desktopReadLive(store.snapshot(inputId: first.context.inputId, campId: first.campId))
++            #expect(initial.context == first.context)
++            #expect(initial.contextVersion == 1)
++            #expect(initial.input.id == first.context.inputId)
++            #expect(initial.input.status == .captured)
++            #expect(initial.goal == nil)
++            #expect(initial.session == nil)
++            #expect(initial.work.count == 1)
++            let parsing = try #require(initial.work.first)
++            #expect(parsing.id == firstReceipt.captureReceipt.refs.first(where: { $0.kind == .durableWork })?.id)
++            #expect(parsing.kind == .inputParsing)
++            #expect(parsing.state == .queued)
++            let operation = try #require(initial.operations.first)
++            #expect(initial.operations.count == 1)
++            #expect(operation.operationId == first.operationId)
++            #expect(operation.inputId == first.context.inputId)
++            #expect(operation.owner == .userMutation)
++            #expect(operation.kind == "submit")
++            #expect(operation.version == 3)
++            #expect(operation.phase == .prepared)
++            #expect(operation.intent == first)
++            #expect(operation.safeReceipt == firstReceipt)
++            let expectedRequestHash = try CanonicalContractCodingV1.hash(first)
++            #expect(operation.requestHash == expectedRequestHash)
++            #expect(operation.stages.count == 1)
++            #expect(operation.stages.first?.receipt != nil)
++            let a = try store.list(campId: first.campId).map { try desktopReadLive($0).input.id }
++            let b = try store.list(campId: otherCamp.campId).map { try desktopReadLive($0).input.id }
++            #expect(a == [first.context.inputId, second.context.inputId])
++            #expect(b == [otherCamp.context.inputId])
++        }
++        #expect(throws: DesktopGoalFoundationErrorV1.graphScopeMismatch) {
++            _ = try store.snapshot(inputId: first.context.inputId, campId: otherCamp.campId)
++        }
++        #expect(throws: DesktopGoalFoundationErrorV1.missingCarrier) {
++            _ = try store.snapshot(inputId: legacy.context.inputId, campId: legacy.campId)
++        }
++        let afterReads = try desktopCaptureSQLSnapshot(database)
++        #expect(afterReads == beforeReads)
++        try desktopReadOpenActualSession(database, intent: first)
++        let beforeProgressReads = try desktopCaptureSQLSnapshot(database)
++        #expect(throws: Never.self) {
++            let progressed = try desktopReadLive(store.snapshot(inputId: first.context.inputId, campId: first.campId))
++            #expect(progressed.input.status == .goalCreated)
++            let goal = try #require(progressed.goal)
++            let session = try #require(progressed.session)
++            #expect(goal.id == first.context.goalId)
++            #expect(goal.sourceInputId == first.context.inputId)
++            #expect(goal.campId == first.campId)
++            #expect(session.id == first.context.sessionId)
++            #expect(session.goalId == goal.id)
++            #expect(session.inputId == first.context.inputId)
++            #expect(progressed.work.count == 2)
++            let parsing = try #require(progressed.work.first(where: { $0.kind == .inputParsing }))
++            let coach = try #require(progressed.work.first(where: { $0.kind == .coach }))
++            #expect(parsing.state == .succeeded)
++            #expect(coach.state == .queued)
++            #expect(coach.aggregateType == "goal")
++            #expect(coach.aggregateId == goal.id)
++            #expect(coach.campId == first.campId)
++            let payload = try CanonicalContractCodingV1.decode(CoachTurnWorkInputV1.self, from: Data(coach.inputJson.utf8))
++            #expect(payload.goalId == goal.id)
++            #expect(payload.sessionId == session.id)
++        }
++        let afterProgressReads = try desktopCaptureSQLSnapshot(database)
++        #expect(afterProgressReads == beforeProgressReads)
++        try database.pool.close()
++        let reopened = try AppDatabase(path: path)
++        #expect(throws: Never.self) {
++            let restored = try desktopReadLive(DesktopGoalWorkflowStore(database: reopened).snapshot(inputId: first.context.inputId, campId: first.campId))
++            #expect(restored.session?.id == first.context.sessionId)
++            #expect(restored.work.count == 2)
++        }
++        let afterRestartRead = try desktopCaptureSQLSnapshot(reopened)
++        #expect(afterRestartRead == beforeProgressReads)
++
++        // Isolated corruption cases cannot be concealed by filtering away the damaged owned row.
++        for corruption in ["contextHash", "missingInput", "goalSource", "sessionInput", "parsingAggregate", "parsingCamp", "coachGoal", "coachSession", "coachHash"] {
++            let (brokenDB, _) = try desktopTextDatabase()
++            let intent = try desktopCaptureIntent()
++            let receipt = try DesktopGoalWorkflowStore(database: brokenDB).prepareSubmission(intent)
++            let parsingID = try #require(receipt.captureReceipt.refs.first(where: { $0.kind == .durableWork })?.id)
++            if corruption != "missingInput" { try desktopReadOpenActualSession(brokenDB, intent: intent) }
++            try brokenDB.pool.write { db in
++                switch corruption {
++                case "contextHash":
++                    try db.execute(sql: "UPDATE desktop_goal_context SET contextHash=? WHERE inputId=?", arguments: [String(repeating: "0", count: 64), intent.context.inputId])
++                case "missingInput":
++                    try db.execute(sql: "DELETE FROM input_envelope WHERE id=?", arguments: [intent.context.inputId])
++                case "goalSource":
++                    try db.execute(sql: "UPDATE goal_controller SET sourceInputId=NULL WHERE id=?", arguments: [intent.context.goalId])
++                case "sessionInput":
++                    try db.execute(sql: "UPDATE coach_session SET inputId=NULL WHERE id=?", arguments: [intent.context.sessionId])
++                case "parsingAggregate":
++                    try db.execute(sql: "UPDATE durable_work SET aggregateId=? WHERE id=?", arguments: ["50000000-0000-4000-8000-000000000001", parsingID])
++                case "parsingCamp":
++                    try db.execute(sql: "INSERT INTO camp(id,name,archived,createdAt) VALUES ('desktop-wrong-camp','Wrong camp',0,1)")
++                    try db.execute(sql: "UPDATE durable_work SET campId='desktop-wrong-camp' WHERE id=?", arguments: [parsingID])
++                case "coachGoal", "coachSession", "coachHash":
++                    let workValue = try DurableWorkRecord.filter(Column("kind") == "coach").filter(Column("aggregateId") == intent.context.goalId).fetchOne(db)
++                    let work = try #require(workValue)
++                    if corruption == "coachHash" {
++                        try db.execute(sql: "UPDATE durable_work SET inputHash=? WHERE id=?", arguments: [String(repeating: "0", count: 64), work.id])
++                    } else {
++                        let objectValue = try JSONSerialization.jsonObject(with: Data(work.inputJson.utf8))
++                        var object = try #require(objectValue as? [String: Any])
++                        object[corruption == "coachGoal" ? "goalId" : "sessionId"] = "50000000-0000-4000-8000-000000000001"
++                        let bytes = try desktopTextCanonicalFixture(object)
++                        try db.execute(sql: "UPDATE durable_work SET inputJson=?,inputHash=? WHERE id=?", arguments: [String(decoding: bytes, as: UTF8.self), CanonicalJSONV1.sha256Hex(bytes), work.id])
++                    }
++                default:
++                    Issue.record("Unknown isolated graph corruption")
++                    throw DesktopGoalFoundationErrorV1.invalidIntent
++                }
++            }
++            let corrupted = try desktopCaptureSQLSnapshot(brokenDB)
++            let expected: DesktopGoalFoundationErrorV1 = ["contextHash", "coachHash"].contains(corruption) ? .corruptCanonicalPayload : .graphScopeMismatch
++            #expect(throws: expected) {
++                _ = try DesktopGoalWorkflowStore(database: brokenDB).snapshot(inputId: intent.context.inputId, campId: intent.campId)
++            }
++            let after = try desktopCaptureSQLSnapshot(brokenDB)
++            #expect(after == corrupted)
++        }
++    }
++
++    @Test func archivedOrInactiveCampCannotCaptureButExistingRecordsRemainReadable() throws {
++        for state in ["archived", "deletionRequested", "legacyArchived"] {
++            let (database, _) = try desktopTextDatabase()
++            let original = try desktopCaptureIntent()
++            let store = DesktopGoalWorkflowStore(database: database)
++            _ = try store.prepareSubmission(original)
++            try database.pool.write { db in
++                if state == "legacyArchived" {
++                    try db.execute(sql: "UPDATE camp SET archived=1 WHERE id=?", arguments: [original.campId])
++                } else {
++                    try db.execute(sql: "UPDATE camp_lifecycle SET state=?,deletionRequestedAt=? WHERE campId=?", arguments: [state, state == "deletionRequested" ? Date(timeIntervalSince1970: 150) : nil, original.campId])
++                }
++            }
++            let before = try desktopCaptureSQLSnapshot(database)
++            let incoming = try desktopCaptureSecondIntent()
++            let expected: CampLifecycleWriteAuthorizationError = state == "legacyArchived" ? .legacyArchived : .inactive(state == "archived" ? .archived : .deletionRequested)
++            #expect(throws: expected) { _ = try store.prepareSubmission(incoming) }
++            #expect(throws: Never.self) {
++                let read = try desktopReadLive(store.snapshot(inputId: original.context.inputId, campId: original.campId))
++                #expect(read.context == original.context)
++                #expect(read.input.status == .captured)
++                #expect(read.operations.first?.phase == .prepared)
++                #expect(read.operations.first?.intent == original)
++                let listed = try store.list(campId: original.campId).map { try desktopReadLive($0).input.id }
++                #expect(listed == [original.context.inputId])
++            }
++            let after = try desktopCaptureSQLSnapshot(database)
++            #expect(after == before)
++        }
++    }
++}
+*** End Patch

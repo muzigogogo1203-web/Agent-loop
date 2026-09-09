@@ -194,6 +194,7 @@ private func runGuideChat(
 
 // MARK: - 提案确认（Orchestrator 层，D10）
 
+@MainActor
 @Test func confirmSquadProposalStartsMissionWithBudgetAndIsIdempotent() async throws {
     let db = try guideTempDB()
     let camp = try db.ensureDefaultCamp()
@@ -207,15 +208,49 @@ private func runGuideChat(
         threadId: thread.id, role: "guide", contentJson: try block.encodedString())
 
     // 规划走回退（空脚本）也不影响建队
+    let provider = MockProvider(script: [])
+    let runtime = try testPlanningRuntimeSelection(db: db, model: "m")
+    let stateRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "guide-confirmed-proposal-state-\(UUID().uuidString)",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: stateRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
+    defer { try? FileManager.default.removeItem(at: stateRoot) }
+    let artifactRoot = stateRoot.appendingPathComponent(
+        "artifacts",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: artifactRoot,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+    )
     let orch = Orchestrator(
         db: db,
-        makeProvider: { _, _ in MockProvider(script: []) },
-        artifactStoreRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
+        planningProviderResolver: TestPlanningProviderResolver(provider: provider),
+        makeProvider: { _, _ in provider },
+        artifactStoreRoot: artifactRoot,
         tickInterval: nil
     )
     // 不等 waitUntilIdle：空脚本 mock 的规划/派发重试链很慢，确认动作的断言全部同步可得，
     // 后台规划任务由 shutdown 取消。
-    let missionId = try await orch.confirmSquadProposal(messageId: messageId, plannerModel: "m")
+    let coordinator = PlanningEntryCoordinator(
+        db: db,
+        orchestrator: orch,
+        makeUUIDString: { "guide-confirmed-proposal-trace" }
+    )
+    let captured = try coordinator.captureConfirmedProposal(
+        messageId: messageId,
+        runtime: runtime,
+        fallbackBudget: KernelDefaults.missionBudget,
+        autonomy: .standard
+    )
+    await orch.recoverAndReconcile()
+    let missionId = try await coordinator.startConfirmedProposal(captured)
 
     let mission = try #require(try db.mission(id: missionId))
     #expect(mission.budgetTokens == 66_000) // budget 承接进 mission
@@ -236,7 +271,7 @@ private func runGuideChat(
 
     // 幂等：二次确认拒绝，不重复建队
     await #expect(throws: StaleProposalError.self) {
-        _ = try await orch.confirmSquadProposal(messageId: messageId, plannerModel: "m")
+        _ = try await coordinator.startConfirmedProposal(captured)
     }
     let missionCount = try await db.pool.read { try MissionRecord.fetchCount($0) }
     #expect(missionCount == 1)
@@ -275,9 +310,33 @@ private func runGuideChat(
         campName: "c", squadName: "s", goal: "修桥", cardTitle: "备料",
         cardDescription: "d", expectedOutput: "o", assigneeId: nil, maxTurns: 3)
     try db.transitionCard(id: ids.cardId, to: .running, eventKind: "card_started", payload: .object([:]))
+    let declaration = HandoffPayload.ArtifactDecl(
+        relativePath: "桥料清单.md",
+        kind: "file",
+        label: "桥料清单"
+    )
+    let artifactDirectory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("agentloop-guide-external-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(
+        at: artifactDirectory,
+        withIntermediateDirectories: true
+    )
+    let artifactURL = artifactDirectory.appendingPathComponent("桥料清单.md")
+    try "# 桥料清单".write(
+        to: artifactURL,
+        atomically: true,
+        encoding: .utf8
+    )
+    let externalReference = try WorkspaceExternalArtifactReferenceV1.explicit(
+        cardId: ids.cardId,
+        path: artifactURL.path,
+        kind: declaration.kind,
+        label: declaration.label,
+        classifiedAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
     try db.completeCard(id: ids.cardId, runId: nil, handoff: HandoffPayload(
-        outcome: "done", summary: "s", artifacts: [], noArtifactReason: "无", verification: [], risks: []
-    ), durableArtifacts: [(decl: .init(relativePath: "桥料清单.md", kind: "file", label: "桥料清单"), durablePath: "/tmp/x")])
+        outcome: "done", summary: "s", artifacts: [declaration], verification: [], risks: []
+    ), workspaceExternalArtifacts: [externalReference])
 
     let tool = CampStatusTool(db: db, campId: camp.id)
     let outcome = await tool.execute(input: .object([:]))

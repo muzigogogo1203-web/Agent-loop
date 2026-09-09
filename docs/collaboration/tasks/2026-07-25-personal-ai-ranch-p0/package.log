@@ -1,0 +1,60 @@
+==> swift build -c release
+Fetching https://github.com/groue/GRDB.swift.git
+warning: 'grdb.swift': skipping cache due to an error: Failed to clone repository https://github.com/groue/GRDB.swift.git:
+    Cloning into bare repository '/Users/muzi/Library/Caches/org.swift.swiftpm/repositories/GRDB.swift-dd0599db'...
+    fatal: unable to access 'https://github.com/groue/GRDB.swift.git/': Recv failure: Operation timed out
+error: Failed to clone repository https://github.com/groue/GRDB.swift.git:
+    Cloning into bare repository '/private/tmp/agentloop-p0-package.S5SbNz/.build/repositories/GRDB.swift-dd0599db'...
+    fatal: unable to access 'https://github.com/groue/GRDB.swift.git/': Recv failure: Operation timed out
+
+--- Attempt 2: isolated worktree with verified local SwiftPM checkout copied in ---
+==> swift build -c release
+Building for production...
+[0/13] Copying Info.plist
+[0/13] Write sources
+[3/13] Copying PrivacyInfo.xcprivacy
+[3/13] Write sources
+[7/13] Copying RanchArt
+[8/13] Write swift-version--1AB21518FC5DEDBE.txt
+[10/14] Compiling GRDB Configuration.swift
+[11/15] Compiling AgentLoopCore ChatService.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[12/17] Compiling AgentLoopTestSuite AgentLoopTests.swift
+/private/tmp/agentloop-p0-package.S5SbNz/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/private/tmp/agentloop-p0-package.S5SbNz/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[13/18] Compiling RunTests main.swift
+[13/18] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[14/18] Linking RunTests
+[16/18] Compiling AgentLoopApp AgentLoopApp.swift
+[16/18] Write Objects.LinkFileList
+[17/18] Linking AgentLoopApp
+Build complete! (143.54s)
+==> icon
+==> codesign (ad-hoc;跨机首启需右键打开过 Gatekeeper)
+dist/Coding 牧场.app: replacing existing signature
+==> zip
+==> 未配置 NOTARY_PROFILE,跳过公证(脚本头注释有一次性配置方法)
+==> DMG
+打包完成:dist/Coding 牧场.app(v1.1.0 build 128)
+  - dist/CodingRanch-1.1.0.zip
+  - dist/CodingRanch-1.1.0.dmg
+Executable=/private/tmp/agentloop-p0-package.S5SbNz/dist/Coding 牧场.app/Contents/MacOS/AgentLoop
+Identifier=com.muzi.agentloop
+Format=app bundle with Mach-O thin (arm64)

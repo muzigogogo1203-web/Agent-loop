@@ -1,0 +1,214 @@
+P1-A1b implementation preflight
+date=2026-07-26
+branch=codex/personal-ai-ranch-p0
+head=02334ec8d21533be81d93d39191bc7d9b9c24f7f
+
+ENTRY GATES
+P0 acceptance=ACCEPTED
+P1-A1a acceptance=ACCEPTED
+Review10A verdict=APPROVED — 0 P0 / 0 P1
+Review10A sha256=a268725470996d04db109b4caeb378fdfa64b66abd85b6f7ac55ecb420956bfe
+
+FROZEN INPUTS
+Stage sha256=d05452fd0a877fb03e94ff0e1a75a0efa3b095c93c14ff856c79da04619db3a6
+total Plan sha256=b14c145c433a03606c925d5f027d7a3a25d458b07a2a5bb447a29424cce58a61
+A1b leaf sha256=cf1b603c2147a2cb2619a5230ff3b71a41b2968f78e0c3e28480da09460feb0e
+
+ENTERING MANIFESTS
+production 12 entries=44f0104b82a23d8b1db7c8110fc340a9b777d104df8e71438b1b3a58711be3f7
+existing + new tests 19 entries=4678484e4a4eaadfaaf60f8d3e721d26e0426499b541cb3533e309865387534c
+runner/script/Package/resolved/RunTests 5 entries=90174bf00f8955f5df387ea35ff3c08f9e726adeade1dfee54109be72eafe65d
+
+WORKTREE
+The branch enters A1b with the already-authorized P0/P1/A1a dirty baseline.
+No unrelated tracked or untracked file is adopted by this slice.
+Product/test writes are restricted to frozen leaf §3.
+Package.swift, Package.resolved, Sources/RunTests/main.swift and the target graph are immutable.
+
+R-01 PRE-IMPLEMENTATION PROOF
+Sources/AgentLoopCore/Kernel/Orchestrator.swift still owns process-local planningTasks.
+startMission still calls createMissionShell before provider execution.
+Planning tokens, fallback and cards still use separate AppDatabase transactions.
+Provider failure still appends kernel_error while the Mission can remain planning.
+recordPlanningTokens still uses saturating projection and Double JSON values.
+Generic DurableWorkStore APIs still accept kind=.planning and ignore the durable halt gate.
+shutdown still awaits every planning Task without a bounded deadline.
+
+FAILURE-FIRST EXECUTION
+command=swift run RunTests
+full output=../verify.log
+build=pass
+test discovery=497 tests
+expected red tests:
+- missionAndPlanningWorkCommitAtomically: planning work count was 0 after Mission shell commit.
+- sameMissionStartReplayRequiresExplicitIdentity: Orchestrator startMission had no idempotencyKey or traceId.
+- planningUsageOverflowFailsInsteadOfSaturating: recordPlanningTokens accepted Int.max + Int.max without error.
+- haltedPlanningCannotClaimThroughGenericStore: generic claimNext claimed planning while durable mode was halted.
+- shutdownWithCancellationIgnoringProviderReturnsBoundedly: shutdown remained blocked on the cancellation-ignoring planning gate after 150 ms.
+
+All five tests compiled and reached their target assertions. None failed because of fixture setup
+or a compiler error. The repeated full run produced six expected issues because the replay source
+test has two independent required-parameter assertions.
+
+OBSERVED PRE-EXISTING FLAKE
+The captured full run also observed slowActiveStreamDoesNotIdleTimeout fail with
+"idle script exhausted". An immediate full repeat passed that test and left only the five
+failure-first tests red. This is recorded as pre-existing concurrency-sensitive evidence, not
+counted as an A1b root-cause failure and not modified outside the A1b allowlist.
+
+PRODUCTION HASHES BEFORE FAILURE-FIRST TESTS
+AppDatabase.swift=faf98fa6b1f252d0e58bd463b46cbdc98753324a880357901aeaca07361756ac
+EventKind.swift=a3705837724a27beeb9f372fccafc7e61d3b0f9b98bd853bd6b4e3750b4ba52a
+Orchestrator.swift=c0967ba6a78c7e5818e65d7991f21dee4f4ff5de952e5ec6509fcba3b109b329
+Planner.swift=9d7a6cb233e3f310df9f34dc8199e9b26e81d066fb07d54e570e93c448c43d98
+LLMProvider.swift=9bbfde860060837b959670d6a986a65810ea025c870ef566168e1ffce40efb4b
+DurableWork.swift=694e922ef582ea1551dfcb78ec7544a191967dda980a4f2b82852fa62b20bbb2
+DurableWorkStore.swift=68098d8e4f977a3591826772a737f2e67a2070f1eebf5fa8d18b8172b192f07b
+DurableWorkSupervisor.swift=ABSENT
+PlanningProviderResolver.swift=ABSENT
+AppStore.swift=1c1e48a5ca6dad0a8080f1365057bbe35377cfb2d3d117d2c8be9d0db8e89153
+CodingRanchStoreAdapter.swift=603935ca0a628f794f95c420e50098bbf54494ad52ff0b66dbe3ec10d7f13cf7
+MissionScheduler.swift=1c5998aac4ae81eba29c0d5639b74527523794a2bf231af8b72e787f38afbf8a
+
+===== R11 POST-REVIEW11 ENTRY — 2026-07-27 =====
+
+ENTRY GATE
+Review11 verdict=APPROVED — 0 P0 / 0 P1
+Review11 sha256=f03000a92c3b8324a3ca824834cc7724b028c18bbe48061ea4fb72512b81d671
+Review11 report=docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p0/reviews/11-p1-plan-review.md
+
+R11 FROZEN INPUTS
+Stage sha256=add94117fc634add114bff62aefd7f77d71e4826d15c9bd1affba1a8d76366a2
+total Plan sha256=143db98e995ddc1c182e13fd22ab1a52a6517b6610e7bdb070f731c790d180a0
+A1b leaf sha256=4fd98fad71ead93e88d36545127e484be121f8177784a006659483162f922f56
+R11 freeze evidence sha256=8f58e33035f70538dd5f692e979eabb68e4b8b22df07656e95154d428b759852
+
+R11 PRE-IMPLEMENTATION MANIFESTS
+production 13 entries=b7ddddadd04a68f676b125605c04d91cb6adee5f9c50835689cba58ccec90aab
+existing + new tests 19 entries=03da4e7bfbe18cf64148af879baf6df39662b8ee86c79a6f3f8341331c02abd0
+runner/script/Package/resolved/RunTests 5 entries=b2e07ddf612913a78c132cbf51350d49cb62eb51ba3207a0a2bd539423156b53
+Package.swift=577184382639ebe84f0c972b1aa1f43d67837683b74ab088d12198f72a16fe9d
+Package.resolved=d2786c9b64c245c62f5793e697bb406d4960753e5f33c622250e804cd865fb3a
+Sources/RunTests/main.swift=70417b226a6a3b83f2ef876628028a87618392cbb0688de903ce9d10305dbfd3
+
+R11 FAILURE-FIRST EXECUTION
+full output=../verify.log
+
+1. Schedule numeric persistence and non-finite pre-guard
+command=swift run RunTests --filter scheduleExtremeFiniteLastFiredAtPersistsNumericallyReloadsAndDedupes|scheduleLegacyTextLastFiredAtRemainsReadable|scheduleDateEncodingChangesOnlyLastFiredAt|nonFiniteScheduleFireFailsBeforeClaimWithoutWrites|runningStartupDoesNotDispatchPlanningBeforeCardOrphanAdoptionCompletes
+build=pass
+tests executed=5
+observed root causes:
+- extreme finite lastFiredAt was stored as TEXT and could not round-trip a five-digit year;
+- lastFiredAt lacked the required INTEGER/REAL column-specific encoding while createdAt remained TEXT;
+- non-finite fire kept UUID/runtime selection at zero but still claimed the schedule and changed lastFiredAt from NULL to empty TEXT before failing to encode NaN;
+- durable-running Supervisor recovery opened dispatch before Card recovery activation.
+
+2. Legacy typed error and DEBUG seam
+command=swift run RunTests --filter legacyPlanningWithCardsFailsClosedWithExactTypedErrorAndZeroWrites|unexpectedPlanningFallbackTerminalizesThroughFailureOwner
+build=pass
+tests executed=2
+observed root causes:
+- running legacy Mission with Cards threw InvalidDurableWorkStateError, not LegacyPlanningHasCardsError, while the full zero-write snapshot held;
+- the exact DEBUG owned-success seam declaration count was zero.
+
+3. Startup retry and control ownership
+command=swift run RunTests --filter startupCardOrphanAdoptionFailureKeepsPlanningSuppressedWithoutDurableTransition|explicitRetryAfterStartupCardRecoveryFailureActivatesSupervisorExactlyOnce|startupRecoveryRetryWritesNoCampHaltedOrCampResumedEvent|staleStartupRecoveryCannotActivateAfterConcurrentControlTransition
+build=pass
+tests executed=4
+observed root causes:
+- planning work left queued state before Card orphan adoption completed;
+- Card-retry paths observed an early provider call;
+- emergency control from the Card-recovery failure state returned without durably halting or canceling planning.
+
+All R11 failure-first tests compiled and reached runtime assertions. The red results above were
+caused by the frozen R11 contract roots, not missing symbols, fixture compilation, or a test
+discovery failure. A transient concurrent edit initially exposed missing await markers in the new
+startup fixtures; those markers were fixed before the recorded failure-first run and are not
+counted as product evidence.
+
+R11 BASELINE FULL RUN
+command=swift run RunTests
+build=pass
+test discovery=568 tests
+observed red:
+- scheduleMillisecondsOverflowClaimsSlotThenRecordsMissedWithoutMission failed while decoding an empty-TEXT lastFiredAt written by the pre-R11 Schedule path;
+- slowActiveStreamDoesNotIdleTimeout reproduced the previously isolated concurrency-sensitive
+  "idle script exhausted" flake.
+Neither baseline failure was hidden or treated as a completed fix.
+
+===== REVIEW01 BOUNDED P1 REPAIR — 2026-07-27 =====
+
+IMPLEMENTATION REVIEW
+Review01 verdict=CHANGES REQUIRED — 0 P0 / 2 P1
+Review01 sha256=05ac137b93c94e04d51cbd72cf24d047b321a55beaaa24c56dcf16eca563a4a3
+Review01 report=docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a1b-durable-planning/reviews/01-p1-a1b-review.md
+A1b acceptance=closed
+A2=closed
+
+BOUNDED WRITES
+- Sources/AgentLoopApp/AppStore.swift
+- Sources/AgentLoopCore/Work/DurableWorkSupervisor.swift
+- Sources/AgentLoopTestSuite/DurablePlanningTests.swift
+- Sources/AgentLoopTestSuite/CrashRecoveryTests.swift
+- current task owner logs/report/evidence
+
+P1-1 FAILURE-FIRST
+command=swift run RunTests --filter uiPreviewUsesProcessLocalDefaultsBeforeBootstrapAndReload
+result=failed 1/1 before production repair
+observed=preview had no ProcessLocalPreviewUserDefaults or common pre-bootstrap defaults routing
+root=AppStore direct defaults and fresh RuntimeProfileBootstrap used the normal shared domain
+
+P1-1 ROOT FIX
+AppStore creates one defaults instance before its first defaults access.
+Normal mode returns .standard.
+Preview returns a unique-suite ProcessLocalPreviewUserDefaults whose currently used
+object/set/remove/string/integer/bool/stringArray surface is a locked process-local dictionary.
+The same instance is injected into ProfileScopedDefaults, fresh-profile bootstrap, resolver,
+scheduler, reload, catalog, persistence, and OAuth state paths.
+No allowlist-external Core defaults/bootstrap file or run-app.sh was changed.
+
+P1-2 FAILURE-FIRST
+command=swift run RunTests --filter suppressedWaitUntilIdleDistinguishesDueFutureRetryAndHaltedCleanup
+result=failed 1/1 with 3 expectation failures before production repair
+observed=waitUntilIdle completed before the expected ledger read, before activation, and while the provider remained owned
+root=isIdleNow treated every dispatchSuppressed state as idle without checking current queued/due planning
+
+P1-2 ROOT FIX
+isIdleNow first requires owned/pump/halt-cleanup to be empty.
+Only suppressed plus durable halted can then return idle directly.
+recoveryReady/running with durable running still queries nextClaimablePlanningDate, so current due
+work blocks while future retry does not. Existing read failure latching remains in the waiter path.
+
+POST-FIX TARGETED
+command=swift run RunTests --filter uiPreviewUsesProcessLocalDefaultsBeforeBootstrapAndReload|suppressedWaitUntilIdleDistinguishesDueFutureRetryAndHaltedCleanup|waitUntilIdleIgnoresFutureRetryButWaitUntilTerminalDoesNot|runningStartupDoesNotDispatchPlanningBeforeCardOrphanAdoptionCompletes|haltedStartupRunsCleanupWithoutPumpTimerOrProvider
+result=pass 5/5
+
+POST-FIX AUTHORITATIVE FULL
+command=swift run RunTests
+result=pass 611 tests in 5 suites
+full output=../verify.log
+
+POST-FIX STATIC AND RUNTIME GATES
+frozen named tests=115/115 exact once
+App build=pass
+release Core build=pass
+DEBUG seam Core=1/1 guarded
+DEBUG seam tests=3/3 guarded
+release seam symbol=absent
+source sentinels=pass
+SQLite 3.51 linked/literal=pass
+SQLite 3.52 linked/literal=pass
+isolated preview final retry=pass
+preview final root=/private/tmp/agentloop-a1b-review01-preview.sy7T0L
+preview final PID=51258
+preview screenshot sha256=90ae69421b6a0be472e5ba22afacb6279b16e2838df75ee13d285e384e3648c8
+
+PREVIEW DEVIATION RETAINED
+The first Review01 repair preview PID 50856 passed its preview checks and quit, but a post-quit
+Computer Use state probe automatically launched non-preview PID 51012. That new process lacked both
+preview environment variables and was immediately terminated by exact PID. No defaults or Keychain
+content was inspected. Because normal initialization can access the normal preference domain, the
+run is explicitly rejected and retained in preview.log; it is not presented as a green preview.
+The accepted retry started from no AgentLoop process, used a new state root, and performed no
+post-quit UI probe.

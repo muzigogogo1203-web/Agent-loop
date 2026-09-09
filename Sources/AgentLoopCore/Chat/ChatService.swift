@@ -10,56 +10,73 @@ public struct ChatService: Sendable {
     }
 
     public func send(companionId: String, userText: String) throws -> AsyncThrowingStream<ProviderEvent, Error> {
-        guard let companion = try db.companion(id: companionId) else {
-            throw ProviderError.malformedStream("no companion")
-        }
-        let thread = try db.findOrCreateDMThread(companionId: companionId)
-        try db.appendChatMessage(threadId: thread.id, role: "user", text: userText)
-        let history: [APIMessage] = try db.messages(threadId: thread.id).map { message in
-            APIMessage(
-                role: message.role == "user" ? .user : .assistant,
-                content: [.text(message.text)]
-            )
-        }
-        // 伙伴记忆注入（spec §10.1）：置顶全部 + 最近 3，严格按伙伴隔离
-        let (pinned, recent) = try db.pinnedAndRecentCompanionNotes(companionId: companionId)
+        let preparation = try db.prepareDMChatTurn(
+            companionId: companionId,
+            userText: userText
+        )
         let memorySection = NoteSnippet.renderSection(
-            header: "你的记忆", snippets: NoteSnippet.from(pinned: pinned, recent: recent))
+            header: "你的记忆",
+            snippets: NoteSnippet.from(
+                pinned: preparation.pinnedNotes,
+                recent: preparation.recentNotes
+            )
+        )
         let system = """
-        你的名字是\(companion.name)。\(companion.rolePrompt)
+        你的名字是\(preparation.companion.name)。\(preparation.companion.rolePrompt)
         你正在与你的用户一对一聊天，语气自然、有人情味，回答简洁。
         """ + (memorySection.map { "\n\n" + $0 } ?? "")
 
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    // 落库正文以 TurnResult 为权威（delta 只管显示）——
-                    // 传输层断流兜底可能让 delta 序列不完整或不连续，累积 delta 会失真
-                    var deltaAccum = ""
-                    var turnText: String?
+                    var authoritativeTurn: TurnResult?
                     for try await event in provider.streamTurn(
                         system: system,
-                        history: history,
+                        history: preparation.history,
                         tools: [],
                         toolChoice: .auto,
                         maxTokens: 4096
                     ) {
                         switch event {
-                        case .textDelta(let text):
-                            deltaAccum += text
+                        case .textDelta:
+                            break
                         case .turn(let result):
-                            turnText = result.content.compactMap { block -> String? in
-                                if case .text(let t) = block { return t }
-                                return nil
-                            }.joined()
+                            guard authoritativeTurn == nil else {
+                                throw ProviderError.malformedStream(
+                                    "multiple DM turn results"
+                                )
+                            }
+                            authoritativeTurn = result
                         }
                         continuation.yield(event)
                     }
-                    let fullReply = turnText ?? deltaAccum
-                    // Only persist when there is a full reply and we were not cancelled.
-                    if !fullReply.isEmpty && !Task.isCancelled {
-                        try db.appendChatMessage(threadId: thread.id, role: "companion", text: fullReply)
+                    guard let turn = authoritativeTurn else {
+                        throw ProviderError.malformedStream(
+                            "missing DM turn result"
+                        )
                     }
+                    let parts = try turn.content.map { block -> String in
+                        guard case .text(let text) = block else {
+                            throw ProviderError.malformedStream(
+                                "non-text DM turn result"
+                            )
+                        }
+                        return text
+                    }
+                    let fullReply = parts.joined()
+                    guard !fullReply.trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    ).isEmpty else {
+                        throw ProviderError.malformedStream(
+                            "empty DM turn result"
+                        )
+                    }
+                    try Task.checkCancellation()
+                    try db.appendChatMessage(
+                        threadId: preparation.thread.id,
+                        role: "companion",
+                        text: fullReply
+                    )
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)

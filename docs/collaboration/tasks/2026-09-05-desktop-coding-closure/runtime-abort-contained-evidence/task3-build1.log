@@ -1,0 +1,38 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Emitting module AgentLoopTestSuite
+[4/6] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:382:54: error: cannot find 'PROC_PIDPATHINFO_MAXSIZE' in scope
+  380 | ) throws -> P1F1D065AbortProcessIdentity {
+  381 |     let first = try p1f1d065ReadAbortBSDIdentity(pid: pid, phase: "before")
+  382 |     var pathBytes = [CChar](repeating: 0, count: Int(PROC_PIDPATHINFO_MAXSIZE))
+      |                                                      `- error: cannot find 'PROC_PIDPATHINFO_MAXSIZE' in scope
+  383 |     guard let pathSize = UInt32(exactly: pathBytes.count) else {
+  384 |         throw P1F1D065AbortIdentityError.invalid("process-path-size")
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/proc_info.h:749:9: note: macro 'PROC_PIDPATHINFO_MAXSIZE' unavailable: structure not supported
+747 | #define PROC_PIDPATHINFO                11
+748 | #define PROC_PIDPATHINFO_SIZE           (MAXPATHLEN)
+749 | #define PROC_PIDPATHINFO_MAXSIZE        (4*MAXPATHLEN)
+    |         `- note: macro 'PROC_PIDPATHINFO_MAXSIZE' unavailable: structure not supported
+750 | 
+751 | #define PROC_PIDWORKQUEUEINFO           12
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:2261:12: warning: no calls to throwing functions occur within 'try' expression
+ 2259 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+ 2260 |     }
+ 2261 |     return try CliEngineAdapter(
+      |            `- warning: no calls to throwing functions occur within 'try' expression
+ 2262 |         profile: profile,
+ 2263 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:9784:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+ 9782 |                 progressSink: P1F1DProgressRecorder(),
+ 9783 |                 modelLoopDriver: try #require(
+ 9784 |                     selectedTransport.modelLoopDriver
+      |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+ 9785 |                 ),
+ 9786 |                 cliProcessDriver: nil,

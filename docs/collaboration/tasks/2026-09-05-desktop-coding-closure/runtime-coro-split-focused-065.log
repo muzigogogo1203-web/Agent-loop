@@ -1,0 +1,98 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/5] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/7] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7817:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7815 |                 progressSink: P1F1DProgressRecorder(),
+7816 |                 modelLoopDriver: try #require(
+7817 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7818 |                 ),
+7819 |                 cliProcessDriver: nil,
+[4/7] Emitting module AgentLoopTestSuite
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (24.78s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite ExecutionEngineConformanceTests started.
+◇ Test p1f1_065CancellationCleansProcessAndCommitsOnce() started.
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 fixture-root=/tmp/al65-gate-cf61dcaf
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 launch-called
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 launch-returned
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 readiness-start observed=false
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 signal=19 group=50884 target=-50884 result=0 errno=0
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 readiness-end observed=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 cancel-start
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 signal=15 group=50884 target=-50884 result=0 errno=0
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 signal=9 group=50884 target=-50884 result=0 errno=0
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 cancel-result success=true pid=50884 group=50884 status=137 term=true kill=true stdoutEOF=true stderrEOF=true childReaped=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 stream-join-start
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 stream-exited status=137
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 stream-join-result success=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 final-signal-count=3 assessment-execution=00000000-0000-4000-8000-000000000065
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 final-signal=19 group=50884 target=-50884 result=0 errno=0
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 final-signal=15 group=50884 target=-50884 result=0 errno=0
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 final-signal=9 group=50884 target=-50884 result=0 errno=0
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 observation=successful-SIGCONT-identity result=1 errno=0 passed=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 observation=cancellation-identity result=50884 errno=0 passed=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 observation=cancellation-childReaped result=1 errno=0 passed=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 observation=cancellation-stdoutEOF result=1 errno=0 passed=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 observation=cancellation-stderrEOF result=1 errno=0 passed=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 observation=kill(50884,0) result=-1 errno=3 passed=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 observation=kill(-50884,0) result=-1 errno=3 passed=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 observation=waitid(WEXITED|WNOHANG|WNOWAIT) result=-1 errno=10 passed=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 observation=socket-lstat result=-1 errno=2 passed=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 observation=registry-activeCount result=0 errno=0 passed=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 final-stream-exited status=137
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 observation=joined-stream-exited result=1 errno=0 passed=true
+065-cold fixture=8B3C2F02-8E7F-4232-8CC2-C013969926BA execution=00000000-0000-4000-8000-000000000065 cleanup-certified=true retained-root=none
+✔ Test p1f1_065CancellationCleansProcessAndCommitsOnce() passed after 12.175 seconds.
+◇ Test p1f1_065ColdGateForcedFailureStillJoinsCleanup() started.
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 fixture-root=/tmp/al65-cold-error-c305e2aa
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 launch-called
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 launch-returned
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 readiness-start observed=false successfulContinuations=0
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 signal=19 group=50887 target=-50887 result=0 errno=0
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 readiness-end observed=true successfulContinuations=1
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 body-error category=forcedFailure.afterReady
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 cancel-start
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 signal=15 group=50887 target=-50887 result=0 errno=0
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 signal=9 group=50887 target=-50887 result=0 errno=0
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 cancel-result success=true pid=50887 group=50887 status=137 term=true kill=true stdoutEOF=true stderrEOF=true childReaped=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 stream-join-start
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 stream-exited status=137
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 stream-join-result success=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 final-signal-count=3 assessment-execution=00000000-0000-4000-8000-000000000865
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 final-signal=19 group=50887 target=-50887 result=0 errno=0
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 final-signal=15 group=50887 target=-50887 result=0 errno=0
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 final-signal=9 group=50887 target=-50887 result=0 errno=0
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 observation=successful-SIGCONT-identity result=1 errno=0 passed=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 observation=cancellation-identity result=50887 errno=0 passed=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 observation=cancellation-childReaped result=1 errno=0 passed=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 observation=cancellation-stdoutEOF result=1 errno=0 passed=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 observation=cancellation-stderrEOF result=1 errno=0 passed=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 observation=kill(50887,0) result=-1 errno=3 passed=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 observation=kill(-50887,0) result=-1 errno=3 passed=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 observation=waitid(WEXITED|WNOHANG|WNOWAIT) result=-1 errno=10 passed=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 observation=socket-lstat result=-1 errno=2 passed=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 observation=registry-activeCount result=0 errno=0 passed=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 final-stream-exited status=137
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 observation=joined-stream-exited result=1 errno=0 passed=true
+065-cold fixture=4DD0FAAD-AFF8-40CA-8D19-C013E58354D7 execution=00000000-0000-4000-8000-000000000865 cleanup-certified=true retained-root=none
+✔ Test p1f1_065ColdGateForcedFailureStillJoinsCleanup() passed after 5.522 seconds.
+✔ Suite ExecutionEngineConformanceTests passed after 17.698 seconds.
+✔ Test run with 2 tests in 1 suite passed after 17.702 seconds.

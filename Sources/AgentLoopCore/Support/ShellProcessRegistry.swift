@@ -37,7 +37,17 @@ public final class ShellProcessRegistry: @unchecked Sendable {
         pids.removeAll()
         lock.unlock()
         for pid in snapshot {
-            kill(pid, SIGTERM)
+            let diagnostic = RuntimeLifecycleDiagnostics.isEnabled
+                ? RuntimeLifecycleDiagnostics.signalWillSend(
+                    target: pid, signal: SIGTERM,
+                    path: self === Self.shared ? 2 : 1
+                )
+                : nil
+            let result = kill(pid, SIGTERM)
+            let failure = errno
+            RuntimeLifecycleDiagnostics.signalDidSend(
+                owner: diagnostic, result: result, errorNumber: failure
+            )
         }
     }
 }
@@ -45,35 +55,70 @@ public final class ShellProcessRegistry: @unchecked Sendable {
 /// 登录 shell 环境捕获（M7-D6）：Finder 启动的 GUI app 只有极简 PATH，
 /// shell 命令与 npx/uvx 拉起的 MCP server 会找不到可执行文件（桌面 agent 宿主经典坑）。
 /// 启动后异步捕获一次（zsh -l -c env），shell 工具与 M8 MCP 子进程共用。
-/// 锁保护缓存（并发重复捕获无害，结果一致）。
+/// 锁保护缓存与 single-flight 任务，并发首用只捕获一次。
 public final class LoginShellEnvironment: @unchecked Sendable {
     public static let shared = LoginShellEnvironment()
 
-    private let lock = NSLock()
-    private var cached: [String: String]?
+    private enum Resolution {
+        case cached([String: String])
+        case pending(Task<[String: String], Never>)
+    }
 
-    public init() {}
+    private let lock = NSLock()
+    private let captureEnvironment: @Sendable () async -> [String: String]
+    private var cached: [String: String]?
+    private var inFlight: Task<[String: String], Never>?
+
+    public init() {
+        captureEnvironment = {
+            await Self.capture()
+        }
+    }
+
+    package init(
+        capture: @escaping @Sendable () async -> [String: String]
+    ) {
+        captureEnvironment = capture
+    }
 
     /// 捕获过的登录环境（合并进程环境兜底）；捕获失败返回进程环境。
     public func environment() async -> [String: String] {
-        if let existing = readCached() { return existing }
+        switch resolution() {
+        case .cached(let existing):
+            return existing
+        case .pending(let task):
+            let merged = await task.value
+            finish(merged)
+            return merged
+        }
+    }
+
+    private func resolution() -> Resolution {
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached {
+            return .cached(cached)
+        }
+        if let inFlight {
+            return .pending(inFlight)
+        }
         let base = ProcessInfo.processInfo.environment
-        let captured = await Self.capture()
-        let merged = base.merging(captured) { _, fromLogin in fromLogin }
-        storeCached(merged)
-        return merged
+        let capture = captureEnvironment
+        let task = Task.detached {
+            let captured = await capture()
+            return base.merging(captured) { _, fromLogin in fromLogin }
+        }
+        inFlight = task
+        return .pending(task)
     }
 
-    private func readCached() -> [String: String]? {
+    private func finish(_ environment: [String: String]) {
         lock.lock()
         defer { lock.unlock() }
-        return cached
-    }
-
-    private func storeCached(_ env: [String: String]) {
-        lock.lock()
-        defer { lock.unlock() }
-        cached = env
+        if cached == nil {
+            cached = environment
+        }
+        inFlight = nil
     }
 
     package static func capture() async -> [String: String] {

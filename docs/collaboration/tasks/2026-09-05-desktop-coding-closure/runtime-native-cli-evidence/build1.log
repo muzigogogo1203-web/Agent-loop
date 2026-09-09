@@ -1,0 +1,106 @@
+[0/1] Planning build
+Building for debugging...
+[0/7] Write sources
+[3/7] Write swift-version--1AB21518FC5DEDBE.txt
+[5/9] Compiling AgentLoopCore CliProcessBackend.swift
+[6/9] Emitting module AgentLoopCore
+[7/10] Emitting module AgentLoopApplication
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[8/16] Compiling AgentLoopTestSuite CliMechanicsFixture.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CliMechanicsFixture.swift:182:27: error: missing argument labels '__sigaction_u:sa_mask:sa_flags:' in call
+180 |     action.sa_flags = 0
+181 |     guard sigemptyset(&action.sa_mask) == 0,
+182 |           Darwin.sigaction(SIGTERM, &action, nil) == 0 else {
+    |                           `- error: missing argument labels '__sigaction_u:sa_mask:sa_flags:' in call
+183 |         throw CliMechanicsNativeFixtureError.systemCall("signal", errno)
+184 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CliMechanicsFixture.swift:182:28: error: cannot convert value of type 'Int32' to expected argument type '__sigaction_u'
+180 |     action.sa_flags = 0
+181 |     guard sigemptyset(&action.sa_mask) == 0,
+182 |           Darwin.sigaction(SIGTERM, &action, nil) == 0 else {
+    |                            `- error: cannot convert value of type 'Int32' to expected argument type '__sigaction_u'
+183 |         throw CliMechanicsNativeFixtureError.systemCall("signal", errno)
+184 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CliMechanicsFixture.swift:182:37: error: cannot convert value of type 'sigaction' to expected argument type 'sigset_t' (aka 'UInt32')
+180 |     action.sa_flags = 0
+181 |     guard sigemptyset(&action.sa_mask) == 0,
+182 |           Darwin.sigaction(SIGTERM, &action, nil) == 0 else {
+    |                                     `- error: cannot convert value of type 'sigaction' to expected argument type 'sigset_t' (aka 'UInt32')
+183 |         throw CliMechanicsNativeFixtureError.systemCall("signal", errno)
+184 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CliMechanicsFixture.swift:182:46: error: 'nil' is not compatible with expected argument type 'Int32'
+180 |     action.sa_flags = 0
+181 |     guard sigemptyset(&action.sa_mask) == 0,
+182 |           Darwin.sigaction(SIGTERM, &action, nil) == 0 else {
+    |                                              `- error: 'nil' is not compatible with expected argument type 'Int32'
+183 |         throw CliMechanicsNativeFixtureError.systemCall("signal", errno)
+184 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CliMechanicsFixture.swift:182:51: error: referencing operator function '==' on 'BinaryInteger' requires that 'sigaction' conform to 'BinaryInteger'
+180 |     action.sa_flags = 0
+181 |     guard sigemptyset(&action.sa_mask) == 0,
+182 |           Darwin.sigaction(SIGTERM, &action, nil) == 0 else {
+    |                                                   `- error: referencing operator function '==' on 'BinaryInteger' requires that 'sigaction' conform to 'BinaryInteger'
+183 |         throw CliMechanicsNativeFixtureError.systemCall("signal", errno)
+184 |     }
+
+Swift.BinaryInteger:1:11: note: where 'Self' = 'sigaction'
+1 | extension BinaryInteger {
+  |           `- note: where 'Self' = 'sigaction'
+2 |     public static func == <Other>(lhs: Self, rhs: Other) -> Bool where Other : BinaryInteger
+3 |     public static func != <Other>(lhs: Self, rhs: Other) -> Bool where Other : BinaryInteger
+[9/16] Compiling AgentLoopTestSuite CliBackendTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CliBackendTests.swift:299:34: error: 'await' cannot appear to the right of a non-assignment operator
+ 297 |             throw CliMechanicsFixtureFailure.watchdog
+ 298 |         }
+ 299 |         guard sawParentMarker || await frames.containsStdout("parent-exited") else {
+     |                                  `- error: 'await' cannot appear to the right of a non-assignment operator
+ 300 |             throw CliMechanicsFixtureFailure.missingParentMarker
+ 301 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CliBackendTests.swift:299:47: error: call to actor-isolated instance method 'containsStdout' in a synchronous nonisolated context [#ActorIsolatedCall]
+ 297 |             throw CliMechanicsFixtureFailure.watchdog
+ 298 |         }
+ 299 |         guard sawParentMarker || await frames.containsStdout("parent-exited") else {
+     |                                               `- error: call to actor-isolated instance method 'containsStdout' in a synchronous nonisolated context [#ActorIsolatedCall]
+ 300 |             throw CliMechanicsFixtureFailure.missingParentMarker
+ 301 |         }
+     :
+1162 |     }
+1163 | 
+1164 |     func containsStdout(_ expected: String) -> Bool {
+     |          `- note: calls to instance method 'containsStdout' from outside of its actor context are implicitly asynchronous
+1165 |         frames.contains(.stdoutLine(expected))
+1166 |     }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/CliBackendTests.swift:299:34: error: 'await' in an autoclosure that does not support concurrency
+ 297 |             throw CliMechanicsFixtureFailure.watchdog
+ 298 |         }
+ 299 |         guard sawParentMarker || await frames.containsStdout("parent-exited") else {
+     |                                  `- error: 'await' in an autoclosure that does not support concurrency
+ 300 |             throw CliMechanicsFixtureFailure.missingParentMarker
+ 301 |         }
+
+[#ActorIsolatedCall]: <https://docs.swift.org/compiler/documentation/diagnostics/actor-isolated-call>
+[10/16] Emitting module AgentLoopTestSuite
+[11/16] Compiling AgentLoopTestSuite CardRunnerTests.swift
+[12/16] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+[13/16] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1530:12: warning: no calls to throwing functions occur within 'try' expression
+1528 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1529 |     }
+1530 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1531 |         profile: profile,
+1532 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7854:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7852 |                 progressSink: P1F1DProgressRecorder(),
+7853 |                 modelLoopDriver: try #require(
+7854 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7855 |                 ),
+7856 |                 cliProcessDriver: nil,

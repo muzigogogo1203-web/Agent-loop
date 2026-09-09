@@ -1,0 +1,25 @@
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite ExecutionEngineConformanceTests started.
+◇ Test p1f1_065AbortBeforeRegistrationOwnsAllLifetime() started.
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 fixture-root=/tmp/al65-pre-registration-abort-7bef2b04 launch=guard-owned
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 identity-before-gate root=/tmp/al65-pre-registration-abort-7bef2b04 pid=86564 ppid=86556 pgid=86564 uid=501 start-seconds=1788977257 start-microseconds=327793 path=/private/tmp/al65-pre-registration-abort-7bef2b04/controlled-native-runner device=16777233 inode=347016765 hash=4d1fca7ceae6e026141917ad884569335e29251be96c4937dab8aded6defe0d2
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 signal=19 group=86564 target=-86564 result=0 errno=0
+065-resume-readiness outcome=observed polls=170/3000 interval-us=1000 elapsed=0.61592475 seconds
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 operation=backend-group-probe target=-86564 result=0 errno=0
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 signal=9 group=86564 target=-86564 result=0 errno=0
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 signal=19 group=86564 target=-86564 result=-1 errno=1
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 operation=backend-group-probe target=-86564 result=-1 errno=1
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 operation=backend-group-probe target=-86564 result=-1 errno=1
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 operation=backend-group-probe target=-86564 result=-1 errno=3
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 owner-returned body=none stream=AgentLoopCore.CliProcessBackendError cancellation=AgentLoopCore.CliProcessBackendError epilogue=Optional(AgentLoopTestSuite.(unknown context at $10505d604).P1F1D065AbortCleanupClaimant.owner) reader=Optional(Swift.Result<(), Swift.Error>.success()) client-shutdown=Optional(Swift.Result<(), Swift.Error>.success()) client-close=Optional(Swift.Result<(), Swift.Error>.success()) guard=Optional(AgentLoopTestSuite.(unknown context at $10505d3f4).P1F1D065AbortGuardReport(expired: false, missingImageAbort: nil, publicationAbort: nil, clientShutdown: nil))
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 operation=final-cleanup-lstat target=0 result=-1 errno=2 waitable-pid=0
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 operation=final-socket-lstat target=0 result=-1 errno=2 waitable-pid=0
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 operation=final-pid-probe target=86564 result=-1 errno=3 waitable-pid=0
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 operation=final-group-probe target=-86564 result=-1 errno=3 waitable-pid=0
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 operation=waitid-WEXITED-WNOHANG-WNOWAIT target=86564 result=-1 errno=10 waitable-pid=0
+065-abort fixture=4E6470BB-9E00-41E4-9265-1912625F3CBB execution=00000000-0000-4000-8000-000000000465 certificate=P1F1D065AbortCleanupCertificate(bodyCompleted: true, publicationOrdered: true, streamPrimaryExpected: true, cancellationPrimaryExpected: true, ownerEpilogue: true, readerJoinedSuccessfully: true, bothWaitersJoined: true, clientShutdown: true, clientClosed: true, guardStarted: true, guardJoined: true, guardInactive: true, gatesReleasedOnce: true, identityCapturedBeforeWait: true, identityMatchesControl: true, readinessObserved: true, readinessBudget: true, signalContract: true, spawnCleanupProofMatched: true, cleanupRemoved: true, socketRemoved: true, registryEmpty: true, directoryClosed: true, pidAbsent: true, groupAbsent: true, noWaitableChild: true, diagnosticsClean: true, noContainment: true)
+✔ Test p1f1_065AbortBeforeRegistrationOwnsAllLifetime() passed after 0.683 seconds.
+✔ Suite ExecutionEngineConformanceTests passed after 0.683 seconds.
+✔ Test run with 1 test in 1 suite passed after 0.684 seconds.

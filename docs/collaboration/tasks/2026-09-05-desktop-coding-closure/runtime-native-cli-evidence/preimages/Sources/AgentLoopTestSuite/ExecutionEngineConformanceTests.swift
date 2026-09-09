@@ -1,0 +1,9913 @@
+import Darwin
+import Foundation
+import GRDB
+import Testing
+@testable import AgentLoopCore
+
+private func p1f1dExpectError<Expected: Error & Equatable>(
+    _ expected: Expected,
+    operation: () throws -> Void
+) {
+    do {
+        try operation()
+        Issue.record("Expected \(Expected.self), but operation succeeded")
+    } catch let error as Expected {
+        #expect(error == expected)
+    } catch {
+        Issue.record("Expected \(Expected.self), got \(type(of: error))")
+    }
+}
+
+private func p1f1dExpectError<Expected: Error & Equatable>(
+    _ expected: Expected,
+    operation: () async throws -> Void
+) async {
+    do {
+        try await operation()
+        Issue.record("Expected \(Expected.self), but operation succeeded")
+    } catch let error as Expected {
+        #expect(error == expected)
+    } catch {
+        Issue.record("Expected \(Expected.self), got \(type(of: error))")
+    }
+}
+
+private func p1f1dExpectAnyError(operation: () throws -> Void) {
+    do {
+        try operation()
+        Issue.record("Expected fail-closed error, but operation succeeded")
+    } catch {}
+}
+
+private final class P1F1DLockedCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage = 0
+
+    func increment() {
+        lock.lock()
+        storage += 1
+        lock.unlock()
+    }
+
+    var value: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
+}
+
+private enum P1F1D062UnexpectedCall: Error { case invoked }
+
+private final class P1F1D062CallLedger: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [String: Int] = [:]
+
+    func record(_ name: String) {
+        lock.withLock { storage[name, default: 0] += 1 }
+    }
+
+    func count(_ name: String) -> Int {
+        lock.withLock { storage[name, default: 0] }
+    }
+}
+
+private final class P1F1DLaunchRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var requests: [CliProcessLaunchRequestV1] = []
+
+    func append(_ request: CliProcessLaunchRequestV1) {
+        lock.lock()
+        requests.append(request)
+        lock.unlock()
+    }
+
+    var snapshot: [CliProcessLaunchRequestV1] {
+        lock.lock()
+        defer { lock.unlock() }
+        return requests
+    }
+}
+
+private actor P1F1DTerminalRecorder: EngineTerminalSink {
+    private var storage: [EngineTerminalIntentV1] = []
+
+    func submit(_ intent: EngineTerminalIntentV1) async throws {
+        storage.append(intent)
+    }
+
+    func snapshot() -> [EngineTerminalIntentV1] { storage }
+}
+
+private actor P1F1DBoardTerminalRecorder: EngineBoardTerminalSink {
+    private var storage: [EngineBoardTerminalIntentV1] = []
+
+    func submit(_ intent: EngineBoardTerminalIntentV1) async throws {
+        storage.append(intent)
+    }
+
+    func snapshot() -> [EngineBoardTerminalIntentV1] { storage }
+}
+
+private actor P1F1DProgressRecorder: EngineProgressSink {
+    private var storage: [EngineExecutionEventPayloadV1] = []
+
+    func submit(_ payload: EngineExecutionEventPayloadV1) async throws {
+        storage.append(payload)
+    }
+
+    func snapshot() -> [EngineExecutionEventPayloadV1] { storage }
+}
+
+private struct P1F1DProcessDriver: CliProcessDrivingV1 {
+    let frames: [CliProcessFrameV1]
+    let recorder: P1F1DLaunchRecorder
+    let cancelEvidence: CliProcessExitEvidenceV1
+
+    var supportsProcessGroupCancellation: Bool { true }
+
+    func launch(
+        _ request: CliProcessLaunchRequestV1
+    ) -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        recorder.append(request)
+        return AsyncThrowingStream { continuation in
+            for frame in frames { continuation.yield(frame) }
+            continuation.finish()
+        }
+    }
+
+    func cancel(executionId: String) async throws -> CliProcessExitEvidenceV1 {
+        cancelEvidence
+    }
+}
+
+private enum P1F1D065SignatureCall: Sendable, Equatable {
+    case cli
+    case boardBridge
+}
+
+private enum P1F1D065SignatureFixtureError: Error, Sendable, Equatable {
+    case injected(P1F1D065SignatureCall)
+}
+
+private enum P1F1D065MechanicsFixtureError: Error, Sendable, Equatable {
+    case coldGateReadinessTimedOut
+    case resumeFailureReadinessTimedOut
+    case coldDiagnosticsAlreadyConfigured
+}
+
+private enum P1F1D065ColdForcedFailure: Error, Sendable, Equatable {
+    case afterReady
+}
+
+private struct P1F1D065ColdIdentity: Sendable {
+    let fixtureId: UUID
+    let executionId: String
+    let rootPath: String
+}
+
+private struct P1F1D065SignalObservation: Sendable {
+    let signal: Int32
+    let group: Int32
+    let target: Int32
+    let result: Int32
+    let errorNumber: Int32
+}
+
+private func p1f1d065ColdErrorCategory(_ error: any Error) -> String {
+    if (error as? P1F1D065ColdForcedFailure) == .afterReady {
+        return "forcedFailure.afterReady"
+    }
+    if (error as? P1F1D065MechanicsFixtureError) == .coldGateReadinessTimedOut {
+        return "coldGateReadinessTimedOut"
+    }
+    return String(reflecting: type(of: error))
+}
+
+private func p1f1d065ColdLog(
+    _ identity: P1F1D065ColdIdentity,
+    _ message: String
+) {
+    print("065-cold fixture=\(identity.fixtureId.uuidString) execution=\(identity.executionId) \(message)")
+}
+
+private struct P1F1D065ColdCleanupResult: Sendable {
+    let cancellation: Result<CliProcessExitEvidenceV1, any Error>
+    let stream: Result<[CliProcessFrameV1], any Error>
+}
+
+private struct P1F1D065ColdOwnedReport: Sendable {
+    let body: Result<Void, any Error>
+    let cleanup: P1F1D065ColdCleanupResult
+}
+
+// The stream stays cold until the one cancellation attempt settles. Detached
+// cleanup cannot inherit a cancelled caller's state and is always joined.
+private func p1f1d065RunOwnedColdStream(
+    stream: AsyncThrowingStream<CliProcessFrameV1, Error>,
+    backend: CliProcessBackend,
+    executionId: String,
+    identity: P1F1D065ColdIdentity,
+    body: @Sendable () async throws -> Void
+) async -> P1F1D065ColdOwnedReport {
+    let bodyResult: Result<Void, any Error>
+    do {
+        try await body()
+        bodyResult = .success(())
+    } catch {
+        bodyResult = .failure(error)
+        p1f1d065ColdLog(identity, "body-error category=\(p1f1d065ColdErrorCategory(error))")
+    }
+    let cleanup = Task.detached { () -> P1F1D065ColdCleanupResult in
+        let cancellation: Result<CliProcessExitEvidenceV1, any Error>
+        p1f1d065ColdLog(identity, "cancel-start")
+        do {
+            let evidence = try await backend.cancel(executionId: executionId)
+            cancellation = .success(evidence)
+            p1f1d065ColdLog(identity, "cancel-result success=true pid=\(evidence.pid) group=\(evidence.processGroupID) status=\(evidence.status) term=\(evidence.termSent) kill=\(evidence.killSent) stdoutEOF=\(evidence.stdoutEOF) stderrEOF=\(evidence.stderrEOF) childReaped=\(evidence.childReaped)")
+        } catch {
+            cancellation = .failure(error)
+            p1f1d065ColdLog(identity, "cancel-result success=false category=\(p1f1d065ColdErrorCategory(error))")
+        }
+        var frames: [CliProcessFrameV1] = []
+        let streamResult: Result<[CliProcessFrameV1], any Error>
+        p1f1d065ColdLog(identity, "stream-join-start")
+        do {
+            for try await frame in stream {
+                frames.append(frame)
+                if case let .exited(status) = frame {
+                    p1f1d065ColdLog(identity, "stream-exited status=\(status)")
+                }
+            }
+            streamResult = .success(frames)
+            p1f1d065ColdLog(identity, "stream-join-result success=true")
+        } catch {
+            streamResult = .failure(error)
+            p1f1d065ColdLog(identity, "stream-join-result success=false category=\(p1f1d065ColdErrorCategory(error))")
+        }
+        return P1F1D065ColdCleanupResult(
+            cancellation: cancellation, stream: streamResult
+        )
+    }
+    return P1F1D065ColdOwnedReport(
+        body: bodyResult, cleanup: await cleanup.value
+    )
+}
+
+private struct P1F1D065ColdObservationError: Error, Sendable {
+    let operation: String
+    let result: Int32
+    let errorNumber: Int32
+}
+
+private struct P1F1D065ColdCleanupError: Error, CustomStringConvertible {
+    struct Failure: Sendable {
+        let operation: String
+        let error: any Error
+    }
+
+    let primary: (any Error)?
+    var cleanupFailures: [Failure]
+    let retainedFixturePath: String?
+
+    var description: String {
+        let primaryLabel = primary.map(p1f1d065ColdErrorCategory) ?? "none"
+        let failures = cleanupFailures.map { failure in
+            if let observation = failure.error as? P1F1D065ColdObservationError {
+                return "operation=\(failure.operation) result=\(observation.result) errno=\(observation.errorNumber)"
+            }
+            return "operation=\(failure.operation) category=\(p1f1d065ColdErrorCategory(failure.error))"
+        }.joined(separator: "; ")
+        return "065 cold cleanup primary=\(primaryLabel) failures=[\(failures)] retainedFixturePath=\(retainedFixturePath ?? "none")"
+    }
+}
+
+private enum P1F1D065GateCompletion: Sendable {
+    case stream
+    case cancellation
+    case reader
+}
+
+private enum P1F1D065GateWaitOutcome: Sendable {
+    case entered
+    case completed(P1F1D065GateCompletion)
+}
+
+private final class P1F1D065SynchronousGate: @unchecked Sendable {
+    private let condition = NSCondition()
+    private var entered = false
+    private var released = false
+    private var completed: P1F1D065GateCompletion?
+    private var enteredWaiters: [
+        CheckedContinuation<P1F1D065GateWaitOutcome, Never>
+    ] = []
+
+    func enterAndWait() {
+        condition.lock()
+        entered = true
+        let waiters = enteredWaiters
+        enteredWaiters.removeAll()
+        condition.broadcast()
+        condition.unlock()
+        waiters.forEach { $0.resume(returning: .entered) }
+        condition.lock()
+        while !released {
+            condition.wait()
+        }
+        condition.unlock()
+    }
+
+    func waitUntilEnteredOrCompleted() async -> P1F1D065GateWaitOutcome {
+        await withCheckedContinuation { continuation in
+            condition.lock()
+            if entered {
+                condition.unlock()
+                continuation.resume(returning: .entered)
+            } else if let completed {
+                condition.unlock()
+                continuation.resume(returning: .completed(completed))
+            } else {
+                enteredWaiters.append(continuation)
+                condition.unlock()
+            }
+        }
+    }
+
+    func complete(_ completion: P1F1D065GateCompletion) {
+        condition.lock()
+        guard !entered, completed == nil else {
+            condition.unlock()
+            return
+        }
+        completed = completion
+        let waiters = enteredWaiters
+        enteredWaiters.removeAll()
+        condition.unlock()
+        waiters.forEach { $0.resume(returning: .completed(completion)) }
+    }
+
+    func release() {
+        condition.lock()
+        released = true
+        condition.broadcast()
+        condition.unlock()
+    }
+
+}
+
+private struct P1F1D065BlockingProgressSink: EngineProgressSink {
+    let gate: P1F1D065SynchronousGate
+
+    func submit(_ payload: EngineExecutionEventPayloadV1) async throws {
+        _ = payload
+        gate.enterAndWait()
+    }
+}
+
+private enum P1F1D065DirectoryCloseObservation: Sendable, Equatable {
+    case closed
+    case notAttempted
+    case failed(String)
+}
+
+private struct P1F1D065CleanupPublicationObservation: Sendable, Equatable {
+    let expectedFailure: Bool
+    let cleanupRemoved: Bool
+    let socketRemoved: Bool
+    let registryEmpty: Bool
+    let directoryClose: P1F1D065DirectoryCloseObservation
+}
+
+private final class P1F1D065PublicationProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: P1F1D065CleanupPublicationObservation?
+
+    func record(_ observation: P1F1D065CleanupPublicationObservation) {
+        lock.withLock { storage = observation }
+    }
+
+    var snapshot: P1F1D065CleanupPublicationObservation? {
+        lock.withLock { storage }
+    }
+}
+
+private final class P1F1D065SignatureRevalidator:
+    CliProcessCodeSignatureRevalidatingV1, @unchecked Sendable
+{
+    private let expectedCLI: CliExecutableAuthorityV1
+    private let expectedBoardBridge: EngineBoardBridgeExecutableAuthorityV1
+    private let injectedFailure: P1F1D065SignatureCall?
+    private let lock = NSLock()
+    private var calls: [P1F1D065SignatureCall] = []
+
+    init(
+        expectedCLI: CliExecutableAuthorityV1,
+        expectedBoardBridge: EngineBoardBridgeExecutableAuthorityV1,
+        injectedFailure: P1F1D065SignatureCall? = nil
+    ) {
+        self.expectedCLI = expectedCLI
+        self.expectedBoardBridge = expectedBoardBridge
+        self.injectedFailure = injectedFailure
+    }
+
+    func revalidateCLI(
+        _ authority: CliExecutableAuthorityV1
+    ) throws {
+        try authority.validateCanonical()
+        guard authority == expectedCLI else {
+            throw EngineContextValidationErrorV1()
+        }
+        try record(.cli, expectedPrefix: [])
+    }
+
+    func revalidateBoardBridge(
+        _ authority: EngineBoardBridgeExecutableAuthorityV1
+    ) throws {
+        try authority.validateCanonical()
+        guard authority == expectedBoardBridge else {
+            throw EngineContextValidationErrorV1()
+        }
+        try record(.boardBridge, expectedPrefix: [.cli])
+    }
+
+    func snapshot() -> [P1F1D065SignatureCall] {
+        lock.withLock { calls }
+    }
+
+    private func record(
+        _ call: P1F1D065SignatureCall,
+        expectedPrefix: [P1F1D065SignatureCall]
+    ) throws {
+        try lock.withLock {
+            guard calls == expectedPrefix else {
+                throw EngineContextValidationErrorV1()
+            }
+            calls.append(call)
+        }
+        if injectedFailure == call {
+            throw P1F1D065SignatureFixtureError.injected(call)
+        }
+    }
+}
+
+private final class P1F1D065ProcessInspector:
+    EngineRuntimeProcessInspectingV1, @unchecked Sendable
+{
+    private let authority: CliExecutableAuthorityV1
+    private let bridgeAuthority: EngineBoardBridgeExecutableAuthorityV1
+    private let missingImageGate: P1F1D065SynchronousGate?
+    private let resumeReadyURL: URL?
+    private let lock = NSLock()
+    private var snapshotCalls = 0
+    private var signals: [(Int32, Int32)] = []
+    private var injectedResumeFailure = false
+    private var observedSignals: [P1F1D065SignalObservation] = []
+    private var coldIdentity: P1F1D065ColdIdentity?
+
+    init(
+        authority: CliExecutableAuthorityV1,
+        bridgeAuthority: EngineBoardBridgeExecutableAuthorityV1,
+        missingImageGate: P1F1D065SynchronousGate? = nil,
+        resumeReadyURL: URL? = nil
+    ) {
+        self.authority = authority
+        self.bridgeAuthority = bridgeAuthority
+        self.missingImageGate = missingImageGate
+        self.resumeReadyURL = resumeReadyURL
+    }
+
+    func configureColdDiagnostics(_ identity: P1F1D065ColdIdentity) throws {
+        try lock.withLock {
+            guard coldIdentity == nil else {
+                throw P1F1D065MechanicsFixtureError.coldDiagnosticsAlreadyConfigured
+            }
+            coldIdentity = identity
+        }
+    }
+
+    func signalObservations() -> [P1F1D065SignalObservation] {
+        lock.withLock { observedSignals }
+    }
+
+    func logCold(_ message: String) {
+        if let identity = lock.withLock({ coldIdentity }) {
+            p1f1d065ColdLog(identity, message)
+        }
+    }
+
+    private func recordSignal(_ observation: P1F1D065SignalObservation) {
+        lock.withLock { observedSignals.append(observation) }
+        logCold("signal=\(observation.signal) group=\(observation.group) target=\(observation.target) result=\(observation.result) errno=\(observation.errorNumber)")
+    }
+
+    func snapshots() throws -> [EngineRuntimeProcessSnapshotV1] {
+        lock.withLock {
+            snapshotCalls += 1
+        }
+        let peer = EngineRuntimeProcessSnapshotV1(
+            pid: getpid(),
+            processGroupId: getpgrp(),
+            uid: getuid(),
+            startSeconds: 1,
+            startMicroseconds: 0,
+            executablePath: bridgeAuthority.stagedPath,
+            executableDevice: bridgeAuthority.stagedDevice,
+            executableInode: bridgeAuthority.stagedInode,
+            executableHash: bridgeAuthority.executableHash,
+            designatedRequirement: bridgeAuthority.designatedRequirement,
+            cdHash: bridgeAuthority.cdHash
+        )
+        var pids = [pid_t](repeating: 0, count: 512)
+        let count = pids.withUnsafeMutableBytes { bytes in
+            proc_listchildpids(
+                getpid(),
+                bytes.baseAddress,
+                Int32(bytes.count)
+            )
+        }
+        guard count >= 0, Int(count) <= pids.count else {
+            throw EngineContextValidationErrorV1()
+        }
+        var snapshots = pids.prefix(Int(count)).compactMap {
+            pid -> EngineRuntimeProcessSnapshotV1? in
+            guard pid > 0 else { return nil }
+            let processGroupID = getpgid(pid)
+            guard processGroupID > 0 else { return nil }
+            return EngineRuntimeProcessSnapshotV1(
+                pid: pid,
+                processGroupId: processGroupID,
+                uid: getuid(),
+                startSeconds: 1,
+                startMicroseconds: 0,
+                executablePath: authority.stagedPath,
+                executableDevice: authority.stagedDevice,
+                executableInode: authority.stagedInode,
+                executableHash: authority.executableHash,
+                designatedRequirement: authority.designatedRequirement,
+                cdHash: authority.cdHash
+            )
+        }
+        snapshots.append(peer)
+        return snapshots
+    }
+
+    func send(signal: Int32, processGroupId: Int32) throws {
+        let shouldInjectResumeFailure = lock.withLock {
+            signals.append((signal, processGroupId))
+            guard signal == SIGCONT,
+                  missingImageGate != nil,
+                  !injectedResumeFailure
+            else { return false }
+            injectedResumeFailure = true
+            return true
+        }
+        if shouldInjectResumeFailure {
+            missingImageGate?.enterAndWait()
+            let result = Darwin.kill(-processGroupId, signal)
+            let errorNumber = result == 0 ? 0 : errno
+            recordSignal(P1F1D065SignalObservation(
+                signal: signal, group: processGroupId, target: -processGroupId,
+                result: result, errorNumber: errorNumber
+            ))
+            guard result == 0 || errorNumber == ESRCH else {
+                throw EngineContextValidationErrorV1()
+            }
+            for _ in 0..<3_000 {
+                if let resumeReadyURL,
+                   FileManager.default.fileExists(
+                       atPath: resumeReadyURL.path
+                   )
+                {
+                    throw CliProcessBackendError.processLaunchFailed(
+                        "injected resume dispatch failure"
+                    )
+                }
+                usleep(1_000)
+            }
+            throw P1F1D065MechanicsFixtureError
+                .resumeFailureReadinessTimedOut
+        }
+        let result = Darwin.kill(-processGroupId, signal)
+        let errorNumber = result == 0 ? 0 : errno
+        recordSignal(P1F1D065SignalObservation(
+            signal: signal, group: processGroupId, target: -processGroupId,
+            result: result, errorNumber: errorNumber
+        ))
+        guard result == 0 || errorNumber == ESRCH else {
+            throw EngineContextValidationErrorV1()
+        }
+    }
+
+    func processGroupExists(_ processGroupId: Int32) throws -> Bool {
+        if Darwin.kill(-processGroupId, 0) == 0 { return true }
+        if errno == ESRCH { return false }
+        if errno == EPERM { return true }
+        throw EngineContextValidationErrorV1()
+    }
+
+    var effectSnapshot: (snapshotCalls: Int, signalCount: Int) {
+        lock.withLock { (snapshotCalls, signals.count) }
+    }
+
+    var signalSnapshot: [Int32] {
+        lock.withLock { signals.map { $0.0 } }
+    }
+}
+
+private final class P1F1D065MechanicsHarness: @unchecked Sendable {
+    let root: URL
+    let workspace: URL
+    let executableAuthority: CliExecutableAuthorityV1
+    let bridgeAuthority: EngineBoardBridgeExecutableAuthorityV1
+    let directoryAuthority: EngineBoardSocketDirectoryAuthorityV1
+    let processInspector: P1F1D065ProcessInspector
+
+    private let lifecycleLock = NSLock()
+    private var directoryAuthorityClosed = false
+
+    init(
+        label: String,
+        missingImageGate: P1F1D065SynchronousGate? = nil
+    ) throws {
+        root = URL(
+            fileURLWithPath:
+                "/tmp/al65-\(label)-\(UUID().uuidString.prefix(8).lowercased())",
+            isDirectory: true
+        ).standardizedFileURL
+        workspace = root.appendingPathComponent("workspace", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: workspace,
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o700],
+            ofItemAtPath: root.path
+        )
+
+        let staged = root.appendingPathComponent("controlled-shell")
+        try Data("#!/bin/sh\nexec /bin/sh \"$@\"\n".utf8).write(
+            to: staged,
+            options: .atomic
+        )
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o500],
+            ofItemAtPath: staged.path
+        )
+        var stagedInfo = stat()
+        guard staged.path.withCString({ Darwin.lstat($0, &stagedInfo) }) == 0
+        else {
+            throw EngineContextValidationErrorV1()
+        }
+        let stagedHash = CanonicalJSONV1.sha256Hex(
+            try Data(contentsOf: staged)
+        )
+        executableAuthority = try CliExecutableAuthorityV1(
+            kind: .cliCodex,
+            command: "codex",
+            commandSourcePath: staged.path,
+            commandSourceHash: stagedHash,
+            resolvedExecutablePath: staged.path,
+            stagedPath: staged.path,
+            executableHash: stagedHash,
+            designatedRequirement:
+                "anchor apple generic and identifier codex and certificate leaf[subject.OU] = 2DC432GLL2",
+            teamIdentifier: "2DC432GLL2",
+            cdHash: String(repeating: "a", count: 40),
+            stagedDevice: UInt64(stagedInfo.st_dev),
+            stagedInode: UInt64(stagedInfo.st_ino)
+        )
+        bridgeAuthority = try EngineBoardBridgeExecutableAuthorityV1(
+            sourcePath: staged.path,
+            stagedPath: staged.path,
+            executableHash: stagedHash,
+            designatedRequirement:
+                "anchor apple generic and identifier com.muzi.agentloop.board-bridge",
+            teamIdentifier: "2DC432GLL2",
+            cdHash: String(repeating: "b", count: 40),
+            stagedDevice: UInt64(stagedInfo.st_dev),
+            stagedInode: UInt64(stagedInfo.st_ino)
+        )
+
+        let directoryDescriptor = root.path.withCString {
+            Darwin.open($0, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW)
+        }
+        guard directoryDescriptor >= 0 else {
+            throw EngineContextValidationErrorV1()
+        }
+        var directoryInfo = stat()
+        guard Darwin.fstat(directoryDescriptor, &directoryInfo) == 0 else {
+            _ = Darwin.close(directoryDescriptor)
+            throw EngineContextValidationErrorV1()
+        }
+        do {
+            directoryAuthority = try EngineBoardSocketDirectoryAuthorityV1(
+                directoryURL: try p1f1CanonicalDirectoryURL(
+                    directoryDescriptor
+                ),
+                ownedDescriptor: directoryDescriptor,
+                device: UInt64(directoryInfo.st_dev),
+                inode: UInt64(directoryInfo.st_ino),
+                uid: UInt32(directoryInfo.st_uid),
+                mode: UInt16(directoryInfo.st_mode & mode_t(0o777)),
+                ownerIdentityHash: p1f1dFullHash,
+                bootId: "00000000-0000-4000-8000-000000000065"
+            )
+        } catch {
+            _ = Darwin.close(directoryDescriptor)
+            throw error
+        }
+        processInspector = P1F1D065ProcessInspector(
+            authority: executableAuthority,
+            bridgeAuthority: bridgeAuthority,
+            missingImageGate: missingImageGate,
+            resumeReadyURL: missingImageGate == nil
+                ? nil : root.appendingPathComponent("resume-ready")
+        )
+    }
+
+    func makeCleanupAuthority(
+        _ name: String
+    ) throws -> (authority: CliCleanupFileAuthorityV1, url: URL) {
+        let url = root.appendingPathComponent(name)
+        try "{}".write(to: url, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o600],
+            ofItemAtPath: url.path
+        )
+        return (try CliCleanupFileAuthorityV1.captureExisting(url), url)
+    }
+
+    func request(
+        executionId: String,
+        arguments: [String],
+        token: Character,
+        cleanupAuthorities: [CliCleanupFileAuthorityV1] = [],
+        progressSink: any EngineProgressSink = P1F1DProgressRecorder()
+    ) throws -> CliProcessLaunchRequestV1 {
+        let socketURL = try BoardToolServer.makeSocketURL(
+            directoryAuthority: directoryAuthority,
+            executionId: executionId
+        )
+        return try CliProcessLaunchRequestV1(
+            executionId: executionId,
+            spec: CliCommandSpec(
+                command: executableAuthority.stagedPath,
+                arguments: arguments,
+                environment: [:],
+                stdinBytes: Data("p1f1d controlled mechanics stdin".utf8),
+                cleanupAuthorities: cleanupAuthorities
+            ),
+            cliExecutableAuthority: executableAuthority,
+            workspaceURL: workspace,
+            boundCapabilityTools: p1f1dBoundCapabilityTools(),
+            bridgeExecutableAuthority: bridgeAuthority,
+            boardSocketDirectoryAuthority: directoryAuthority,
+            boardSocketBasename: socketURL.lastPathComponent,
+            boardToken: String(repeating: token, count: 64),
+            boardCardId: p1f1EngineCardID,
+            boardTerminalSink: P1F1DBoardTerminalRecorder(),
+            progressSink: progressSink
+        )
+    }
+
+    func socketURL(executionId: String) throws -> URL {
+        try BoardToolServer.makeSocketURL(
+            directoryAuthority: directoryAuthority,
+            executionId: executionId
+        )
+    }
+
+    func checkedCloseDirectoryAuthority() throws {
+        try lifecycleLock.withLock {
+            guard !directoryAuthorityClosed else {
+                throw EngineRuntimeAuthorityErrorV1.authorityClosed
+            }
+            try directoryAuthority.close()
+            directoryAuthorityClosed = true
+        }
+    }
+
+    func remove() {
+        if !lifecycleLock.withLock({ directoryAuthorityClosed }) {
+            do {
+                try checkedCloseDirectoryAuthority()
+            } catch {
+                Issue.record("065 socket directory authority close failed")
+            }
+        }
+        try? FileManager.default.removeItem(at: root)
+    }
+
+    func removeChecked() throws {
+        if !lifecycleLock.withLock({ directoryAuthorityClosed }) {
+            try checkedCloseDirectoryAuthority()
+        }
+        try FileManager.default.removeItem(at: root)
+    }
+}
+
+private func p1f1d065AssessColdCleanup(
+    report: P1F1D065ColdOwnedReport,
+    harness: P1F1D065MechanicsHarness,
+    registry: ShellProcessRegistry,
+    socketURL: URL,
+    executionId: String,
+    removalAllowed: inout Bool
+) -> P1F1D065ColdCleanupError {
+    removalAllowed = false
+    var failures: [P1F1D065ColdCleanupError.Failure] = []
+    func observe(
+        _ operation: String, result: Int32, errorNumber: Int32, passed: Bool
+    ) {
+        harness.processInspector.logCold("observation=\(operation) result=\(result) errno=\(errorNumber) passed=\(passed)")
+        if !passed {
+            failures.append(.init(
+                operation: operation,
+                error: P1F1D065ColdObservationError(
+                    operation: operation, result: result, errorNumber: errorNumber
+                )
+            ))
+        }
+    }
+
+    let signals = harness.processInspector.signalObservations()
+    harness.processInspector.logCold("final-signal-count=\(signals.count) assessment-execution=\(executionId)")
+    for signal in signals {
+        harness.processInspector.logCold("final-signal=\(signal.signal) group=\(signal.group) target=\(signal.target) result=\(signal.result) errno=\(signal.errorNumber)")
+    }
+    let continued = signals.filter { $0.signal == SIGCONT && $0.result == 0 }
+    let continuationIsValid = continued.count == 1
+        && continued[0].group > 0
+        && continued[0].target == -continued[0].group
+    observe("successful-SIGCONT-identity", result: Int32(clamping: continued.count),
+            errorNumber: 0, passed: continuationIsValid)
+    // Only an actual successful continuation supplies this fixture's PID.
+    let pid: Int32? = continuationIsValid ? continued[0].group : nil
+
+    switch report.cleanup.cancellation {
+    case .success(let evidence):
+        observe("cancellation-identity", result: evidence.pid, errorNumber: 0,
+                passed: evidence.pid > 0 && evidence.pid == pid
+                    && evidence.processGroupID == evidence.pid)
+        observe("cancellation-childReaped", result: evidence.childReaped ? 1 : 0,
+                errorNumber: 0, passed: evidence.childReaped)
+        observe("cancellation-stdoutEOF", result: evidence.stdoutEOF ? 1 : 0,
+                errorNumber: 0, passed: evidence.stdoutEOF)
+        observe("cancellation-stderrEOF", result: evidence.stderrEOF ? 1 : 0,
+                errorNumber: 0, passed: evidence.stderrEOF)
+    case .failure(let error):
+        failures.append(.init(operation: "cancellation", error: error))
+        harness.processInspector.logCold("observation=cancellation passed=false category=\(p1f1d065ColdErrorCategory(error))")
+    }
+
+    if let pid {
+        for target in [pid, -pid] {
+            let result = Darwin.kill(target, 0)
+            let errorNumber = result == 0 ? 0 : errno
+            observe("kill(\(target),0)", result: result, errorNumber: errorNumber,
+                    passed: result == -1 && errorNumber == ESRCH)
+        }
+        var information = siginfo_t()
+        var waitResult: Int32
+        var waitError: Int32
+        repeat {
+            // WNOWAIT is essential: ownership stays with the backend reaper.
+            waitResult = Darwin.waitid(
+                P_PID, id_t(pid), &information, WEXITED | WNOHANG | WNOWAIT
+            )
+            waitError = waitResult == 0 ? 0 : errno
+        } while waitResult == -1 && waitError == EINTR
+        observe("waitid(WEXITED|WNOHANG|WNOWAIT)", result: waitResult,
+                errorNumber: waitError, passed: waitResult == -1 && waitError == ECHILD)
+    } else {
+        observe("pid-group-waitid-unavailable", result: -1, errorNumber: 0, passed: false)
+    }
+
+    var socketInformation = stat()
+    let (socketResult, socketError) = socketURL.path.withCString {
+        let result = Darwin.lstat($0, &socketInformation)
+        let errorNumber = result == 0 ? 0 : errno
+        return (result, errorNumber)
+    }
+    observe("socket-lstat", result: socketResult, errorNumber: socketError,
+            passed: socketResult == -1 && socketError == ENOENT)
+    let activeCount = registry.activeCount
+    observe("registry-activeCount", result: Int32(clamping: activeCount), errorNumber: 0,
+            passed: activeCount == 0)
+
+    switch report.cleanup.stream {
+    case .success(let frames):
+        let statuses = frames.compactMap { frame -> Int32? in
+            if case let .exited(status) = frame { return status }
+            return nil
+        }
+        for status in statuses {
+            harness.processInspector.logCold("final-stream-exited status=\(status)")
+        }
+        observe("joined-stream-exited", result: Int32(clamping: statuses.count),
+                errorNumber: 0, passed: !statuses.isEmpty)
+    case .failure(let error):
+        failures.append(.init(operation: "joined-stream", error: error))
+        harness.processInspector.logCold("observation=joined-stream passed=false category=\(p1f1d065ColdErrorCategory(error))")
+    }
+
+    removalAllowed = failures.isEmpty
+    let primary: (any Error)?
+    switch report.body {
+    case .success: primary = nil
+    case .failure(let error): primary = error
+    }
+    harness.processInspector.logCold("cleanup-certified=\(removalAllowed) retained-root=\(removalAllowed ? "none" : harness.root.path)")
+    return P1F1D065ColdCleanupError(
+        primary: primary, cleanupFailures: failures,
+        retainedFixturePath: removalAllowed ? nil : harness.root.path
+    )
+}
+
+private enum P1F1D065SocketClientError: Error, Sendable, Equatable {
+    case closed
+}
+
+private final class P1F1D065SocketClient: @unchecked Sendable {
+    private let lock = NSLock()
+    private var descriptor: Int32 = -1
+
+    init(path: String) throws {
+        let opened = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
+        guard opened >= 0 else {
+            throw BoardToolServerError.socketSetupFailed(
+                String(cString: strerror(errno))
+            )
+        }
+        guard PosixSockets.disableSIGPIPE(opened) else {
+            _ = Darwin.close(opened)
+            throw BoardToolServerError.socketSetupFailed(
+                "065 client SO_NOSIGPIPE failed"
+            )
+        }
+        do {
+            try Self.connect(opened, path: path)
+            descriptor = opened
+        } catch {
+            _ = Darwin.close(opened)
+            throw error
+        }
+    }
+
+    deinit { close() }
+
+    func send(_ value: JSONValue) throws {
+        let descriptor = try ownedDescriptor()
+        var data = Data(try value.encodedString().utf8)
+        data.append(UInt8(ascii: "\n"))
+        try data.withUnsafeBytes { bytes in
+            guard let base = bytes.baseAddress else { return }
+            var offset = 0
+            while offset < data.count {
+                let written = Darwin.write(
+                    descriptor,
+                    base.advanced(by: offset),
+                    data.count - offset
+                )
+                if written < 0 {
+                    if errno == EINTR { continue }
+                    throw BoardToolServerError.socketSetupFailed(
+                        String(cString: strerror(errno))
+                    )
+                }
+                offset += written
+            }
+        }
+    }
+
+    func readLine() throws -> String? {
+        let descriptor = try ownedDescriptor()
+        var buffer = Data()
+        var byte = UInt8()
+        while true {
+            let count = Darwin.read(descriptor, &byte, 1)
+            if count == 0 { return nil }
+            if count < 0 {
+                if errno == EINTR { continue }
+                if errno == ECONNRESET || errno == ENOTCONN { return nil }
+                throw BoardToolServerError.socketSetupFailed(
+                    String(cString: strerror(errno))
+                )
+            }
+            if byte == UInt8(ascii: "\n") {
+                guard let line = String(data: buffer, encoding: .utf8),
+                      !line.isEmpty
+                else { return nil }
+                return line
+            }
+            buffer.append(byte)
+        }
+    }
+
+    func interruptRead() {
+        let owned = lock.withLock { descriptor }
+        if owned >= 0 { _ = Darwin.shutdown(owned, SHUT_RDWR) }
+    }
+
+    func close() {
+        let owned = lock.withLock { () -> Int32 in
+            guard descriptor >= 0 else { return -1 }
+            let value = descriptor
+            descriptor = -1
+            return value
+        }
+        guard owned >= 0 else { return }
+        _ = Darwin.shutdown(owned, SHUT_RDWR)
+        _ = Darwin.close(owned)
+    }
+
+    private func ownedDescriptor() throws -> Int32 {
+        try lock.withLock {
+            guard descriptor >= 0 else {
+                throw P1F1D065SocketClientError.closed
+            }
+            return descriptor
+        }
+    }
+
+    private static func connect(_ descriptor: Int32, path: String) throws {
+        var address = sockaddr_un()
+        address.sun_family = sa_family_t(AF_UNIX)
+        let pathBytes = Array(path.utf8) + [0]
+        guard pathBytes.count <= MemoryLayout.size(ofValue: address.sun_path)
+        else { throw BoardToolServerError.socketPathTooLong(path) }
+        withUnsafeMutableBytes(of: &address.sun_path) { raw in
+            raw.copyBytes(from: pathBytes)
+        }
+        let length = socklen_t(
+            MemoryLayout<sockaddr_un>.offset(of: \.sun_path)!
+                + pathBytes.count
+        )
+        address.sun_len = UInt8(length)
+        let result = withUnsafePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.connect(descriptor, $0, length)
+            }
+        }
+        guard result == 0 else {
+            throw BoardToolServerError.socketSetupFailed(
+                String(cString: strerror(errno))
+            )
+        }
+    }
+}
+
+private func p1f1d065ObserveCleanupPublication(
+    error: (any Error)?,
+    expectedError: CliProcessBackendError,
+    harness: P1F1D065MechanicsHarness,
+    cleanupURL: URL,
+    socketURL: URL,
+    registry: ShellProcessRegistry
+) -> P1F1D065CleanupPublicationObservation {
+    let cleanupRemoved = !FileManager.default.fileExists(
+        atPath: cleanupURL.path
+    )
+    let socketRemoved = !FileManager.default.fileExists(
+        atPath: socketURL.path
+    )
+    let registryEmpty = registry.activeCount == 0
+    let closeObservation: P1F1D065DirectoryCloseObservation
+    if cleanupRemoved, socketRemoved, registryEmpty {
+        do {
+            try harness.checkedCloseDirectoryAuthority()
+            closeObservation = .closed
+        } catch {
+            closeObservation = .failed(String(reflecting: type(of: error)))
+        }
+    } else {
+        closeObservation = .notAttempted
+    }
+    return P1F1D065CleanupPublicationObservation(
+        expectedFailure: (error as? CliProcessBackendError) == expectedError,
+        cleanupRemoved: cleanupRemoved,
+        socketRemoved: socketRemoved,
+        registryEmpty: registryEmpty,
+        directoryClose: closeObservation
+    )
+}
+
+private func p1f1d065GateBackend(
+    harness: P1F1D065MechanicsHarness,
+    registry: ShellProcessRegistry,
+    revalidator: any CliProcessCodeSignatureRevalidatingV1
+) throws -> CliProcessBackend {
+    try CliProcessBackend(
+        pipeDrainGrace: .seconds(1),
+        registry: registry,
+        processInspector: harness.processInspector,
+        codeSignatureRevalidator: revalidator
+    )
+}
+
+private actor P1F1DFrameRecorder {
+    private var storage: [CliProcessFrameV1] = []
+    private var streamEnded = false
+    private var streamFailure: String?
+
+    func append(_ frame: CliProcessFrameV1) { storage.append(frame) }
+    func finish(error: (any Error)? = nil) {
+        streamEnded = true
+        streamFailure = error.map { String(reflecting: type(of: $0)) }
+    }
+    func snapshot() -> [CliProcessFrameV1] { storage }
+    func ended() -> Bool { streamEnded }
+    func failure() -> String? { streamFailure }
+    func sawStdout(_ value: String) -> Bool {
+        storage.contains(.stdoutLine(value))
+    }
+}
+
+private struct P1F1DRawSecretError: Error, Sendable {
+    let raw: String
+}
+
+private struct P1F1DRawFailureProcessDriver: CliProcessDrivingV1 {
+    let frames: [CliProcessFrameV1]
+    let failure: P1F1DRawSecretError
+    let recorder: P1F1DLaunchRecorder
+
+    var supportsProcessGroupCancellation: Bool { true }
+
+    func launch(
+        _ request: CliProcessLaunchRequestV1
+    ) -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        recorder.append(request)
+        return AsyncThrowingStream { continuation in
+            for frame in frames { continuation.yield(frame) }
+            continuation.finish(throwing: failure)
+        }
+    }
+
+    func cancel(executionId: String) async throws -> CliProcessExitEvidenceV1 {
+        throw failure
+    }
+}
+
+private struct P1F1DModelLoopDriver: ModelLoopExecutionDrivingV1 {
+    func execute(
+        request: EngineExecutionRequest,
+        context: EngineResolvedContextTransportV1,
+        workspaceURL: URL,
+        terminalSink: any EngineTerminalSink,
+        boardTerminalSink: any EngineBoardTerminalSink,
+        progressSink: any EngineProgressSink
+    ) -> AsyncThrowingStream<EngineExecutionEventPayloadV1, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+
+    func cancel(executionId: String) async throws {}
+}
+
+private struct P1F1DDescriptorAdapter: ExecutionEngineAdapter {
+    let value: ExecutionEngineDescriptor
+
+    func descriptor(
+        profile: RuntimeProfileRecord
+    ) throws -> ExecutionEngineDescriptor { value }
+
+    func execute(
+        request: EngineExecutionRequest
+    ) -> AsyncThrowingStream<EngineExecutionEventPayloadV1, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+
+    func cancel(executionId: String) async throws {}
+}
+
+private let p1f1dExecutionID = "00000000-0000-4000-8000-000000000062"
+private let p1f1dRunID = "00000000-0000-4000-8000-000000000063"
+private let p1f1dCardID = "00000000-0000-4000-8000-000000000064"
+private let p1f1dSessionID = "00000000-0000-4000-8000-000000000067"
+private let p1f1dSquadID = "00000000-0000-4000-8000-000000000068"
+private let p1f1dFullHash = String(repeating: "a", count: 64)
+
+private func p1f1dContainsOrderedSubsequence(
+    _ expected: [String],
+    in actual: [String]
+) -> Bool {
+    var searchIndex = actual.startIndex
+    for value in expected {
+        guard searchIndex < actual.endIndex,
+              let match = actual[searchIndex...].firstIndex(of: value)
+        else { return false }
+        searchIndex = actual.index(after: match)
+    }
+    return true
+}
+
+private func p1f1dBoundCapabilityTools() -> EngineBoundCapabilityToolsV1 {
+    EngineBoundCapabilityToolsV1(
+        logicalDefinitions: [
+            .completeCard, .blockCard, .addProgressNote, .askUser,
+        ],
+        capabilityTools: []
+    )
+}
+
+private func p1f1dProfile(_ kind: RuntimeProfileKind) -> RuntimeProfileRecord {
+    let suffix: Int
+    switch kind {
+    case .anthropicAPI: suffix = 1
+    case .openAIAPI: suffix = 2
+    case .chatGPTOAuth: suffix = 3
+    case .cliCodex: suffix = 4
+    case .cliClaude: suffix = 5
+    }
+    return RuntimeProfileRecord(
+        id: String(format: "00000000-0000-4000-8000-%012d", suffix),
+        kind: kind,
+        name: "P1-F1D \(kind.rawValue)",
+        baseURL: nil,
+        credentialAccount: nil,
+        isDefault: false,
+        createdAt: Date(timeIntervalSince1970: 0)
+    )
+}
+
+private func p1f1dHelp(
+    _ kind: RuntimeProfileKind,
+    dropping flag: String? = nil
+) throws -> CliHelpSnapshotV1 {
+    var root: [String]
+    var first: [String]
+    var resume: [String]
+    let subcommands: [String]
+    switch kind {
+    case .cliCodex:
+        root = ["-C", "-a", "-m", "-s"]
+        first = [
+            "--ignore-rules", "--ignore-user-config", "--json",
+            "--skip-git-repo-check", "--strict-config", "-c",
+        ]
+        resume = first
+        subcommands = ["resume"]
+    case .cliClaude:
+        root = []
+        first = [
+            "--add-dir", "--allowedTools", "--disable-slash-commands",
+            "--input-format", "--mcp-config", "--model", "--no-chrome",
+            "--output-format", "--permission-mode", "--session-id",
+            "--setting-sources", "--strict-mcp-config", "--tools",
+            "--verbose", "-p",
+        ]
+        resume = first + ["--resume"]
+        subcommands = []
+    case .anthropicAPI, .openAIAPI, .chatGPTOAuth:
+        preconditionFailure("Only CLI profiles have help snapshots")
+    }
+    if let flag {
+        root.removeAll { $0 == flag }
+        first.removeAll { $0 == flag }
+        resume.removeAll { $0 == flag }
+    }
+    let authority = try CliExecutableAuthorityV1(
+        kind: kind,
+        command: kind == .cliCodex ? "codex" : "claude",
+        commandSourcePath: "/fixtures/\(kind.rawValue)/command",
+        commandSourceHash: String(repeating: "1", count: 64),
+        resolvedExecutablePath: "/fixtures/\(kind.rawValue)/native",
+        stagedPath: "/fixtures/\(kind.rawValue)/staged/executable",
+        executableHash: String(repeating: "2", count: 64),
+        designatedRequirement: "anchor apple generic and identifier fixture.\(kind.rawValue)",
+        teamIdentifier: kind == .cliCodex ? "2DC432GLL2" : "Q6L2SF6YDW",
+        cdHash: String(repeating: "a", count: 40),
+        stagedDevice: 62,
+        stagedInode: 63
+    )
+    return try CliHelpSnapshotV1(
+        executableAuthority: authority,
+        versionLine: kind == .cliCodex
+            ? "codex-cli 0.144.5" : "2.1.81 (Claude Code)",
+        rootExitStatus: 0,
+        rootStdoutHash: String(repeating: "1", count: 64),
+        firstExitStatus: 0,
+        firstStdoutHash: String(repeating: "2", count: 64),
+        resumeExitStatus: 0,
+        resumeStdoutHash: String(repeating: "3", count: 64),
+        rootFlags: root.sorted(),
+        firstFlags: first.sorted(),
+        resumeFlags: resume.sorted(),
+        subcommands: subcommands.sorted()
+    )
+}
+
+private func p1f1dDescriptor(
+    kind: RuntimeProfileKind,
+    help: CliHelpSnapshotV1? = nil,
+    adapterId overrideID: String? = nil,
+    adapterVersion: String = "1"
+) -> ExecutionEngineDescriptor {
+    let isModel = !kind.isCLI
+    let adapterID: String
+    switch kind {
+    case .anthropicAPI, .openAIAPI, .chatGPTOAuth:
+        adapterID = "agentloop.model-loop"
+    case .cliCodex:
+        adapterID = "agentloop.cli.codex"
+    case .cliClaude:
+        adapterID = "agentloop.cli.claude"
+    }
+    func has(_ flag: String, resume: Bool = false) -> Bool {
+        guard let help else { return false }
+        return (resume ? help.resumeFlags : help.firstFlags).contains(flag)
+    }
+    func hasRoot(_ flag: String) -> Bool {
+        help?.rootFlags.contains(flag) == true
+    }
+    let codexRoot = ["-a", "-C", "-s", "-m"].allSatisfy(hasRoot)
+    let codexFirst = [
+        "--ignore-user-config", "--ignore-rules", "--strict-config",
+        "--skip-git-repo-check", "-c",
+    ].allSatisfy { has($0) }
+    let codexResume = [
+        "--ignore-user-config", "--ignore-rules", "--strict-config",
+        "--skip-git-repo-check", "-c",
+    ].allSatisfy { has($0, resume: true) }
+    let stream: EngineCapabilitySupportV1 = isModel
+        ? .supported
+        : (kind == .cliCodex
+            ? (codexRoot && codexFirst && has("--json")
+                ? .supported : .unsupported)
+            : (has("--output-format") && has("--verbose")
+                ? .supported : .unsupported))
+    let board: EngineCapabilitySupportV1 = isModel
+        ? .supported
+        : (kind == .cliCodex
+            ? (codexRoot && codexFirst ? .supported : .unsupported)
+            : (has("--mcp-config") ? .supported : .unsupported))
+    let readWrite: EngineCapabilitySupportV1 = isModel
+        ? .supported
+        : (kind == .cliCodex
+            ? (codexRoot ? .supported : .unsupported)
+            : (has("--add-dir") && has("--permission-mode")
+                ? .supported : .unsupported))
+    let resume: EngineCapabilitySupportV1
+    if isModel {
+        resume = .unsupported
+    } else if kind == .cliCodex {
+        resume = codexRoot
+            && codexResume
+            && has("--json", resume: true)
+            && help?.subcommands.contains("resume") == true
+            ? .supported : .unsupported
+    } else {
+        resume = has("--resume", resume: true) ? .supported : .unsupported
+    }
+    return ExecutionEngineDescriptor(
+        adapterId: overrideID ?? adapterID,
+        adapterVersion: adapterVersion,
+        profileKind: kind,
+        streamingProgress: stream,
+        boardTerminal: board,
+        toolBridge: board,
+        cancellation: .supported,
+        sessionResume: resume,
+        usageMetering: stream,
+        workspaceRead: readWrite,
+        workspaceWrite: readWrite,
+        network: board,
+        replayClassResolver: { _ in .nonReplayable }
+    )
+}
+
+private func p1f1dDescriptorsMatch(
+    _ lhs: ExecutionEngineDescriptor,
+    _ rhs: ExecutionEngineDescriptor,
+    replayScope: EngineSessionScopeV1
+) -> Bool {
+    guard lhs.adapterId == rhs.adapterId,
+          lhs.adapterVersion == rhs.adapterVersion,
+          lhs.profileKind == rhs.profileKind,
+          EngineCapabilityV1.allCases.allSatisfy({ capability in
+              lhs.support(for: capability) == rhs.support(for: capability)
+          })
+    else {
+        return false
+    }
+    return lhs.executionReplayClass(for: replayScope)
+        == rhs.executionReplayClass(for: replayScope)
+}
+
+private func p1f1dFactory(
+    id: String,
+    kinds: Set<RuntimeProfileKind>,
+    makeCounter: P1F1DLockedCounter? = nil,
+    descriptorOverrideID: String? = nil
+) throws -> EngineAdapterFactoryV1 {
+    let helpRequirement: EngineAdapterHelpRequirementV1?
+    if kinds == [.cliCodex] {
+        helpRequirement = try EngineAdapterHelpRequirementV1(
+            kind: .cliCodex,
+            command: "codex"
+        )
+    } else if kinds == [.cliClaude] {
+        helpRequirement = try EngineAdapterHelpRequirementV1(
+            kind: .cliClaude,
+            command: "claude"
+        )
+    } else {
+        helpRequirement = nil
+    }
+    return EngineAdapterFactoryV1(
+        adapterId: id,
+        adapterVersion: "1",
+        profileKinds: kinds,
+        helpRequirement: helpRequirement,
+        descriptor: { profile, help in
+            p1f1dDescriptor(
+                kind: profile.kind,
+                help: help,
+                adapterId: descriptorOverrideID
+            )
+        },
+        prepareRequest: { _, _, _ in
+            throw P1F1D062UnexpectedCall.invoked
+        },
+        makeRecoveryTransport: { _, _, _, _, _, _ in
+            throw P1F1D062UnexpectedCall.invoked
+        },
+        makeAdapter: { profile, _ in
+            makeCounter?.increment()
+            return P1F1DDescriptorAdapter(
+                value: p1f1dDescriptor(kind: profile.kind)
+            )
+        }
+    )
+}
+
+private func p1f1dRegistry(
+    codexHelp: CliHelpSnapshotV1? = nil,
+    claudeHelp: CliHelpSnapshotV1? = nil,
+    makeCounter: P1F1DLockedCounter? = nil
+) throws -> EngineAdapterRegistryV1 {
+    return try EngineAdapterRegistryV1(
+        factories: [
+            try p1f1dFactory(
+                id: "agentloop.model-loop",
+                kinds: [.anthropicAPI, .openAIAPI, .chatGPTOAuth],
+                makeCounter: makeCounter
+            ),
+            try p1f1dFactory(
+                id: "agentloop.cli.codex",
+                kinds: [.cliCodex],
+                makeCounter: makeCounter
+            ),
+            try p1f1dFactory(
+                id: "agentloop.cli.claude",
+                kinds: [.cliClaude],
+                makeCounter: makeCounter
+            ),
+        ],
+        helpSnapshots: [
+            .cliCodex: try codexHelp ?? p1f1dHelp(.cliCodex),
+            .cliClaude: try claudeHelp ?? p1f1dHelp(.cliClaude),
+        ]
+    )
+}
+
+private func p1f1dProductionRegistry(
+    codexHelp: CliHelpSnapshotV1? = nil,
+    claudeHelp: CliHelpSnapshotV1? = nil
+) throws -> EngineAdapterRegistryV1 {
+    let factories = EngineAdapterFactoryV1.builtInFactories(
+        makeModelLoopAdapter: { profile, runtime in
+            guard let driver = runtime.modelLoopDriver else {
+                throw EngineAdapterSelectionErrorV1.descriptorMismatch
+            }
+            return ModelLoopEngineAdapter(
+                profile: profile,
+                descriptor: runtime.descriptor,
+                driver: driver,
+                context: runtime.context,
+                workspace: runtime.workspace,
+                boundCapabilityTools: runtime.boundCapabilityTools,
+                terminalSink: runtime.terminalSink,
+                boardTerminalSink: runtime.boardTerminalSink,
+                progressSink: runtime.progressSink
+            )
+        },
+        makeCodexAdapter: { profile, runtime in
+            try p1f1dCliAdapter(profile: profile, runtime: runtime)
+        },
+        makeClaudeAdapter: { profile, runtime in
+            try p1f1dCliAdapter(profile: profile, runtime: runtime)
+        }
+    )
+    return try EngineAdapterRegistryV1(
+        factories: factories,
+        helpSnapshots: [
+            .cliCodex: try codexHelp ?? p1f1dHelp(.cliCodex),
+            .cliClaude: try claudeHelp ?? p1f1dHelp(.cliClaude),
+        ]
+    )
+}
+
+private func p1f1dCliAdapter(
+    profile: RuntimeProfileRecord,
+    runtime: EngineAdapterRuntimeV1
+) throws -> CliEngineAdapter {
+    guard let processDriver = runtime.cliProcessDriver else {
+        throw EngineAdapterSelectionErrorV1.descriptorMismatch
+    }
+    guard let configuration = runtime.cliConfiguration else {
+        throw EngineAdapterSelectionErrorV1.descriptorMismatch
+    }
+    return try CliEngineAdapter(
+        profile: profile,
+        descriptor: runtime.descriptor,
+        processDriver: processDriver,
+        configuration: configuration,
+        commandBuilder: CliEngineCommandBuilderV1(),
+        codexParser: CodexCliEventParserV1(),
+        claudeParserFactory: { expectedSessionID in
+            try ClaudeCliEventParserV1(expectedSessionId: expectedSessionID)
+        },
+        sanitizer: CliEngineSecretSanitizerV1(),
+        context: runtime.context,
+        workspace: runtime.workspace,
+        boundCapabilityTools: runtime.boundCapabilityTools,
+        resolvedSessionRef: runtime.resolvedSessionRef,
+        terminalSink: runtime.terminalSink,
+        boardTerminalSink: runtime.boardTerminalSink,
+        progressSink: runtime.progressSink
+    )
+}
+
+private func p1f1dConfiguration(
+    kind: RuntimeProfileKind = .cliCodex,
+    ranchSessionID: String = p1f1dSessionID,
+    claudeConfigDirectory: URL = URL(fileURLWithPath: "/tmp")
+) throws -> CliEngineRuntimeConfigurationV1 {
+    let executableAuthority = try p1f1dHelp(kind).executableAuthority
+    let bridgeAuthority = try EngineBoardBridgeExecutableAuthorityV1(
+        sourcePath: "/fixtures/board-bridge/source",
+        stagedPath: "/fixtures/board-bridge/staged/executable",
+        executableHash: String(repeating: "3", count: 64),
+        designatedRequirement:
+            "anchor apple generic and identifier com.muzi.agentloop.board-bridge",
+        teamIdentifier: "2DC432GLL2",
+        cdHash: String(repeating: "b", count: 40),
+        stagedDevice: 64,
+        stagedInode: 65
+    )
+    let temporaryDirectory = URL(
+        fileURLWithPath: NSTemporaryDirectory(),
+        isDirectory: true
+    ).standardizedFileURL
+    let descriptor = temporaryDirectory.path.withCString {
+        Darwin.open($0, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW)
+    }
+    guard descriptor >= 0 else { throw EngineContextValidationErrorV1() }
+    var info = stat()
+    guard Darwin.fstat(descriptor, &info) == 0 else {
+        _ = Darwin.close(descriptor)
+        throw EngineContextValidationErrorV1()
+    }
+    let boardDirectoryAuthority: EngineBoardSocketDirectoryAuthorityV1
+    do {
+        boardDirectoryAuthority = try EngineBoardSocketDirectoryAuthorityV1(
+            directoryURL: try p1f1CanonicalDirectoryURL(descriptor),
+            ownedDescriptor: descriptor,
+            device: UInt64(info.st_dev),
+            inode: UInt64(info.st_ino),
+            uid: UInt32(info.st_uid),
+            mode: UInt16(info.st_mode & mode_t(0o777)),
+            ownerIdentityHash: p1f1dFullHash,
+            bootId: "00000000-0000-4000-8000-000000000062"
+        )
+    } catch {
+        _ = Darwin.close(descriptor)
+        throw error
+    }
+    return try CliEngineRuntimeConfigurationV1(
+        command: executableAuthority.stagedPath,
+        cliExecutableAuthority: executableAuthority,
+        sandbox: "read-only",
+        reasoningEffort: "high",
+        bridgeExecutableAuthority: bridgeAuthority,
+        boardSocketDirectoryAuthority: boardDirectoryAuthority,
+        claudeConfigDirectory: claudeConfigDirectory,
+        ranchSessionId: ranchSessionID
+    )
+}
+
+private func p1f1dAdapterRuntime(
+    profile: RuntimeProfileRecord,
+    descriptor: ExecutionEngineDescriptor
+) throws -> EngineAdapterRuntimeV1 {
+    let cliDriver: (any CliProcessDrivingV1)? = profile.kind.isCLI
+        ? P1F1DProcessDriver(
+            frames: [],
+            recorder: P1F1DLaunchRecorder(),
+            cancelEvidence: p1f1dCancelEvidence
+        )
+        : nil
+    let modelDriver: (any ModelLoopExecutionDrivingV1)? = profile.kind.isCLI
+        ? nil : P1F1DModelLoopDriver()
+    return try EngineAdapterRuntimeV1(
+        descriptor: descriptor,
+        context: try p1f1dContext(),
+        workspace: try p1f1dWorkspace(),
+        boundCapabilityTools: p1f1dBoundCapabilityTools(),
+        resolvedSessionRef: nil,
+        terminalSink: P1F1DTerminalRecorder(),
+        boardTerminalSink: P1F1DBoardTerminalRecorder(),
+        progressSink: P1F1DProgressRecorder(),
+        modelLoopDriver: modelDriver,
+        cliProcessDriver: cliDriver,
+        cliConfiguration: profile.kind.isCLI
+            ? p1f1dConfiguration(kind: profile.kind)
+            : nil
+    )
+}
+
+private func p1f1dHandoff() -> HandoffPayload {
+    HandoffPayload(
+        outcome: "implemented",
+        summary: "engine conformance",
+        artifacts: [
+            .init(relativePath: "output/result.txt", kind: "text", label: "result"),
+        ],
+        verification: [.init(method: "test", passed: true, note: "exact")],
+        risks: []
+    )
+}
+
+private func p1f1dArtifact() -> EngineTerminalArtifactDeclarationV1 {
+    EngineTerminalArtifactDeclarationV1(
+        ordinal: 0,
+        sourceRelativePath: "output/result.txt",
+        kind: "text",
+        label: "result",
+        byteCount: 5,
+        contentHash: String(repeating: "4", count: 64)
+    )
+}
+
+private func p1f1dRouter(
+    _ sequence: Int = 4,
+    initialUsage: EngineUsageV1 = .zero
+) -> EngineEventRouterV1 {
+    EngineEventRouterV1(
+        executionId: p1f1dExecutionID,
+        runId: p1f1dRunID,
+        cardId: p1f1dCardID,
+        nextSequence: sequence,
+        initialUsage: initialUsage
+    )
+}
+
+private func p1f1dTerminal(
+    _ event: EngineExecutionEvent
+) throws -> EngineTerminalProposalContentV1 {
+    guard case let .terminal(content) = event.payload else {
+        Issue.record("Expected terminal event payload")
+        throw EngineTerminalProposalValidationErrorV1()
+    }
+    return content
+}
+
+private func p1f1dContext() throws -> EngineResolvedContextTransportV1 {
+    try EngineResolvedContextTransportV1(
+        envelope: p1f1CanonicalEnvelope(),
+        packet: p1f1ContextPacket(),
+        canonicalEnvelopeJSON: p1f1ContextGolden,
+        hash: p1f1ContextGoldenHash
+    )
+}
+
+private func p1f1dSecretContext(
+    prompt: String
+) throws -> EngineResolvedContextTransportV1 {
+    let packet = try p1f1ContextPacket(
+        rolePrompt: prompt,
+        cardDescription: "bounded secret-sanitization input"
+    )
+    let envelope = try EngineContextEnvelopeV1.from(
+        packet: packet,
+        scope: p1f1ContextScope()
+    )
+    let bytes = try CanonicalJSONV1.encode(envelope)
+    return try EngineResolvedContextTransportV1(
+        envelope: envelope,
+        packet: packet,
+        canonicalEnvelopeJSON: String(decoding: bytes, as: UTF8.self),
+        hash: CanonicalJSONV1.sha256Hex(bytes)
+    )
+}
+
+private func p1f1dWorkspace() throws -> EngineResolvedWorkspaceV1 {
+    let identity = try EngineWorkspaceIdentityV1(
+        campId: p1f1EngineCampID,
+        squadId: p1f1dSquadID,
+        workspacePath: "/tmp",
+        bookmarkHash: nil
+    )
+    return try EngineResolvedWorkspaceV1(
+        identity: identity,
+        url: URL(fileURLWithPath: "/tmp"),
+        release: {}
+    )
+}
+
+private func p1f1dRequest(
+    executionId: String = p1f1dExecutionID,
+    kind: RuntimeProfileKind = .cliCodex,
+    sessionRef: EngineSessionReferenceV1? = nil
+) throws -> EngineExecutionRequest {
+    let profile = p1f1dProfile(kind)
+    let descriptor = try p1f1dDescriptor(
+        kind: kind,
+        help: kind.isCLI ? p1f1dHelp(kind) : nil
+    )
+    let contract = try OutcomeContractRef(
+        id: p1f1EngineContractID,
+        version: 1,
+        hash: p1f1EngineHashA
+    )
+    let scope = try EngineSessionScopeV1.derived(
+        campId: p1f1EngineCampID,
+        profileId: profile.id,
+        descriptor: descriptor,
+        engineKind: descriptor.adapterId,
+        model: "gpt-test",
+        workspaceHash: p1f1EngineWorkspaceHash,
+        contract: contract
+    )
+    let scopeBytes = try CanonicalJSONV1.encode(scope)
+    let requiredCapabilities: [EngineCapabilityV1] = [
+        .boardTerminal, .sessionResume, .streamingProgress,
+    ].filter { descriptor.support(for: $0) == .supported }
+    return try EngineExecutionRequest.makeCanonical(
+        executionId: executionId,
+        idempotencyKey: "p1f1d-execute",
+        campId: p1f1EngineCampID,
+        campLifecycleVersion: 1,
+        runId: p1f1dRunID,
+        cardId: p1f1dCardID,
+        contract: contract,
+        adapterId: descriptor.adapterId,
+        adapterVersion: descriptor.adapterVersion,
+        profileId: profile.id,
+        engineKind: descriptor.adapterId,
+        model: "gpt-test",
+        replayClass: .nonReplayable,
+        contextJson: p1f1ContextGolden,
+        contextHash: p1f1ContextGoldenHash,
+        sessionScopeJson: String(decoding: scopeBytes, as: UTF8.self),
+        sessionScopeHash: CanonicalJSONV1.sha256Hex(scopeBytes),
+        requiredCapabilities: requiredCapabilities,
+        approvalGrantIds: [],
+        budget: EngineExecutionBudgetV1(
+            tokenLimit: 1_000,
+            costMicrosLimit: 2_000_000,
+            wallClockSeconds: 60
+        ),
+        workspace: EngineWorkspaceRefV1(
+            reference: "squad-workspace.v1:\(p1f1dSquadID)",
+            hash: p1f1EngineWorkspaceHash
+        ),
+        sessionRef: sessionRef
+    )
+}
+
+private func p1f1dAdapter(
+    driver: any CliProcessDrivingV1,
+    terminal: any EngineTerminalSink = P1F1DTerminalRecorder(),
+    board: any EngineBoardTerminalSink = P1F1DBoardTerminalRecorder(),
+    progress: any EngineProgressSink = P1F1DProgressRecorder(),
+    profile: RuntimeProfileRecord? = nil,
+    context: EngineResolvedContextTransportV1? = nil,
+    cancellationLifecycleObserver: @escaping @Sendable (
+        CliEngineAdapterCancellationLifecycleEventV1
+    ) -> Void = { _ in }
+) throws -> CliEngineAdapter {
+    let resolvedProfile = profile ?? p1f1dProfile(.cliCodex)
+    return try CliEngineAdapter(
+        profile: resolvedProfile,
+        descriptor: p1f1dDescriptor(
+            kind: resolvedProfile.kind,
+            help: resolvedProfile.kind.isCLI
+                ? p1f1dHelp(resolvedProfile.kind) : nil
+        ),
+        processDriver: driver,
+        configuration: p1f1dConfiguration(kind: resolvedProfile.kind),
+        commandBuilder: CliEngineCommandBuilderV1(),
+        codexParser: CodexCliEventParserV1(),
+        claudeParserFactory: { expectedSessionID in
+            try ClaudeCliEventParserV1(expectedSessionId: expectedSessionID)
+        },
+        sanitizer: CliEngineSecretSanitizerV1(),
+        context: try context ?? p1f1dContext(),
+        workspace: p1f1dWorkspace(),
+        boundCapabilityTools: p1f1dBoundCapabilityTools(),
+        resolvedSessionRef: nil,
+        terminalSink: terminal,
+        boardTerminalSink: board,
+        progressSink: progress,
+        cancellationLifecycleObserver: cancellationLifecycleObserver
+    )
+}
+
+private func p1f1dRecoveryAdapter(
+    driver: any CliProcessDrivingV1,
+    resolvedSessionRef: EngineSessionReferenceV1,
+    terminal: any EngineTerminalSink = P1F1DTerminalRecorder(),
+    board: any EngineBoardTerminalSink = P1F1DBoardTerminalRecorder(),
+    progress: any EngineProgressSink = P1F1DProgressRecorder(),
+    profile: RuntimeProfileRecord = p1f1dProfile(.cliCodex),
+    context: EngineResolvedContextTransportV1? = nil,
+    claudeConfigDirectory: URL = URL(fileURLWithPath: "/tmp")
+) throws -> CliEngineAdapter {
+    try CliEngineAdapter(
+        profile: profile,
+        descriptor: p1f1dDescriptor(
+            kind: profile.kind,
+            help: try p1f1dHelp(profile.kind)
+        ),
+        processDriver: driver,
+        configuration: p1f1dConfiguration(
+            kind: profile.kind,
+            claudeConfigDirectory: claudeConfigDirectory
+        ),
+        commandBuilder: CliEngineCommandBuilderV1(),
+        codexParser: CodexCliEventParserV1(),
+        claudeParserFactory: { expectedSessionID in
+            try ClaudeCliEventParserV1(expectedSessionId: expectedSessionID)
+        },
+        sanitizer: CliEngineSecretSanitizerV1(),
+        context: try context ?? p1f1dContext(),
+        workspace: p1f1dWorkspace(),
+        boundCapabilityTools: p1f1dBoundCapabilityTools(),
+        resolvedSessionRef: resolvedSessionRef,
+        terminalSink: terminal,
+        boardTerminalSink: board,
+        progressSink: progress
+    )
+}
+
+private let p1f1dCancelEvidence = CliProcessExitEvidenceV1(
+    pid: 4242,
+    processGroupID: 4242,
+    status: 15,
+    termSent: true,
+    killSent: true,
+    stdoutEOF: true,
+    stderrEOF: true,
+    childReaped: true
+)
+
+private final class P1F1DEventRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [EngineExecutionEvent] = []
+
+    func append(_ event: EngineExecutionEvent) {
+        lock.lock()
+        storage.append(event)
+        lock.unlock()
+    }
+
+    var snapshot: [EngineExecutionEvent] {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
+}
+
+private enum P1F1DWiringSource: Sendable, Hashable {
+    case board
+    case adapter
+    case eof
+}
+
+private enum P1F1DWiringPermutation: String, CaseIterable, Sendable {
+    case board
+    case adapter
+    case eof
+
+    var winner: P1F1DWiringSource {
+        switch self {
+        case .board: .board
+        case .adapter: .adapter
+        case .eof: .eof
+        }
+    }
+}
+
+private actor P1F1DThreeWayBarrier {
+    private var arrivals = 0
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        arrivals += 1
+        if arrivals == 3 {
+            let pending = waiters
+            waiters.removeAll()
+            for waiter in pending { waiter.resume() }
+            return
+        }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+}
+
+private actor P1F1DWinnerAckGate {
+    private var released = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        if released { return }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    func release() {
+        guard !released else { return }
+        released = true
+        let pending = waiters
+        waiters.removeAll()
+        for waiter in pending { waiter.resume() }
+    }
+}
+
+private struct P1F1DWiringSnapshot: @unchecked Sendable {
+    let adapterRouter: EngineEventRouterV1
+    let boardRouter: EngineEventRouterV1
+    let progressRouter: EngineEventRouterV1
+    let outcomes: [P1F1DWiringSource: P1F1DConcurrentTerminalOutcome]
+}
+
+private final class P1F1DWiringCapture: @unchecked Sendable {
+    private let lock = NSLock()
+    private var adapterRouter: EngineEventRouterV1?
+    private var boardRouter: EngineEventRouterV1?
+    private var progressRouter: EngineEventRouterV1?
+    private var outcomes: [P1F1DWiringSource: P1F1DConcurrentTerminalOutcome]
+        = [:]
+
+    func capture(_ runtime: EngineAdapterRuntimeV1) throws {
+        guard let adapter = runtime.terminalSink
+                as? EngineAdapterTerminalRouterSinkV1,
+              let board = runtime.boardTerminalSink
+                as? EngineBoardTerminalRouterSinkV1,
+              let progress = runtime.progressSink
+                as? EngineProgressRouterSinkV1
+        else {
+            throw EngineContextValidationErrorV1()
+        }
+        lock.lock()
+        adapterRouter = adapter.router
+        boardRouter = board.router
+        progressRouter = progress.router
+        lock.unlock()
+    }
+
+    func record(
+        _ outcome: P1F1DConcurrentTerminalOutcome,
+        source: P1F1DWiringSource
+    ) {
+        lock.lock()
+        outcomes[source] = outcome
+        lock.unlock()
+    }
+
+    var snapshot: P1F1DWiringSnapshot? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let adapterRouter, let boardRouter, let progressRouter else {
+            return nil
+        }
+        return P1F1DWiringSnapshot(
+            adapterRouter: adapterRouter,
+            boardRouter: boardRouter,
+            progressRouter: progressRouter,
+            outcomes: outcomes
+        )
+    }
+}
+
+private struct P1F1DWiringAdapter: ExecutionEngineAdapter {
+    let value: ExecutionEngineDescriptor
+    let runtime: EngineAdapterRuntimeV1
+    let capture: P1F1DWiringCapture
+    let permutation: P1F1DWiringPermutation
+
+    func descriptor(
+        profile: RuntimeProfileRecord
+    ) throws -> ExecutionEngineDescriptor { value }
+
+    func execute(
+        request: EngineExecutionRequest
+    ) -> AsyncThrowingStream<EngineExecutionEventPayloadV1, Error> {
+        AsyncThrowingStream { continuation in
+            let barrier = P1F1DThreeWayBarrier()
+            let winnerAck = P1F1DWinnerAckGate()
+            let router = (runtime.terminalSink
+                as? EngineAdapterTerminalRouterSinkV1)?.router
+            Task {
+                await barrier.wait()
+                if permutation.winner != .board { await winnerAck.wait() }
+                let outcome = await p1f1dConcurrentSubmit {
+                    try await runtime.boardTerminalSink.submit(
+                        .blocked(
+                            reasonCode: "board_wiring_race",
+                            detail: "ordinary"
+                        )
+                    )
+                }
+                capture.record(outcome, source: .board)
+                if permutation.winner == .board { await winnerAck.release() }
+            }
+            Task {
+                await barrier.wait()
+                if permutation.winner != .adapter { await winnerAck.wait() }
+                let outcome = await p1f1dConcurrentSubmit {
+                    try await runtime.terminalSink.submit(
+                        .failed(code: "adapter_wiring_race", detail: "safe")
+                    )
+                }
+                capture.record(outcome, source: .adapter)
+                if permutation.winner == .adapter { await winnerAck.release() }
+            }
+            Task {
+                await barrier.wait()
+                if permutation.winner != .eof {
+                    await winnerAck.wait()
+                    continuation.finish()
+                    capture.record(.duplicate, source: .eof)
+                    return
+                }
+                continuation.finish()
+                guard let router else {
+                    capture.record(
+                        .unexpected("missing coordinator router"),
+                        source: .eof
+                    )
+                    await winnerAck.release()
+                    return
+                }
+                var accepted = false
+                for _ in 0..<10_000 {
+                    if try await router.state() != .open {
+                        accepted = true
+                        break
+                    }
+                    await Task.yield()
+                }
+                capture.record(
+                    accepted
+                        ? .committed
+                        : .unexpected("EOF router acknowledgement missing"),
+                    source: .eof
+                )
+                await winnerAck.release()
+            }
+        }
+    }
+
+    func cancel(executionId: String) async throws {}
+}
+
+private func p1f1dWiringRegistry(
+    fixture: P1F1DCanonicalExecutionFixture,
+    capture: P1F1DWiringCapture,
+    permutation: P1F1DWiringPermutation
+) throws -> EngineAdapterRegistryV1 {
+    try EngineAdapterRegistryV1(
+        factories: [
+            EngineAdapterFactoryV1(
+                adapterId: fixture.descriptor.adapterId,
+                adapterVersion: fixture.descriptor.adapterVersion,
+                profileKinds: [.cliCodex],
+                helpRequirement: try EngineAdapterHelpRequirementV1(
+                    kind: .cliCodex,
+                    command: "codex"
+                ),
+                descriptor: { _, _ in fixture.descriptor },
+                prepareRequest: { _, _, _ in
+                    throw P1F1D062UnexpectedCall.invoked
+                },
+                makeRecoveryTransport: { _, _, _, _, _, _ in
+                    throw P1F1D062UnexpectedCall.invoked
+                },
+                makeAdapter: { _, runtime in
+                    try capture.capture(runtime)
+                    return P1F1DWiringAdapter(
+                        value: fixture.descriptor,
+                        runtime: runtime,
+                        capture: capture,
+                        permutation: permutation
+                    )
+                }
+            ),
+        ],
+        helpSnapshots: [.cliCodex: try p1f1dHelp(.cliCodex)]
+    )
+}
+
+private enum P1F1DConcurrentTerminalOutcome: Sendable, Equatable {
+    case committed
+    case duplicate
+    case unexpected(String)
+}
+
+private func p1f1dConcurrentSubmit(
+    _ operation: @escaping @Sendable () async throws -> Void
+) async -> P1F1DConcurrentTerminalOutcome {
+    do {
+        try await operation()
+        return .committed
+    } catch is EngineDuplicateTerminalErrorV1 {
+        return .duplicate
+    } catch {
+        return .unexpected(String(reflecting: type(of: error)))
+    }
+}
+
+private func p1f1dExternalSessionID(
+    from payload: EngineExecutionEventPayloadV1?
+) -> String? {
+    guard let payload,
+          case let .sessionBound(externalSessionId) = payload
+    else { return nil }
+    return externalSessionId
+}
+
+private func p1f1dIntentText(_ intent: EngineTerminalIntentV1) -> String {
+    switch intent {
+    case let .completed(handoff):
+        return "\(handoff.outcome) \(handoff.summary)"
+    case let .blocked(_, reasonCode, detail):
+        return "\(reasonCode) \(detail)"
+    case let .needsHumanInput(_, prompt, options):
+        return ([prompt] + options).joined(separator: " ")
+    case let .failed(code, detail):
+        return "\(code) \(detail)"
+    case let .canceled(reasonCode, detail):
+        return "\(reasonCode) \(detail)"
+    }
+}
+
+private struct P1F1DSharedWriteSnapshot: Equatable {
+    let surfaces: P1F1EngineSurfaceCounts
+    let cardStatus: String
+    let missionStatus: String
+    let runCount: Int
+}
+
+private func p1f1dSharedWriteSnapshot(
+    _ fixture: P1F1DCanonicalExecutionFixture
+) throws -> P1F1DSharedWriteSnapshot {
+    let card = try #require(
+        try fixture.db.card(id: fixture.card.id)
+    )
+    let mission = try #require(
+        try fixture.db.mission(id: fixture.mission.id)
+    )
+    return try P1F1DSharedWriteSnapshot(
+        surfaces: p1f1EngineSurfaceCounts(fixture.db),
+        cardStatus: card.status.rawValue,
+        missionStatus: mission.status.rawValue,
+        runCount: fixture.db.runs(cardId: fixture.card.id).count
+    )
+}
+
+private func p1f1dInsertResumeSession(
+    fixture: P1F1DCanonicalExecutionFixture,
+    id: String,
+    profileId: String? = nil,
+    adapterId: String? = nil,
+    adapterVersion: String? = nil,
+    model: String = "gpt-test",
+    workspaceHash: String? = nil,
+    externalSessionId: String? = "codex-thread-resume-068",
+    state: EngineSessionStateV1 = .active
+) throws {
+    let resolvedProfileID = profileId ?? fixture.profile.id
+    let resolvedWorkspaceHash: String
+    if let workspaceHash {
+        resolvedWorkspaceHash = workspaceHash
+    } else {
+        resolvedWorkspaceHash = try fixture.expectedContext()
+            .workspaceReference.hash
+    }
+    let scope = try EngineSessionScopeV1.derived(
+        campId: fixture.camp.id,
+        profileId: resolvedProfileID,
+        descriptor: fixture.descriptor,
+        engineKind: fixture.descriptor.adapterId,
+        model: model,
+        workspaceHash: resolvedWorkspaceHash,
+        contract: fixture.contract.ref
+    )
+    let scopeBytes = try CanonicalJSONV1.encode(scope)
+    let scopeJSON = String(decoding: scopeBytes, as: UTF8.self)
+    let scopeHash = CanonicalJSONV1.sha256Hex(scopeBytes)
+    try fixture.db.pool.write { database in
+        try EngineSessionRecord(
+            id: id,
+            campId: fixture.camp.id,
+            adapterId: adapterId ?? fixture.descriptor.adapterId,
+            adapterVersion: adapterVersion ?? fixture.descriptor.adapterVersion,
+            profileId: resolvedProfileID,
+            externalSessionId: externalSessionId,
+            workspaceHash: resolvedWorkspaceHash,
+            sessionScopeJson: scopeJSON,
+            sessionScopeHash: scopeHash,
+            state: state,
+            version: 1,
+            createdAt: P1F1DCanonicalExecutionFixture.now,
+            updatedAt: P1F1DCanonicalExecutionFixture.now,
+            redactedAt: nil
+        ).insert(database)
+    }
+}
+
+private func p1f1dFields(
+    _ fixture: P1F1DCanonicalExecutionFixture,
+    predecessorExecutionId: String,
+    profileId: String? = nil,
+    model: String = "gpt-test",
+    workspaceHash: String? = nil
+) throws -> EngineExecutionRequestFieldsV1 {
+    let expected = try fixture.expectedContext()
+    return try fixture.fields(
+        profileID: profileId ?? fixture.profile.id,
+        model: model,
+        workspace: EngineWorkspaceRefV1(
+            reference: expected.workspaceReference.reference,
+            hash: workspaceHash ?? expected.workspaceReference.hash
+        ),
+        predecessorExecutionId: predecessorExecutionId,
+        context: expected
+    )
+}
+
+private func p1f1dCanceledPredecessor(
+    _ fixture: P1F1DCanonicalExecutionFixture,
+    key: String
+) throws -> EngineExecutionRequest {
+    let request = try fixture.begin(key: key)
+    let prepared = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+    _ = try fixture.store.markEngineDispatchStarted(
+        executionId: request.executionId,
+        expectedVersion: prepared["version"],
+        requestHash: request.requestHash,
+        commandIdempotencyKey: "\(key)-dispatch",
+        now: P1F1DCanonicalExecutionFixture.now.addingTimeInterval(1)
+    )
+    try fixture.store.acceptEngineEvent(
+        executionId: request.executionId,
+        sequence: 0,
+        event: EngineExecutionEvent(
+            executionId: request.executionId,
+            sequence: 0,
+            payload: .sessionBound(
+                externalSessionId: "codex-thread-\(key)"
+            )
+        )
+    )
+    let proposal = try fixture.store.recordEngineTerminalProposal(
+        EngineTerminalProposalContentV1(
+            protocolVersion: "agentloop.execution.v1",
+            executionId: request.executionId,
+            runId: request.runId,
+            cardId: request.cardId,
+            sequence: 1,
+            terminalIdempotencyKey: "\(key)-terminal",
+            terminalKind: .canceled,
+            terminalSubtype: nil,
+            payload: .canceled(
+                reasonCode: "engine_canceled",
+                detail: "safe predecessor cancel"
+            ),
+            artifacts: []
+        )
+    )
+    _ = try fixture.store.commitEngineTerminal(
+        proposalId: proposal.proposal.id,
+        checkedUsage: .zero,
+        now: P1F1DCanonicalExecutionFixture.now.addingTimeInterval(2)
+    )
+    #expect(try fixture.db.card(id: request.cardId)?.status == .ready)
+    return request
+}
+
+private func p1f1dContextDependencyLoader(
+    _ database: AppDatabase
+) -> ContextDependencyLoader {
+    ContextDependencyLoader(
+        database: database,
+        manager: nil,
+        reporter: FailureReporter(database: database),
+        searchCredential: { nil },
+        knowledge: .live(database: database),
+        makeTrace: { operation, scope in
+            OperationTraceFactory.live.generated(
+                operation: operation,
+                scope: scope
+            )
+        }
+    )
+}
+
+private actor P1F1D069CleanupProbe {
+    enum Failure: Error, Sendable { case injected }
+
+    private var attempts = 0
+    private var failNext = false
+    private var blocked = false
+    private var attemptWaiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseWaiters: [CheckedContinuation<Void, Never>] = []
+
+    init(failFirst: Bool = false, blocked: Bool = false) {
+        failNext = failFirst
+        self.blocked = blocked
+    }
+
+    func run() async throws {
+        attempts += 1
+        let currentAttemptWaiters = attemptWaiters
+        attemptWaiters.removeAll()
+        currentAttemptWaiters.forEach { $0.resume() }
+        if blocked {
+            await withCheckedContinuation { releaseWaiters.append($0) }
+        }
+        if failNext {
+            failNext = false
+            throw Failure.injected
+        }
+    }
+
+    func waitUntilAttemptCount(_ expected: Int) async {
+        while attempts < expected {
+            await withCheckedContinuation { attemptWaiters.append($0) }
+        }
+    }
+
+    func release() {
+        blocked = false
+        let current = releaseWaiters
+        releaseWaiters.removeAll()
+        current.forEach { $0.resume() }
+    }
+
+    func count() -> Int { attempts }
+}
+
+private final class P1F1D069SynchronousGate: @unchecked Sendable {
+    private let condition = NSCondition()
+    private var entered = false
+    private var released = false
+    private var enteredWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func enterAndWait() {
+        condition.lock()
+        entered = true
+        let waiters = enteredWaiters
+        enteredWaiters.removeAll()
+        condition.broadcast()
+        condition.unlock()
+        waiters.forEach { $0.resume() }
+        condition.lock()
+        while !released {
+            condition.wait()
+        }
+        condition.unlock()
+    }
+
+    func waitUntilEntered() async {
+        if hasEntered { return }
+        await withCheckedContinuation { continuation in
+            condition.lock()
+            if entered {
+                condition.unlock()
+                continuation.resume()
+            } else {
+                enteredWaiters.append(continuation)
+                condition.unlock()
+            }
+        }
+    }
+
+    func release() {
+        condition.lock()
+        released = true
+        condition.broadcast()
+        condition.unlock()
+    }
+
+    private var hasEntered: Bool {
+        condition.lock()
+        defer { condition.unlock() }
+        return entered
+    }
+}
+
+private actor P1F1D069LifecycleProbe<Event: Equatable & Sendable> {
+    private struct Waiter {
+        let event: Event
+        let continuation: CheckedContinuation<Void, Never>
+    }
+
+    private var events: [Event] = []
+    private var waiters: [Waiter] = []
+
+    func record(_ event: Event) {
+        events.append(event)
+        let ready = waiters.filter { $0.event == event }
+        waiters.removeAll { $0.event == event }
+        ready.forEach { $0.continuation.resume() }
+    }
+
+    func waitUntilRecorded(_ event: Event) async {
+        if events.contains(event) { return }
+        await withCheckedContinuation { continuation in
+            waiters.append(Waiter(event: event, continuation: continuation))
+        }
+    }
+
+    func count(_ event: Event) -> Int {
+        events.filter { $0 == event }.count
+    }
+}
+
+private actor P1F1D069FinalizerProbe {
+    private var executionId: String?
+    private var observerEntered = false
+    private var boundWaiters: [CheckedContinuation<String, Never>] = []
+    private var observerWaiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func bind(_ value: String) {
+        executionId = value
+        let waiters = boundWaiters
+        boundWaiters.removeAll()
+        waiters.forEach { $0.resume(returning: value) }
+    }
+
+    func waitUntilBound() async -> String {
+        if let executionId { return executionId }
+        return await withCheckedContinuation { boundWaiters.append($0) }
+    }
+
+    func observe() async {
+        observerEntered = true
+        let waiters = observerWaiters
+        observerWaiters.removeAll()
+        waiters.forEach { $0.resume() }
+        await withCheckedContinuation { releaseWaiters.append($0) }
+    }
+
+    func waitUntilObserverEntered() async {
+        if observerEntered { return }
+        await withCheckedContinuation { observerWaiters.append($0) }
+    }
+
+    func releaseObserver() {
+        let waiters = releaseWaiters
+        releaseWaiters.removeAll()
+        waiters.forEach { $0.resume() }
+    }
+}
+
+private actor P1F1D069RequestProbe {
+    private var request: EngineExecutionRequest?
+    private var waiters: [
+        CheckedContinuation<EngineExecutionRequest, Never>
+    ] = []
+
+    func bind(_ value: EngineExecutionRequest) {
+        request = value
+        let current = waiters
+        waiters.removeAll()
+        current.forEach { $0.resume(returning: value) }
+    }
+
+    func waitUntilBound() async -> EngineExecutionRequest {
+        if let request { return request }
+        return await withCheckedContinuation { waiters.append($0) }
+    }
+}
+
+private enum P1F1D069BindError: Error, Sendable {
+    case rawCallbackDetailMustNotEscape
+}
+
+private final class P1F1D069CallLedger: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [String: Int] = [:]
+    private var cancellationIDs: [String] = []
+
+    func record(_ key: String) {
+        lock.withLock { values[key, default: 0] += 1 }
+    }
+
+    func recordCancellation(_ executionId: String) {
+        lock.withLock {
+            values["cancel", default: 0] += 1
+            cancellationIDs.append(executionId)
+        }
+    }
+
+    func count(_ key: String) -> Int {
+        lock.withLock { values[key, default: 0] }
+    }
+
+    func canceledExecutionIDs() -> [String] {
+        lock.withLock { cancellationIDs }
+    }
+}
+
+private struct P1F1D069CancelDriver: CliProcessDrivingV1 {
+    let ledger: P1F1D069CallLedger
+    let evidence: CliProcessExitEvidenceV1
+
+    var supportsProcessGroupCancellation: Bool { true }
+
+    func launch(
+        _ request: CliProcessLaunchRequestV1
+    ) -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        ledger.record("launch")
+        return AsyncThrowingStream { $0.finish() }
+    }
+
+    func cancel(executionId: String) async throws
+        -> CliProcessExitEvidenceV1
+    {
+        ledger.recordCancellation(executionId)
+        return evidence
+    }
+}
+
+private enum P1F1D069RecoveryAttemptFailure: Error, Sendable, Equatable {
+    case transport
+    case evidence
+}
+
+private final class P1F1D069RecoveryFailureCell: @unchecked Sendable {
+    enum Phase: Sendable, Equatable { case transport, evidence, store, none }
+
+    private let lock = NSLock()
+    private var phase: Phase
+
+    init(_ phase: Phase) { self.phase = phase }
+
+    func beforeTransport() throws {
+        if lock.withLock({ phase == .transport }) {
+            throw P1F1D069RecoveryAttemptFailure.transport
+        }
+    }
+
+    func beforeEvidence(
+        storeFailure: @Sendable () throws -> Void
+    ) throws {
+        switch lock.withLock({ phase }) {
+        case .transport, .none:
+            return
+        case .evidence:
+            throw P1F1D069RecoveryAttemptFailure.evidence
+        case .store:
+            try storeFailure()
+        }
+    }
+
+    func disarm() { lock.withLock { phase = .none } }
+}
+
+private struct P1F1D069RecoveryFailureDriver: CliProcessDrivingV1 {
+    let ledger: P1F1D069CallLedger
+    let cell: P1F1D069RecoveryFailureCell
+    let storeFailure: @Sendable () throws -> Void
+
+    var supportsProcessGroupCancellation: Bool { true }
+
+    func launch(
+        _ request: CliProcessLaunchRequestV1
+    ) -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        ledger.record("launch")
+        return AsyncThrowingStream { $0.finish() }
+    }
+
+    func cancel(executionId: String) async throws -> CliProcessExitEvidenceV1 {
+        ledger.recordCancellation(executionId)
+        try cell.beforeEvidence(storeFailure: storeFailure)
+        return p1f1dCancelEvidence
+    }
+}
+
+private struct P1F1D069BlockingRecoveryDriver: CliProcessDrivingV1 {
+    let ledger: P1F1D069CallLedger
+    let probe: P1F1D069CleanupProbe
+
+    var supportsProcessGroupCancellation: Bool { true }
+
+    func launch(
+        _ request: CliProcessLaunchRequestV1
+    ) -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        ledger.record("launch")
+        return AsyncThrowingStream { $0.finish() }
+    }
+
+    func cancel(executionId: String) async throws -> CliProcessExitEvidenceV1 {
+        ledger.recordCancellation(executionId)
+        try await probe.run()
+        return p1f1dCancelEvidence
+    }
+}
+
+private enum P1F1D069AdapterCleanupFailure: Error, Sendable {
+    case modelProvider
+    case cliProcess
+}
+
+private final class P1F1D069ModelCleanupCell: @unchecked Sendable {
+    private typealias Continuation = AsyncThrowingStream<
+        EngineExecutionEventPayloadV1,
+        Error
+    >.Continuation
+
+    private struct StartWaiter {
+        let expectedCount: Int
+        let continuation: CheckedContinuation<Void, Never>
+    }
+
+    private let lock = NSLock()
+    private var continuations: [Continuation] = []
+    private var nextCancellation = 0
+    private var waiters: [StartWaiter] = []
+    private var cancellations = 0
+
+    func stream() -> AsyncThrowingStream<
+        EngineExecutionEventPayloadV1,
+        Error
+    > {
+        AsyncThrowingStream { continuation in
+            let current = lock.withLock { () -> [StartWaiter] in
+                continuations.append(continuation)
+                let count = continuations.count
+                let current = waiters.filter { $0.expectedCount <= count }
+                waiters.removeAll { $0.expectedCount <= count }
+                return current
+            }
+            current.forEach { $0.continuation.resume() }
+        }
+    }
+
+    func waitUntilStarted(_ expectedCount: Int = 1) async {
+        if lock.withLock({ continuations.count >= expectedCount }) { return }
+        await withCheckedContinuation { waiter in
+            let resumeNow = lock.withLock { () -> Bool in
+                if continuations.count >= expectedCount { return true }
+                waiters.append(StartWaiter(
+                    expectedCount: expectedCount,
+                    continuation: waiter
+                ))
+                return false
+            }
+            if resumeNow { waiter.resume() }
+        }
+    }
+
+    func failCancellation() throws -> Never {
+        let continuation = try lock.withLock { () throws -> Continuation in
+            guard nextCancellation < continuations.count else {
+                throw EngineDispatchConflictErrorV1()
+            }
+            let continuation = continuations[nextCancellation]
+            nextCancellation += 1
+            cancellations += 1
+            return continuation
+        }
+        continuation.finish(
+            throwing: P1F1D069AdapterCleanupFailure.modelProvider
+        )
+        throw P1F1D069AdapterCleanupFailure.modelProvider
+    }
+
+    func finish(_ generation: Int) throws {
+        let continuation = try lock.withLock { () throws -> Continuation in
+            guard generation > 0, generation <= continuations.count else {
+                throw EngineDispatchConflictErrorV1()
+            }
+            return continuations[generation - 1]
+        }
+        continuation.finish()
+    }
+
+    func cancellationCount() -> Int { lock.withLock { cancellations } }
+}
+
+private struct P1F1D069ModelCleanupDriver: ModelLoopExecutionDrivingV1 {
+    let cell: P1F1D069ModelCleanupCell
+    let cleanupGate: P1F1D069CleanupProbe?
+    let constructionGate: P1F1D069SynchronousGate?
+
+    init(
+        cell: P1F1D069ModelCleanupCell,
+        cleanupGate: P1F1D069CleanupProbe? = nil,
+        constructionGate: P1F1D069SynchronousGate? = nil
+    ) {
+        self.cell = cell
+        self.cleanupGate = cleanupGate
+        self.constructionGate = constructionGate
+    }
+
+    func execute(
+        request: EngineExecutionRequest,
+        context: EngineResolvedContextTransportV1,
+        workspaceURL: URL,
+        terminalSink: any EngineTerminalSink,
+        boardTerminalSink: any EngineBoardTerminalSink,
+        progressSink: any EngineProgressSink
+    ) -> AsyncThrowingStream<EngineExecutionEventPayloadV1, Error> {
+        let stream = cell.stream()
+        constructionGate?.enterAndWait()
+        return stream
+    }
+
+    func cancel(executionId: String) async throws {
+        if let cleanupGate { try await cleanupGate.run() }
+        try cell.failCancellation()
+    }
+}
+
+private final class P1F1D069CliCleanupCell: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation:
+        AsyncThrowingStream<CliProcessFrameV1, Error>.Continuation?
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var cancellations = 0
+
+    func stream() -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        AsyncThrowingStream { continuation in
+            let current = lock.withLock { () -> [CheckedContinuation<Void, Never>] in
+                self.continuation = continuation
+                let current = waiters
+                waiters.removeAll()
+                return current
+            }
+            current.forEach { $0.resume() }
+        }
+    }
+
+    func waitUntilStarted() async {
+        if lock.withLock({ continuation != nil }) { return }
+        await withCheckedContinuation { waiter in
+            let resumeNow = lock.withLock { () -> Bool in
+                if continuation != nil { return true }
+                waiters.append(waiter)
+                return false
+            }
+            if resumeNow { waiter.resume() }
+        }
+    }
+
+    func failCancellation() throws -> Never {
+        let continuation = try lock.withLock { () throws
+            -> AsyncThrowingStream<CliProcessFrameV1, Error>.Continuation in
+            guard let continuation = self.continuation else {
+                throw EngineDispatchConflictErrorV1()
+            }
+            cancellations += 1
+            return continuation
+        }
+        continuation.finish(
+            throwing: P1F1D069AdapterCleanupFailure.cliProcess
+        )
+        throw P1F1D069AdapterCleanupFailure.cliProcess
+    }
+
+    func cancellationCount() -> Int { lock.withLock { cancellations } }
+}
+
+private struct P1F1D069CliCleanupDriver: CliProcessDrivingV1 {
+    let cell: P1F1D069CliCleanupCell
+    let cleanupGate: P1F1D069CleanupProbe?
+    let constructionGate: P1F1D069SynchronousGate?
+
+    init(
+        cell: P1F1D069CliCleanupCell,
+        cleanupGate: P1F1D069CleanupProbe? = nil,
+        constructionGate: P1F1D069SynchronousGate? = nil
+    ) {
+        self.cell = cell
+        self.cleanupGate = cleanupGate
+        self.constructionGate = constructionGate
+    }
+
+    var supportsProcessGroupCancellation: Bool { true }
+
+    func launch(
+        _ request: CliProcessLaunchRequestV1
+    ) -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        let stream = cell.stream()
+        constructionGate?.enterAndWait()
+        return stream
+    }
+
+    func cancel(executionId: String) async throws -> CliProcessExitEvidenceV1 {
+        if let cleanupGate { try await cleanupGate.run() }
+        try cell.failCancellation()
+    }
+}
+
+private enum P1F1D069ImmediateDriverFailure: Error, Sendable {
+    case modelProvider
+    case cliProcess
+}
+
+private enum P1F1D069ImmediateDriverOutcome: Sendable, Equatable {
+    case finished
+    case failed
+}
+
+private struct P1F1D069ImmediateModelDriver: ModelLoopExecutionDrivingV1 {
+    let ledger: P1F1D069CallLedger
+    let outcome: P1F1D069ImmediateDriverOutcome
+    let constructionGate: P1F1D069SynchronousGate?
+
+    init(
+        ledger: P1F1D069CallLedger,
+        outcome: P1F1D069ImmediateDriverOutcome,
+        constructionGate: P1F1D069SynchronousGate? = nil
+    ) {
+        self.ledger = ledger
+        self.outcome = outcome
+        self.constructionGate = constructionGate
+    }
+
+    func startExecution(
+        request: EngineExecutionRequest,
+        context: EngineResolvedContextTransportV1,
+        workspaceURL: URL,
+        terminalSink: any EngineTerminalSink,
+        boardTerminalSink: any EngineBoardTerminalSink,
+        progressSink: any EngineProgressSink
+    ) -> ModelLoopExecutionRunV1 {
+        let events = execute(
+            request: request,
+            context: context,
+            workspaceURL: workspaceURL,
+            terminalSink: terminalSink,
+            boardTerminalSink: boardTerminalSink,
+            progressSink: progressSink
+        )
+        let result: Result<Void, any Error>
+        switch outcome {
+        case .finished:
+            result = .success(())
+        case .failed:
+            result = .failure(
+                P1F1D069ImmediateDriverFailure.modelProvider
+            )
+        }
+        return ModelLoopExecutionRunV1(
+            events: events,
+            cancellation: .completed(result)
+        )
+    }
+
+    func execute(
+        request: EngineExecutionRequest,
+        context: EngineResolvedContextTransportV1,
+        workspaceURL: URL,
+        terminalSink: any EngineTerminalSink,
+        boardTerminalSink: any EngineBoardTerminalSink,
+        progressSink: any EngineProgressSink
+    ) -> AsyncThrowingStream<EngineExecutionEventPayloadV1, Error> {
+        ledger.record("modelExecute")
+        let stream = AsyncThrowingStream<
+            EngineExecutionEventPayloadV1,
+            Error
+        > { continuation in
+            switch outcome {
+            case .finished:
+                continuation.finish()
+            case .failed:
+                continuation.finish(
+                    throwing: P1F1D069ImmediateDriverFailure.modelProvider
+                )
+            }
+        }
+        constructionGate?.enterAndWait()
+        return stream
+    }
+
+    func cancel(executionId: String) async throws {
+        ledger.recordCancellation(executionId)
+    }
+}
+
+private struct P1F1D069ImmediateCliDriver: CliProcessDrivingV1 {
+    let ledger: P1F1D069CallLedger
+    let outcome: P1F1D069ImmediateDriverOutcome
+    let constructionGate: P1F1D069SynchronousGate?
+    let cancellationGate: P1F1D069SynchronousGate?
+
+    init(
+        ledger: P1F1D069CallLedger,
+        outcome: P1F1D069ImmediateDriverOutcome,
+        constructionGate: P1F1D069SynchronousGate? = nil,
+        cancellationGate: P1F1D069SynchronousGate? = nil
+    ) {
+        self.ledger = ledger
+        self.outcome = outcome
+        self.constructionGate = constructionGate
+        self.cancellationGate = cancellationGate
+    }
+
+    var supportsProcessGroupCancellation: Bool { true }
+
+    func launch(
+        _ request: CliProcessLaunchRequestV1
+    ) -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        ledger.record("launch")
+        let stream = AsyncThrowingStream<CliProcessFrameV1, Error> {
+            continuation in
+            switch outcome {
+            case .finished:
+                continuation.yield(.exited(0))
+                continuation.finish()
+            case .failed:
+                continuation.finish(
+                    throwing: P1F1D069ImmediateDriverFailure.cliProcess
+                )
+            }
+        }
+        constructionGate?.enterAndWait()
+        return stream
+    }
+
+    func cancel(executionId: String) async throws
+        -> CliProcessExitEvidenceV1
+    {
+        ledger.recordCancellation(executionId)
+        cancellationGate?.enterAndWait()
+        return p1f1dCancelEvidence
+    }
+}
+
+private final class P1F1D069PrelaunchCliCell: @unchecked Sendable {
+    private typealias Stream = AsyncThrowingStream<CliProcessFrameV1, Error>
+
+    let launchGate = P1F1D069SynchronousGate()
+    let firstCancel = P1F1D069CleanupProbe()
+    let registeredCancel = P1F1D069CleanupProbe(blocked: true)
+
+    private let lock = NSLock()
+    private var continuation: Stream.Continuation?
+    private var cancellationCount = 0
+
+    func launch() -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        let stream = Stream { continuation in
+            lock.withLock { self.continuation = continuation }
+        }
+        launchGate.enterAndWait()
+        return stream
+    }
+
+    func cancel(executionId: String) async throws
+        -> CliProcessExitEvidenceV1
+    {
+        let attempt = lock.withLock { () -> Int in
+            cancellationCount += 1
+            return cancellationCount
+        }
+        if attempt == 1 {
+            try await firstCancel.run()
+            throw CliProcessBackendError.processNotRegistered(executionId)
+        }
+        guard attempt == 2 else {
+            throw EngineDispatchConflictErrorV1()
+        }
+        try await registeredCancel.run()
+        let continuation = try lock.withLock {
+            () throws -> Stream.Continuation in
+            guard let continuation = self.continuation else {
+                throw EngineDispatchConflictErrorV1()
+            }
+            return continuation
+        }
+        continuation.finish(
+            throwing: P1F1D069AdapterCleanupFailure.cliProcess
+        )
+        throw P1F1D069AdapterCleanupFailure.cliProcess
+    }
+
+    func snapshotCancellationCount() -> Int {
+        lock.withLock { cancellationCount }
+    }
+}
+
+private struct P1F1D069PrelaunchCliDriver: CliProcessDrivingV1 {
+    let cell: P1F1D069PrelaunchCliCell
+
+    var supportsProcessGroupCancellation: Bool { true }
+
+    func launch(
+        _ request: CliProcessLaunchRequestV1
+    ) -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        cell.launch()
+    }
+
+    func cancel(executionId: String) async throws
+        -> CliProcessExitEvidenceV1
+    {
+        try await cell.cancel(executionId: executionId)
+    }
+}
+
+private final class P1F1D069StubbornCliCell: @unchecked Sendable {
+    private typealias Stream = AsyncThrowingStream<CliProcessFrameV1, Error>
+
+    private struct Waiter {
+        let expectedCount: Int
+        let continuation: CheckedContinuation<Void, Never>
+    }
+
+    private let lock = NSLock()
+    private var launchCount = 0
+    private var cancellationCount = 0
+    private var terminationCount = 0
+    private var launchWaiters: [Waiter] = []
+    private var terminationWaiters: [Waiter] = []
+
+    func stream() -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        Stream { continuation in
+            let launched = lock.withLock { () -> (Int, [Waiter]) in
+                launchCount += 1
+                let current = launchCount
+                let ready = launchWaiters.filter {
+                    $0.expectedCount <= current
+                }
+                launchWaiters.removeAll {
+                    $0.expectedCount <= current
+                }
+                return (current, ready)
+            }
+            launched.1.forEach { $0.continuation.resume() }
+            continuation.onTermination = { _ in
+                self.recordTermination(launched.0)
+            }
+        }
+    }
+
+    func cancel(executionId: String) async throws
+        -> CliProcessExitEvidenceV1
+    {
+        let attempt = lock.withLock { () -> Int in
+            cancellationCount += 1
+            return cancellationCount
+        }
+        throw CliProcessBackendError.processGroupStillAlive(Int32(attempt))
+    }
+
+    func waitUntilLaunched(_ expectedCount: Int) async {
+        await wait(
+            until: expectedCount,
+            snapshot: { self.launchCount },
+            append: { self.launchWaiters.append($0) }
+        )
+    }
+
+    func waitUntilTerminated(_ expectedCount: Int) async {
+        await wait(
+            until: expectedCount,
+            snapshot: { self.terminationCount },
+            append: { self.terminationWaiters.append($0) }
+        )
+    }
+
+    func snapshotCancellationCount() -> Int {
+        lock.withLock { cancellationCount }
+    }
+
+    private func recordTermination(_ generation: Int) {
+        let ready = lock.withLock { () -> [Waiter] in
+            precondition(
+                generation <= launchCount,
+                "unknown stubborn CLI generation"
+            )
+            terminationCount += 1
+            let ready = terminationWaiters.filter {
+                $0.expectedCount <= terminationCount
+            }
+            terminationWaiters.removeAll {
+                $0.expectedCount <= terminationCount
+            }
+            return ready
+        }
+        ready.forEach { $0.continuation.resume() }
+    }
+
+    private func wait(
+        until expectedCount: Int,
+        snapshot: () -> Int,
+        append: (Waiter) -> Void
+    ) async {
+        if lock.withLock({ snapshot() >= expectedCount }) { return }
+        await withCheckedContinuation { continuation in
+            let resumeNow = lock.withLock { () -> Bool in
+                if snapshot() >= expectedCount { return true }
+                append(Waiter(
+                    expectedCount: expectedCount,
+                    continuation: continuation
+                ))
+                return false
+            }
+            if resumeNow { continuation.resume() }
+        }
+    }
+}
+
+private struct P1F1D069StubbornCliDriver: CliProcessDrivingV1 {
+    let cell: P1F1D069StubbornCliCell
+
+    var supportsProcessGroupCancellation: Bool { true }
+
+    func launch(
+        _ request: CliProcessLaunchRequestV1
+    ) -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        cell.stream()
+    }
+
+    func cancel(executionId: String) async throws
+        -> CliProcessExitEvidenceV1
+    {
+        try await cell.cancel(executionId: executionId)
+    }
+}
+
+private final class P1F1D069GenerationCell<Element: Sendable>:
+    @unchecked Sendable
+{
+    private typealias Stream = AsyncThrowingStream<Element, Error>
+    private typealias Continuation = Stream.Continuation
+
+    private struct StartWaiter {
+        let expectedCount: Int
+        let continuation: CheckedContinuation<Void, Never>
+    }
+
+    private let lock = NSLock()
+    private let cleanupGates: [P1F1D069CleanupProbe]
+    private var continuations: [Continuation] = []
+    private var startWaiters: [StartWaiter] = []
+    private var nextCancellation = 0
+    private var cancellationCounts: [Int]
+
+    init(cleanupGates: [P1F1D069CleanupProbe]) {
+        self.cleanupGates = cleanupGates
+        cancellationCounts = Array(
+            repeating: 0,
+            count: cleanupGates.count
+        )
+    }
+
+    func stream() -> AsyncThrowingStream<Element, Error> {
+        Stream { continuation in
+            let ready = lock.withLock { () -> [StartWaiter] in
+                continuations.append(continuation)
+                let count = continuations.count
+                let ready = startWaiters.filter {
+                    $0.expectedCount <= count
+                }
+                startWaiters.removeAll {
+                    $0.expectedCount <= count
+                }
+                return ready
+            }
+            ready.forEach { $0.continuation.resume() }
+        }
+    }
+
+    func waitUntilStarted(_ expectedCount: Int) async {
+        if lock.withLock({ continuations.count >= expectedCount }) { return }
+        await withCheckedContinuation { continuation in
+            let resumeNow = lock.withLock { () -> Bool in
+                if continuations.count >= expectedCount { return true }
+                startWaiters.append(StartWaiter(
+                    expectedCount: expectedCount,
+                    continuation: continuation
+                ))
+                return false
+            }
+            if resumeNow { continuation.resume() }
+        }
+    }
+
+    func failNextCancellation(
+        _ error: P1F1D069AdapterCleanupFailure
+    ) async throws -> Never {
+        let target = try lock.withLock {
+            () throws -> (Continuation, P1F1D069CleanupProbe) in
+            guard nextCancellation < continuations.count,
+                  nextCancellation < cleanupGates.count
+            else {
+                throw EngineDispatchConflictErrorV1()
+            }
+            let index = nextCancellation
+            nextCancellation += 1
+            cancellationCounts[index] += 1
+            return (continuations[index], cleanupGates[index])
+        }
+        try await target.1.run()
+        target.0.finish(throwing: error)
+        throw error
+    }
+
+    func cancellationSnapshot() -> [Int] {
+        lock.withLock { cancellationCounts }
+    }
+}
+
+private struct P1F1D069GenerationModelDriver:
+    ModelLoopExecutionDrivingV1
+{
+    let cell: P1F1D069GenerationCell<EngineExecutionEventPayloadV1>
+
+    func execute(
+        request: EngineExecutionRequest,
+        context: EngineResolvedContextTransportV1,
+        workspaceURL: URL,
+        terminalSink: any EngineTerminalSink,
+        boardTerminalSink: any EngineBoardTerminalSink,
+        progressSink: any EngineProgressSink
+    ) -> AsyncThrowingStream<EngineExecutionEventPayloadV1, Error> {
+        cell.stream()
+    }
+
+    func cancel(executionId: String) async throws {
+        try await cell.failNextCancellation(.modelProvider)
+    }
+}
+
+private struct P1F1D069GenerationCliDriver: CliProcessDrivingV1 {
+    let cell: P1F1D069GenerationCell<CliProcessFrameV1>
+
+    var supportsProcessGroupCancellation: Bool { true }
+
+    func launch(
+        _ request: CliProcessLaunchRequestV1
+    ) -> AsyncThrowingStream<CliProcessFrameV1, Error> {
+        cell.stream()
+    }
+
+    func cancel(executionId: String) async throws
+        -> CliProcessExitEvidenceV1
+    {
+        try await cell.failNextCancellation(.cliProcess)
+    }
+}
+
+private func p1f1d069AdapterResultLabel(
+    _ operation: @escaping @Sendable () async throws -> Void
+) async -> String {
+    do {
+        try await operation()
+        return "success"
+    } catch P1F1D069AdapterCleanupFailure.modelProvider {
+        return "model_provider_failure"
+    } catch P1F1D069AdapterCleanupFailure.cliProcess {
+        return "cli_process_failure"
+    } catch P1F1D069ImmediateDriverFailure.modelProvider {
+        return "model_provider_failure"
+    } catch P1F1D069ImmediateDriverFailure.cliProcess {
+        return "cli_process_failure"
+    } catch CliProcessBackendError.processGroupStillAlive(_) {
+        return "process_group_still_alive"
+    } catch is CancellationError {
+        return "cancellation"
+    } catch is EngineDispatchConflictErrorV1 {
+        return "registry_conflict"
+    } catch {
+        return "unexpected_failure"
+    }
+}
+
+private func p1f1d069StreamResultLabel(
+    _ stream: AsyncThrowingStream<EngineExecutionEventPayloadV1, Error>
+) async -> String {
+    await p1f1d069AdapterResultLabel {
+        for try await _ in stream {}
+    }
+}
+
+private func p1f1d069CancellationClaimResultLabel(
+    _ claim: EngineAdapterCancellationClaimV1
+) async -> String {
+    do {
+        try await claim.wait()
+        return "success"
+    } catch is CancellationError {
+        return "success"
+    } catch P1F1D069AdapterCleanupFailure.modelProvider {
+        return "model_provider_failure"
+    } catch P1F1D069AdapterCleanupFailure.cliProcess {
+        return "cli_process_failure"
+    } catch P1F1D069ImmediateDriverFailure.modelProvider {
+        return "model_provider_failure"
+    } catch P1F1D069ImmediateDriverFailure.cliProcess {
+        return "cli_process_failure"
+    } catch CliProcessBackendError.processGroupStillAlive(_) {
+        return "process_group_still_alive"
+    } catch is EngineDispatchConflictErrorV1 {
+        return "registry_conflict"
+    } catch {
+        return "unexpected_failure"
+    }
+}
+
+private func p1f1d069ExerciseImmediateCliWinner(
+    outcome: P1F1D069ImmediateDriverOutcome
+) async throws {
+    let ledger = P1F1D069CallLedger()
+    let constructionGate = P1F1D069SynchronousGate()
+    let cancellationGate = P1F1D069SynchronousGate()
+    let failureOwnerGate = P1F1D069SynchronousGate()
+    let outcomeGate = P1F1D069SynchronousGate()
+    let terminal = P1F1DTerminalRecorder()
+    let board = P1F1DBoardTerminalRecorder()
+    defer {
+        constructionGate.release()
+        cancellationGate.release()
+        failureOwnerGate.release()
+        outcomeGate.release()
+    }
+    let adapter = try p1f1dAdapter(
+        driver: P1F1D069ImmediateCliDriver(
+            ledger: ledger,
+            outcome: outcome,
+            constructionGate: constructionGate,
+            cancellationGate: cancellationGate
+        ),
+        terminal: terminal,
+        board: board,
+        progress: P1F1DProgressRecorder(),
+        cancellationLifecycleObserver: { event in
+            switch event {
+            case .beforeOuterTaskLoad where outcome == .failed:
+                failureOwnerGate.enterAndWait()
+            case .outcomePublished:
+                outcomeGate.enterAndWait()
+            case .beforeOuterTaskLoad, .outerTaskLoaded,
+                 .cancellationOwnerSettled:
+                break
+            }
+        }
+    )
+    let request = try p1f1dRequest(
+        executionId: "00000000-0000-4000-8000-000000000703"
+    )
+    let consumer = Task {
+        await p1f1d069StreamResultLabel(
+            adapter.execute(request: request)
+        )
+    }
+    await constructionGate.waitUntilEntered()
+    let firstClaim = try await adapter.claimCancellation(
+        executionId: request.executionId
+    )
+    let secondClaim = try await adapter.claimCancellation(
+        executionId: request.executionId
+    )
+    switch outcome {
+    case .finished:
+        await cancellationGate.waitUntilEntered()
+        constructionGate.release()
+        await outcomeGate.waitUntilEntered()
+        outcomeGate.release()
+        cancellationGate.release()
+    case .failed:
+        await failureOwnerGate.waitUntilEntered()
+        constructionGate.release()
+        await outcomeGate.waitUntilEntered()
+        outcomeGate.release()
+        failureOwnerGate.release()
+    }
+    let firstResult = await p1f1d069CancellationClaimResultLabel(firstClaim)
+    let secondResult = await p1f1d069CancellationClaimResultLabel(secondClaim)
+    adapter.acknowledgeCancellation(firstClaim)
+    adapter.acknowledgeCancellation(secondClaim)
+    let expectedResult = outcome == .finished
+        ? "success" : "cli_process_failure"
+    #expect(firstResult == expectedResult)
+    #expect(secondResult == expectedResult)
+    #expect(await consumer.value == expectedResult)
+    #expect(ledger.count("launch") == 1)
+    let expectedCancellationCount = outcome == .finished ? 1 : 0
+    #expect(ledger.count("cancel") == expectedCancellationCount)
+    #expect(await terminal.snapshot().isEmpty)
+    #expect(await board.snapshot().isEmpty)
+}
+
+private func p1f1d069ExerciseGenerationBoundCancellation(
+    expectedFailure: String,
+    cleanupGates: [P1F1D069CleanupProbe],
+    makeStream: @escaping @Sendable ()
+        -> AsyncThrowingStream<EngineExecutionEventPayloadV1, Error>,
+    waitUntilStarted: @escaping @Sendable (Int) async -> Void,
+    claim: @escaping @Sendable () async throws
+        -> EngineAdapterCancellationClaimV1,
+    acknowledge: @escaping @Sendable (
+        EngineAdapterCancellationClaimV1
+    ) -> Void
+) async throws {
+    precondition(cleanupGates.count == 2)
+
+    let firstConsumer = Task {
+        await p1f1d069StreamResultLabel(makeStream())
+    }
+    await waitUntilStarted(1)
+    let firstPromptClaim = try await claim()
+    let firstDelayedClaim = try await claim()
+    await cleanupGates[0].waitUntilAttemptCount(1)
+
+    await cleanupGates[0].release()
+    #expect(
+        await p1f1d069CancellationClaimResultLabel(firstPromptClaim)
+            == expectedFailure
+    )
+    acknowledge(firstPromptClaim)
+    #expect(await firstConsumer.value == expectedFailure)
+
+    let secondConsumer = Task {
+        await p1f1d069StreamResultLabel(makeStream())
+    }
+    await waitUntilStarted(2)
+    let secondPromptClaim = try await claim()
+    await cleanupGates[1].waitUntilAttemptCount(1)
+
+    #expect(
+        await p1f1d069CancellationClaimResultLabel(firstDelayedClaim)
+            == expectedFailure
+    )
+    acknowledge(firstDelayedClaim)
+    let secondJoinedClaim = try await claim()
+    await cleanupGates[1].release()
+    #expect(
+        await p1f1d069CancellationClaimResultLabel(secondPromptClaim)
+            == expectedFailure
+    )
+    #expect(
+        await p1f1d069CancellationClaimResultLabel(secondJoinedClaim)
+            == expectedFailure
+    )
+    acknowledge(secondPromptClaim)
+    acknowledge(secondJoinedClaim)
+    #expect(await secondConsumer.value == expectedFailure)
+}
+
+private enum P1F1D069ExactRecoveryOwnerKind:
+    String,
+    CaseIterable,
+    Equatable,
+    Sendable
+{
+    case cli
+    case modelLoop
+
+    var profileKind: RuntimeProfileKind {
+        switch self {
+        case .cli: .cliCodex
+        case .modelLoop: .openAIAPI
+        }
+    }
+
+    var replayClass: EngineExecutionReplayClassV1 {
+        switch self {
+        case .cli: .nonReplayable
+        case .modelLoop: .replaySafe
+        }
+    }
+}
+
+private enum P1F1D069MissionRecoveryOutcome: Sendable {
+    case summary(EngineRecoverySummaryV1)
+    case failure(String)
+}
+
+private func p1f1d069ExactCancelResultLabel(
+    _ operation: @escaping @Sendable () async throws -> Void
+) async -> String {
+    do {
+        try await operation()
+        return "success"
+    } catch is P1F1D069CleanupProbe.Failure {
+        return "injected_cleanup_failure"
+    } catch is EngineDispatchConflictErrorV1 {
+        return "dispatch_conflict"
+    } catch {
+        return "unexpected_failure"
+    }
+}
+
+private func p1f1d069MissionRecoveryOutcome(
+    _ operation: @escaping @Sendable () async throws
+        -> EngineRecoverySummaryV1
+) async -> P1F1D069MissionRecoveryOutcome {
+    do {
+        return .summary(try await operation())
+    } catch is P1F1D069CleanupProbe.Failure {
+        return .failure("injected_cleanup_failure")
+    } catch is EngineDispatchConflictErrorV1 {
+        return .failure("dispatch_conflict")
+    } catch {
+        return .failure("unexpected_failure")
+    }
+}
+
+private func p1f1d069ExerciseExactRecoveryOwner(
+    kind: P1F1D069ExactRecoveryOwnerKind,
+    failFirst: Bool
+) async throws {
+    let fixture = try P1F1DCanonicalExecutionFixture(
+        replayClass: kind.replayClass,
+        profileKind: kind.profileKind
+    )
+    let key = "p1f1d-069-round3-owner-\(kind.rawValue)-\(failFirst)"
+    let reason = "round3_\(kind.rawValue.lowercased())_cancel"
+    let request = try fixture.begin(key: key)
+    try p1f1d069MarkStarted(
+        fixture: fixture,
+        request: request,
+        key: key
+    )
+    let before = try p1f1EngineSurfaceCounts(fixture.db)
+    let fields = try fixture.fields()
+    let ledger = P1F1D069CallLedger()
+    let exactCleanup = P1F1D069CleanupProbe(
+        failFirst: failFirst,
+        blocked: true
+    )
+    let wrongRecoveryEffect = P1F1D069CleanupProbe(blocked: true)
+    let recoveryDriver = P1F1D069BlockingRecoveryDriver(
+        ledger: ledger,
+        probe: wrongRecoveryEffect
+    )
+    let recoverySeed = try p1f1d069RecoverySeed(
+        fixture: fixture,
+        fields: fields,
+        driver: recoveryDriver
+    )
+    let active = EngineActiveExecutionRegistryV1()
+    let completions = EngineExecutionCompletionRegistryV1()
+    #expect(
+        try await active.register(
+            executionId: request.executionId,
+            cancelAndAwait: { try await exactCleanup.run() }
+        ) == .installed
+    )
+    let coordinator = try p1f1dCoordinator(
+        fixture: fixture,
+        registry: try p1f1d069RecoveryRegistry(
+            fixture: fixture,
+            fields: fields,
+            driver: recoveryDriver,
+            ledger: ledger
+        ),
+        root: fixture.root.appendingPathComponent(key),
+        activeExecutions: active,
+        completionRegistry: completions,
+        transportSeedResolver: { candidate in
+            guard candidate.executionId == request.executionId else {
+                throw EngineDispatchConflictErrorV1()
+            }
+            ledger.record("seed")
+            if kind == .modelLoop {
+                try await wrongRecoveryEffect.run()
+            }
+            return recoverySeed
+        },
+        eventObserver: { _, event in
+            if event.executionId == request.executionId {
+                ledger.record("finalizer")
+            }
+        }
+    )
+
+    let exactCancel = Task {
+        await p1f1d069ExactCancelResultLabel {
+            try await coordinator.cancel(
+                executionId: request.executionId,
+                reason: reason
+            )
+        }
+    }
+    await exactCleanup.waitUntilAttemptCount(1)
+    #expect(await completions.snapshotCount() == 1)
+    let duringExactCleanup = try p1f1d069Snapshot(
+        fixture: fixture,
+        executionId: request.executionId
+    )
+    #expect(duringExactCleanup.execution.cancellationReason == reason)
+    #expect(duringExactCleanup.execution.cancellationRequestedAt != nil)
+
+    let missionRecovery = Task {
+        await p1f1d069MissionRecoveryOutcome {
+            try await coordinator.recover(
+                missionId: fixture.mission.id,
+                now: P1F1DCanonicalExecutionFixture.now
+                    .addingTimeInterval(8)
+            )
+        }
+    }
+    while await completions.snapshotClaimCount(
+        executionId: request.executionId
+    ) < 2 {
+        await Task.yield()
+    }
+    #expect(await exactCleanup.count() == 1)
+    #expect(await wrongRecoveryEffect.count() == 0)
+    #expect(ledger.count("seed") == 0)
+    #expect(ledger.count("recoveryTransport") == 0)
+    #expect(ledger.count("cancel") == 0)
+    #expect(ledger.count("makeAdapter") == 0)
+    #expect(ledger.count("finalizer") == 0)
+
+    await exactCleanup.release()
+    let exactResult = await exactCancel.value
+    await wrongRecoveryEffect.release()
+    let missionResult = await missionRecovery.value
+
+    if failFirst {
+        #expect(exactResult == "injected_cleanup_failure")
+        guard case let .failure(missionFailure) = missionResult else {
+            Issue.record("Mission recovery must join the exact owner failure")
+            return
+        }
+        #expect(missionFailure == exactResult)
+        #expect(await exactCleanup.count() == 1)
+        #expect(ledger.count("finalizer") == 0)
+        #expect(try p1f1EngineSurfaceCounts(fixture.db).proposals == before.proposals)
+        #expect(await active.snapshotCounts().live == 1)
+        #expect(await active.snapshotCounts().pending == 0)
+        #expect(await active.snapshotCounts().inFlight == 0)
+        #expect(await completions.snapshotCount() == 0)
+
+        #expect(
+            await p1f1d069ExactCancelResultLabel {
+                try await coordinator.cancel(
+                    executionId: request.executionId,
+                    reason: reason
+                )
+            } == "success"
+        )
+    } else {
+        #expect(exactResult == "success")
+        guard case let .summary(summary) = missionResult else {
+            Issue.record("Mission recovery must join the exact owner receipt")
+            return
+        }
+        guard case let .terminalWon(receipt) = try fixture.store
+            .requestCancellation(
+                executionId: request.executionId,
+                reason: reason,
+                now: P1F1DCanonicalExecutionFixture.now
+                    .addingTimeInterval(9)
+            )
+        else {
+            Issue.record("exact owner must retain its terminal receipt")
+            return
+        }
+        #expect(summary.scannedCount == 1)
+        #expect(summary.directives.isEmpty)
+        #expect(summary.terminalReceipts == [receipt])
+    }
+
+    guard case let .terminalWon(finalReceipt) = try fixture.store
+        .requestCancellation(
+            executionId: request.executionId,
+            reason: reason,
+            now: P1F1DCanonicalExecutionFixture.now.addingTimeInterval(10)
+        )
+    else {
+        Issue.record("fresh owner must publish the exact terminal receipt")
+        return
+    }
+    #expect(finalReceipt.executionId == request.executionId)
+    #expect(finalReceipt.terminalKind == .canceled)
+    #expect(finalReceipt.reasonCode == reason)
+    #expect(await exactCleanup.count() == (failFirst ? 2 : 1))
+    #expect(await wrongRecoveryEffect.count() == 0)
+    #expect(ledger.count("seed") == 0)
+    #expect(ledger.count("recoveryTransport") == 0)
+    #expect(ledger.count("cancel") == 0)
+    #expect(ledger.count("makeAdapter") == 0)
+    #expect(ledger.count("finalizer") == 1)
+    #expect(
+        try p1f1EngineSurfaceCounts(fixture.db).proposals
+            == before.proposals + 1
+    )
+    #expect(await active.snapshotCounts().live == 0)
+    #expect(await active.snapshotCounts().pending == 0)
+    #expect(await active.snapshotCounts().inFlight == 0)
+    #expect(await completions.snapshotCount() == 0)
+}
+
+private struct P1F1D069ObserverAdapter: ExecutionEngineAdapter {
+    let descriptorValue: ExecutionEngineDescriptor
+    let runtime: EngineAdapterRuntimeV1
+    let ledger: P1F1D069CallLedger
+
+    func descriptor(
+        profile: RuntimeProfileRecord
+    ) throws -> ExecutionEngineDescriptor {
+        descriptorValue
+    }
+
+    func execute(
+        request: EngineExecutionRequest
+    ) -> AsyncThrowingStream<EngineExecutionEventPayloadV1, Error> {
+        ledger.record("execute")
+        return AsyncThrowingStream { continuation in
+            Task {
+                do {
+                    for payload in [
+                        EngineExecutionEventPayloadV1.accepted,
+                        .sessionBound(
+                            externalSessionId:
+                                "model-loop-observer-session-069"
+                        ),
+                        .progress(message: "observer-progress"),
+                        .toolActivity(name: "observer-tool"),
+                        .usage(EngineUsageV1(
+                            inputTokens: 11,
+                            outputTokens: 7,
+                            cacheReadTokens: 3,
+                            costMicros: 29
+                        )),
+                    ] {
+                        try await runtime.progressSink.submit(payload)
+                    }
+                    try await runtime.terminalSink.submit(
+                        .failed(
+                            code: "observer_terminal",
+                            detail: "observer terminal"
+                        )
+                    )
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+        }
+    }
+
+    func cancel(executionId: String) async throws {
+        ledger.recordCancellation(executionId)
+    }
+}
+
+private final class P1F1D069RunningCell: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: AsyncThrowingStream<
+        EngineExecutionEventPayloadV1,
+        Error
+    >.Continuation?
+    private var startWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func install(
+        _ value: AsyncThrowingStream<
+            EngineExecutionEventPayloadV1,
+            Error
+        >.Continuation
+    ) {
+        let waiters = lock.withLock { () -> [CheckedContinuation<Void, Never>] in
+            continuation = value
+            let waiters = startWaiters
+            startWaiters.removeAll()
+            return waiters
+        }
+        waiters.forEach { $0.resume() }
+    }
+
+    func waitUntilStarted() async {
+        if lock.withLock({ continuation != nil }) { return }
+        await withCheckedContinuation { waiter in
+            let resumeNow = lock.withLock { () -> Bool in
+                if continuation != nil { return true }
+                startWaiters.append(waiter)
+                return false
+            }
+            if resumeNow { waiter.resume() }
+        }
+    }
+
+    func finishCancellation() throws {
+        guard let continuation = lock.withLock({ self.continuation }) else {
+            throw EngineDispatchConflictErrorV1()
+        }
+        continuation.finish(throwing: CancellationError())
+    }
+}
+
+private struct P1F1D069RunningAdapter: ExecutionEngineAdapter {
+    let descriptorValue: ExecutionEngineDescriptor
+    let cell: P1F1D069RunningCell
+    let cleanup: P1F1D069CleanupProbe
+    let ledger: P1F1D069CallLedger
+
+    func descriptor(
+        profile: RuntimeProfileRecord
+    ) throws -> ExecutionEngineDescriptor {
+        descriptorValue
+    }
+
+    func execute(
+        request: EngineExecutionRequest
+    ) -> AsyncThrowingStream<EngineExecutionEventPayloadV1, Error> {
+        ledger.record("execute")
+        return AsyncThrowingStream { cell.install($0) }
+    }
+
+    func cancel(executionId: String) async throws {
+        ledger.recordCancellation(executionId)
+        try await cleanup.run()
+        try cell.finishCancellation()
+    }
+}
+
+private struct P1F1D069ExecutionSnapshot: Equatable {
+    let execution: EngineExecutionRecord
+    let cardStatus: CardStatus
+    let runOutcome: String?
+    let eventBytes: [String]
+}
+
+private func p1f1d069Snapshot(
+    fixture: P1F1DCanonicalExecutionFixture,
+    executionId: String
+) throws -> P1F1D069ExecutionSnapshot {
+    try fixture.db.pool.read { database in
+        let execution = try #require(
+            try EngineExecutionRecord.fetchOne(database, key: executionId)
+        )
+        let card = try #require(
+            try CardRecord.fetchOne(database, key: execution.cardId)
+        )
+        let run = try #require(
+            try RunRecord.fetchOne(database, key: execution.runId)
+        )
+        let eventBytes = try EventRecord
+            .filter(Column("cardId") == execution.cardId)
+            .order(Column("createdAt"), Column("id"))
+            .fetchAll(database)
+            .map {
+                [
+                    $0.id,
+                    $0.missionId ?? "nil",
+                    $0.cardId ?? "nil",
+                    $0.runId ?? "nil",
+                    $0.kind,
+                    $0.payloadJson,
+                    String($0.createdAt.timeIntervalSince1970),
+                ].joined(separator: "|")
+            }
+        return P1F1D069ExecutionSnapshot(
+            execution: execution,
+            cardStatus: card.status,
+            runOutcome: run.outcome,
+            eventBytes: eventBytes
+        )
+    }
+}
+
+private func p1f1d069RequestCancellation(
+    fixture: P1F1DCanonicalExecutionFixture,
+    key: String,
+    bindSession: Bool,
+    reason: String
+) throws -> EngineExecutionRequest {
+    let request = try fixture.begin(key: key)
+    let prepared = try p1f1ExecutionRow(
+        fixture.db,
+        id: request.executionId
+    )
+    _ = try fixture.store.markEngineDispatchStarted(
+        executionId: request.executionId,
+        expectedVersion: prepared["version"],
+        requestHash: request.requestHash,
+        commandIdempotencyKey: "\(key)-dispatch",
+        now: P1F1DCanonicalExecutionFixture.now.addingTimeInterval(1)
+    )
+    if bindSession {
+        try fixture.store.acceptEngineEvent(
+            executionId: request.executionId,
+            sequence: 0,
+            event: EngineExecutionEvent(
+                executionId: request.executionId,
+                sequence: 0,
+                payload: .sessionBound(
+                    externalSessionId: "codex-thread-\(key)"
+                )
+            )
+        )
+    }
+    guard case let .requested(canceled) = try fixture.store
+        .requestCancellation(
+            executionId: request.executionId,
+            reason: reason,
+            now: P1F1DCanonicalExecutionFixture.now.addingTimeInterval(2)
+        )
+    else {
+        throw EngineDispatchConflictErrorV1()
+    }
+    #expect(canceled.cancellationReason == reason)
+    return request
+}
+
+private enum P1F1D069SharedRecoveryCase: String, CaseIterable, Sendable {
+    case prepareAndCommitProposal
+    case startPrepared
+    case replayExecution
+    case resumeSession
+}
+
+private func p1f1d069InstallActionAbort(
+    fixture: P1F1DCanonicalExecutionFixture,
+    request: EngineExecutionRequest,
+    recoveryCase: P1F1D069SharedRecoveryCase,
+    ledger: P1F1D069CallLedger
+) throws -> String? {
+    let predicate: String
+    switch recoveryCase {
+    case .prepareAndCommitProposal:
+        predicate = "NEW.dispatchState='terminal'"
+    case .startPrepared:
+        predicate = "OLD.dispatchState='prepared' AND NEW.dispatchState='started'"
+    case .replayExecution, .resumeSession:
+        return nil
+    }
+    let suffix = recoveryCase.rawValue
+    let functionName = "p1f1d_069_action_\(suffix)"
+    let triggerName = "p1f1d_069_abort_\(suffix)"
+    let function = DatabaseFunction(functionName, argumentCount: 0) { _ in
+        ledger.record("actionFault")
+        return 1
+    }
+    try fixture.db.pool.write { database in
+        database.add(function: function)
+        try database.execute(sql: """
+            CREATE TRIGGER \(triggerName)
+            BEFORE UPDATE ON engine_execution
+            WHEN OLD.id='\(request.executionId)' AND \(predicate)
+            BEGIN
+              SELECT \(functionName)();
+              SELECT RAISE(ABORT, 'p1f1d-069 action failure');
+            END
+            """)
+    }
+    return triggerName
+}
+
+private func p1f1d069DropActionAbort(
+    fixture: P1F1DCanonicalExecutionFixture,
+    triggerName: String?
+) throws {
+    guard let triggerName else { return }
+    try fixture.db.pool.write { database in
+        try database.execute(sql: "DROP TRIGGER \(triggerName)")
+    }
+}
+
+private func p1f1d069RecoveryFailureLabel(
+    _ operation: @escaping @Sendable () async throws
+        -> EngineRecoverySummaryV1
+) async -> String {
+    do {
+        _ = try await operation()
+        return "unexpected_success"
+    } catch is DatabaseError {
+        return "database_action_failure"
+    } catch is EngineDispatchConflictErrorV1 {
+        return "active_registration_conflict"
+    } catch {
+        return "unexpected_failure"
+    }
+}
+
+private func p1f1d069MarkStarted(
+    fixture: P1F1DCanonicalExecutionFixture,
+    request: EngineExecutionRequest,
+    key: String
+) throws {
+    let prepared = try p1f1ExecutionRow(
+        fixture.db,
+        id: request.executionId
+    )
+    _ = try fixture.store.markEngineDispatchStarted(
+        executionId: request.executionId,
+        expectedVersion: prepared["version"],
+        requestHash: request.requestHash,
+        commandIdempotencyKey: "\(key)-dispatch",
+        now: P1F1DCanonicalExecutionFixture.now.addingTimeInterval(1)
+    )
+}
+
+private func p1f1d069RecordArtifactProposal(
+    fixture: P1F1DCanonicalExecutionFixture,
+    request: EngineExecutionRequest,
+    key: String
+) throws -> String {
+    let relativePath = "output/\(key).txt"
+    let fileURL = fixture.workspaceURL.appendingPathComponent(relativePath)
+    try FileManager.default.createDirectory(
+        at: fileURL.deletingLastPathComponent(),
+        withIntermediateDirectories: true
+    )
+    let bytes = Data("round2-shared-recovery".utf8)
+    try bytes.write(to: fileURL, options: .atomic)
+    let artifact = EngineTerminalArtifactDeclarationV1(
+        ordinal: 0,
+        sourceRelativePath: relativePath,
+        kind: "text",
+        label: "round2 recovery",
+        byteCount: bytes.count,
+        contentHash: CanonicalJSONV1.sha256Hex(bytes)
+    )
+    let recorded = try fixture.store.recordEngineTerminalProposal(
+        EngineTerminalProposalContentV1(
+            protocolVersion: engineExecutionProtocolVersionV1,
+            executionId: request.executionId,
+            runId: request.runId,
+            cardId: request.cardId,
+            sequence: 0,
+            terminalIdempotencyKey: "\(key)-terminal",
+            terminalKind: .completed,
+            terminalSubtype: nil,
+            payload: .completed(
+                handoff: HandoffPayload(
+                    outcome: "implemented",
+                    summary: "round2 shared recovery",
+                    artifacts: [
+                        .init(
+                            relativePath: relativePath,
+                            kind: artifact.kind,
+                            label: artifact.label
+                        ),
+                    ],
+                    verification: [
+                        .init(method: "recovery", passed: true, note: "exact"),
+                    ],
+                    risks: []
+                )
+            ),
+            artifacts: [artifact]
+        )
+    )
+    return recorded.proposal.id
+}
+
+private func p1f1d069InsertRunningSibling(
+    fixture: P1F1DCanonicalExecutionFixture,
+    target: EngineExecutionRequest,
+    terminalized: Bool = false
+) throws -> String {
+    let siblingCardID = "00000000-0000-4000-8000-000000000696"
+    let siblingRunID = "00000000-0000-4000-8000-000000000697"
+    let siblingExecutionID = "00000000-0000-4000-8000-000000000698"
+    var siblingCard = fixture.card
+    siblingCard.id = siblingCardID
+    siblingCard.idemKey = "p1f1d-069-sibling-card"
+    siblingCard.title = "P1-F1D 069 same-Mission sibling"
+    siblingCard.status = .running
+    let siblingRun = RunRecord(
+        id: siblingRunID,
+        cardId: siblingCardID,
+        attempt: 1,
+        outcome: nil,
+        turns: 0,
+        tokensIn: 0,
+        tokensOut: 0,
+        startedAt: P1F1DCanonicalExecutionFixture.now,
+        endedAt: nil
+    )
+    let siblingRequest = try EngineExecutionRequest.makeCanonical(
+        executionId: siblingExecutionID,
+        idempotencyKey: "p1f1d-069-sibling-execution",
+        campId: target.campId,
+        campLifecycleVersion: target.campLifecycleVersion,
+        runId: siblingRunID,
+        cardId: siblingCardID,
+        contract: target.contract,
+        adapterId: target.adapterId,
+        adapterVersion: target.adapterVersion,
+        profileId: target.profileId,
+        engineKind: target.engineKind,
+        model: target.model,
+        replayClass: target.replayClass,
+        contextJson: target.contextJson,
+        contextHash: target.contextHash,
+        sessionScopeJson: target.sessionScopeJson,
+        sessionScopeHash: target.sessionScopeHash,
+        requiredCapabilities: target.requiredCapabilities,
+        approvalGrantIds: target.approvalGrantIds,
+        budget: target.budget,
+        workspace: target.workspace,
+        sessionRef: nil
+    )
+    let siblingExecution = EngineExecutionRecord(
+        id: siblingExecutionID,
+        campId: siblingRequest.campId,
+        campLifecycleVersion: siblingRequest.campLifecycleVersion,
+        idempotencyKey: siblingRequest.idempotencyKey,
+        runId: siblingRunID,
+        cardId: siblingCardID,
+        adapterId: siblingRequest.adapterId,
+        adapterVersion: siblingRequest.adapterVersion,
+        profileId: siblingRequest.profileId,
+        engineKind: siblingRequest.engineKind,
+        model: siblingRequest.model,
+        requestJson: siblingRequest.requestJson,
+        requestHash: siblingRequest.requestHash,
+        contextJson: siblingRequest.contextJson,
+        contextHash: siblingRequest.contextHash,
+        sessionScopeJson: siblingRequest.sessionScopeJson,
+        sessionScopeHash: siblingRequest.sessionScopeHash,
+        sessionId: nil,
+        replayClass: siblingRequest.replayClass,
+        dispatchState: .started,
+        state: .running,
+        terminalSubtype: nil,
+        nextSequence: 0,
+        terminalReceiptIdempotencyKey: nil,
+        terminalReceiptHash: nil,
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        costMicros: 0,
+        version: 1,
+        createdAt: P1F1DCanonicalExecutionFixture.now,
+        updatedAt: P1F1DCanonicalExecutionFixture.now,
+        dispatchStartedAt: P1F1DCanonicalExecutionFixture.now,
+        cancellationRequestedAt: nil,
+        cancellationReason: nil,
+        finishedAt: nil,
+        redactedAt: nil
+    )
+    try fixture.db.pool.write { database in
+        try siblingCard.insert(database)
+        try siblingRun.insert(database)
+        try siblingExecution.insert(database)
+    }
+    if terminalized {
+        let proposal = try fixture.store.recordEngineTerminalProposal(
+            p1f1TerminalCompletedProposal(
+                request: siblingRequest,
+                key: "p1f1d-069-terminal-sibling"
+            )
+        )
+        _ = try fixture.store.commitEngineTerminal(
+            proposalId: proposal.proposal.id,
+            checkedUsage: .zero,
+            now: P1F1DCanonicalExecutionFixture.now.addingTimeInterval(3)
+        )
+    }
+    return siblingExecutionID
+}
+
+private func p1f1d069Receipt(
+    executionId: String,
+    reason: String = "user_cancel"
+) throws -> EngineTerminalCommitReceiptV1 {
+    try EngineTerminalCommitReceiptV1(
+        receiptIdempotencyKey: "engine.terminal.v1:p1f1d-069",
+        executionId: executionId,
+        proposalId: "00000000-0000-4000-8000-000000000690",
+        proposalHash: String(repeating: "6", count: 64),
+        disposition: .committedProposal,
+        terminalKind: .canceled,
+        terminalSubtype: nil,
+        reasonCode: reason,
+        artifactIds: [],
+        committedEventIds: [
+            "00000000-0000-4000-8000-000000000691",
+        ],
+        finishedAt: P1F1DCanonicalExecutionFixture.now,
+        terminalReceiptHash: String(repeating: "7", count: 64)
+    )
+}
+
+private func p1f1d069Prepared(
+    fixture: P1F1DCanonicalExecutionFixture,
+    fields: EngineExecutionRequestFieldsV1,
+    idempotencyKey: String,
+    makeTransport: @escaping @Sendable (
+        EngineExecutionRequest,
+        EngineResolvedContextTransportV1,
+        EngineResolvedWorkspaceV1
+    ) throws -> EngineExecutionTransportV1
+) throws -> EnginePreparedDispatchV1 {
+    let expected = try fixture.expectedContext()
+    let resolved = try EngineResolvedContextTransportV1(
+        envelope: expected.envelope,
+        packet: expected.packet,
+        canonicalEnvelopeJSON: expected.canonicalJSON,
+        hash: expected.hash
+    )
+    let logicalDefinitions: [ToolDef] = [
+        .completeCard, .blockCard, .addProgressNote, .askUser,
+    ]
+    let modelBindings = logicalDefinitions.map {
+        EngineContextToolBindingV1(
+            logicalName: $0.name,
+            providerVisibleName: $0.name
+        )
+    }
+    let cliBindings = logicalDefinitions.map {
+        EngineContextToolBindingV1(
+            logicalName: $0.name,
+            providerVisibleName: "mcp__ranchboard__\($0.name)"
+        )
+    }
+    let modelVariant = EnginePreparedContextVariantV1(
+        request: expected.contextRequest,
+        resolved: resolved,
+        namespace: .modelLoop,
+        toolBindings: modelBindings
+    )
+    let cliVariant = EnginePreparedContextVariantV1(
+        request: expected.contextRequest,
+        resolved: resolved,
+        namespace: .ranchMCP,
+        toolBindings: cliBindings
+    )
+    let preparedContext = EnginePreparedContextV1(
+        modelLoop: modelVariant,
+        cli: cliVariant,
+        profile: fixture.profile,
+        contract: fixture.contract.ref,
+        companionId: fixture.companion.id,
+        companionModel: fields.model,
+        companionModelPolicy: .pinned,
+        autonomy: fixture.mission.autonomy,
+        cardMaxTurns: fixture.card.maxTurns,
+        cardTokenBudget: fixture.card.tokenBudget,
+        capabilityTools: EngineCapabilityToolPlanV1(
+            logicalDefinitions: logicalDefinitions,
+            modelLoopDefinitions: logicalDefinitions,
+            cliDefinitions: logicalDefinitions.map {
+                ToolDef(
+                    name: "mcp__ranchboard__\($0.name)",
+                    description: $0.description,
+                    inputSchema: $0.inputSchema
+                )
+            },
+            requiresWorkspaceWrite: false,
+            makeCapabilityTools: { _ in
+                EngineBoundCapabilityToolsV1(
+                    logicalDefinitions: logicalDefinitions,
+                    capabilityTools: []
+                )
+            }
+        )
+    )
+    let workspace = EnginePreparedWorkspaceClaimV1(
+        request: expected.workspaceRequest,
+        workspace: expected.workspaceReference
+    )
+    return EnginePreparedDispatchV1(
+        requestFields: fields,
+        idempotencyKey: idempotencyKey,
+        context: preparedContext,
+        workspace: workspace,
+        selected: EngineAdapterPreparedRequestV1(
+            descriptor: fixture.descriptor,
+            engineKind: fields.engineKind,
+            model: fields.model,
+            budget: fields.budget,
+            context: fixture.profile.kind.isCLI ? cliVariant : modelVariant,
+            requiredCapabilities: fields.requiredCapabilities,
+            makeTransport: makeTransport
+        )
+    )
+}
+
+private func p1f1dCoordinator(
+    fixture: P1F1DCanonicalExecutionFixture,
+    registry: EngineAdapterRegistryV1,
+    root: URL,
+    activeExecutions: EngineActiveExecutionRegistryV1 =
+        EngineActiveExecutionRegistryV1(),
+    completionRegistry: EngineExecutionCompletionRegistryV1 =
+        EngineExecutionCompletionRegistryV1(),
+    transportSeedResolver:
+        @escaping EngineExecutionTransportSeedResolveV1 = { _ in
+            throw EngineDispatchConflictErrorV1()
+        },
+    eventObserver: @escaping EngineRoutedEventDidCommitV1 = { _, _ in }
+) throws -> EngineExecutionCoordinatorV1 {
+    let artifactRoot = root.appendingPathComponent("artifacts")
+    try FileManager.default.createDirectory(
+        at: artifactRoot,
+        withIntermediateDirectories: true
+    )
+    let stateLock = try StateDirectoryLock(directoryURL: root)
+    let blobStore = ArtifactBlobStore(
+        database: fixture.db,
+        artifactStoreRoot: artifactRoot,
+        stateDirectoryLock: stateLock
+    )
+    let coordinatorStore = EngineExecutionStore(
+        database: fixture.db,
+        descriptorResolver: { profile, requiredCapabilities in
+            try fixture.descriptorAuthority(
+                profile,
+                requiredCapabilities
+            )
+        },
+        clock: { P1F1DCanonicalExecutionFixture.now },
+        artifactBlobStore: blobStore,
+        artifactStorageOriginStore: ArtifactStorageOriginStore(
+            database: fixture.db
+        ),
+        executionIdFactory: { fixture.ids.next("execution") },
+        runIdFactory: { fixture.ids.next("run") },
+        proposalIdFactory: { fixture.ids.next("proposal") },
+        artifactIdFactory: { fixture.ids.next("artifact") },
+        eventIdFactory: { fixture.ids.next("event") },
+        userRequestIdFactory: { fixture.ids.next("user-request") },
+        sessionIdFactory: { fixture.ids.next("session") }
+    )
+    return EngineExecutionCoordinatorV1(
+        store: coordinatorStore,
+        registry: registry,
+        artifactStager: ArtifactStager(
+            database: fixture.db,
+            blobStore: blobStore
+        ),
+        contextResolver: EngineContextTransportResolverV1(
+            database: fixture.db,
+            dependencyLoader: p1f1dContextDependencyLoader(fixture.db)
+        ),
+        workspaceResolver: EngineWorkspaceResolverV1(database: fixture.db),
+        transportSeedResolver: transportSeedResolver,
+        activeExecutions: activeExecutions,
+        completionRegistry: completionRegistry,
+        eventObserver: eventObserver,
+        clock: { P1F1DCanonicalExecutionFixture.now }
+    )
+}
+
+private func p1f1dTransport(
+    fixture: P1F1DCanonicalExecutionFixture,
+    fields: EngineExecutionRequestFieldsV1,
+    driver: any CliProcessDrivingV1
+) throws -> EngineExecutionTransportV1 {
+    try EngineExecutionTransportV1(
+        contextRequest: try EngineContextResolveRequestV1(
+            campId: fields.campId,
+            cardId: fields.cardId,
+            companionId: fixture.companion.id,
+            contextJson: fields.contextJson,
+            contextHash: fields.contextHash
+        ),
+        workspaceRequest: try EngineWorkspaceResolveRequestV1(
+            cardId: fields.cardId,
+            campId: fields.campId,
+            expectedWorkspace: fields.workspace
+        ),
+        boundCapabilityTools: p1f1dBoundCapabilityTools(),
+        modelLoopDriver: nil,
+        cliProcessDriver: driver,
+        cliConfiguration: p1f1dConfiguration(kind: fixture.profile.kind)
+    )
+}
+
+private func p1f1d069RecoverySeed(
+    fixture: P1F1DCanonicalExecutionFixture,
+    fields: EngineExecutionRequestFieldsV1,
+    driver: any CliProcessDrivingV1
+) throws -> EngineExecutionTransportSeedV1 {
+    let prepared = try p1f1d069Prepared(
+        fixture: fixture,
+        fields: fields,
+        idempotencyKey: "p1f1d-069-recovery-seed",
+        makeTransport: { _, _, _ in
+            try p1f1dTransport(
+                fixture: fixture,
+                fields: fields,
+                driver: driver
+            )
+        }
+    )
+    return EngineExecutionTransportSeedV1(
+        context: prepared.context,
+        workspace: prepared.workspace,
+        baseRequiredCapabilities: fields.requiredCapabilities,
+        bridgeExecutableAuthority: nil,
+        boardSocketDirectoryAuthority: nil,
+        validateCodexManagedPolicy: nil,
+        validateClaudeManagedPolicy: nil,
+        claudeConfigDirectory: URL(fileURLWithPath: "/tmp"),
+        cliExecutableDirectory: URL(fileURLWithPath: "/tmp"),
+        resolveInitialModelLoopProvider: { _, _, _, _ in
+            throw EngineDispatchConflictErrorV1()
+        },
+        resolveRecoveryModelLoopProvider: { _, _, _ in
+            throw EngineDispatchConflictErrorV1()
+        },
+        makeCliProcessDriver: { driver }
+    )
+}
+
+private func p1f1d069RecoveryRegistry(
+    fixture: P1F1DCanonicalExecutionFixture,
+    fields: EngineExecutionRequestFieldsV1,
+    driver: any CliProcessDrivingV1,
+    ledger: P1F1D069CallLedger,
+    beforeTransport: @escaping @Sendable () throws -> Void = {}
+) throws -> EngineAdapterRegistryV1 {
+    let expectedHelp = fixture.profile.kind.isCLI
+        ? try p1f1dHelp(fixture.profile.kind) : nil
+    let helpRequirement = try expectedHelp.map {
+        try EngineAdapterHelpRequirementV1(
+            kind: $0.kind,
+            command: $0.command
+        )
+    }
+    let helpSnapshots = expectedHelp.map {
+        [fixture.profile.kind: $0]
+    } ?? [:]
+    return try EngineAdapterRegistryV1(
+        factories: [
+            EngineAdapterFactoryV1(
+                adapterId: fixture.descriptor.adapterId,
+                adapterVersion: fixture.descriptor.adapterVersion,
+                profileKinds: [fixture.profile.kind],
+                helpRequirement: helpRequirement,
+                descriptor: { profile, help in
+                    guard profile.id == fixture.profile.id,
+                          profile.kind == fixture.profile.kind,
+                          help == expectedHelp
+                    else {
+                        throw EngineDescriptorMismatchErrorV1()
+                    }
+                    ledger.record("descriptor")
+                    return fixture.descriptor
+                },
+                prepareRequest: { _, _, _ in
+                    ledger.record("prepare")
+                    throw EngineDispatchConflictErrorV1()
+                },
+                makeRecoveryTransport: {
+                    profile, help, request, _, _, _ in
+                    guard profile.id == fixture.profile.id,
+                          profile.kind == fixture.profile.kind,
+                          help == expectedHelp,
+                          request.adapterId == fixture.descriptor.adapterId,
+                          request.adapterVersion
+                            == fixture.descriptor.adapterVersion
+                    else {
+                        throw EngineDescriptorMismatchErrorV1()
+                    }
+                    ledger.record("recoveryTransport")
+                    try beforeTransport()
+                    return try p1f1dTransport(
+                        fixture: fixture,
+                        fields: fields,
+                        driver: driver
+                    )
+                },
+                makeAdapter: { _, _ in
+                    ledger.record("makeAdapter")
+                    return P1F1DDescriptorAdapter(
+                        value: fixture.descriptor
+                    )
+                }
+            ),
+        ],
+        helpSnapshots: helpSnapshots
+    )
+}
+
+private func p1f1d069ObserverRegistry(
+    fixture: P1F1DCanonicalExecutionFixture,
+    ledger: P1F1D069CallLedger
+) throws -> EngineAdapterRegistryV1 {
+    try EngineAdapterRegistryV1(
+        factories: [
+            EngineAdapterFactoryV1(
+                adapterId: fixture.descriptor.adapterId,
+                adapterVersion: fixture.descriptor.adapterVersion,
+                profileKinds: [fixture.profile.kind],
+                helpRequirement: nil,
+                descriptor: { profile, help in
+                    guard profile.id == fixture.profile.id,
+                          profile.kind == fixture.profile.kind,
+                          help == nil
+                    else {
+                        throw EngineDescriptorMismatchErrorV1()
+                    }
+                    return fixture.descriptor
+                },
+                prepareRequest: { _, _, _ in
+                    throw EngineDispatchConflictErrorV1()
+                },
+                makeRecoveryTransport: { _, _, _, _, _, _ in
+                    throw EngineDispatchConflictErrorV1()
+                },
+                makeAdapter: { _, runtime in
+                    ledger.record("makeAdapter")
+                    return P1F1D069ObserverAdapter(
+                        descriptorValue: fixture.descriptor,
+                        runtime: runtime,
+                        ledger: ledger
+                    )
+                }
+            ),
+        ],
+        helpSnapshots: [:]
+    )
+}
+
+private func p1f1d069RunningRegistry(
+    fixture: P1F1DCanonicalExecutionFixture,
+    cell: P1F1D069RunningCell,
+    cleanup: P1F1D069CleanupProbe,
+    ledger: P1F1D069CallLedger
+) throws -> EngineAdapterRegistryV1 {
+    let expectedHelp = fixture.profile.kind.isCLI
+        ? try p1f1dHelp(fixture.profile.kind) : nil
+    let helpRequirement = try expectedHelp.map {
+        try EngineAdapterHelpRequirementV1(
+            kind: $0.kind,
+            command: $0.command
+        )
+    }
+    let helpSnapshots = expectedHelp.map {
+        [fixture.profile.kind: $0]
+    } ?? [:]
+    return try EngineAdapterRegistryV1(
+        factories: [
+            EngineAdapterFactoryV1(
+                adapterId: fixture.descriptor.adapterId,
+                adapterVersion: fixture.descriptor.adapterVersion,
+                profileKinds: [fixture.profile.kind],
+                helpRequirement: helpRequirement,
+                descriptor: { profile, help in
+                    guard profile.id == fixture.profile.id,
+                          profile.kind == fixture.profile.kind,
+                          help == expectedHelp
+                    else {
+                        throw EngineDescriptorMismatchErrorV1()
+                    }
+                    return fixture.descriptor
+                },
+                prepareRequest: { _, _, _ in
+                    throw EngineDispatchConflictErrorV1()
+                },
+                makeRecoveryTransport: { _, _, _, _, _, _ in
+                    throw EngineDispatchConflictErrorV1()
+                },
+                makeAdapter: { _, _ in
+                    ledger.record("makeAdapter")
+                    return P1F1D069RunningAdapter(
+                        descriptorValue: fixture.descriptor,
+                        cell: cell,
+                        cleanup: cleanup,
+                        ledger: ledger
+                    )
+                }
+            ),
+        ],
+        helpSnapshots: helpSnapshots
+    )
+}
+
+private func p1f1d069ModelTransport(
+    fixture: P1F1DCanonicalExecutionFixture,
+    fields: EngineExecutionRequestFieldsV1
+) throws -> EngineExecutionTransportV1 {
+    try EngineExecutionTransportV1(
+        contextRequest: EngineContextResolveRequestV1(
+            campId: fields.campId,
+            cardId: fields.cardId,
+            companionId: fixture.companion.id,
+            contextJson: fields.contextJson,
+            contextHash: fields.contextHash
+        ),
+        workspaceRequest: EngineWorkspaceResolveRequestV1(
+            cardId: fields.cardId,
+            campId: fields.campId,
+            expectedWorkspace: fields.workspace
+        ),
+        boundCapabilityTools: p1f1dBoundCapabilityTools(),
+        modelLoopDriver: P1F1DModelLoopDriver(),
+        cliProcessDriver: nil,
+        cliConfiguration: nil
+    )
+}
+
+private func p1f1dRequirePredecessorRejected(
+    fixture: P1F1DCanonicalExecutionFixture,
+    key: String,
+    mutate: (AppDatabase, EngineExecutionRequest) throws -> Void = { _, _ in },
+    fields: (P1F1DCanonicalExecutionFixture, String) throws
+        -> EngineExecutionRequestFieldsV1
+) throws {
+    let predecessor = try p1f1dCanceledPredecessor(fixture, key: key)
+    try mutate(fixture.db, predecessor)
+    let before = try p1f1dSharedWriteSnapshot(fixture)
+    p1f1dExpectError(EngineSessionScopeMismatchError()) {
+        _ = try fixture.begin(
+            key: "\(key)-successor",
+            fields: fields(fixture, predecessor.executionId)
+        )
+    }
+    #expect(try p1f1dSharedWriteSnapshot(fixture) == before)
+}
+
+private func p1f1d069ExerciseRoutingWinners() async throws {
+    print("P1F1D069_SCENARIO=RoutingWinners")
+    let initialRouter = p1f1dRouter(80)
+    let initialEvents = P1F1DEventRecorder()
+    let initialManifestCount = P1F1DLockedCounter()
+    let initialSink = EngineBoardTerminalRouterSinkV1(
+        router: initialRouter,
+        manifestResolver: { _ in
+            initialManifestCount.increment()
+            return [p1f1dArtifact()]
+        },
+        commit: { initialEvents.append($0) }
+    )
+    try await initialSink.submit(
+        .blocked(reasonCode: "board_blocked", detail: "ordinary")
+    )
+    #expect(initialEvents.snapshot.count == 1)
+    #expect(initialManifestCount.value == 0)
+    let initialProposal = try p1f1dTerminal(
+        #require(initialEvents.snapshot.first)
+    )
+    #expect(initialProposal.terminalKind == .blocked)
+    #expect(initialProposal.terminalSubtype == .ordinary)
+    #expect(initialProposal.artifacts.isEmpty)
+
+    for permutation in P1F1DWiringPermutation.allCases {
+        let fixture = try P1F1DCanonicalExecutionFixture()
+        let capture = P1F1DWiringCapture()
+        let registry = try p1f1dWiringRegistry(
+            fixture: fixture,
+            capture: capture,
+            permutation: permutation
+        )
+        let coordinatorRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "agentloop-p1f1d-069-\(permutation.rawValue)-\(UUID().uuidString)"
+            )
+        defer { try? FileManager.default.removeItem(at: coordinatorRoot) }
+        let coordinator = try p1f1dCoordinator(
+            fixture: fixture,
+            registry: registry,
+            root: coordinatorRoot
+        )
+        let fields = try fixture.fields()
+        let before = try p1f1EngineSurfaceCounts(fixture.db)
+        let prepared = try p1f1d069Prepared(
+            fixture: fixture,
+            fields: fields,
+            idempotencyKey:
+                "p1f1d-069-production-\(permutation.rawValue)",
+            makeTransport: { _, _, _ in
+                try p1f1dTransport(
+                    fixture: fixture,
+                    fields: fields,
+                    driver: P1F1DProcessDriver(
+                        frames: [],
+                        recorder: P1F1DLaunchRecorder(),
+                        cancelEvidence: p1f1dCancelEvidence
+                    )
+                )
+            }
+        )
+        let receipt = try await coordinator.execute(
+            prepared,
+            onExecutionBound: { request in
+                #expect(request.cardId == fixture.card.id)
+                try CanonicalContractCodingV1.validateCanonicalUUID(
+                    request.executionId
+                )
+                return .dispatch
+            }
+        )
+        for _ in 0..<10_000
+            where (capture.snapshot?.outcomes.count ?? 0) < 3
+        {
+            await Task.yield()
+        }
+        let wiring = try #require(capture.snapshot)
+        #expect(wiring.adapterRouter === wiring.boardRouter)
+        #expect(wiring.adapterRouter === wiring.progressRouter)
+        #expect(wiring.outcomes.count == 3)
+        #expect(!wiring.outcomes.values.contains { outcome in
+            if case .unexpected = outcome { return true }
+            return false
+        })
+
+        switch permutation {
+        case .board:
+            #expect(wiring.outcomes[.board] == .committed)
+            #expect(wiring.outcomes[.adapter] == .duplicate)
+            #expect(wiring.outcomes[.eof] == .duplicate)
+            #expect(receipt.terminalKind == .blocked)
+            #expect(receipt.terminalSubtype == .ordinary)
+            #expect(receipt.reasonCode == "board_wiring_race")
+        case .adapter:
+            #expect(wiring.outcomes[.board] == .duplicate)
+            #expect(wiring.outcomes[.adapter] == .committed)
+            #expect(wiring.outcomes[.eof] == .duplicate)
+            #expect(receipt.terminalKind == .failed)
+            #expect(receipt.terminalSubtype == nil)
+            #expect(receipt.reasonCode == "adapter_wiring_race")
+        case .eof:
+            #expect(wiring.outcomes[.board] == .duplicate)
+            #expect(wiring.outcomes[.adapter] == .duplicate)
+            #expect(wiring.outcomes[.eof] == .committed)
+            #expect(receipt.terminalKind == .blocked)
+            #expect(receipt.terminalSubtype == .engineProtocolError)
+            #expect(receipt.reasonCode == "engine_protocol_error")
+        }
+
+        let proposal = try await fixture.db.pool.read { database in
+            try #require(
+                try EngineTerminalProposalRecord.fetchOne(
+                    database,
+                    key: receipt.proposalId
+                )
+            )
+        }
+        #expect(
+            try await wiring.adapterRouter.state()
+                == .accepted(
+                    sequence: proposal.sequence,
+                    terminalIdempotencyKey:
+                        proposal.terminalIdempotencyKey
+                )
+        )
+        let after = try p1f1EngineSurfaceCounts(fixture.db)
+        #expect(after.executions == before.executions + 1)
+        #expect(after.runs == before.runs + 1)
+        #expect(after.proposals == before.proposals + 1)
+        #expect(receipt.disposition == .committedProposal)
+        #expect(receipt.artifactIds.isEmpty)
+    }
+}
+
+private func p1f1d069ExerciseActiveCancellationRegistry() async throws {
+    print("P1F1D069_SCENARIO=ActiveCancellationRegistry")
+    let activeExecutionID =
+        "00000000-0000-4000-8000-000000000692"
+    let activeReceipt = try p1f1d069Receipt(
+        executionId: activeExecutionID
+    )
+    let pendingRegistry = EngineActiveExecutionRegistryV1()
+    #expect(
+        try await pendingRegistry.cancel(
+            executionId: activeExecutionID,
+            reason: "user_cancel"
+        ) == .latched
+    )
+    let pendingProbe = P1F1D069CleanupProbe(blocked: true)
+    let pendingRegistration = Task {
+        try await pendingRegistry.register(
+            executionId: activeExecutionID,
+            cancelAndAwait: { try await pendingProbe.run() }
+        )
+    }
+    await pendingProbe.waitUntilAttemptCount(1)
+    let joinedPendingCancel = Task {
+        try await pendingRegistry.cancel(
+            executionId: activeExecutionID,
+            reason: "user_cancel"
+        )
+    }
+    do {
+        _ = try await pendingRegistry.cancel(
+            executionId: activeExecutionID,
+            reason: "byte_different_reason"
+        )
+        Issue.record("a byte-different cancellation reason must conflict")
+    } catch is EngineDispatchConflictErrorV1 {
+    }
+    await pendingProbe.release()
+    #expect(
+        try await pendingRegistration.value
+            == .pendingCancellationConsumed(reason: "user_cancel")
+    )
+    #expect(
+        try await joinedPendingCancel.value == .cancelledAndAwaited
+    )
+    #expect(await pendingProbe.count() == 1)
+    #expect(await pendingRegistry.snapshotCounts().live == 1)
+    try await pendingRegistry.remove(
+        executionId: activeExecutionID,
+        terminalReceipt: activeReceipt
+    )
+    #expect(await pendingRegistry.snapshotCounts().live == 0)
+    #expect(await pendingRegistry.snapshotCounts().pending == 0)
+    #expect(await pendingRegistry.snapshotCounts().inFlight == 0)
+
+    let retryExecutionID =
+        "00000000-0000-4000-8000-000000000693"
+    let retryRegistry = EngineActiveExecutionRegistryV1()
+    let retryProbe = P1F1D069CleanupProbe(failFirst: true)
+    #expect(
+        try await retryRegistry.register(
+            executionId: retryExecutionID,
+            cancelAndAwait: { try await retryProbe.run() }
+        ) == .installed
+    )
+    do {
+        _ = try await retryRegistry.cancel(
+            executionId: retryExecutionID,
+            reason: "retryable_cancel"
+        )
+        Issue.record("the injected cleanup failure must reach its waiter")
+    } catch is P1F1D069CleanupProbe.Failure {
+    }
+    #expect(await retryRegistry.snapshotCounts().live == 1)
+    #expect(await retryRegistry.snapshotCounts().inFlight == 0)
+    #expect(
+        try await retryRegistry.cancel(
+            executionId: retryExecutionID,
+            reason: "retryable_cancel"
+        ) == .cancelledAndAwaited
+    )
+    #expect(await retryProbe.count() == 2)
+    try await retryRegistry.remove(
+        executionId: retryExecutionID,
+        terminalReceipt: p1f1d069Receipt(
+            executionId: retryExecutionID,
+            reason: "retryable_cancel"
+        )
+    )
+
+    let sharedFailureExecutionID =
+        "00000000-0000-4000-8000-000000000699"
+    let sharedFailureRegistry = EngineActiveExecutionRegistryV1()
+    let sharedFailureProbe = P1F1D069CleanupProbe(
+        failFirst: true,
+        blocked: true
+    )
+    #expect(
+        try await sharedFailureRegistry.register(
+            executionId: sharedFailureExecutionID,
+            cancelAndAwait: { try await sharedFailureProbe.run() }
+        ) == .installed
+    )
+    let firstFailedCleanup = Task {
+        try await sharedFailureRegistry.cancel(
+            executionId: sharedFailureExecutionID,
+            reason: "shared_cleanup_failure"
+        )
+    }
+    await sharedFailureProbe.waitUntilAttemptCount(1)
+    let secondFailedCleanup = Task {
+        try await sharedFailureRegistry.cancel(
+            executionId: sharedFailureExecutionID,
+            reason: "shared_cleanup_failure"
+        )
+    }
+    do {
+        try await sharedFailureRegistry.remove(
+            executionId: sharedFailureExecutionID,
+            terminalReceipt: p1f1d069Receipt(
+                executionId: sharedFailureExecutionID,
+                reason: "shared_cleanup_failure"
+            )
+        )
+        Issue.record("in-flight cleanup must reject early removal")
+    } catch is EngineDispatchConflictErrorV1 {
+    }
+    await sharedFailureProbe.release()
+    for waiter in [firstFailedCleanup, secondFailedCleanup] {
+        do {
+            _ = try await waiter.value
+            Issue.record("all current waiters must receive cleanup failure")
+        } catch is P1F1D069CleanupProbe.Failure {
+        }
+    }
+    #expect(await sharedFailureProbe.count() == 1)
+    #expect(
+        try await sharedFailureRegistry.cancel(
+            executionId: sharedFailureExecutionID,
+            reason: "shared_cleanup_failure"
+        ) == .cancelledAndAwaited
+    )
+    #expect(await sharedFailureProbe.count() == 2)
+    let wrongReasonReceipt = try p1f1d069Receipt(
+        executionId: sharedFailureExecutionID,
+        reason: "wrong_reason"
+    )
+    do {
+        try await sharedFailureRegistry.remove(
+            executionId: sharedFailureExecutionID,
+            terminalReceipt: wrongReasonReceipt
+        )
+        Issue.record("receipt reason must bind active-registry cleanup")
+    } catch is EngineDispatchConflictErrorV1 {
+    }
+    try await sharedFailureRegistry.remove(
+        executionId: sharedFailureExecutionID,
+        terminalReceipt: p1f1d069Receipt(
+            executionId: sharedFailureExecutionID,
+            reason: "shared_cleanup_failure"
+        )
+    )
+    #expect(await sharedFailureRegistry.snapshotCounts().live == 0)
+    #expect(await sharedFailureRegistry.snapshotCounts().pending == 0)
+    #expect(await sharedFailureRegistry.snapshotCounts().inFlight == 0)
+
+    let pendingOnlyExecutionID =
+        "00000000-0000-4000-8000-000000000700"
+    let pendingOnlyRegistry = EngineActiveExecutionRegistryV1()
+    #expect(
+        try await pendingOnlyRegistry.cancel(
+            executionId: pendingOnlyExecutionID,
+            reason: "pending_only"
+        ) == .latched
+    )
+    do {
+        try await pendingOnlyRegistry.finishPending(
+            executionId: pendingOnlyExecutionID,
+            terminalReceipt: p1f1d069Receipt(
+                executionId:
+                    "00000000-0000-4000-8000-000000000701",
+                reason: "pending_only"
+            )
+        )
+        Issue.record("pending cleanup must reject a different receipt ID")
+    } catch is EngineDispatchConflictErrorV1 {
+    }
+    try await pendingOnlyRegistry.finishPending(
+        executionId: pendingOnlyExecutionID,
+        terminalReceipt: p1f1d069Receipt(
+            executionId: pendingOnlyExecutionID,
+            reason: "pending_only"
+        )
+    )
+    #expect(await pendingOnlyRegistry.snapshotCounts().live == 0)
+    #expect(await pendingOnlyRegistry.snapshotCounts().pending == 0)
+    #expect(await pendingOnlyRegistry.snapshotCounts().inFlight == 0)
+
+    let startGate = EngineExecutionStartGateV1()
+    let startGateLedger = P1F1D069CallLedger()
+    let gated = Task {
+        try await startGate.waitUntilOpened()
+        startGateLedger.record("downstream")
+    }
+    while await startGate.snapshotWaiterCount() == 0 {
+        await Task.yield()
+    }
+    gated.cancel()
+    try await startGate.open()
+    do {
+        try await gated.value
+        Issue.record("a canceled closed gate must throw cancellation")
+    } catch is CancellationError {
+    }
+    #expect(await startGate.snapshotWaiterCount() == 0)
+    #expect(startGateLedger.count("downstream") == 0)
+}
+
+private func p1f1d069ExerciseSharedAdapterCleanup() async throws {
+    print("P1F1D069_SCENARIO=SharedAdapterCleanup")
+    let modelCleanupCell = P1F1D069ModelCleanupCell()
+    let modelCleanupGate = P1F1D069CleanupProbe(blocked: true)
+    let modelConstructionGate = P1F1D069SynchronousGate()
+    let modelTerminal = P1F1DTerminalRecorder()
+    let modelBoard = P1F1DBoardTerminalRecorder()
+    let modelProgress = P1F1DProgressRecorder()
+    let modelAdapter = ModelLoopEngineAdapter(
+        profile: p1f1dProfile(.openAIAPI),
+        descriptor: p1f1dDescriptor(kind: .openAIAPI),
+        driver: P1F1D069ModelCleanupDriver(
+            cell: modelCleanupCell,
+            cleanupGate: modelCleanupGate,
+            constructionGate: modelConstructionGate
+        ),
+        context: try p1f1dContext(),
+        workspace: try p1f1dWorkspace(),
+        boundCapabilityTools: p1f1dBoundCapabilityTools(),
+        terminalSink: modelTerminal,
+        boardTerminalSink: modelBoard,
+        progressSink: modelProgress
+    )
+    let modelCleanupRequest = try p1f1dRequest(
+        executionId: "00000000-0000-4000-8000-000000000696",
+        kind: .openAIAPI
+    )
+    let modelConsumer = Task {
+        do {
+            for try await _ in modelAdapter.execute(
+                request: modelCleanupRequest
+            ) {}
+            Issue.record("ModelLoop cleanup failure must reach its stream")
+        } catch is P1F1D069AdapterCleanupFailure {
+        }
+    }
+    await modelConstructionGate.waitUntilEntered()
+    await modelCleanupCell.waitUntilStarted()
+    let modelCancelEntry = P1F1DThreeWayBarrier()
+    let firstModelCancel = Task {
+        await modelCancelEntry.wait()
+        do {
+            try await modelAdapter.cancel(
+                executionId: modelCleanupRequest.executionId
+            )
+            return false
+        } catch is P1F1D069AdapterCleanupFailure {
+            return true
+        } catch {
+            return false
+        }
+    }
+    let secondModelCancel = Task {
+        await modelCancelEntry.wait()
+        do {
+            try await modelAdapter.cancel(
+                executionId: modelCleanupRequest.executionId
+            )
+            return false
+        } catch is P1F1D069AdapterCleanupFailure {
+            return true
+        } catch {
+            return false
+        }
+    }
+    await modelCancelEntry.wait()
+    modelConstructionGate.release()
+    await modelCleanupGate.waitUntilAttemptCount(1)
+    #expect(await modelCleanupGate.count() == 1)
+    await modelCleanupGate.release()
+    #expect(await firstModelCancel.value)
+    #expect(await secondModelCancel.value)
+    print("P1F1D069_JOIN=model-begin")
+    try await modelConsumer.value
+    print("P1F1D069_JOIN=model-end")
+    #expect(modelCleanupCell.cancellationCount() == 1)
+    #expect(await modelTerminal.snapshot().isEmpty)
+    #expect(await modelBoard.snapshot().isEmpty)
+
+    let cliCleanupCell = P1F1D069CliCleanupCell()
+    let cliCleanupGate = P1F1D069CleanupProbe(blocked: true)
+    let cliConstructionGate = P1F1D069SynchronousGate()
+    let cliTerminal = P1F1DTerminalRecorder()
+    let cliBoard = P1F1DBoardTerminalRecorder()
+    let cliProgress = P1F1DProgressRecorder()
+    let cliAdapter = try p1f1dAdapter(
+        driver: P1F1D069CliCleanupDriver(
+            cell: cliCleanupCell,
+            cleanupGate: cliCleanupGate,
+            constructionGate: cliConstructionGate
+        ),
+        terminal: cliTerminal,
+        board: cliBoard,
+        progress: cliProgress
+    )
+    let cliCleanupRequest = try p1f1dRequest(
+        executionId: "00000000-0000-4000-8000-000000000697"
+    )
+    let cliConsumer = Task {
+        do {
+            for try await _ in cliAdapter.execute(
+                request: cliCleanupRequest
+            ) {}
+            Issue.record("CLI cleanup failure must reach its stream")
+        } catch is P1F1D069AdapterCleanupFailure {
+        }
+    }
+    await cliConstructionGate.waitUntilEntered()
+    await cliCleanupCell.waitUntilStarted()
+    let cliCancelEntry = P1F1DThreeWayBarrier()
+    let firstCliCancel = Task {
+        await cliCancelEntry.wait()
+        do {
+            try await cliAdapter.cancel(
+                executionId: cliCleanupRequest.executionId
+            )
+            return false
+        } catch is P1F1D069AdapterCleanupFailure {
+            return true
+        } catch {
+            return false
+        }
+    }
+    let secondCliCancel = Task {
+        await cliCancelEntry.wait()
+        do {
+            try await cliAdapter.cancel(
+                executionId: cliCleanupRequest.executionId
+            )
+            return false
+        } catch is P1F1D069AdapterCleanupFailure {
+            return true
+        } catch {
+            return false
+        }
+    }
+    await cliCancelEntry.wait()
+    cliConstructionGate.release()
+    await cliCleanupGate.waitUntilAttemptCount(1)
+    #expect(await cliCleanupGate.count() == 1)
+    await cliCleanupGate.release()
+    #expect(await firstCliCancel.value)
+    #expect(await secondCliCancel.value)
+    print("P1F1D069_JOIN=cli-begin")
+    try await cliConsumer.value
+    print("P1F1D069_JOIN=cli-end")
+    #expect(cliCleanupCell.cancellationCount() == 1)
+    #expect(await cliTerminal.snapshot().isEmpty)
+    #expect(await cliBoard.snapshot().isEmpty)
+}
+
+private func p1f1d069ExerciseModelClaimHandoff() async throws {
+    print("P1F1D069_SCENARIO=ModelClaimHandoff")
+    let modelHandoffCell = P1F1D069ModelCleanupCell()
+    let modelHandoffLifecycle = P1F1D069LifecycleProbe<
+        EngineAdapterCancellationLifecycleEventV1
+    >()
+    let modelHandoffTerminal = P1F1DTerminalRecorder()
+    let modelHandoffBoard = P1F1DBoardTerminalRecorder()
+    let modelHandoffAdapter = ModelLoopEngineAdapter(
+        profile: p1f1dProfile(.openAIAPI),
+        descriptor: p1f1dDescriptor(kind: .openAIAPI),
+        driver: P1F1D069ModelCleanupDriver(cell: modelHandoffCell),
+        context: try p1f1dContext(),
+        workspace: try p1f1dWorkspace(),
+        boundCapabilityTools: p1f1dBoundCapabilityTools(),
+        terminalSink: modelHandoffTerminal,
+        boardTerminalSink: modelHandoffBoard,
+        progressSink: P1F1DProgressRecorder(),
+        cancellationLifecycleObserver: { event in
+            Task { await modelHandoffLifecycle.record(event) }
+        }
+    )
+    let modelHandoffRequest = try p1f1dRequest(
+        executionId: "00000000-0000-4000-8000-000000000708",
+        kind: .openAIAPI
+    )
+    let modelSignalConsumer = Task {
+        await p1f1d069StreamResultLabel(
+            modelHandoffAdapter.execute(request: modelHandoffRequest)
+        )
+    }
+    await modelHandoffCell.waitUntilStarted(1)
+    modelSignalConsumer.cancel()
+    await modelHandoffLifecycle.waitUntilRecorded(
+        .cancellationOwnerSettled
+    )
+    #expect(modelHandoffCell.cancellationCount() == 1)
+    #expect(
+        await p1f1d069AdapterResultLabel {
+            try await modelHandoffAdapter.cancel(
+                executionId: modelHandoffRequest.executionId
+            )
+        } == "model_provider_failure"
+    )
+    #expect(modelHandoffCell.cancellationCount() == 1)
+    _ = await modelSignalConsumer.value
+
+    let modelReuseConsumer = Task {
+        await p1f1d069StreamResultLabel(
+            modelHandoffAdapter.execute(request: modelHandoffRequest)
+        )
+    }
+    await modelHandoffCell.waitUntilStarted(2)
+    #expect(
+        await p1f1d069AdapterResultLabel {
+            try await modelHandoffAdapter.cancel(
+                executionId: modelHandoffRequest.executionId
+            )
+        } == "model_provider_failure"
+    )
+    #expect(modelHandoffCell.cancellationCount() == 2)
+    _ = await modelReuseConsumer.value
+    #expect(
+        await modelHandoffLifecycle.count(.cancellationOwnerSettled)
+            == 2
+    )
+    #expect(await modelHandoffTerminal.snapshot().isEmpty)
+    #expect(await modelHandoffBoard.snapshot().isEmpty)
+
+    let atomicModelCell = P1F1D069ModelCleanupCell()
+    let atomicModelLookup = P1F1D069SynchronousGate()
+    let atomicModelLifecycle = P1F1D069LifecycleProbe<
+        EngineAdapterCancellationLifecycleEventV1
+    >()
+    let atomicModelAdapter = ModelLoopEngineAdapter(
+        profile: p1f1dProfile(.openAIAPI),
+        descriptor: p1f1dDescriptor(kind: .openAIAPI),
+        driver: P1F1D069ModelCleanupDriver(cell: atomicModelCell),
+        context: try p1f1dContext(),
+        workspace: try p1f1dWorkspace(),
+        boundCapabilityTools: p1f1dBoundCapabilityTools(),
+        terminalSink: P1F1DTerminalRecorder(),
+        boardTerminalSink: P1F1DBoardTerminalRecorder(),
+        progressSink: P1F1DProgressRecorder(),
+        cancellationLifecycleObserver: { event in
+            if event == .claimLookup {
+                atomicModelLookup.enterAndWait()
+            }
+            Task { await atomicModelLifecycle.record(event) }
+        }
+    )
+    let atomicModelRequest = try p1f1dRequest(
+        executionId: "00000000-0000-4000-8000-000000000709",
+        kind: .openAIAPI
+    )
+    let atomicModelConsumer = Task {
+        await p1f1d069StreamResultLabel(
+            atomicModelAdapter.execute(request: atomicModelRequest)
+        )
+    }
+    await atomicModelCell.waitUntilStarted(1)
+    let atomicOldClaim = Task {
+        try await atomicModelAdapter.claimCancellation(
+            executionId: atomicModelRequest.executionId
+        )
+    }
+    await atomicModelLookup.waitUntilEntered()
+    try atomicModelCell.finish(1)
+    await atomicModelLifecycle.waitUntilRecorded(
+        .generationOutcomePublished
+    )
+    atomicModelLookup.release()
+    let atomicOldGenerationClaim = try await atomicOldClaim.value
+    #expect(
+        await p1f1d069CancellationClaimResultLabel(
+            atomicOldGenerationClaim
+        ) == "success"
+    )
+    #expect(await atomicModelConsumer.value == "success")
+    #expect(
+        await p1f1d069StreamResultLabel(
+            atomicModelAdapter.execute(request: atomicModelRequest)
+        ) == "registry_conflict"
+    )
+    atomicModelAdapter.acknowledgeCancellation(
+        atomicOldGenerationClaim
+    )
+    let atomicReuseConsumer = Task {
+        await p1f1d069StreamResultLabel(
+            atomicModelAdapter.execute(request: atomicModelRequest)
+        )
+    }
+    await atomicModelCell.waitUntilStarted(2)
+    try atomicModelCell.finish(2)
+    #expect(await atomicReuseConsumer.value == "success")
+}
+
+private func p1f1d069ExerciseCliHandoffAndImmediateWinners() async throws {
+    print("P1F1D069_SCENARIO=CliHandoffAndImmediateWinners")
+    let stubbornCliCell = P1F1D069StubbornCliCell()
+    let stubbornCliLifecycle = P1F1D069LifecycleProbe<
+        CliEngineAdapterCancellationLifecycleEventV1
+    >()
+    let stubbornCliTerminal = P1F1DTerminalRecorder()
+    let stubbornCliBoard = P1F1DBoardTerminalRecorder()
+    let stubbornCliAdapter = try p1f1dAdapter(
+        driver: P1F1D069StubbornCliDriver(cell: stubbornCliCell),
+        terminal: stubbornCliTerminal,
+        board: stubbornCliBoard,
+        progress: P1F1DProgressRecorder(),
+        cancellationLifecycleObserver: { event in
+            Task { await stubbornCliLifecycle.record(event) }
+        }
+    )
+    let stubbornCliRequest = try p1f1dRequest(
+        executionId: "00000000-0000-4000-8000-000000000710"
+    )
+    let stubbornSignalConsumer = Task {
+        await p1f1d069StreamResultLabel(
+            stubbornCliAdapter.execute(request: stubbornCliRequest)
+        )
+    }
+    await stubbornCliCell.waitUntilLaunched(1)
+    stubbornSignalConsumer.cancel()
+    await stubbornCliLifecycle.waitUntilRecorded(
+        .cancellationOwnerSettled
+    )
+    await stubbornCliCell.waitUntilTerminated(1)
+    #expect(stubbornCliCell.snapshotCancellationCount() == 1)
+    #expect(
+        await p1f1d069AdapterResultLabel {
+            try await stubbornCliAdapter.cancel(
+                executionId: stubbornCliRequest.executionId
+            )
+        } == "process_group_still_alive"
+    )
+    #expect(stubbornCliCell.snapshotCancellationCount() == 1)
+    _ = await stubbornSignalConsumer.value
+
+    let stubbornDirectConsumer = Task {
+        await p1f1d069StreamResultLabel(
+            stubbornCliAdapter.execute(request: stubbornCliRequest)
+        )
+    }
+    await stubbornCliCell.waitUntilLaunched(2)
+    #expect(
+        await p1f1d069AdapterResultLabel {
+            try await stubbornCliAdapter.cancel(
+                executionId: stubbornCliRequest.executionId
+            )
+        } == "process_group_still_alive"
+    )
+    await stubbornCliCell.waitUntilTerminated(2)
+    let stubbornDirectResult = await stubbornDirectConsumer.value
+    print("P1F1D069_RESULT=stubborn-direct value=\(stubbornDirectResult)")
+    #expect(stubbornDirectResult == "process_group_still_alive")
+    #expect(stubbornCliCell.snapshotCancellationCount() == 2)
+    #expect(await stubbornCliTerminal.snapshot().isEmpty)
+    #expect(await stubbornCliBoard.snapshot().isEmpty)
+
+    for outcome in [
+        P1F1D069ImmediateDriverOutcome.finished,
+        .failed,
+    ] {
+        let immediateModelLedger = P1F1D069CallLedger()
+        let immediateModelGate = P1F1D069SynchronousGate()
+        let immediateModelTerminal = P1F1DTerminalRecorder()
+        let immediateModelBoard = P1F1DBoardTerminalRecorder()
+        let immediateModelAdapter = ModelLoopEngineAdapter(
+            profile: p1f1dProfile(.openAIAPI),
+            descriptor: p1f1dDescriptor(kind: .openAIAPI),
+            driver: P1F1D069ImmediateModelDriver(
+                ledger: immediateModelLedger,
+                outcome: outcome,
+                constructionGate: immediateModelGate
+            ),
+            context: try p1f1dContext(),
+            workspace: try p1f1dWorkspace(),
+            boundCapabilityTools: p1f1dBoundCapabilityTools(),
+            terminalSink: immediateModelTerminal,
+            boardTerminalSink: immediateModelBoard,
+            progressSink: P1F1DProgressRecorder()
+        )
+        let immediateModelRequest = try p1f1dRequest(
+            executionId: "00000000-0000-4000-8000-000000000702",
+            kind: .openAIAPI
+        )
+        let immediateModelConsumer = Task {
+            await p1f1d069StreamResultLabel(
+                immediateModelAdapter.execute(
+                    request: immediateModelRequest
+                )
+            )
+        }
+        await immediateModelGate.waitUntilEntered()
+        let firstImmediateModelClaim = try await immediateModelAdapter
+            .claimCancellation(
+                executionId: immediateModelRequest.executionId
+            )
+        let secondImmediateModelClaim = try await immediateModelAdapter
+            .claimCancellation(
+                executionId: immediateModelRequest.executionId
+            )
+        immediateModelGate.release()
+        let firstImmediateModelResult = await
+            p1f1d069CancellationClaimResultLabel(
+                firstImmediateModelClaim
+            )
+        let secondImmediateModelResult = await
+            p1f1d069CancellationClaimResultLabel(
+                secondImmediateModelClaim
+            )
+        immediateModelAdapter.acknowledgeCancellation(
+            firstImmediateModelClaim
+        )
+        immediateModelAdapter.acknowledgeCancellation(
+            secondImmediateModelClaim
+        )
+        let expectedModelResult = outcome == .finished
+            ? "success" : "model_provider_failure"
+        #expect(firstImmediateModelResult == expectedModelResult)
+        #expect(secondImmediateModelResult == expectedModelResult)
+        #expect(await immediateModelConsumer.value == expectedModelResult)
+        #expect(immediateModelLedger.count("modelExecute") == 1)
+        #expect(immediateModelLedger.count("cancel") == 0)
+        #expect(await immediateModelTerminal.snapshot().isEmpty)
+        #expect(await immediateModelBoard.snapshot().isEmpty)
+
+        try await p1f1d069ExerciseImmediateCliWinner(
+            outcome: outcome
+        )
+    }
+}
+
+private func p1f1d069ExercisePrelaunchAndQuarantine() async throws {
+    print("P1F1D069_SCENARIO=PrelaunchAndQuarantine")
+    let prelaunchCliCell = P1F1D069PrelaunchCliCell()
+    let prelaunchCliTerminal = P1F1DTerminalRecorder()
+    let prelaunchCliBoard = P1F1DBoardTerminalRecorder()
+    let prelaunchCliDriver = P1F1D069PrelaunchCliDriver(
+        cell: prelaunchCliCell
+    )
+    let prelaunchCliAdapter = try p1f1dAdapter(
+        driver: prelaunchCliDriver,
+        terminal: prelaunchCliTerminal,
+        board: prelaunchCliBoard,
+        progress: P1F1DProgressRecorder()
+    )
+    let prelaunchCliControlAdapter = try p1f1dAdapter(
+        driver: prelaunchCliDriver,
+        terminal: prelaunchCliTerminal,
+        board: prelaunchCliBoard,
+        progress: P1F1DProgressRecorder()
+    )
+    let prelaunchCliRequest = try p1f1dRequest(
+        executionId: "00000000-0000-4000-8000-000000000706"
+    )
+    let prelaunchCliConsumer = Task {
+        await p1f1d069StreamResultLabel(
+            prelaunchCliAdapter.execute(request: prelaunchCliRequest)
+        )
+    }
+    await prelaunchCliCell.launchGate.waitUntilEntered()
+    let prelaunchCliClaim = try await prelaunchCliControlAdapter
+        .claimCancellation(executionId: prelaunchCliRequest.executionId)
+    await prelaunchCliCell.firstCancel.waitUntilAttemptCount(1)
+    #expect(prelaunchCliCell.snapshotCancellationCount() == 1)
+    prelaunchCliCell.launchGate.release()
+    await prelaunchCliCell.registeredCancel.waitUntilAttemptCount(1)
+    #expect(prelaunchCliCell.snapshotCancellationCount() == 2)
+    let prelaunchCliJoinedClaim = try await prelaunchCliAdapter
+        .claimCancellation(executionId: prelaunchCliRequest.executionId)
+    await prelaunchCliCell.registeredCancel.release()
+    #expect(
+        await p1f1d069CancellationClaimResultLabel(prelaunchCliClaim)
+            == "cli_process_failure"
+    )
+    #expect(
+        await p1f1d069CancellationClaimResultLabel(
+            prelaunchCliJoinedClaim
+        ) == "cli_process_failure"
+    )
+    prelaunchCliControlAdapter.acknowledgeCancellation(
+        prelaunchCliClaim
+    )
+    prelaunchCliAdapter.acknowledgeCancellation(
+        prelaunchCliJoinedClaim
+    )
+    #expect(await prelaunchCliConsumer.value == "cli_process_failure")
+    #expect(prelaunchCliCell.snapshotCancellationCount() == 2)
+    #expect(await prelaunchCliTerminal.snapshot().isEmpty)
+    #expect(await prelaunchCliBoard.snapshot().isEmpty)
+
+    let quarantineConstructionGate = P1F1D069SynchronousGate()
+    let quarantineBeforeLoadGate = P1F1D069SynchronousGate()
+    let quarantineOutcomeGate = P1F1D069SynchronousGate()
+    let quarantineLoadedGate = P1F1D069SynchronousGate()
+    let quarantineLedger = P1F1D069CallLedger()
+    let quarantineTerminal = P1F1DTerminalRecorder()
+    let quarantineBoard = P1F1DBoardTerminalRecorder()
+    let quarantineAdapter = try p1f1dAdapter(
+        driver: P1F1D069ImmediateCliDriver(
+            ledger: quarantineLedger,
+            outcome: .finished,
+            constructionGate: quarantineConstructionGate
+        ),
+        terminal: quarantineTerminal,
+        board: quarantineBoard,
+        progress: P1F1DProgressRecorder(),
+        cancellationLifecycleObserver: { event in
+            switch event {
+            case .beforeOuterTaskLoad:
+                quarantineBeforeLoadGate.enterAndWait()
+            case .outcomePublished:
+                quarantineLedger.record("outcomePublished")
+                quarantineOutcomeGate.enterAndWait()
+            case let .outerTaskLoaded(isLoaded):
+                quarantineLedger.record(
+                    isLoaded ? "outerTaskLoaded" : "outerTaskMissing"
+                )
+                quarantineLoadedGate.enterAndWait()
+            case .cancellationOwnerSettled:
+                break
+            }
+        }
+    )
+    let quarantineRequest = try p1f1dRequest(
+        executionId: "00000000-0000-4000-8000-000000000707"
+    )
+    let quarantineConsumer = Task {
+        await p1f1d069StreamResultLabel(
+            quarantineAdapter.execute(request: quarantineRequest)
+        )
+    }
+    await quarantineConstructionGate.waitUntilEntered()
+    let quarantineClaim = try await quarantineAdapter.claimCancellation(
+        executionId: quarantineRequest.executionId
+    )
+    await quarantineBeforeLoadGate.waitUntilEntered()
+    quarantineConstructionGate.release()
+    await quarantineOutcomeGate.waitUntilEntered()
+    #expect(quarantineLedger.count("outcomePublished") == 1)
+    #expect(
+        await p1f1d069StreamResultLabel(
+            quarantineAdapter.execute(request: quarantineRequest)
+        ) == "registry_conflict"
+    )
+
+    quarantineBeforeLoadGate.release()
+    await quarantineLoadedGate.waitUntilEntered()
+    #expect(quarantineLedger.count("outerTaskLoaded") == 1)
+    #expect(quarantineLedger.count("outerTaskMissing") == 0)
+    let quarantineJoinedClaim = try await quarantineAdapter
+        .claimCancellation(executionId: quarantineRequest.executionId)
+    #expect(
+        await p1f1d069StreamResultLabel(
+            quarantineAdapter.execute(request: quarantineRequest)
+        ) == "registry_conflict"
+    )
+    quarantineLoadedGate.release()
+    quarantineOutcomeGate.release()
+    #expect(
+        await p1f1d069CancellationClaimResultLabel(quarantineClaim)
+            == "success"
+    )
+    #expect(
+        await p1f1d069CancellationClaimResultLabel(
+            quarantineJoinedClaim
+        ) == "success"
+    )
+    quarantineAdapter.acknowledgeCancellation(quarantineClaim)
+    quarantineAdapter.acknowledgeCancellation(quarantineJoinedClaim)
+    #expect(await quarantineConsumer.value == "success")
+    #expect(quarantineLedger.count("cancel") == 0)
+    #expect(await quarantineTerminal.snapshot().isEmpty)
+    #expect(await quarantineBoard.snapshot().isEmpty)
+    #expect(
+        await p1f1d069StreamResultLabel(
+            quarantineAdapter.execute(request: quarantineRequest)
+        ) == "success"
+    )
+}
+
+private func p1f1d069ExerciseGenerationBoundCleanup() async throws {
+    print("P1F1D069_SCENARIO=GenerationBoundCleanup")
+    let generationModelGates = [
+        P1F1D069CleanupProbe(blocked: true),
+        P1F1D069CleanupProbe(blocked: true),
+    ]
+    let generationModelCell = P1F1D069GenerationCell<
+        EngineExecutionEventPayloadV1
+    >(cleanupGates: generationModelGates)
+    let generationModelTerminal = P1F1DTerminalRecorder()
+    let generationModelBoard = P1F1DBoardTerminalRecorder()
+    let generationModelAdapter = ModelLoopEngineAdapter(
+        profile: p1f1dProfile(.openAIAPI),
+        descriptor: p1f1dDescriptor(kind: .openAIAPI),
+        driver: P1F1D069GenerationModelDriver(
+            cell: generationModelCell
+        ),
+        context: try p1f1dContext(),
+        workspace: try p1f1dWorkspace(),
+        boundCapabilityTools: p1f1dBoundCapabilityTools(),
+        terminalSink: generationModelTerminal,
+        boardTerminalSink: generationModelBoard,
+        progressSink: P1F1DProgressRecorder()
+    )
+    let generationModelRequest = try p1f1dRequest(
+        executionId: "00000000-0000-4000-8000-000000000704",
+        kind: .openAIAPI
+    )
+    try await p1f1d069ExerciseGenerationBoundCancellation(
+        expectedFailure: "model_provider_failure",
+        cleanupGates: generationModelGates,
+        makeStream: {
+            generationModelAdapter.execute(
+                request: generationModelRequest
+            )
+        },
+        waitUntilStarted: { count in
+            await generationModelCell.waitUntilStarted(count)
+        },
+        claim: {
+            try await generationModelAdapter.claimCancellation(
+                executionId: generationModelRequest.executionId
+            )
+        },
+        acknowledge: { claim in
+            generationModelAdapter.acknowledgeCancellation(claim)
+        }
+    )
+    #expect(generationModelCell.cancellationSnapshot() == [1, 1])
+    #expect(await generationModelTerminal.snapshot().isEmpty)
+    #expect(await generationModelBoard.snapshot().isEmpty)
+
+    let generationCliGates = [
+        P1F1D069CleanupProbe(blocked: true),
+        P1F1D069CleanupProbe(blocked: true),
+    ]
+    let generationCliCell = P1F1D069GenerationCell<
+        CliProcessFrameV1
+    >(cleanupGates: generationCliGates)
+    let generationCliTerminal = P1F1DTerminalRecorder()
+    let generationCliBoard = P1F1DBoardTerminalRecorder()
+    let generationCliAdapter = try p1f1dAdapter(
+        driver: P1F1D069GenerationCliDriver(cell: generationCliCell),
+        terminal: generationCliTerminal,
+        board: generationCliBoard,
+        progress: P1F1DProgressRecorder()
+    )
+    let generationCliControlAdapter = try p1f1dAdapter(
+        driver: P1F1D069GenerationCliDriver(cell: generationCliCell),
+        terminal: generationCliTerminal,
+        board: generationCliBoard,
+        progress: P1F1DProgressRecorder()
+    )
+    let generationCliRequest = try p1f1dRequest(
+        executionId: "00000000-0000-4000-8000-000000000705"
+    )
+    try await p1f1d069ExerciseGenerationBoundCancellation(
+        expectedFailure: "cli_process_failure",
+        cleanupGates: generationCliGates,
+        makeStream: {
+            generationCliAdapter.execute(request: generationCliRequest)
+        },
+        waitUntilStarted: { count in
+            await generationCliCell.waitUntilStarted(count)
+        },
+        claim: {
+            try await generationCliControlAdapter.claimCancellation(
+                executionId: generationCliRequest.executionId
+            )
+        },
+        acknowledge: { claim in
+            generationCliControlAdapter.acknowledgeCancellation(claim)
+        }
+    )
+    #expect(generationCliCell.cancellationSnapshot() == [1, 1])
+    #expect(await generationCliTerminal.snapshot().isEmpty)
+    #expect(await generationCliBoard.snapshot().isEmpty)
+}
+
+private func p1f1d069ExerciseCompletionRegistry() async throws {
+    print("P1F1D069_SCENARIO=CompletionRegistry")
+    let completionExecutionID =
+        "00000000-0000-4000-8000-000000000694"
+    let completionReceipt = try p1f1d069Receipt(
+        executionId: completionExecutionID,
+        reason: "joined_cancel"
+    )
+    let resolutionProbe = P1F1D069CleanupProbe(blocked: true)
+    let completionRegistry = EngineExecutionCompletionRegistryV1()
+    let installed = try await completionRegistry.lookupOrInstall(
+        executionId: completionExecutionID,
+        makeHandle: {
+            try EngineExecutionCompletionHandleV1(
+                executionId: completionExecutionID,
+                resolveCancellation: { handle, reason in
+                    #expect(handle.executionId == completionExecutionID)
+                    #expect(reason == "joined_cancel")
+                    try await resolutionProbe.run()
+                    return completionReceipt
+                }
+            )
+        }
+    )
+    #expect(installed.didInstall)
+    let reused = try await completionRegistry.lookupOrInstall(
+        executionId: completionExecutionID,
+        makeHandle: {
+            Issue.record("lookupOrInstall invoked a second maker")
+            return try EngineExecutionCompletionHandleV1(
+                executionId:
+                    "00000000-0000-4000-8000-000000000695",
+                resolveCancellation: { _, _ in completionReceipt }
+            )
+        }
+    )
+    #expect(!reused.didInstall)
+    #expect(reused.handle === installed.handle)
+    let firstResolution = Task {
+        try await installed.handle.resolveCancellation(
+            reason: "joined_cancel"
+        )
+    }
+    await resolutionProbe.waitUntilAttemptCount(1)
+    let secondResolution = Task {
+        try await installed.handle.resolveCancellation(
+            reason: "joined_cancel"
+        )
+    }
+    do {
+        _ = try await installed.handle.resolveCancellation(
+            reason: "different_cancel"
+        )
+        Issue.record("different completion reason must conflict")
+    } catch is EngineDispatchConflictErrorV1 {
+    }
+    await resolutionProbe.release()
+    #expect(try await firstResolution.value == completionReceipt)
+    #expect(try await secondResolution.value == completionReceipt)
+    #expect(await resolutionProbe.count() == 1)
+    try await installed.handle.publishCancellationLifecycle(.noTransport)
+    try await installed.handle.publishCancellationLifecycle(.noTransport)
+    do {
+        try await installed.handle.publishCancellationLifecycle(
+            .registeredCleanupComplete
+        )
+        Issue.record("different lifecycle replay must conflict")
+    } catch is EngineDispatchConflictErrorV1 {
+    }
+    #expect(
+        try await installed.handle.waitForCancellationLifecycle()
+            == .noTransport
+    )
+    do {
+        _ = try await installed.handle.waitForCancellationLifecycle()
+        Issue.record("a lifecycle barrier may be consumed only once")
+    } catch is EngineDispatchConflictErrorV1 {
+    }
+    do {
+        try await completionRegistry.remove(
+            executionId: completionExecutionID,
+            terminalReceipt: completionReceipt
+        )
+        Issue.record("an unauthorized receipt must not remove its handle")
+    } catch is EngineDispatchConflictErrorV1 {
+    }
+    #expect(await completionRegistry.snapshotCount() == 1)
+    try await completionRegistry.authorizeRemoval(
+        executionId: completionExecutionID,
+        terminalReceipt: completionReceipt
+    )
+    #expect(await completionRegistry.snapshotCount() == 1)
+    let byteDifferentCompletionReceipt = try p1f1d069Receipt(
+        executionId: completionExecutionID,
+        reason: "byte_different_receipt"
+    )
+    do {
+        try await completionRegistry.remove(
+            executionId: completionExecutionID,
+            terminalReceipt: byteDifferentCompletionReceipt
+        )
+        Issue.record("a byte-different receipt must retain its handle")
+    } catch is EngineDispatchConflictErrorV1 {
+    }
+    #expect(await completionRegistry.snapshotCount() == 1)
+    try await completionRegistry.remove(
+        executionId: completionExecutionID,
+        terminalReceipt: completionReceipt
+    )
+    try await installed.handle.complete(receipt: completionReceipt)
+    #expect(try await installed.handle.waitForReceipt() == completionReceipt)
+    #expect(await completionRegistry.snapshotCount() == 0)
+    do {
+        try await completionRegistry.remove(
+            executionId: completionExecutionID,
+            terminalReceipt: completionReceipt
+        )
+        Issue.record("duplicate completion-registry removal must conflict")
+    } catch is EngineDispatchConflictErrorV1 {
+    }
+}
+
+private func p1f1d069ExerciseDispatchAdmission() async throws {
+    print("P1F1D069_SCENARIO=DispatchAdmission")
+    let duplicateFixture = try P1F1DCanonicalExecutionFixture(
+        profileKind: .openAIAPI
+    )
+    let duplicateLedger = P1F1D069CallLedger()
+    let duplicateBindGate = P1F1D069FinalizerProbe()
+    let duplicateActive = EngineActiveExecutionRegistryV1()
+    let duplicateCompletions = EngineExecutionCompletionRegistryV1()
+    let duplicateCoordinator = try p1f1dCoordinator(
+        fixture: duplicateFixture,
+        registry: p1f1d069ObserverRegistry(
+            fixture: duplicateFixture,
+            ledger: duplicateLedger
+        ),
+        root: duplicateFixture.root.appendingPathComponent(
+            "p1f1d-069-duplicate-execute"
+        ),
+        activeExecutions: duplicateActive,
+        completionRegistry: duplicateCompletions,
+        transportSeedResolver: { _ in
+            duplicateLedger.record("recovery")
+            throw EngineDispatchConflictErrorV1()
+        }
+    )
+    let duplicateFields = try duplicateFixture.fields()
+    let duplicatePrepared = try p1f1d069Prepared(
+        fixture: duplicateFixture,
+        fields: duplicateFields,
+        idempotencyKey: "p1f1d-069-duplicate-execute",
+        makeTransport: { _, _, _ in
+            duplicateLedger.record("transport")
+            return try p1f1d069ModelTransport(
+                fixture: duplicateFixture,
+                fields: duplicateFields
+            )
+        }
+    )
+    let firstDuplicateExecute = Task {
+        try await duplicateCoordinator.execute(
+            duplicatePrepared,
+            onExecutionBound: { _ in
+                duplicateLedger.record("bind")
+                await duplicateBindGate.observe()
+                return .dispatch
+            }
+        )
+    }
+    await duplicateBindGate.waitUntilObserverEntered()
+    let secondDuplicateExecute = Task {
+        try await duplicateCoordinator.execute(
+            duplicatePrepared,
+            onExecutionBound: { _ in
+                duplicateLedger.record("secondBind")
+                return .dispatch
+            }
+        )
+    }
+    for _ in 0..<1_000 { await Task.yield() }
+    #expect(duplicateLedger.count("bind") == 1)
+    #expect(duplicateLedger.count("secondBind") == 0)
+    #expect(duplicateLedger.count("transport") == 0)
+    #expect(duplicateLedger.count("makeAdapter") == 0)
+    #expect(duplicateLedger.count("execute") == 0)
+    #expect(duplicateLedger.count("recovery") == 0)
+    await duplicateBindGate.releaseObserver()
+    let firstDuplicateReceipt = try await firstDuplicateExecute.value
+    let secondDuplicateReceipt = try await secondDuplicateExecute.value
+    #expect(firstDuplicateReceipt == secondDuplicateReceipt)
+    #expect(duplicateLedger.count("bind") == 1)
+    #expect(duplicateLedger.count("secondBind") == 0)
+    #expect(duplicateLedger.count("transport") == 1)
+    #expect(duplicateLedger.count("makeAdapter") == 1)
+    #expect(duplicateLedger.count("execute") == 1)
+    #expect(duplicateLedger.count("recovery") == 0)
+    #expect(await duplicateActive.snapshotCounts().live == 0)
+    #expect(await duplicateActive.snapshotCounts().pending == 0)
+    #expect(await duplicateActive.snapshotCounts().inFlight == 0)
+    #expect(await duplicateCompletions.snapshotCount() == 0)
+
+    let incompleteHandle = try EngineExecutionCompletionHandleV1(
+        executionId: "00000000-0000-4000-8000-000000000702",
+        resolveCancellation: { _, _ in
+            try p1f1d069Receipt(
+                executionId:
+                    "00000000-0000-4000-8000-000000000702"
+            )
+        }
+    )
+    do {
+        try await incompleteHandle.complete(
+            receipt: p1f1d069Receipt(
+                executionId:
+                    "00000000-0000-4000-8000-000000000702"
+            )
+        )
+        Issue.record("completion without lifecycle publication must conflict")
+    } catch is EngineDispatchConflictErrorV1 {
+    }
+
+    let preBeginFixture = try P1F1DCanonicalExecutionFixture(
+        profileKind: .openAIAPI
+    )
+    let preBeginLedger = P1F1D069CallLedger()
+    let preBeginGate = P1F1D069FinalizerProbe()
+    let preBeginCoordinator = try p1f1dCoordinator(
+        fixture: preBeginFixture,
+        registry: p1f1d069ObserverRegistry(
+            fixture: preBeginFixture,
+            ledger: preBeginLedger
+        ),
+        root: preBeginFixture.root.appendingPathComponent(
+            "p1f1d-069-pre-begin"
+        )
+    )
+    let preBeginFields = try preBeginFixture.fields()
+    let preBeginPrepared = try p1f1d069Prepared(
+        fixture: preBeginFixture,
+        fields: preBeginFields,
+        idempotencyKey: "p1f1d-069-pre-begin",
+        makeTransport: { _, _, _ in
+            preBeginLedger.record("transport")
+            return try p1f1d069ModelTransport(
+                fixture: preBeginFixture,
+                fields: preBeginFields
+            )
+        }
+    )
+    let preBeginSnapshot = try p1f1dSharedWriteSnapshot(preBeginFixture)
+    let preBeginTask = Task {
+        await preBeginGate.observe()
+        return try await preBeginCoordinator.execute(
+            preBeginPrepared,
+            onExecutionBound: { _ in .dispatch }
+        )
+    }
+    await preBeginGate.waitUntilObserverEntered()
+    preBeginTask.cancel()
+    await preBeginGate.releaseObserver()
+    do {
+        _ = try await preBeginTask.value
+        Issue.record("pre-begin cancellation must stop before Store begin")
+    } catch is CancellationError {
+    }
+    #expect(try p1f1dSharedWriteSnapshot(preBeginFixture) == preBeginSnapshot)
+    #expect(preBeginLedger.count("transport") == 0)
+    #expect(preBeginLedger.count("makeAdapter") == 0)
+    #expect(preBeginLedger.count("execute") == 0)
+}
+
+private func p1f1d069ExerciseBeginRegistrationLatch() async throws {
+    print("P1F1D069_SCENARIO=BeginRegistrationLatch")
+    let latchFixture = try P1F1DCanonicalExecutionFixture(
+        profileKind: .openAIAPI
+    )
+    try await latchFixture.db.pool.write { database in
+        try database.execute(sql: """
+            CREATE TABLE p1f1d_069_cancel_request_audit(
+              count INTEGER NOT NULL
+            );
+            INSERT INTO p1f1d_069_cancel_request_audit(count) VALUES(0);
+            CREATE TRIGGER p1f1d_069_count_cancel_request
+            AFTER UPDATE OF cancellationRequestedAt ON engine_execution
+            WHEN OLD.cancellationRequestedAt IS NULL
+              AND NEW.cancellationRequestedAt IS NOT NULL
+            BEGIN
+              UPDATE p1f1d_069_cancel_request_audit
+              SET count=count+1;
+            END;
+            """)
+    }
+    let latchLedger = P1F1D069CallLedger()
+    let latchActive = EngineActiveExecutionRegistryV1()
+    let latchCommand = P1F1D069CleanupProbe(blocked: true)
+    let latchFinalizer = P1F1D069FinalizerProbe()
+    let latchBound = P1F1D069FinalizerProbe()
+    let latchCompletions = EngineExecutionCompletionRegistryV1(
+        cancellationCommandObserver: { executionId in
+            let boundExecutionID = await latchBound.waitUntilBound()
+            #expect(executionId == boundExecutionID)
+            do {
+                try await latchCommand.run()
+            } catch {
+                Issue.record(
+                    "completion supervisor command observer failed: \(error)"
+                )
+            }
+        }
+    )
+    let latchCoordinator = try p1f1dCoordinator(
+        fixture: latchFixture,
+        registry: p1f1d069ObserverRegistry(
+            fixture: latchFixture,
+            ledger: latchLedger
+        ),
+        root: latchFixture.root.appendingPathComponent(
+            "p1f1d-069-begin-register-latch"
+        ),
+        activeExecutions: latchActive,
+        completionRegistry: latchCompletions,
+        eventObserver: { _, _ in
+            await latchFinalizer.observe()
+        }
+    )
+    let latchFields = try latchFixture.fields()
+    let latchPrepared = try p1f1d069Prepared(
+        fixture: latchFixture,
+        fields: latchFields,
+        idempotencyKey: "p1f1d-069-begin-register-latch",
+        makeTransport: { _, _, _ in
+            latchLedger.record("transport")
+            return try p1f1d069ModelTransport(
+                fixture: latchFixture,
+                fields: latchFields
+            )
+        }
+    )
+    let latchExecute = Task {
+        try await latchCoordinator.execute(
+            latchPrepared,
+            onExecutionBound: { request in
+                await latchBound.bind(request.executionId)
+                try await Task.sleep(for: .seconds(3_600))
+                Issue.record(
+                    "generation child must be canceled by its supervisor"
+                )
+                return .dispatch
+            }
+        )
+    }
+    let latchExecutionID = await latchBound.waitUntilBound()
+    let latchCancel = Task {
+        try await latchCoordinator.cancel(
+            executionId: latchExecutionID,
+            reason: "begin_register_latch"
+        )
+        latchLedger.record("cancelReturned")
+    }
+    await latchCommand.waitUntilAttemptCount(1)
+    #expect(
+        try await latchFixture.db.pool.read { database in
+            try Int.fetchOne(
+                database,
+                sql: "SELECT count FROM p1f1d_069_cancel_request_audit"
+            )
+        } == 0
+    )
+    #expect(
+        await latchCompletions.snapshotClaimCount(
+            executionId: latchExecutionID
+        ) == 2
+    )
+    await latchCommand.release()
+    await latchFinalizer.waitUntilObserverEntered()
+    #expect(
+        try await latchFixture.db.pool.read { database in
+            try Int.fetchOne(
+                database,
+                sql: "SELECT count FROM p1f1d_069_cancel_request_audit"
+            )
+        } == 1
+    )
+    #expect(latchLedger.count("transport") == 0)
+    #expect(latchLedger.count("makeAdapter") == 0)
+    #expect(latchLedger.count("execute") == 0)
+    await latchFinalizer.releaseObserver()
+    try await latchCancel.value
+    let latchReceipt = try await latchExecute.value
+    #expect(latchReceipt.executionId == latchExecutionID)
+    #expect(latchReceipt.terminalKind == .canceled)
+    #expect(latchReceipt.reasonCode == "begin_register_latch")
+    #expect(latchLedger.count("cancelReturned") == 1)
+    #expect(latchLedger.count("cancelFailed") == 0)
+    #expect(latchLedger.count("transport") == 0)
+    #expect(latchLedger.count("makeAdapter") == 0)
+    #expect(latchLedger.count("execute") == 0)
+    #expect(await latchActive.snapshotCounts().live == 0)
+    #expect(await latchActive.snapshotCounts().pending == 0)
+    #expect(await latchActive.snapshotCounts().inFlight == 0)
+    #expect(await latchCompletions.snapshotCount() == 0)
+}
+
+private func p1f1d069ExerciseSettledPrimaryRetry() async throws {
+    print("P1F1D069_SCENARIO=SettledPrimaryRetry")
+    let settledChildFixture = try P1F1DCanonicalExecutionFixture(
+        profileKind: .openAIAPI
+    )
+    let settledChildKey = "p1f1d-069-settled-primary-cancellation"
+    let settledChildReason = "settled_primary_cancellation"
+    let settledChildRequest = try settledChildFixture.begin(
+        key: settledChildKey
+    )
+    let settledChildLedger = P1F1D069CallLedger()
+    let settledChildBarrier = P1F1D069FinalizerProbe()
+    let settledChildFunction = DatabaseFunction(
+        "p1f1d_069_fail_primary_cancellation",
+        argumentCount: 0
+    ) { _ in
+        settledChildLedger.record("storeResolver")
+        return 1
+    }
+    try await settledChildFixture.db.pool.write { database in
+        database.add(function: settledChildFunction)
+        try database.execute(sql: """
+            CREATE TRIGGER p1f1d_069_fail_primary_cancellation
+            BEFORE UPDATE OF cancellationRequestedAt ON engine_execution
+            WHEN OLD.id='\(settledChildRequest.executionId)'
+              AND OLD.cancellationRequestedAt IS NULL
+              AND NEW.cancellationRequestedAt IS NOT NULL
+            BEGIN
+              SELECT p1f1d_069_fail_primary_cancellation();
+              SELECT RAISE(
+                ABORT,
+                'p1f1d-069 primary cancellation Store failure'
+              );
+            END;
+            """)
+    }
+    let settledChildActive = EngineActiveExecutionRegistryV1()
+    let settledChildCompletions = EngineExecutionCompletionRegistryV1(
+        primaryCancellationChildSettledObserver: {
+            executionId,
+            reason in
+            #expect(executionId == settledChildRequest.executionId)
+            #expect(reason == settledChildReason)
+            settledChildLedger.record("primaryChildSettled")
+            if settledChildLedger.count("primaryChildSettled") == 1 {
+                await settledChildBarrier.bind(executionId)
+                await settledChildBarrier.observe()
+            }
+        }
+    )
+    let settledChildCoordinator = try p1f1dCoordinator(
+        fixture: settledChildFixture,
+        registry: p1f1d069ObserverRegistry(
+            fixture: settledChildFixture,
+            ledger: settledChildLedger
+        ),
+        root: settledChildFixture.root.appendingPathComponent(
+            settledChildKey
+        ),
+        activeExecutions: settledChildActive,
+        completionRegistry: settledChildCompletions,
+        eventObserver: { _, event in
+            if event.executionId == settledChildRequest.executionId {
+                settledChildLedger.record("finalizer")
+            }
+        }
+    )
+    let settledChildPrepared = try p1f1d069Prepared(
+        fixture: settledChildFixture,
+        fields: try settledChildFixture.fields(),
+        idempotencyKey: settledChildKey,
+        makeTransport: { _, _, _ in
+            settledChildLedger.record("transport")
+            throw EngineDispatchConflictErrorV1()
+        }
+    )
+    let settledChildPrimary = Task { () -> String in
+        do {
+            _ = try await settledChildCoordinator.execute(
+                settledChildPrepared,
+                onExecutionBound: { request in
+                    #expect(
+                        request.executionId
+                            == settledChildRequest.executionId
+                    )
+                    settledChildLedger.record("primaryBind")
+                    return .cancel(reason: settledChildReason)
+                }
+            )
+            return "unexpected_success"
+        } catch is DatabaseError {
+            return "database_request_failure"
+        } catch is EngineDispatchConflictErrorV1 {
+            return "dispatch_conflict"
+        } catch {
+            return "unexpected_failure"
+        }
+    }
+    let settledChildExecutionID = await settledChildBarrier.waitUntilBound()
+    await settledChildBarrier.waitUntilObserverEntered()
+    #expect(settledChildExecutionID == settledChildRequest.executionId)
+    #expect(settledChildLedger.count("storeResolver") == 1)
+    #expect(settledChildLedger.count("primaryChildSettled") == 1)
+    #expect(
+        await settledChildCompletions.snapshotClaimCount(
+            executionId: settledChildExecutionID
+        ) == 1
+    )
+
+    let settledChildExternal = Task { () -> String in
+        let result: String
+        do {
+            try await settledChildCoordinator.cancel(
+                executionId: settledChildExecutionID,
+                reason: settledChildReason
+            )
+            result = "unexpected_success"
+        } catch is DatabaseError {
+            result = "database_request_failure"
+        } catch is EngineDispatchConflictErrorV1 {
+            result = "dispatch_conflict"
+        } catch {
+            result = "unexpected_failure"
+        }
+        settledChildLedger.record("externalReturned")
+        return result
+    }
+    var settledChildJoinedCurrentOutcome = false
+    while !settledChildJoinedCurrentOutcome,
+          settledChildLedger.count("externalReturned") == 0
+    {
+        settledChildJoinedCurrentOutcome = await settledChildCompletions
+            .snapshotClaimCount(executionId: settledChildExecutionID) == 2
+        if !settledChildJoinedCurrentOutcome { await Task.yield() }
+    }
+    #expect(settledChildJoinedCurrentOutcome)
+    #expect(settledChildLedger.count("externalReturned") == 0)
+    #expect(settledChildLedger.count("storeResolver") == 1)
+    #expect(settledChildLedger.count("primaryChildSettled") == 1)
+    #expect(await settledChildCompletions.snapshotCount() == 1)
+    #expect(await settledChildActive.snapshotCounts().live == 0)
+    #expect(await settledChildActive.snapshotCounts().pending == 0)
+    #expect(await settledChildActive.snapshotCounts().inFlight == 0)
+
+    await settledChildBarrier.releaseObserver()
+    let settledChildPrimaryResult = await settledChildPrimary.value
+    let settledChildExternalResult = await settledChildExternal.value
+    #expect(settledChildPrimaryResult == "database_request_failure")
+    #expect(settledChildExternalResult == settledChildPrimaryResult)
+    #expect(settledChildLedger.count("storeResolver") == 1)
+    #expect(settledChildLedger.count("primaryChildSettled") == 1)
+    #expect(await settledChildCompletions.snapshotCount() == 0)
+    #expect(
+        await settledChildCompletions.snapshotClaimCount(
+            executionId: settledChildExecutionID
+        ) == 0
+    )
+    #expect(await settledChildActive.snapshotCounts().live == 0)
+    #expect(await settledChildActive.snapshotCounts().pending == 0)
+    #expect(await settledChildActive.snapshotCounts().inFlight == 0)
+    #expect(
+        try p1f1d069Snapshot(
+            fixture: settledChildFixture,
+            executionId: settledChildExecutionID
+        ).execution.cancellationRequestedAt == nil
+    )
+
+    try await settledChildFixture.db.pool.write { database in
+        try database.execute(sql: """
+            DROP TRIGGER p1f1d_069_fail_primary_cancellation
+            """)
+    }
+    let settledChildRetryReceipt = try await settledChildCoordinator.execute(
+        settledChildPrepared,
+        onExecutionBound: { request in
+            #expect(request.executionId == settledChildExecutionID)
+            settledChildLedger.record("retryBind")
+            return .cancel(reason: settledChildReason)
+        }
+    )
+    #expect(settledChildRetryReceipt.executionId == settledChildExecutionID)
+    #expect(settledChildRetryReceipt.terminalKind == .canceled)
+    #expect(settledChildRetryReceipt.reasonCode == settledChildReason)
+    #expect(settledChildLedger.count("primaryBind") == 1)
+    #expect(settledChildLedger.count("retryBind") == 1)
+    #expect(settledChildLedger.count("storeResolver") == 1)
+    #expect(settledChildLedger.count("primaryChildSettled") == 1)
+    #expect(settledChildLedger.count("transport") == 0)
+    #expect(settledChildLedger.count("makeAdapter") == 0)
+    #expect(settledChildLedger.count("execute") == 0)
+    #expect(settledChildLedger.count("finalizer") == 1)
+    #expect(await settledChildCompletions.snapshotCount() == 0)
+    #expect(await settledChildActive.snapshotCounts().live == 0)
+    #expect(await settledChildActive.snapshotCounts().pending == 0)
+    #expect(await settledChildActive.snapshotCounts().inFlight == 0)
+}
+
+private func p1f1d069ExercisePostGateAndBindCancellation() async throws {
+    print("P1F1D069_SCENARIO=PostGateAndBindCancellation")
+    let postGateFixture = try P1F1DCanonicalExecutionFixture(
+        profileKind: .openAIAPI
+    )
+    let postGateLedger = P1F1D069CallLedger()
+    let postGateCell = P1F1D069RunningCell()
+    let postGateCleanup = P1F1D069CleanupProbe(blocked: true)
+    let postGateActive = EngineActiveExecutionRegistryV1()
+    let postGateCompletions = EngineExecutionCompletionRegistryV1()
+    let postGateBound = P1F1D069FinalizerProbe()
+    let postGateCoordinator = try p1f1dCoordinator(
+        fixture: postGateFixture,
+        registry: p1f1d069RunningRegistry(
+            fixture: postGateFixture,
+            cell: postGateCell,
+            cleanup: postGateCleanup,
+            ledger: postGateLedger
+        ),
+        root: postGateFixture.root.appendingPathComponent(
+            "p1f1d-069-post-gate"
+        ),
+        activeExecutions: postGateActive,
+        completionRegistry: postGateCompletions
+    )
+    let postGateFields = try postGateFixture.fields()
+    let postGatePrepared = try p1f1d069Prepared(
+        fixture: postGateFixture,
+        fields: postGateFields,
+        idempotencyKey: "p1f1d-069-post-gate",
+        makeTransport: { _, _, _ in
+            postGateLedger.record("transport")
+            return try p1f1d069ModelTransport(
+                fixture: postGateFixture,
+                fields: postGateFields
+            )
+        }
+    )
+    let postGateExecute = Task {
+        try await postGateCoordinator.execute(
+            postGatePrepared,
+            onExecutionBound: { request in
+                await postGateBound.bind(request.executionId)
+                return .dispatch
+            }
+        )
+    }
+    let postGateExecutionID = await postGateBound.waitUntilBound()
+    await postGateCell.waitUntilStarted()
+    let postGateCancel = Task {
+        try await postGateCoordinator.cancel(
+            executionId: postGateExecutionID,
+            reason: "post_gate_cancel"
+        )
+        postGateLedger.record("cancelReturned")
+    }
+    await postGateCleanup.waitUntilAttemptCount(1)
+    let postGateDuringCleanup = try p1f1d069Snapshot(
+        fixture: postGateFixture,
+        executionId: postGateExecutionID
+    )
+    #expect(postGateDuringCleanup.execution.state == .running)
+    #expect(
+        postGateDuringCleanup.execution.cancellationReason
+            == "post_gate_cancel"
+    )
+    #expect(postGateLedger.count("cancelReturned") == 0)
+    #expect(await postGateActive.snapshotCounts().live == 1)
+    #expect(await postGateActive.snapshotCounts().pending == 0)
+    #expect(await postGateActive.snapshotCounts().inFlight == 1)
+    await postGateCleanup.release()
+    try await postGateCancel.value
+    let postGateReceipt = try await postGateExecute.value
+    #expect(postGateReceipt.terminalKind == .canceled)
+    #expect(postGateReceipt.reasonCode == "post_gate_cancel")
+    #expect(postGateLedger.count("transport") == 1)
+    #expect(postGateLedger.count("makeAdapter") == 1)
+    #expect(postGateLedger.count("execute") == 1)
+    #expect(postGateLedger.count("cancel") == 1)
+    #expect(postGateLedger.count("cancelReturned") == 1)
+    #expect(
+        postGateLedger.canceledExecutionIDs()
+            == [postGateExecutionID]
+    )
+    #expect(await postGateCleanup.count() == 1)
+    #expect(await postGateActive.snapshotCounts().live == 0)
+    #expect(await postGateActive.snapshotCounts().pending == 0)
+    #expect(await postGateActive.snapshotCounts().inFlight == 0)
+    #expect(await postGateCompletions.snapshotCount() == 0)
+
+    for bindMode in ["cancel", "throw"] {
+        let fixture = try P1F1DCanonicalExecutionFixture()
+        let active = EngineActiveExecutionRegistryV1()
+        let completions = EngineExecutionCompletionRegistryV1()
+        let makeCount = P1F1DLockedCounter()
+        let observerLedger = P1F1D069CallLedger()
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "agentloop-p1f1d-069-bind-\(bindMode)-\(UUID().uuidString)"
+            )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let coordinator = try p1f1dCoordinator(
+            fixture: fixture,
+            registry: p1f1dRegistry(makeCounter: makeCount),
+            root: root,
+            activeExecutions: active,
+            completionRegistry: completions,
+            eventObserver: { cardId, event in
+                let persisted = try? fixture.db.pool.read { database in
+                    try EngineExecutionRecord.fetchOne(
+                        database,
+                        key: event.executionId
+                    )
+                }
+                if cardId == fixture.card.id,
+                   persisted?.dispatchState == .terminal
+                {
+                    observerLedger.record("afterStore")
+                } else {
+                    observerLedger.record("beforeStore")
+                }
+            }
+        )
+        let fields = try fixture.fields()
+        let prepared = try p1f1d069Prepared(
+            fixture: fixture,
+            fields: fields,
+            idempotencyKey: "p1f1d-069-bind-\(bindMode)",
+            makeTransport: { _, _, _ in
+                makeCount.increment()
+                throw EngineDispatchConflictErrorV1()
+            }
+        )
+        if bindMode == "cancel" {
+            let receipt = try await coordinator.execute(
+                prepared,
+                onExecutionBound: { _ in
+                    .cancel(reason: "bind_cancel")
+                }
+            )
+            #expect(receipt.terminalKind == .canceled)
+            #expect(receipt.reasonCode == "bind_cancel")
+        } else {
+            do {
+                _ = try await coordinator.execute(
+                    prepared,
+                    onExecutionBound: { _ in
+                        throw P1F1D069BindError
+                            .rawCallbackDetailMustNotEscape
+                    }
+                )
+                Issue.record("bind callback failure must be sanitized")
+            } catch is EngineDispatchConflictErrorV1 {
+            }
+            let rows = try await fixture.db.pool.read { database in
+                try EngineExecutionRecord.fetchAll(database)
+            }
+            #expect(rows.count == 1)
+            #expect(rows.first?.state == .canceled)
+            #expect(rows.first?.cancellationReason == "engine_bind_failed")
+        }
+        #expect(makeCount.value == 0)
+        #expect(await active.snapshotCounts().live == 0)
+        #expect(await active.snapshotCounts().pending == 0)
+        #expect(await active.snapshotCounts().inFlight == 0)
+        #expect(await completions.snapshotCount() == 0)
+        #expect(observerLedger.count("afterStore") == 1)
+        #expect(observerLedger.count("beforeStore") == 0)
+    }
+}
+
+private func p1f1d069ExerciseObserverAndFinalizerFailure() async throws {
+    print("P1F1D069_SCENARIO=ObserverAndFinalizerFailure")
+    let observerFixture = try P1F1DCanonicalExecutionFixture(
+        profileKind: .openAIAPI
+    )
+    let routedObserverLedger = P1F1D069CallLedger()
+    let observerActive = EngineActiveExecutionRegistryV1()
+    let observerCompletions = EngineExecutionCompletionRegistryV1()
+    let observerCoordinator = try p1f1dCoordinator(
+        fixture: observerFixture,
+        registry: p1f1d069ObserverRegistry(
+            fixture: observerFixture,
+            ledger: routedObserverLedger
+        ),
+        root: observerFixture.root.appendingPathComponent(
+            "p1f1d-069-routed-observer"
+        ),
+        activeExecutions: observerActive,
+        completionRegistry: observerCompletions,
+        eventObserver: { cardId, event in
+            guard cardId == observerFixture.card.id else {
+                routedObserverLedger.record("wrongCard")
+                return
+            }
+            do {
+                let persisted = try observerFixture.db.pool.read {
+                    database in
+                    try #require(
+                        try EngineExecutionRecord.fetchOne(
+                            database,
+                            key: event.executionId
+                        )
+                    )
+                }
+                switch event.payload {
+                case .accepted:
+                    #expect(persisted.nextSequence == event.sequence + 1)
+                    routedObserverLedger.record("accepted")
+                case .sessionBound:
+                    #expect(persisted.dispatchState == .sessionBound)
+                    #expect(persisted.nextSequence == event.sequence + 1)
+                    routedObserverLedger.record("session")
+                case .progress:
+                    #expect(persisted.nextSequence == event.sequence + 1)
+                    routedObserverLedger.record("progress")
+                case .toolActivity:
+                    #expect(persisted.nextSequence == event.sequence + 1)
+                    routedObserverLedger.record("tool")
+                case .usage:
+                    #expect(persisted.nextSequence == event.sequence + 1)
+                    #expect(persisted.inputTokens == 11)
+                    #expect(persisted.outputTokens == 7)
+                    #expect(persisted.cacheReadTokens == 3)
+                    #expect(persisted.costMicros == 29)
+                    routedObserverLedger.record("usage")
+                case .terminal:
+                    #expect(persisted.dispatchState == .terminal)
+                    #expect(persisted.state == .failed)
+                    routedObserverLedger.record("terminal")
+                }
+            } catch {
+                routedObserverLedger.record("storeMissing")
+            }
+        }
+    )
+    let observerFields = try observerFixture.fields()
+    let observerPrepared = try p1f1d069Prepared(
+        fixture: observerFixture,
+        fields: observerFields,
+        idempotencyKey: "p1f1d-069-routed-observer",
+        makeTransport: { _, _, _ in
+            try p1f1d069ModelTransport(
+                fixture: observerFixture,
+                fields: observerFields
+            )
+        }
+    )
+    let observerReceipt = try await observerCoordinator.execute(
+        observerPrepared,
+        onExecutionBound: { _ in .dispatch }
+    )
+    #expect(observerReceipt.terminalKind == .failed)
+    #expect(observerReceipt.reasonCode == "observer_terminal")
+    for key in [
+        "accepted", "session", "progress", "tool", "usage", "terminal",
+    ] {
+        #expect(routedObserverLedger.count(key) == 1)
+    }
+    #expect(routedObserverLedger.count("wrongCard") == 0)
+    #expect(routedObserverLedger.count("storeMissing") == 0)
+    #expect(routedObserverLedger.count("makeAdapter") == 1)
+    #expect(routedObserverLedger.count("execute") == 1)
+    #expect(routedObserverLedger.count("cancel") == 0)
+    #expect(await observerActive.snapshotCounts().live == 0)
+    #expect(await observerActive.snapshotCounts().pending == 0)
+    #expect(await observerActive.snapshotCounts().inFlight == 0)
+    #expect(await observerCompletions.snapshotCount() == 0)
+
+    let finalizerFixture = try P1F1DCanonicalExecutionFixture()
+    let finalizerActive = EngineActiveExecutionRegistryV1()
+    let finalizerCompletions = EngineExecutionCompletionRegistryV1()
+    let finalizerProbe = P1F1D069FinalizerProbe()
+    let finalizerCoordinator = try p1f1dCoordinator(
+        fixture: finalizerFixture,
+        registry: p1f1dRegistry(),
+        root: finalizerFixture.root.appendingPathComponent(
+            "p1f1d-069-finalizer"
+        ),
+        activeExecutions: finalizerActive,
+        completionRegistry: finalizerCompletions,
+        eventObserver: { _, _ in await finalizerProbe.observe() }
+    )
+    let finalizerFields = try finalizerFixture.fields()
+    let finalizerPrepared = try p1f1d069Prepared(
+        fixture: finalizerFixture,
+        fields: finalizerFields,
+        idempotencyKey: "p1f1d-069-finalizer",
+        makeTransport: { _, _, _ in
+            throw EngineDispatchConflictErrorV1()
+        }
+    )
+    let finalizerTask = Task {
+        try await finalizerCoordinator.execute(
+            finalizerPrepared,
+            onExecutionBound: { request in
+                await finalizerProbe.bind(request.executionId)
+                return .cancel(reason: "finalizer_injected_failure")
+            }
+        )
+    }
+    let finalizerExecutionID = await finalizerProbe.waitUntilBound()
+    await finalizerProbe.waitUntilObserverEntered()
+    try await finalizerActive.finishPending(
+        executionId: finalizerExecutionID,
+        terminalReceipt: p1f1d069Receipt(
+            executionId: finalizerExecutionID,
+            reason: "finalizer_injected_failure"
+        )
+    )
+    await finalizerProbe.releaseObserver()
+    do {
+        _ = try await finalizerTask.value
+        Issue.record("first finalizer cleanup error must reach the waiter")
+    } catch is EngineDispatchConflictErrorV1 {
+    }
+    #expect(await finalizerActive.snapshotCounts().live == 0)
+    #expect(await finalizerActive.snapshotCounts().pending == 0)
+    #expect(await finalizerActive.snapshotCounts().inFlight == 0)
+    #expect(await finalizerCompletions.snapshotCount() == 0)
+    #expect(
+        try finalizerFixture.db.card(id: finalizerFixture.card.id)?.status
+            == .ready
+    )
+}
+
+private func p1f1d069ExerciseCompletionRemovalBarriers() async throws {
+    print("P1F1D069_SCENARIO=CompletionRemovalBarriers")
+    let removalBarrierFixture = try P1F1DCanonicalExecutionFixture()
+    let removalBarrierProbe = P1F1D069CleanupProbe(blocked: true)
+    let removalBarrierFinalizer = P1F1D069FinalizerProbe()
+    let removalBarrierRegistry = EngineExecutionCompletionRegistryV1(
+        beforeAuthorizedRemoval: { executionId, receipt, handle in
+            #expect(executionId == receipt.executionId)
+            #expect(executionId == handle.executionId)
+            #expect(!(await handle.snapshotHasDeliveredCompletion()))
+            try await removalBarrierProbe.run()
+        }
+    )
+    let removalBarrierCoordinator = try p1f1dCoordinator(
+        fixture: removalBarrierFixture,
+        registry: p1f1dRegistry(),
+        root: removalBarrierFixture.root.appendingPathComponent(
+            "p1f1d-069-removal-barrier"
+        ),
+        completionRegistry: removalBarrierRegistry,
+        eventObserver: { _, _ in
+            await removalBarrierFinalizer.observe()
+        }
+    )
+    let removalBarrierFields = try removalBarrierFixture.fields()
+    let removalBarrierPrepared = try p1f1d069Prepared(
+        fixture: removalBarrierFixture,
+        fields: removalBarrierFields,
+        idempotencyKey: "p1f1d-069-removal-barrier",
+        makeTransport: { _, _, _ in
+            throw EngineDispatchConflictErrorV1()
+        }
+    )
+    let removalBarrierTask = Task {
+        try await removalBarrierCoordinator.execute(
+            removalBarrierPrepared,
+            onExecutionBound: { request in
+                await removalBarrierFinalizer.bind(request.executionId)
+                return .cancel(reason: "removal_barrier")
+            }
+        )
+    }
+    let removalBarrierExecutionID = await removalBarrierFinalizer
+        .waitUntilBound()
+    await removalBarrierFinalizer.waitUntilObserverEntered()
+    let removalBarrierLookup = try await removalBarrierRegistry
+        .lookupOrInstall(
+            executionId: removalBarrierExecutionID,
+            makeHandle: {
+                Issue.record("finalizer generation must already be installed")
+                return try EngineExecutionCompletionHandleV1(
+                    executionId: removalBarrierExecutionID,
+                    resolveCancellation: { _, _ in
+                        throw EngineDispatchConflictErrorV1()
+                    }
+                )
+            }
+        )
+    #expect(!removalBarrierLookup.didInstall)
+    let removalBarrierRawWaiter = Task {
+        try await removalBarrierLookup.handle.waitForReceipt()
+    }
+    await removalBarrierFinalizer.releaseObserver()
+    await removalBarrierProbe.waitUntilAttemptCount(1)
+    #expect(await removalBarrierRegistry.snapshotCount() == 1)
+    #expect(
+        !(await removalBarrierLookup.handle
+            .snapshotHasDeliveredCompletion())
+    )
+    await removalBarrierProbe.release()
+    let removalBarrierReceipt = try await removalBarrierTask.value
+    #expect(
+        try await removalBarrierRawWaiter.value
+            == removalBarrierReceipt
+    )
+    #expect(await removalBarrierProbe.count() == 1)
+    #expect(await removalBarrierRegistry.snapshotCount() == 0)
+
+    let removalFailureFixture = try P1F1DCanonicalExecutionFixture()
+    let removalFailureProbe = P1F1D069CleanupProbe(failFirst: true)
+    let removalFailureFinalizer = P1F1D069FinalizerProbe()
+    let removalFailureRegistry = EngineExecutionCompletionRegistryV1(
+        beforeAuthorizedRemoval: { executionId, receipt, handle in
+            #expect(executionId == receipt.executionId)
+            #expect(executionId == handle.executionId)
+            #expect(!(await handle.snapshotHasDeliveredCompletion()))
+            try await removalFailureProbe.run()
+        }
+    )
+    let removalFailureCoordinator = try p1f1dCoordinator(
+        fixture: removalFailureFixture,
+        registry: p1f1dRegistry(),
+        root: removalFailureFixture.root.appendingPathComponent(
+            "p1f1d-069-removal-failure"
+        ),
+        completionRegistry: removalFailureRegistry,
+        eventObserver: { _, _ in
+            await removalFailureFinalizer.observe()
+        }
+    )
+    let removalFailureFields = try removalFailureFixture.fields()
+    let removalFailurePrepared = try p1f1d069Prepared(
+        fixture: removalFailureFixture,
+        fields: removalFailureFields,
+        idempotencyKey: "p1f1d-069-removal-failure",
+        makeTransport: { _, _, _ in
+            throw EngineDispatchConflictErrorV1()
+        }
+    )
+    let removalFailureTask = Task {
+        await p1f1d069ExactCancelResultLabel {
+            _ = try await removalFailureCoordinator.execute(
+                removalFailurePrepared,
+                onExecutionBound: { request in
+                    await removalFailureFinalizer.bind(
+                        request.executionId
+                    )
+                    return .cancel(reason: "removal_failure")
+                }
+            )
+        }
+    }
+    let removalFailureExecutionID = await removalFailureFinalizer
+        .waitUntilBound()
+    await removalFailureFinalizer.waitUntilObserverEntered()
+    let removalFailureLookup = try await removalFailureRegistry
+        .lookupOrInstall(
+            executionId: removalFailureExecutionID,
+            makeHandle: {
+                Issue.record("failed finalizer generation must be installed")
+                return try EngineExecutionCompletionHandleV1(
+                    executionId: removalFailureExecutionID,
+                    resolveCancellation: { _, _ in
+                        throw EngineDispatchConflictErrorV1()
+                    }
+                )
+            }
+        )
+    #expect(!removalFailureLookup.didInstall)
+    let removalFailureRawWaiter = Task {
+        await p1f1d069ExactCancelResultLabel {
+            _ = try await removalFailureLookup.handle.waitForReceipt()
+        }
+    }
+    await removalFailureFinalizer.releaseObserver()
+    #expect(
+        await removalFailureTask.value
+            == "injected_cleanup_failure"
+    )
+    #expect(
+        await removalFailureRawWaiter.value
+            == "injected_cleanup_failure"
+    )
+    #expect(await removalFailureProbe.count() == 1)
+    #expect(await removalFailureRegistry.snapshotCount() == 1)
+}
+
+private func p1f1d069ExerciseObserverStoreFailure() async throws {
+    print("P1F1D069_SCENARIO=ObserverStoreFailure")
+    let observerFailureFixture = try P1F1DCanonicalExecutionFixture()
+    try await observerFailureFixture.db.pool.write { database in
+        try database.execute(sql: """
+            CREATE TRIGGER p1f1d_069_fail_terminal_store
+            BEFORE UPDATE ON engine_execution
+            WHEN OLD.state='running' AND NEW.state='canceled'
+            BEGIN
+              SELECT RAISE(ABORT, 'p1f1d-069 terminal store failure');
+            END
+            """)
+    }
+    let observerFailureLedger = P1F1D069CallLedger()
+    let observerFailureCoordinator = try p1f1dCoordinator(
+        fixture: observerFailureFixture,
+        registry: p1f1dRegistry(),
+        root: observerFailureFixture.root.appendingPathComponent(
+            "p1f1d-069-observer-store-failure"
+        ),
+        eventObserver: { _, _ in
+            observerFailureLedger.record("observer")
+        }
+    )
+    let observerFailureFields = try observerFailureFixture.fields()
+    let observerFailurePrepared = try p1f1d069Prepared(
+        fixture: observerFailureFixture,
+        fields: observerFailureFields,
+        idempotencyKey: "p1f1d-069-observer-store-failure",
+        makeTransport: { _, _, _ in
+            throw EngineDispatchConflictErrorV1()
+        }
+    )
+    do {
+        _ = try await observerFailureCoordinator.execute(
+            observerFailurePrepared,
+            onExecutionBound: { _ in
+                .cancel(reason: "observer_store_failure")
+            }
+        )
+        Issue.record("forced terminal Store failure must be visible")
+    } catch {
+    }
+    #expect(observerFailureLedger.count("observer") == 0)
+}
+
+private func p1f1d069ExerciseExactLiveCliCancellation() async throws {
+    print("P1F1D069_SCENARIO=ExactLiveCliCancellation")
+    for bindSession in [false, true] {
+        print("P1F1D069_CASE=exact-live-cli-\(bindSession)")
+        let exactFixture = try P1F1DCanonicalExecutionFixture()
+        let reason = bindSession
+            ? "exact_session_bound_cancel"
+            : "exact_started_cancel"
+        let exactFields = try exactFixture.fields()
+        let exactLedger = P1F1D069CallLedger()
+        let exactCell = P1F1D069RunningCell()
+        let exactCleanup = P1F1D069CleanupProbe(blocked: true)
+        let exactActive = EngineActiveExecutionRegistryV1()
+        let exactCompletions = EngineExecutionCompletionRegistryV1()
+        let exactBound = P1F1D069RequestProbe()
+        let exactCoordinator = try p1f1dCoordinator(
+            fixture: exactFixture,
+            registry: p1f1d069RunningRegistry(
+                fixture: exactFixture,
+                cell: exactCell,
+                cleanup: exactCleanup,
+                ledger: exactLedger
+            ),
+            root: exactFixture.root.appendingPathComponent(
+                "p1f1d-069-exact-live-\(bindSession)"
+            ),
+            activeExecutions: exactActive,
+            completionRegistry: exactCompletions,
+            transportSeedResolver: { _ in
+                exactLedger.record("recovery")
+                throw EngineDispatchConflictErrorV1()
+            }
+        )
+        let exactPrepared = try p1f1d069Prepared(
+            fixture: exactFixture,
+            fields: exactFields,
+            idempotencyKey: "p1f1d-069-exact-\(bindSession)",
+            makeTransport: { _, _, _ in
+                exactLedger.record("transport")
+                return try p1f1dTransport(
+                    fixture: exactFixture,
+                    fields: exactFields,
+                    driver: P1F1D069CancelDriver(
+                        ledger: exactLedger,
+                        evidence: p1f1dCancelEvidence
+                    )
+                )
+            }
+        )
+        let exactExecute = Task {
+            try await exactCoordinator.execute(
+                exactPrepared,
+                onExecutionBound: { request in
+                    await exactBound.bind(request)
+                    return .dispatch
+                }
+            )
+        }
+        let target = await exactBound.waitUntilBound()
+        await exactCell.waitUntilStarted()
+        if bindSession {
+            try exactFixture.store.acceptEngineEvent(
+                executionId: target.executionId,
+                sequence: 0,
+                event: EngineExecutionEvent(
+                    executionId: target.executionId,
+                    sequence: 0,
+                    payload: .sessionBound(
+                        externalSessionId:
+                            "codex-thread-p1f1d-069-exact-true"
+                    )
+                )
+            )
+        }
+        let siblingExecutionID = try p1f1d069InsertRunningSibling(
+            fixture: exactFixture,
+            target: target
+        )
+        let siblingBefore = try p1f1d069Snapshot(
+            fixture: exactFixture,
+            executionId: siblingExecutionID
+        )
+        #expect(exactLedger.count("transport") == 1)
+        #expect(exactLedger.count("makeAdapter") == 1)
+        #expect(exactLedger.count("execute") == 1)
+        #expect(exactLedger.count("recovery") == 0)
+        let exactCancel = Task {
+            try await exactCoordinator.cancel(
+                executionId: target.executionId,
+                reason: reason
+            )
+        }
+        await exactCleanup.waitUntilAttemptCount(1)
+        #expect(await exactActive.snapshotCounts().live == 1)
+        #expect(await exactActive.snapshotCounts().inFlight == 1)
+        #expect(await exactCompletions.snapshotCount() == 1)
+        #expect(
+            try p1f1d069Snapshot(
+                fixture: exactFixture,
+                executionId: siblingExecutionID
+            ) == siblingBefore
+        )
+        await exactCleanup.release()
+        try await exactCancel.value
+        let executedReceipt = try await exactExecute.value
+        guard case let .terminalWon(exactReceipt) = try exactFixture.store
+            .requestCancellation(
+                executionId: target.executionId,
+                reason: reason,
+                now: P1F1DCanonicalExecutionFixture.now
+                    .addingTimeInterval(6)
+            )
+        else {
+            Issue.record("exact live resolver must retain its receipt")
+            continue
+        }
+        #expect(exactReceipt.executionId == target.executionId)
+        #expect(exactReceipt.terminalKind == .canceled)
+        #expect(exactReceipt.reasonCode == reason)
+        #expect(executedReceipt == exactReceipt)
+        #expect(exactLedger.count("recovery") == 0)
+        #expect(exactLedger.count("transport") == 1)
+        #expect(exactLedger.count("makeAdapter") == 1)
+        #expect(exactLedger.count("execute") == 1)
+        #expect(exactLedger.count("cancel") == 1)
+        #expect(exactLedger.canceledExecutionIDs() == [target.executionId])
+        #expect(await exactCleanup.count() == 1)
+        #expect(await exactActive.snapshotCounts().live == 0)
+        #expect(await exactActive.snapshotCounts().pending == 0)
+        #expect(await exactActive.snapshotCounts().inFlight == 0)
+        #expect(await exactCompletions.snapshotCount() == 0)
+        #expect(
+            try p1f1d069Snapshot(
+                fixture: exactFixture,
+                executionId: siblingExecutionID
+            ) == siblingBefore
+        )
+    }
+}
+
+private func p1f1d069ExerciseMissionCliRecovery() async throws {
+    print("P1F1D069_SCENARIO=MissionCliRecovery")
+    for bindSession in [false, true] {
+        print("P1F1D069_CASE=mission-cli-\(bindSession)")
+        let missionCLI = try P1F1DCanonicalExecutionFixture()
+        let missionFields = try missionCLI.fields()
+        let missionReason = bindSession
+            ? "mission_cli_session_bound_cancel"
+            : "mission_cli_started_cancel"
+        let missionRequest = try p1f1d069RequestCancellation(
+            fixture: missionCLI,
+            key: "p1f1d-069-mission-cli-\(bindSession)",
+            bindSession: bindSession,
+            reason: missionReason
+        )
+        let missionSiblingID = try p1f1d069InsertRunningSibling(
+            fixture: missionCLI,
+            target: missionRequest,
+            terminalized: true
+        )
+        let missionSiblingBefore = try p1f1d069Snapshot(
+            fixture: missionCLI,
+            executionId: missionSiblingID
+        )
+        let missionSiblingDirectiveBefore = try missionCLI.store
+            .activeRecoverySnapshots(missionId: missionCLI.mission.id)
+            .filter { $0.execution.id == missionSiblingID }
+        let missionLedger = P1F1D069CallLedger()
+        let missionActive = EngineActiveExecutionRegistryV1()
+        let missionCompletions = EngineExecutionCompletionRegistryV1()
+        let missionDriver = P1F1D069CancelDriver(
+            ledger: missionLedger,
+            evidence: p1f1dCancelEvidence
+        )
+        let missionSeed = try p1f1d069RecoverySeed(
+            fixture: missionCLI,
+            fields: missionFields,
+            driver: missionDriver
+        )
+        let missionRegistry = try p1f1d069RecoveryRegistry(
+            fixture: missionCLI,
+            fields: missionFields,
+            driver: missionDriver,
+            ledger: missionLedger
+        )
+        let missionRoot = missionCLI.root.appendingPathComponent(
+            "p1f1d-069-mission-cli-coordinator"
+        )
+        let missionCoordinator = try p1f1dCoordinator(
+            fixture: missionCLI,
+            registry: missionRegistry,
+            root: missionRoot,
+            activeExecutions: missionActive,
+            completionRegistry: missionCompletions,
+            transportSeedResolver: { request in
+                guard request.executionId == missionRequest.executionId
+                else { throw EngineDispatchConflictErrorV1() }
+                missionLedger.record("seed")
+                return missionSeed
+            }
+        )
+        let missionSummary = try await missionCoordinator.recover(
+            missionId: missionCLI.mission.id,
+            now: P1F1DCanonicalExecutionFixture.now
+                .addingTimeInterval(6)
+        )
+        #expect(missionSummary.scannedCount == 1)
+        #expect(missionSummary.directives.isEmpty)
+        #expect(missionSummary.terminalReceipts.count == 1)
+        #expect(
+            missionSummary.terminalReceipts.first?.executionId
+                == missionRequest.executionId
+        )
+        #expect(
+            missionSummary.terminalReceipts.first?.terminalKind
+                == .canceled
+        )
+        #expect(
+            missionSummary.terminalReceipts.first?.reasonCode
+                == missionReason
+        )
+        #expect(missionLedger.count("recoveryTransport") == 1)
+        #expect(missionLedger.count("cancel") == 1)
+        #expect(
+            missionLedger.canceledExecutionIDs()
+                == [missionRequest.executionId]
+        )
+        #expect(missionLedger.count("makeAdapter") == 0)
+        #expect(missionLedger.count("launch") == 0)
+        #expect(await missionActive.snapshotCounts().live == 0)
+        #expect(await missionActive.snapshotCounts().pending == 0)
+        #expect(await missionActive.snapshotCounts().inFlight == 0)
+        #expect(await missionCompletions.snapshotCount() == 0)
+        #expect(
+            try p1f1d069Snapshot(
+                fixture: missionCLI,
+                executionId: missionSiblingID
+            ) == missionSiblingBefore
+        )
+        #expect(
+            try missionCLI.store.activeRecoverySnapshots(
+                missionId: missionCLI.mission.id
+            ).filter { $0.execution.id == missionSiblingID }
+                == missionSiblingDirectiveBefore
+        )
+        #expect(!missionLedger.canceledExecutionIDs().contains(
+            missionSiblingID
+        ))
+    }
+}
+
+private func p1f1d069ExerciseMissionModelRecovery() async throws {
+    print("P1F1D069_SCENARIO=MissionModelRecovery")
+    for bindSession in [false, true] {
+        print("P1F1D069_CASE=mission-model-\(bindSession)")
+        let missionModel = try P1F1DCanonicalExecutionFixture(
+            profileKind: .openAIAPI
+        )
+        let missionModelFields = try missionModel.fields()
+        let missionModelRequest = try p1f1d069RequestCancellation(
+            fixture: missionModel,
+            key: "p1f1d-069-mission-model-\(bindSession)",
+            bindSession: bindSession,
+            reason: "mission_model_requested_cancel"
+        )
+        let missionModelSiblingID = try p1f1d069InsertRunningSibling(
+            fixture: missionModel,
+            target: missionModelRequest,
+            terminalized: true
+        )
+        let missionModelSiblingBefore = try p1f1d069Snapshot(
+            fixture: missionModel,
+            executionId: missionModelSiblingID
+        )
+        let missionModelSiblingDirectiveBefore = try missionModel.store
+            .activeRecoverySnapshots(missionId: missionModel.mission.id)
+            .filter { $0.execution.id == missionModelSiblingID }
+        let missionModelLedger = P1F1D069CallLedger()
+        let missionModelActive = EngineActiveExecutionRegistryV1()
+        let missionModelCompletions =
+            EngineExecutionCompletionRegistryV1()
+        let missionModelDriver = P1F1D069CancelDriver(
+            ledger: missionModelLedger,
+            evidence: p1f1dCancelEvidence
+        )
+        let missionModelRegistry = try p1f1d069RecoveryRegistry(
+            fixture: missionModel,
+            fields: missionModelFields,
+            driver: missionModelDriver,
+            ledger: missionModelLedger
+        )
+        let missionModelCoordinator = try p1f1dCoordinator(
+            fixture: missionModel,
+            registry: missionModelRegistry,
+            root: missionModel.root.appendingPathComponent(
+                "p1f1d-069-mission-model-coordinator"
+            ),
+            activeExecutions: missionModelActive,
+            completionRegistry: missionModelCompletions,
+            transportSeedResolver: { _ in
+                missionModelLedger.record("seed")
+                throw EngineDispatchConflictErrorV1()
+            }
+        )
+        let missionModelSummary = try await missionModelCoordinator
+            .recover(
+                missionId: missionModel.mission.id,
+                now: P1F1DCanonicalExecutionFixture.now
+                    .addingTimeInterval(6)
+            )
+        #expect(missionModelSummary.scannedCount == 1)
+        #expect(missionModelSummary.directives.isEmpty)
+        #expect(missionModelSummary.terminalReceipts.count == 1)
+        #expect(
+            missionModelSummary.terminalReceipts.first?.executionId
+                == missionModelRequest.executionId
+        )
+        #expect(
+            missionModelSummary.terminalReceipts.first?.terminalKind
+                == .blocked
+        )
+        #expect(
+            missionModelSummary.terminalReceipts.first?.terminalSubtype
+                == .externalEffectUnknown
+        )
+        #expect(
+            missionModelSummary.terminalReceipts.first?.reasonCode
+                == "external_effect_unknown"
+        )
+        #expect(missionModelLedger.count("seed") == 0)
+        #expect(missionModelLedger.count("recoveryTransport") == 0)
+        #expect(missionModelLedger.count("makeAdapter") == 0)
+        #expect(missionModelLedger.count("cancel") == 0)
+        #expect(missionModelLedger.count("launch") == 0)
+        #expect(await missionModelActive.snapshotCounts().live == 0)
+        #expect(await missionModelActive.snapshotCounts().pending == 0)
+        #expect(await missionModelActive.snapshotCounts().inFlight == 0)
+        #expect(await missionModelCompletions.snapshotCount() == 0)
+        #expect(
+            try p1f1d069Snapshot(
+                fixture: missionModel,
+                executionId: missionModelSiblingID
+            ) == missionModelSiblingBefore
+        )
+        #expect(
+            try missionModel.store.activeRecoverySnapshots(
+                missionId: missionModel.mission.id
+            ).filter { $0.execution.id == missionModelSiblingID }
+                == missionModelSiblingDirectiveBefore
+        )
+        #expect(!missionModelLedger.canceledExecutionIDs().contains(
+            missionModelSiblingID
+        ))
+    }
+}
+
+private func p1f1d069ExerciseSharedRecoveryOwner() async throws {
+    print("P1F1D069_SCENARIO=SharedRecoveryOwner")
+    let sharedRecoveryFixture = try P1F1DCanonicalExecutionFixture()
+    let sharedRecoveryFields = try sharedRecoveryFixture.fields()
+    let sharedRecoveryRequest = try p1f1d069RequestCancellation(
+        fixture: sharedRecoveryFixture,
+        key: "p1f1d-069-shared-recovery",
+        bindSession: true,
+        reason: "shared_recovery_cancel"
+    )
+    let sharedRecoveryLedger = P1F1D069CallLedger()
+    let sharedRecoveryProbe = P1F1D069CleanupProbe(blocked: true)
+    let sharedRecoveryDriver = P1F1D069BlockingRecoveryDriver(
+        ledger: sharedRecoveryLedger,
+        probe: sharedRecoveryProbe
+    )
+    let sharedRecoverySeed = try p1f1d069RecoverySeed(
+        fixture: sharedRecoveryFixture,
+        fields: sharedRecoveryFields,
+        driver: sharedRecoveryDriver
+    )
+    let sharedRecoveryCompletions = EngineExecutionCompletionRegistryV1()
+    let sharedRecoveryActive = EngineActiveExecutionRegistryV1()
+    let sharedRecoveryCoordinator = try p1f1dCoordinator(
+        fixture: sharedRecoveryFixture,
+        registry: try p1f1d069RecoveryRegistry(
+            fixture: sharedRecoveryFixture,
+            fields: sharedRecoveryFields,
+            driver: sharedRecoveryDriver,
+            ledger: sharedRecoveryLedger
+        ),
+        root: sharedRecoveryFixture.root.appendingPathComponent(
+            "p1f1d-069-shared-recovery"
+        ),
+        activeExecutions: sharedRecoveryActive,
+        completionRegistry: sharedRecoveryCompletions,
+        transportSeedResolver: { request in
+            guard request.executionId == sharedRecoveryRequest.executionId
+            else { throw EngineDispatchConflictErrorV1() }
+            sharedRecoveryLedger.record("seed")
+            return sharedRecoverySeed
+        }
+    )
+    let firstSharedRecovery = Task {
+        try await sharedRecoveryCoordinator.recover(
+            missionId: sharedRecoveryFixture.mission.id,
+            now: P1F1DCanonicalExecutionFixture.now.addingTimeInterval(7)
+        )
+    }
+    await sharedRecoveryProbe.waitUntilAttemptCount(1)
+    let secondSharedRecovery = Task {
+        try await sharedRecoveryCoordinator.recover(
+            missionId: sharedRecoveryFixture.mission.id,
+            now: P1F1DCanonicalExecutionFixture.now.addingTimeInterval(7)
+        )
+    }
+    for _ in 0..<1_000 { await Task.yield() }
+    #expect(await sharedRecoveryProbe.count() == 1)
+    await sharedRecoveryProbe.release()
+    let firstSharedSummary = try await firstSharedRecovery.value
+    let secondSharedSummary = try await secondSharedRecovery.value
+    #expect(firstSharedSummary.scannedCount == 1)
+    #expect(secondSharedSummary.scannedCount == 1)
+    #expect(
+        firstSharedSummary.terminalReceipts
+            == secondSharedSummary.terminalReceipts
+    )
+    #expect(firstSharedSummary.directives.isEmpty)
+    #expect(secondSharedSummary.directives.isEmpty)
+    #expect(sharedRecoveryLedger.count("seed") == 1)
+    #expect(sharedRecoveryLedger.count("recoveryTransport") == 1)
+    #expect(sharedRecoveryLedger.count("cancel") == 1)
+    #expect(await sharedRecoveryCompletions.snapshotCount() == 0)
+    #expect(await sharedRecoveryActive.snapshotCounts().live == 0)
+    #expect(await sharedRecoveryActive.snapshotCounts().pending == 0)
+    #expect(await sharedRecoveryActive.snapshotCounts().inFlight == 0)
+}
+
+private func p1f1d069ExerciseRecoveryFailureRetry() async throws {
+    print("P1F1D069_SCENARIO=RecoveryFailureRetry")
+    for failurePhase in [
+        P1F1D069RecoveryFailureCell.Phase.transport,
+        .evidence,
+        .store,
+    ] {
+        print("P1F1D069_CASE=recovery-retry-\(failurePhase)")
+        let retryFixture = try P1F1DCanonicalExecutionFixture()
+        let retryFields = try retryFixture.fields()
+        let retryReason = "mission_retry_\(String(describing: failurePhase))"
+        let retryRequest = try p1f1d069RequestCancellation(
+            fixture: retryFixture,
+            key: "p1f1d-069-retry-\(String(describing: failurePhase))",
+            bindSession: true,
+            reason: retryReason
+        )
+        let retryLedger = P1F1D069CallLedger()
+        let retryFailure = P1F1D069RecoveryFailureCell(failurePhase)
+        let retryDriver = P1F1D069RecoveryFailureDriver(
+            ledger: retryLedger,
+            cell: retryFailure,
+            storeFailure: {
+                guard failurePhase == .store else { return }
+                try retryFixture.db.pool.writeWithoutTransaction {
+                    database in
+                    try database.execute(sql: "PRAGMA query_only = ON")
+                }
+            }
+        )
+        let retrySeed = try p1f1d069RecoverySeed(
+            fixture: retryFixture,
+            fields: retryFields,
+            driver: retryDriver
+        )
+        let retryRegistry = try p1f1d069RecoveryRegistry(
+            fixture: retryFixture,
+            fields: retryFields,
+            driver: retryDriver,
+            ledger: retryLedger,
+            beforeTransport: { try retryFailure.beforeTransport() }
+        )
+        let retryActive = EngineActiveExecutionRegistryV1()
+        let retryCompletions = EngineExecutionCompletionRegistryV1()
+        let retryCoordinator = try p1f1dCoordinator(
+            fixture: retryFixture,
+            registry: retryRegistry,
+            root: retryFixture.root.appendingPathComponent(
+                "p1f1d-069-retry-\(String(describing: failurePhase))"
+            ),
+            activeExecutions: retryActive,
+            completionRegistry: retryCompletions,
+            transportSeedResolver: { request in
+                guard request.executionId == retryRequest.executionId
+                else { throw EngineDispatchConflictErrorV1() }
+                retryLedger.record("seed")
+                return retrySeed
+            }
+        )
+        do {
+            _ = try await retryCoordinator.recover(
+                missionId: retryFixture.mission.id,
+                now: P1F1DCanonicalExecutionFixture.now
+                    .addingTimeInterval(7)
+            )
+            Issue.record("the injected recovery attempt must fail")
+        } catch let failure as P1F1D069RecoveryAttemptFailure {
+            #expect(
+                failure
+                    == (failurePhase == .transport
+                        ? .transport : .evidence)
+            )
+        } catch {
+            if failurePhase != .store {
+                Issue.record("unexpected recovery failure: \(error)")
+            }
+        }
+        if failurePhase == .store {
+            try await retryFixture.db.pool.writeWithoutTransaction { database in
+                try database.execute(sql: "PRAGMA query_only = OFF")
+            }
+        }
+        #expect(await retryCompletions.snapshotCount() == 0)
+        #expect(await retryActive.snapshotCounts().live == 0)
+        #expect(await retryActive.snapshotCounts().pending == 0)
+        #expect(await retryActive.snapshotCounts().inFlight == 0)
+        retryFailure.disarm()
+        let retrySummary = try await retryCoordinator.recover(
+            missionId: retryFixture.mission.id,
+            now: P1F1DCanonicalExecutionFixture.now.addingTimeInterval(8)
+        )
+        #expect(retrySummary.scannedCount == 1)
+        #expect(retrySummary.directives.isEmpty)
+        #expect(retrySummary.terminalReceipts.count == 1)
+        #expect(
+            retrySummary.terminalReceipts.first?.executionId
+                == retryRequest.executionId
+        )
+        #expect(
+            retrySummary.terminalReceipts.first?.reasonCode == retryReason
+        )
+        #expect(retryLedger.count("seed") == 2)
+        #expect(retryLedger.count("recoveryTransport") == 2)
+        #expect(
+            retryLedger.count("cancel")
+                == (failurePhase == .transport ? 1 : 2)
+        )
+        #expect(await retryCompletions.snapshotCount() == 0)
+        #expect(await retryActive.snapshotCounts().live == 0)
+        #expect(await retryActive.snapshotCounts().pending == 0)
+        #expect(await retryActive.snapshotCounts().inFlight == 0)
+    }
+}
+
+private func p1f1d069ExerciseSharedRecoveryActionMatrix() async throws {
+    print("P1F1D069_SCENARIO=SharedRecoveryActionMatrix")
+    for recoveryCase in P1F1D069SharedRecoveryCase.allCases {
+        print("P1F1D069_CASE=shared-action-\(recoveryCase.rawValue)")
+        let replayClass: EngineExecutionReplayClassV1
+        switch recoveryCase {
+        case .replayExecution:
+            replayClass = .replaySafe
+        case .prepareAndCommitProposal, .startPrepared, .resumeSession:
+            replayClass = .nonReplayable
+        }
+        let fixture = try P1F1DCanonicalExecutionFixture(
+            replayClass: replayClass
+        )
+        let key = "p1f1d-069-round2-\(recoveryCase.rawValue)"
+        let request = try fixture.begin(key: key)
+        let expectedAction: EngineRecoveryActionV1
+        switch recoveryCase {
+        case .prepareAndCommitProposal:
+            try p1f1d069MarkStarted(
+                fixture: fixture,
+                request: request,
+                key: key
+            )
+            expectedAction = .prepareAndCommitProposal(
+                proposalId: try p1f1d069RecordArtifactProposal(
+                    fixture: fixture,
+                    request: request,
+                    key: key
+                )
+            )
+        case .startPrepared:
+            expectedAction = .startPrepared
+        case .replayExecution:
+            try p1f1d069MarkStarted(
+                fixture: fixture,
+                request: request,
+                key: key
+            )
+            expectedAction = .replayExecution
+        case .resumeSession:
+            try p1f1d069MarkStarted(
+                fixture: fixture,
+                request: request,
+                key: key
+            )
+            let externalSessionID =
+                "codex-thread-round2-shared-recovery"
+            try fixture.store.acceptEngineEvent(
+                executionId: request.executionId,
+                sequence: 0,
+                event: EngineExecutionEvent(
+                    executionId: request.executionId,
+                    sequence: 0,
+                    payload: .sessionBound(
+                        externalSessionId: externalSessionID
+                    )
+                )
+            )
+            let sessionID = try await fixture.db.pool.read { database in
+                try #require(
+                    try EngineExecutionRecord.fetchOne(
+                        database,
+                        key: request.executionId
+                    )?.sessionId
+                )
+            }
+            expectedAction = .resumeSession(
+                sessionId: sessionID,
+                externalSessionId: externalSessionID
+            )
+        }
+        let staticRed = try fixture.store
+            .recoverInterruptedEngineExecutions(
+                missionId: fixture.mission.id,
+                now: P1F1DCanonicalExecutionFixture.now
+                    .addingTimeInterval(9)
+            )
+        #expect(staticRed.scannedCount == 1)
+        #expect(staticRed.terminalReceipts.isEmpty)
+        #expect(staticRed.directives.map(\.action) == [expectedAction])
+
+        let fields = try fixture.fields()
+        let ledger = P1F1D069CallLedger()
+        let preAction = P1F1D069CleanupProbe(blocked: true)
+        let driver = P1F1D069CancelDriver(
+            ledger: ledger,
+            evidence: p1f1dCancelEvidence
+        )
+        let seed = try p1f1d069RecoverySeed(
+            fixture: fixture,
+            fields: fields,
+            driver: driver
+        )
+        let completions = EngineExecutionCompletionRegistryV1()
+        let active = EngineActiveExecutionRegistryV1()
+        let triggerName = try p1f1d069InstallActionAbort(
+            fixture: fixture,
+            request: request,
+            recoveryCase: recoveryCase,
+            ledger: ledger
+        )
+        let installedActionBlocker: Bool
+        switch recoveryCase {
+        case .prepareAndCommitProposal, .startPrepared:
+            installedActionBlocker = false
+        case .replayExecution, .resumeSession:
+            #expect(
+                try await active.register(
+                    executionId: request.executionId,
+                    cancelAndAwait: {}
+                ) == .installed
+            )
+            installedActionBlocker = true
+        }
+        let coordinator = try p1f1dCoordinator(
+            fixture: fixture,
+            registry: try p1f1d069RecoveryRegistry(
+                fixture: fixture,
+                fields: fields,
+                driver: driver,
+                ledger: ledger
+            ),
+            root: fixture.root.appendingPathComponent(key),
+            activeExecutions: active,
+            completionRegistry: completions,
+            transportSeedResolver: { candidate in
+                guard candidate.executionId == request.executionId else {
+                    throw EngineDispatchConflictErrorV1()
+                }
+                ledger.record("seed")
+                try await preAction.run()
+                return seed
+            }
+        )
+        let simultaneousEntry = P1F1DThreeWayBarrier()
+        let firstAttempt = Task {
+            await simultaneousEntry.wait()
+            return await p1f1d069RecoveryFailureLabel {
+                try await coordinator.recover(
+                    missionId: fixture.mission.id,
+                    now: P1F1DCanonicalExecutionFixture.now
+                        .addingTimeInterval(10)
+                )
+            }
+        }
+        let secondAttempt = Task {
+            await simultaneousEntry.wait()
+            return await p1f1d069RecoveryFailureLabel {
+                try await coordinator.recover(
+                    missionId: fixture.mission.id,
+                    now: P1F1DCanonicalExecutionFixture.now
+                        .addingTimeInterval(10)
+                )
+            }
+        }
+        await simultaneousEntry.wait()
+        await preAction.waitUntilAttemptCount(1)
+        for _ in 0..<1_000 { await Task.yield() }
+        #expect(await preAction.count() == 1)
+        #expect(ledger.count("seed") == 1)
+        await preAction.release()
+        let expectedFailure: String
+        switch recoveryCase {
+        case .prepareAndCommitProposal, .startPrepared:
+            expectedFailure = "database_action_failure"
+        case .replayExecution, .resumeSession:
+            expectedFailure = "active_registration_conflict"
+        }
+        #expect(await firstAttempt.value == expectedFailure)
+        #expect(await secondAttempt.value == expectedFailure)
+        #expect(await completions.snapshotCount() == 0)
+        #expect(
+            await active.snapshotCounts().live
+                == (installedActionBlocker ? 1 : 0)
+        )
+        #expect(await active.snapshotCounts().pending == 0)
+        #expect(await active.snapshotCounts().inFlight == 0)
+
+        try p1f1d069DropActionAbort(
+            fixture: fixture,
+            triggerName: triggerName
+        )
+        if installedActionBlocker {
+            try await active.remove(
+                executionId: request.executionId,
+                terminalReceipt: p1f1d069Receipt(
+                    executionId: request.executionId,
+                    reason: "action_blocker_cleanup"
+                )
+            )
+        }
+        #expect(await active.snapshotCounts().live == 0)
+
+        let retried = try await coordinator.recover(
+            missionId: fixture.mission.id,
+            now: P1F1DCanonicalExecutionFixture.now
+                .addingTimeInterval(11)
+        )
+        #expect(retried.scannedCount == 1)
+        #expect(retried.directives.isEmpty)
+        #expect(retried.terminalReceipts.count == 1)
+        #expect(
+            retried.terminalReceipts.first?.executionId
+                == request.executionId
+        )
+        #expect(await preAction.count() == 2)
+        #expect(ledger.count("seed") == 2)
+        #expect(
+            ledger.count("actionFault")
+                == (triggerName == nil ? 0 : 1)
+        )
+        #expect(
+            ledger.count("recoveryTransport")
+                == (recoveryCase == .prepareAndCommitProposal ? 0 : 1)
+        )
+        #expect(
+            ledger.count("makeAdapter")
+                == (recoveryCase == .prepareAndCommitProposal ? 0 : 1)
+        )
+        #expect(await completions.snapshotCount() == 0)
+        #expect(await active.snapshotCounts().live == 0)
+        #expect(await active.snapshotCounts().pending == 0)
+        #expect(await active.snapshotCounts().inFlight == 0)
+    }
+}
+
+@Suite(.serialized)
+struct ExecutionEngineConformanceTests {
+    @Test func p1f1_062DescriptorsTellCapabilitiesAndReplayTruth() throws {
+        let calls = P1F1D062CallLedger()
+        let modelProfile = p1f1dProfile(.anthropicAPI)
+        let modelDescriptor = p1f1dDescriptor(kind: .anthropicAPI)
+        let logicalDefinitions: [ToolDef] = [
+            .completeCard, .blockCard, .addProgressNote, .askUser,
+        ]
+        let contextRequest = try EngineContextResolveRequestV1(
+            campId: p1f1EngineCampID,
+            cardId: p1f1dCardID,
+            companionId: p1f1dSquadID,
+            contextJson: p1f1ContextGolden,
+            contextHash: p1f1ContextGoldenHash
+        )
+        let resolvedContext = try p1f1dContext()
+        let modelBindings = logicalDefinitions.map {
+            EngineContextToolBindingV1(
+                logicalName: $0.name,
+                providerVisibleName: $0.name
+            )
+        }
+        let modelVariant = EnginePreparedContextVariantV1(
+            request: contextRequest,
+            resolved: resolvedContext,
+            namespace: .modelLoop,
+            toolBindings: modelBindings
+        )
+        let cliVariant = EnginePreparedContextVariantV1(
+            request: contextRequest,
+            resolved: resolvedContext,
+            namespace: .ranchMCP,
+            toolBindings: modelBindings.map {
+                EngineContextToolBindingV1(
+                    logicalName: $0.logicalName,
+                    providerVisibleName:
+                        "mcp__ranchboard__\($0.logicalName)"
+                )
+            }
+        )
+        let capabilityPlan = EngineCapabilityToolPlanV1(
+            logicalDefinitions: logicalDefinitions,
+            modelLoopDefinitions: logicalDefinitions,
+            cliDefinitions: logicalDefinitions.map {
+                ToolDef(
+                    name: "mcp__ranchboard__\($0.name)",
+                    description: $0.description,
+                    inputSchema: $0.inputSchema
+                )
+            },
+            requiresWorkspaceWrite: false,
+            makeCapabilityTools: { _ in
+                calls.record("tool-maker")
+                return EngineBoundCapabilityToolsV1(
+                    logicalDefinitions: logicalDefinitions,
+                    capabilityTools: []
+                )
+            }
+        )
+        let preparedContext = EnginePreparedContextV1(
+            modelLoop: modelVariant,
+            cli: cliVariant,
+            profile: modelProfile,
+            contract: try OutcomeContractRef(
+                id: p1f1EngineContractID,
+                version: 1,
+                hash: p1f1EngineHashA
+            ),
+            companionId: p1f1dSquadID,
+            companionModel: "fixture-model",
+            companionModelPolicy: .pinned,
+            autonomy: .standard,
+            cardMaxTurns: 3,
+            cardTokenBudget: 731,
+            capabilityTools: capabilityPlan
+        )
+        let descriptorReplayScope = try EngineSessionScopeV1.derived(
+            campId: p1f1EngineCampID,
+            profileId: modelProfile.id,
+            descriptor: modelDescriptor,
+            engineKind: modelDescriptor.adapterId,
+            model: "fixture-model",
+            workspaceHash: p1f1EngineWorkspaceHash,
+            contract: preparedContext.contract
+        )
+        let workspaceRef = EngineWorkspaceRefV1(
+            reference: "squad-workspace.v1:\(p1f1dSquadID)",
+            hash: p1f1EngineWorkspaceHash
+        )
+        let workspaceRequest = try EngineWorkspaceResolveRequestV1(
+            cardId: p1f1dCardID,
+            campId: p1f1EngineCampID,
+            expectedWorkspace: workspaceRef
+        )
+        let seed = EngineExecutionTransportSeedV1(
+            context: preparedContext,
+            workspace: EnginePreparedWorkspaceClaimV1(
+                request: workspaceRequest,
+                workspace: workspaceRef
+            ),
+            baseRequiredCapabilities: [
+                .boardTerminal, .cancellation, .network,
+                .streamingProgress, .toolBridge, .usageMetering,
+                .workspaceRead,
+            ],
+            bridgeExecutableAuthority: nil,
+            boardSocketDirectoryAuthority: nil,
+            validateCodexManagedPolicy: { _ in
+                calls.record("codex-validator")
+            },
+            validateClaudeManagedPolicy: { _ in
+                calls.record("claude-validator")
+            },
+            claudeConfigDirectory: URL(fileURLWithPath: "/tmp"),
+            cliExecutableDirectory: URL(fileURLWithPath: "/tmp"),
+            resolveInitialModelLoopProvider: { _, _, _, _ in
+                calls.record("provider-resolver")
+                return try EngineModelLoopProviderAuthorityV1(
+                    profileId: modelProfile.id,
+                    effectiveModel: "fixture-model",
+                    makeProvider: {
+                        calls.record("provider-maker")
+                        return MockProvider(script: [])
+                    }
+                )
+            },
+            resolveRecoveryModelLoopProvider: { _, _, _ in
+                calls.record("recovery-provider-resolver")
+                throw P1F1D062UnexpectedCall.invoked
+            },
+            makeCliProcessDriver: {
+                calls.record("cli-driver")
+                throw P1F1D062UnexpectedCall.invoked
+            }
+        )
+
+        func makeFactory(
+            id: String,
+            kinds: Set<RuntimeProfileKind>,
+            helpRequirement: EngineAdapterHelpRequirementV1?
+        ) -> EngineAdapterFactoryV1 {
+            EngineAdapterFactoryV1(
+                adapterId: id,
+                adapterVersion: "1",
+                profileKinds: kinds,
+                helpRequirement: helpRequirement,
+                descriptor: { profile, help in
+                    p1f1dDescriptor(kind: profile.kind, help: help)
+                },
+                prepareRequest: { profile, help, receivedSeed in
+                    calls.record("prepare-\(id)")
+                    guard id == "agentloop.model-loop",
+                          profile == modelProfile,
+                          help == nil
+                    else { throw P1F1D062UnexpectedCall.invoked }
+                    return EngineAdapterPreparedRequestV1(
+                        descriptor: modelDescriptor,
+                        engineKind: modelDescriptor.adapterId,
+                        model: "fixture-model",
+                        budget: EngineExecutionBudgetV1(
+                            tokenLimit: 731,
+                            costMicrosLimit: 0,
+                            wallClockSeconds: 0
+                        ),
+                        context: receivedSeed.context.modelLoop,
+                        requiredCapabilities:
+                            receivedSeed.baseRequiredCapabilities,
+                        makeTransport: { _, _, workspace in
+                            calls.record("transport-\(id)")
+                            let bound = try receivedSeed.context
+                                .capabilityTools.makeCapabilityTools(
+                                    workspace.url
+                                )
+                            return try EngineExecutionTransportV1(
+                                contextRequest: contextRequest,
+                                workspaceRequest: workspaceRequest,
+                                boundCapabilityTools: bound,
+                                modelLoopDriver: P1F1DModelLoopDriver(),
+                                cliProcessDriver: nil,
+                                cliConfiguration: nil
+                            )
+                        }
+                    )
+                },
+                makeRecoveryTransport: { _, _, _, _, _, _ in
+                    calls.record("recovery-\(id)")
+                    throw P1F1D062UnexpectedCall.invoked
+                },
+                makeAdapter: { profile, runtime in
+                    calls.record("adapter-\(id)")
+                    guard id == "agentloop.model-loop",
+                          profile == modelProfile,
+                          p1f1dDescriptorsMatch(
+                            runtime.descriptor,
+                            modelDescriptor,
+                            replayScope: descriptorReplayScope
+                          ),
+                          runtime.boundCapabilityTools.logicalDefinitions
+                            == logicalDefinitions,
+                          runtime.boundCapabilityTools.capabilityTools.isEmpty
+                    else { throw P1F1D062UnexpectedCall.invoked }
+                    return P1F1DDescriptorAdapter(value: modelDescriptor)
+                }
+            )
+        }
+
+        let registry = try EngineAdapterRegistryV1(
+            factories: [
+                makeFactory(
+                    id: "agentloop.cli.claude",
+                    kinds: [.cliClaude],
+                    helpRequirement: try EngineAdapterHelpRequirementV1(
+                        kind: .cliClaude,
+                        command: "claude"
+                    )
+                ),
+                makeFactory(
+                    id: "agentloop.cli.codex",
+                    kinds: [.cliCodex],
+                    helpRequirement: try EngineAdapterHelpRequirementV1(
+                        kind: .cliCodex,
+                        command: "codex"
+                    )
+                ),
+                makeFactory(
+                    id: "agentloop.model-loop",
+                    kinds: [.anthropicAPI, .openAIAPI, .chatGPTOAuth],
+                    helpRequirement: nil
+                ),
+            ],
+            helpSnapshots: [
+                .cliCodex: try p1f1dHelp(.cliCodex),
+                .cliClaude: try p1f1dHelp(.cliClaude),
+            ]
+        )
+        let firstSelection = try registry.resolve(
+            profile: modelProfile,
+            requiredCapabilities: [.boardTerminal]
+        )
+        #expect(firstSelection.descriptor.adapterId == "agentloop.model-loop")
+        #expect(firstSelection.profile == modelProfile)
+        #expect(firstSelection.helpSnapshot == nil)
+        let prepared = try firstSelection.prepareRequest(seed)
+        #expect(prepared.engineKind == firstSelection.descriptor.adapterId)
+        #expect(prepared.model == "fixture-model")
+        #expect(
+            prepared.budget
+                == EngineExecutionBudgetV1(
+                    tokenLimit: 731,
+                    costMicrosLimit: 0,
+                    wallClockSeconds: 0
+                )
+        )
+        #expect(
+            prepared.requiredCapabilities == [
+                .boardTerminal, .cancellation, .network,
+                .streamingProgress, .toolBridge, .usageMetering,
+                .workspaceRead,
+            ]
+        )
+        let selectedWorkspace = try p1f1dWorkspace()
+        let selectedTransport = try prepared.makeTransport(
+            p1f1dRequest(kind: .anthropicAPI),
+            resolvedContext,
+            selectedWorkspace
+        )
+        #expect(
+            selectedTransport.boundCapabilityTools.logicalDefinitions
+                == logicalDefinitions
+        )
+        #expect(selectedTransport.boundCapabilityTools.capabilityTools.isEmpty)
+        _ = try firstSelection.makeAdapter(
+            EngineAdapterRuntimeV1(
+                descriptor: firstSelection.descriptor,
+                context: resolvedContext,
+                workspace: selectedWorkspace,
+                boundCapabilityTools:
+                    selectedTransport.boundCapabilityTools,
+                resolvedSessionRef: nil,
+                terminalSink: P1F1DTerminalRecorder(),
+                boardTerminalSink: P1F1DBoardTerminalRecorder(),
+                progressSink: P1F1DProgressRecorder(),
+                modelLoopDriver: try #require(
+                    selectedTransport.modelLoopDriver
+                ),
+                cliProcessDriver: nil,
+                cliConfiguration: nil
+            )
+        )
+        #expect(calls.count("prepare-agentloop.model-loop") == 1)
+        #expect(calls.count("transport-agentloop.model-loop") == 1)
+        #expect(calls.count("adapter-agentloop.model-loop") == 1)
+        #expect(calls.count("tool-maker") == 1)
+        #expect(calls.count("provider-resolver") == 0)
+        #expect(calls.count("provider-maker") == 0)
+        #expect(calls.count("cli-driver") == 0)
+        #expect(calls.count("codex-validator") == 0)
+        #expect(calls.count("claude-validator") == 0)
+        #expect(calls.count("prepare-agentloop.cli.codex") == 0)
+        #expect(calls.count("prepare-agentloop.cli.claude") == 0)
+        #expect(calls.count("adapter-agentloop.cli.codex") == 0)
+        #expect(calls.count("adapter-agentloop.cli.claude") == 0)
+        #expect(
+            registry.factories.map { factory in
+                "\(factory.adapterId)|\(factory.adapterVersion)|"
+                    + factory.profileKinds.map(\.rawValue).sorted()
+                        .joined(separator: ",")
+            } == [
+                "agentloop.cli.claude|1|cli_claude",
+                "agentloop.cli.codex|1|cli_codex",
+                "agentloop.model-loop|1|anthropic_api,chatgpt_oauth,openai_api",
+            ]
+        )
+
+        let productionRegistry = try p1f1dProductionRegistry()
+        let allCapabilities = EngineCapabilityV1.allCases
+        for kind in RuntimeProfileKind.allCases {
+            let profile = p1f1dProfile(kind)
+            let requiredCapabilities = (kind.isCLI
+                ? allCapabilities
+                : allCapabilities.filter { $0 != .sessionResume })
+                .sorted { $0.rawValue < $1.rawValue }
+            let selection = try productionRegistry.resolve(
+                profile: profile,
+                requiredCapabilities: requiredCapabilities
+            )
+            let resolvedDescriptor = selection.descriptor
+            let expectedID = kind.isCLI
+                ? (kind == .cliCodex
+                    ? "agentloop.cli.codex" : "agentloop.cli.claude")
+                : "agentloop.model-loop"
+            #expect(resolvedDescriptor.adapterId == expectedID)
+            #expect(resolvedDescriptor.adapterVersion == "1")
+            #expect(resolvedDescriptor.profileKind == kind)
+            let productionAdapter = try selection.makeAdapter(
+                p1f1dAdapterRuntime(
+                    profile: profile,
+                    descriptor: resolvedDescriptor
+                )
+            )
+            let adapterDescriptor = try productionAdapter.descriptor(
+                profile: profile
+            )
+            #expect(adapterDescriptor.adapterId == resolvedDescriptor.adapterId)
+            #expect(adapterDescriptor.adapterVersion == resolvedDescriptor.adapterVersion)
+            #expect(adapterDescriptor.profileKind == resolvedDescriptor.profileKind)
+            for capability in allCapabilities {
+                let expected: EngineCapabilitySupportV1 =
+                    !kind.isCLI && capability == .sessionResume
+                        ? .unsupported : .supported
+                #expect(resolvedDescriptor.support(for: capability) == expected)
+                #expect(adapterDescriptor.support(for: capability) == expected)
+            }
+            let scope = try EngineSessionScopeV1.derived(
+                campId: p1f1EngineCampID,
+                profileId: profile.id,
+                descriptor: resolvedDescriptor,
+                engineKind: resolvedDescriptor.adapterId,
+                model: "fixture-model",
+                workspaceHash: p1f1EngineWorkspaceHash,
+                contract: OutcomeContractRef(
+                    id: p1f1EngineContractID,
+                    version: 1,
+                    hash: p1f1EngineHashA
+                )
+            )
+            #expect(
+                resolvedDescriptor.executionReplayClass(for: scope)
+                    == .nonReplayable
+            )
+        }
+
+        let degraded = try p1f1dProductionRegistry(
+            codexHelp: p1f1dHelp(.cliCodex, dropping: "--json")
+        )
+        let degradedSelection = try degraded.resolve(
+            profile: p1f1dProfile(.cliCodex),
+            requiredCapabilities: [.boardTerminal]
+        )
+        #expect(
+            degradedSelection.descriptor.support(for: .streamingProgress)
+                == .unsupported
+        )
+        #expect(
+            degradedSelection.descriptor.support(for: .usageMetering)
+                == .unsupported
+        )
+        #expect(
+            degradedSelection.descriptor.support(for: .boardTerminal)
+                == .supported
+        )
+        p1f1dExpectError(
+            EngineAdapterSelectionErrorV1.unsupportedCapability(
+                .streamingProgress
+            )
+        ) {
+            _ = try degraded.resolve(
+                profile: p1f1dProfile(.cliCodex),
+                requiredCapabilities: [.streamingProgress]
+            )
+        }
+    }
+
+    @Test func p1f1_063CompletedBlockedFailedCanceledMatrix() async throws {
+        let router = p1f1dRouter()
+        let completedEvent = try await router.routeTerminal(
+            .completed(handoff: p1f1dHandoff()),
+            artifacts: [p1f1dArtifact()]
+        )
+        let completed = try p1f1dTerminal(completedEvent)
+        #expect(completed.sequence == 4)
+        #expect(completed.terminalKind == .completed)
+        #expect(completed.terminalSubtype == nil)
+        #expect(completed.payload == .completed(handoff: p1f1dHandoff()))
+        #expect(completed.artifacts == [p1f1dArtifact()])
+        #expect(
+            completed.terminalIdempotencyKey
+                == "engine.terminal.v1:\(p1f1dExecutionID):4"
+        )
+        #expect(
+            try await router.state()
+                == .accepted(
+                    sequence: 4,
+                    terminalIdempotencyKey:
+                        "engine.terminal.v1:\(p1f1dExecutionID):4"
+                )
+        )
+
+        let matrix: [(
+            EngineTerminalIntentV1,
+            EngineTerminalKindV1,
+            EngineTerminalSubtypeV1?,
+            EngineTerminalPayloadV1
+        )] = [
+            (
+                .blocked(subtype: .ordinary, reasonCode: "blocked", detail: "ordinary"),
+                .blocked, .ordinary,
+                .blocked(reasonCode: "blocked", detail: "ordinary")
+            ),
+            (
+                .blocked(
+                    subtype: .engineProtocolError,
+                    reasonCode: "engine_protocol_error",
+                    detail: "safe protocol"
+                ),
+                .blocked, .engineProtocolError,
+                .blocked(
+                    reasonCode: "engine_protocol_error",
+                    detail: "safe protocol"
+                )
+            ),
+            (
+                .blocked(
+                    subtype: .externalEffectUnknown,
+                    reasonCode: "engine_external_effect_unknown",
+                    detail: "safe unknown"
+                ),
+                .blocked, .externalEffectUnknown,
+                .blocked(
+                    reasonCode: "engine_external_effect_unknown",
+                    detail: "safe unknown"
+                )
+            ),
+            (
+                .needsHumanInput(kind: .choice, prompt: "Choose", options: ["A", "B"]),
+                .blocked, .needsHumanInput,
+                .needsHumanInput(
+                    kind: .choice,
+                    prompt: "Choose",
+                    options: ["A", "B"]
+                )
+            ),
+            (
+                .failed(code: "provider_failed", detail: "safe failure"),
+                .failed, nil,
+                .failed(code: "provider_failed", detail: "safe failure")
+            ),
+            (
+                .canceled(reasonCode: "canceled", detail: "safe cancel"),
+                .canceled, nil,
+                .canceled(reasonCode: "canceled", detail: "safe cancel")
+            ),
+        ]
+        for (offset, row) in matrix.enumerated() {
+            let matrixRouter = p1f1dRouter(10 + offset)
+            let event = try await matrixRouter.routeTerminal(row.0, artifacts: [])
+            let proposal = try p1f1dTerminal(event)
+            #expect(proposal.terminalKind == row.1)
+            #expect(proposal.terminalSubtype == row.2)
+            #expect(proposal.payload == row.3)
+            #expect(proposal.artifacts.isEmpty)
+
+            let artifactRouter = p1f1dRouter(40 + offset)
+            await p1f1dExpectError(
+                EngineTerminalProposalValidationErrorV1()
+            ) {
+                _ = try await artifactRouter.routeTerminal(
+                    row.0,
+                    artifacts: [p1f1dArtifact()]
+                )
+            }
+            #expect(try await artifactRouter.state() == .open)
+        }
+
+        let invalidRouter = p1f1dRouter(30)
+        await p1f1dExpectError(EngineTerminalProposalValidationErrorV1()) {
+            _ = try await invalidRouter.routeTerminal(
+                .failed(code: "failed", detail: "safe"),
+                artifacts: [p1f1dArtifact()]
+            )
+        }
+
+        let commitCount = P1F1DLockedCounter()
+        let duplicateSink = EngineAdapterTerminalRouterSinkV1(
+            router: router,
+            manifestResolver: { _ in [] },
+            commit: { _ in commitCount.increment() }
+        )
+        await p1f1dExpectError(
+            EngineDuplicateTerminalErrorV1(executionId: p1f1dExecutionID)
+        ) {
+            try await duplicateSink.submit(
+                .failed(code: "late", detail: "must not commit")
+            )
+        }
+        #expect(commitCount.value == 0)
+    }
+
+    @Test func p1f1_064EOFParserAndMissingTerminatorFailClosed() async throws {
+        let codex = CodexCliEventParserV1()
+        let bound = try codex.parse(
+            line: #"{"type":"thread.started","thread_id":"codex-thread-1"}"#
+        )
+        #expect(bound == [.sessionBound(externalSessionId: "codex-thread-1")])
+
+        let codexKnown: [(String, [CliProviderEventV1])] = [
+            (#"{"type":"turn.started"}"#, []),
+            (
+                #"{"type":"item.completed","item":{"id":"i1","type":"agent_message","text":"hello"}}"#,
+                [.progress(message: "hello")]
+            ),
+            (
+                #"{"type":"item.completed","item":{"id":"i2","type":"mcp_tool_call","server":"ranchboard","tool":"progress_note","status":"completed"}}"#,
+                [.toolActivity(name: "ranchboard.progress_note")]
+            ),
+            (
+                #"{"type":"turn.completed","usage":{"input_tokens":7,"cached_input_tokens":3,"output_tokens":5}}"#,
+                [.usage(EngineUsageV1(inputTokens: 7, outputTokens: 5, cacheReadTokens: 3, costMicros: 0))]
+            ),
+            (#"{"type":"error","message":"provider-safe"}"#, [.providerError]),
+        ]
+        for (line, expected) in codexKnown {
+            #expect(try codex.parse(line: line) == expected)
+        }
+
+        let claudeSession = "00000000-0000-4000-8000-000000000164"
+        let claude = try ClaudeCliEventParserV1(
+            expectedSessionId: claudeSession
+        )
+        #expect(
+            try claude.parse(
+                line: #"{"type":"system","subtype":"init","session_id":"00000000-0000-4000-8000-000000000164"}"#
+            ) == [.sessionBound(externalSessionId: claudeSession)]
+        )
+        #expect(
+            try claude.parse(
+                line: #"{"type":"assistant","session_id":"00000000-0000-4000-8000-000000000164","message":{"role":"assistant","content":[{"type":"text","text":"work"}],"usage":{"input_tokens":11,"output_tokens":13,"cache_read_input_tokens":2}}}"#
+            ) == [
+                .progress(message: "work"),
+                .usage(EngineUsageV1(inputTokens: 11, outputTokens: 13, cacheReadTokens: 2, costMicros: 0)),
+            ]
+        )
+        #expect(
+            try claude.parse(
+                line: #"{"type":"result","subtype":"success","is_error":false,"result":"done","session_id":"00000000-0000-4000-8000-000000000164","total_cost_usd":1.25,"usage":{"input_tokens":17,"output_tokens":19,"cache_read_input_tokens":4}}"#
+            ) == [
+                .usage(EngineUsageV1(inputTokens: 17, outputTokens: 19, cacheReadTokens: 4, costMicros: 1_250_000)),
+                .result,
+            ]
+        )
+        #expect(
+            try claude.parse(
+                line: #"{"type":"result","subtype":"error","is_error":true,"result":"provider-safe","session_id":"00000000-0000-4000-8000-000000000164","total_cost_usd":0,"usage":{"input_tokens":0,"output_tokens":0,"cache_read_input_tokens":0}}"#
+            ) == [.providerError]
+        )
+
+        let rejected = [
+            "",
+            "not-json",
+            #"{"type":"unknown"}"#,
+            #"{"type":"turn.started","extra":true}"#,
+            #"{"type":"thread.started"}"#,
+            #"{"type":"turn.completed","usage":{"input_tokens":-1,"cached_input_tokens":0,"output_tokens":0}}"#,
+            #"{"type":"turn.completed","usage":{"input_tokens":9223372036854775808,"cached_input_tokens":0,"output_tokens":0}}"#,
+        ]
+        for line in rejected {
+            p1f1dExpectAnyError { _ = try codex.parse(line: line) }
+        }
+        let claudeRejected = [
+            "",
+            "not-json",
+            #"{"type":"unknown"}"#,
+            #"{"type":"system","subtype":"init","session_id":"00000000-0000-4000-8000-000000000164","extra":true}"#,
+            #"{"type":"system","session_id":"00000000-0000-4000-8000-000000000164"}"#,
+            #"{"type":"system","subtype":"init","session_id":"00000000-0000-4000-8000-000000000999"}"#,
+            #"{"type":"assistant","session_id":"00000000-0000-4000-8000-000000000164","message":{"role":"assistant","content":[{"type":"text","text":"work"}],"usage":{"input_tokens":-1,"output_tokens":0,"cache_read_input_tokens":0}}}"#,
+            #"{"type":"assistant","session_id":"00000000-0000-4000-8000-000000000164","message":{"role":"assistant","content":[{"type":"text","text":"work"}],"usage":{"input_tokens":9223372036854775808,"output_tokens":0,"cache_read_input_tokens":0}}}"#,
+            #"{"type":"assistant","session_id":"00000000-0000-4000-8000-000000000164","message":{"role":"assistant","content":[{"type":"text","text":"work","extra":true}],"usage":{"input_tokens":1,"output_tokens":1,"cache_read_input_tokens":0}}}"#,
+            #"{"type":"result","subtype":"success","is_error":false,"result":"done","session_id":"00000000-0000-4000-8000-000000000164","total_cost_usd":0.0000001,"usage":{"input_tokens":1,"output_tokens":1,"cache_read_input_tokens":0}}"#,
+            #"{"type":"result","subtype":"success","is_error":false,"result":"done","session_id":"00000000-0000-4000-8000-000000000164","total_cost_usd":1e30,"usage":{"input_tokens":1,"output_tokens":1,"cache_read_input_tokens":0}}"#,
+            #"{"type":"result","subtype":"success","is_error":false,"result":"done","session_id":"00000000-0000-4000-8000-000000000164","usage":{"input_tokens":1,"output_tokens":1,"cache_read_input_tokens":0}}"#,
+            #"{"type":"result","subtype":"success","is_error":false,"result":"done","session_id":"00000000-0000-4000-8000-000000000164","total_cost_usd":1.25,"usage":{"input_tokens":1,"output_tokens":1,"cache_read_input_tokens":0,"extra":0}}"#,
+            #"{"type":"result","subtype":"success","is_error":false,"result":"done","session_id":"00000000-0000-4000-8000-000000000999","total_cost_usd":1.25,"usage":{"input_tokens":1,"output_tokens":1,"cache_read_input_tokens":0}}"#,
+        ]
+        for line in claudeRejected {
+            p1f1dExpectAnyError { _ = try claude.parse(line: line) }
+        }
+
+        let terminalRecorder = P1F1DTerminalRecorder()
+        let driver = P1F1DProcessDriver(
+            frames: [
+                .stdoutLine(#"{"type":"thread.started","thread_id":"codex-thread-eof"}"#),
+                .stdoutLine(#"{"type":"turn.started"}"#),
+                .exited(0),
+            ],
+            recorder: P1F1DLaunchRecorder(),
+            cancelEvidence: p1f1dCancelEvidence
+        )
+        let adapter = try p1f1dAdapter(driver: driver, terminal: terminalRecorder)
+        let eofRequest = try p1f1dRequest()
+        for try await _ in adapter.execute(request: eofRequest) {}
+        let terminalIntents = await terminalRecorder.snapshot()
+        #expect(terminalIntents.count == 1)
+        guard case let .blocked(subtype, reasonCode, _) = terminalIntents.first else {
+            Issue.record("EOF without Board terminal did not fail closed")
+            return
+        }
+        #expect(subtype == .engineProtocolError)
+        #expect(reasonCode == "engine_protocol_error")
+    }
+
+    @Test func p1f1_065CancellationCleansProcessAndCommitsOnce() async throws {
+        let gateHarness = try P1F1D065MechanicsHarness(label: "gate")
+        var gateRemovalAllowed = true
+        defer {
+            if gateRemovalAllowed {
+                do { try gateHarness.removeChecked() }
+                catch { Issue.record(error) }
+            } else {
+                Issue.record("retained 065 gate fixture: \(gateHarness.root.path)")
+            }
+        }
+
+        let productionExecutionId =
+            "00000000-0000-4000-8000-000000000265"
+        let productionCleanup = try gateHarness.makeCleanupAuthority(
+            "production-signature-cleanup.json"
+        )
+        let productionRequest = try gateHarness.request(
+            executionId: productionExecutionId,
+            arguments: ["-c", "exit 0"],
+            token: "2",
+            cleanupAuthorities: [productionCleanup.authority]
+        )
+        let productionRegistry = ShellProcessRegistry()
+        let productionBackend = try CliProcessBackend(
+            pipeDrainGrace: .seconds(1),
+            registry: productionRegistry,
+            processInspector: gateHarness.processInspector
+        )
+        do {
+            for try await _ in productionBackend.launch(productionRequest) {}
+            Issue.record("production signature gate accepted unsigned fixture")
+        } catch is EngineContextValidationErrorV1 {}
+        #expect(
+            !FileManager.default.fileExists(atPath: productionCleanup.url.path)
+        )
+        #expect(
+            !FileManager.default.fileExists(
+                atPath: try gateHarness.socketURL(
+                    executionId: productionExecutionId
+                ).path
+            )
+        )
+        #expect(productionRegistry.activeCount == 0)
+        #expect(gateHarness.processInspector.effectSnapshot.snapshotCalls == 0)
+        #expect(gateHarness.processInspector.effectSnapshot.signalCount == 0)
+
+        let rejectedExecutionId =
+            "00000000-0000-4000-8000-000000000365"
+        let rejectedCleanup = try gateHarness.makeCleanupAuthority(
+            "injected-signature-cleanup.json"
+        )
+        let rejectedRequest = try gateHarness.request(
+            executionId: rejectedExecutionId,
+            arguments: ["-c", "exit 0"],
+            token: "3",
+            cleanupAuthorities: [rejectedCleanup.authority]
+        )
+        let rejectedRegistry = ShellProcessRegistry()
+        let rejectedRevalidator = P1F1D065SignatureRevalidator(
+            expectedCLI: gateHarness.executableAuthority,
+            expectedBoardBridge: gateHarness.bridgeAuthority,
+            injectedFailure: .cli
+        )
+        let rejectedBackend = try p1f1d065GateBackend(
+            harness: gateHarness,
+            registry: rejectedRegistry,
+            revalidator: rejectedRevalidator
+        )
+        do {
+            for try await _ in rejectedBackend.launch(rejectedRequest) {}
+            Issue.record("throwing signature gate launched controlled fixture")
+        } catch let error as P1F1D065SignatureFixtureError {
+            #expect(error == .injected(.cli))
+        }
+        #expect(rejectedRevalidator.snapshot() == [.cli])
+        #expect(
+            !FileManager.default.fileExists(atPath: rejectedCleanup.url.path)
+        )
+        #expect(
+            !FileManager.default.fileExists(
+                atPath: try gateHarness.socketURL(
+                    executionId: rejectedExecutionId
+                ).path
+            )
+        )
+        #expect(rejectedRegistry.activeCount == 0)
+        #expect(gateHarness.processInspector.effectSnapshot.snapshotCalls == 0)
+        #expect(gateHarness.processInspector.effectSnapshot.signalCount == 0)
+
+        let missingImageGate = P1F1D065SynchronousGate()
+        let cleanupPublicationGate = P1F1D065SynchronousGate()
+        let abortHarness = try P1F1D065MechanicsHarness(
+            label: "pre-registration-abort",
+            missingImageGate: missingImageGate
+        )
+        defer { abortHarness.remove() }
+        let abortCleanup = try abortHarness.makeCleanupAuthority(
+            "missing-image-config.json"
+        )
+        let abortExecutionId =
+            "00000000-0000-4000-8000-000000000465"
+        let abortRequest = try abortHarness.request(
+            executionId: abortExecutionId,
+            arguments: [
+                "-c",
+                ": > \"$1\"; while :; do :; done",
+                "p1f1d-065-resume-failure",
+                abortHarness.root.appendingPathComponent("resume-ready").path,
+            ],
+            token: "4",
+            cleanupAuthorities: [abortCleanup.authority],
+            progressSink: P1F1D065BlockingProgressSink(
+                gate: cleanupPublicationGate
+            )
+        )
+        let abortSocketURL = try abortHarness.socketURL(
+            executionId: abortExecutionId
+        )
+        let abortRegistry = ShellProcessRegistry()
+        let abortRevalidator = P1F1D065SignatureRevalidator(
+            expectedCLI: abortHarness.executableAuthority,
+            expectedBoardBridge: abortHarness.bridgeAuthority
+        )
+        let abortBackend = try p1f1d065GateBackend(
+            harness: abortHarness,
+            registry: abortRegistry,
+            revalidator: abortRevalidator
+        )
+        let expectedAbortError = CliProcessBackendError.processLaunchFailed(
+            "injected resume dispatch failure"
+        )
+        let abortStream = abortBackend.launch(abortRequest)
+        let streamWaiter = Task { () throws -> Void in
+            defer {
+                missingImageGate.complete(.stream)
+                cleanupPublicationGate.complete(.stream)
+            }
+            for try await _ in abortStream {}
+        }
+        let publicationProbe = P1F1D065PublicationProbe()
+        let cancellationWaiter = Task {
+            defer {
+                missingImageGate.complete(.cancellation)
+                cleanupPublicationGate.complete(.cancellation)
+            }
+            let failure: (any Error)?
+            do {
+                _ = try await abortBackend.cancel(
+                    executionId: abortExecutionId
+                )
+                failure = nil
+            } catch {
+                failure = error
+            }
+            let observation = p1f1d065ObserveCleanupPublication(
+                error: failure,
+                expectedError: expectedAbortError,
+                harness: abortHarness,
+                cleanupURL: abortCleanup.url,
+                socketURL: abortSocketURL,
+                registry: abortRegistry
+            )
+            publicationProbe.record(observation)
+            return observation
+        }
+
+        switch await missingImageGate.waitUntilEnteredOrCompleted() {
+        case .entered:
+            break
+        case .completed(.stream):
+            try await streamWaiter.value
+            throw EngineContextValidationErrorV1()
+        case .completed(.cancellation):
+            let observation = await cancellationWaiter.value
+            if observation.expectedFailure { throw expectedAbortError }
+            throw EngineContextValidationErrorV1()
+        case .completed(.reader):
+            throw EngineContextValidationErrorV1()
+        }
+        let abortClient = try P1F1D065SocketClient(
+            path: abortSocketURL.path
+        )
+        defer {
+            abortClient.close()
+            missingImageGate.release()
+            cleanupPublicationGate.release()
+        }
+        try abortClient.send([
+            "cardId": .string(p1f1EngineCardID),
+            "token": .string(String(repeating: "4", count: 64)),
+            "type": "hello",
+        ])
+        guard let helloLine = try abortClient.readLine(),
+              try JSONValue.decoded(from: helloLine)["type"]?.stringValue
+                == "hello_ok"
+        else { throw EngineContextValidationErrorV1() }
+        try abortClient.send([
+            "arguments": ["text": "hold cleanup publication"],
+            "cardId": .string(p1f1EngineCardID),
+            "id": "p1f1d-065-cleanup-publication",
+            "name": "add_progress_note",
+            "type": "tool_call",
+        ])
+        let resultReader = Task { () throws -> Void in
+            defer { cleanupPublicationGate.complete(.reader) }
+            while try abortClient.readLine() != nil {}
+        }
+        switch await cleanupPublicationGate.waitUntilEnteredOrCompleted() {
+        case .entered:
+            break
+        case .completed(.stream):
+            abortClient.interruptRead()
+            try await resultReader.value
+            try await streamWaiter.value
+            throw EngineContextValidationErrorV1()
+        case .completed(.cancellation):
+            abortClient.interruptRead()
+            try await resultReader.value
+            let observation = await cancellationWaiter.value
+            if observation.expectedFailure { throw expectedAbortError }
+            throw EngineContextValidationErrorV1()
+        case .completed(.reader):
+            try await resultReader.value
+            throw EngineContextValidationErrorV1()
+        }
+        missingImageGate.release()
+        let publishedBeforeCleanup = publicationProbe.snapshot != nil
+        cleanupPublicationGate.release()
+        try await resultReader.value
+        let publicationObservation = await cancellationWaiter.value
+        let streamObservedExpectedFailure: Bool
+        do {
+            try await streamWaiter.value
+            streamObservedExpectedFailure = false
+        } catch let error as CliProcessBackendError {
+            streamObservedExpectedFailure = error == expectedAbortError
+        } catch {
+            streamObservedExpectedFailure = false
+        }
+        abortClient.close()
+        #expect(
+            !publishedBeforeCleanup
+                && streamObservedExpectedFailure
+                && publicationObservation
+                    == P1F1D065CleanupPublicationObservation(
+                        expectedFailure: true,
+                        cleanupRemoved: true,
+                        socketRemoved: true,
+                        registryEmpty: true,
+                        directoryClose: .closed
+                    ),
+            "065 cleanup-publication: pre-registration failure became visible before socket/config/registry cleanup and checked authority close"
+        )
+        #expect(
+            abortHarness.processInspector.signalSnapshot
+                == [SIGCONT, SIGKILL, SIGCONT]
+        )
+
+        let gateRevalidator = P1F1D065SignatureRevalidator(
+            expectedCLI: gateHarness.executableAuthority,
+            expectedBoardBridge: gateHarness.bridgeAuthority
+        )
+        let gateRegistry = ShellProcessRegistry()
+        let gateBackend = try p1f1d065GateBackend(
+            harness: gateHarness,
+            registry: gateRegistry,
+            revalidator: gateRevalidator
+        )
+        let gateRequest = try gateHarness.request(
+            executionId: "00000000-0000-4000-8000-000000000065",
+            arguments: [
+                "-c",
+                "trap '' TERM; : > \"$1\"; while :; do :; done",
+                "p1f1d-065-cold-gate",
+                gateHarness.root.appendingPathComponent("cold-ready").path,
+            ],
+            token: "5"
+        )
+        let coldSocketURL = try gateHarness.socketURL(executionId: gateRequest.executionId)
+        let coldIdentity = P1F1D065ColdIdentity(
+            fixtureId: UUID(), executionId: gateRequest.executionId,
+            rootPath: gateHarness.root.path
+        )
+        try gateHarness.processInspector.configureColdDiagnostics(coldIdentity)
+        p1f1d065ColdLog(coldIdentity, "fixture-root=\(coldIdentity.rootPath)")
+        p1f1d065ColdLog(coldIdentity, "launch-called")
+        gateRemovalAllowed = false
+        let coldGateStream = gateBackend.launch(gateRequest)
+        let coldGateReadyURL = gateHarness.root.appendingPathComponent(
+            "cold-ready"
+        )
+        let coldGateReadyDeadline = ContinuousClock.now.advanced(
+            by: .seconds(3)
+        )
+        p1f1d065ColdLog(coldIdentity, "launch-returned")
+        let report = await p1f1d065RunOwnedColdStream(
+            stream: coldGateStream, backend: gateBackend,
+            executionId: gateRequest.executionId, identity: coldIdentity
+        ) {
+            p1f1d065ColdLog(coldIdentity, "readiness-start observed=\(FileManager.default.fileExists(atPath: coldGateReadyURL.path))")
+            defer {
+                p1f1d065ColdLog(coldIdentity, "readiness-end observed=\(FileManager.default.fileExists(atPath: coldGateReadyURL.path))")
+            }
+            while !FileManager.default.fileExists(atPath: coldGateReadyURL.path),
+                  ContinuousClock.now < coldGateReadyDeadline
+            {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            guard FileManager.default.fileExists(atPath: coldGateReadyURL.path)
+            else {
+                throw P1F1D065MechanicsFixtureError.coldGateReadinessTimedOut
+            }
+        }
+        let assessment = p1f1d065AssessColdCleanup(
+            report: report, harness: gateHarness, registry: gateRegistry,
+            socketURL: coldSocketURL, executionId: gateRequest.executionId,
+            removalAllowed: &gateRemovalAllowed
+        )
+        if assessment.primary != nil || !assessment.cleanupFailures.isEmpty {
+            throw assessment
+        }
+        let gateEvidence = try report.cleanup.cancellation.get()
+        let gateFrames = try report.cleanup.stream.get()
+        #expect(gateEvidence.termSent)
+        #expect(gateEvidence.stdoutEOF && gateEvidence.stderrEOF)
+        #expect(gateEvidence.childReaped)
+        #expect(gateFrames.contains { if case .exited = $0 { return true }; return false })
+        #expect(gateRevalidator.snapshot() == [.cli, .boardBridge])
+        #expect(gateRegistry.activeCount == 0)
+
+        let mainHarness = try P1F1D065MechanicsHarness(label: "main")
+        defer { mainHarness.remove() }
+        let mainRevalidator = P1F1D065SignatureRevalidator(
+            expectedCLI: mainHarness.executableAuthority,
+            expectedBoardBridge: mainHarness.bridgeAuthority
+        )
+        let mainRegistry = ShellProcessRegistry()
+        let backend = try CliProcessBackend(
+            pipeDrainGrace: .seconds(1),
+            registry: mainRegistry,
+            processInspector: mainHarness.processInspector,
+            codeSignatureRevalidator: mainRevalidator
+        )
+        let frames = P1F1DFrameRecorder()
+        let request = try mainHarness.request(
+            executionId: p1f1dExecutionID,
+            arguments: [
+                "-c",
+                "trap '' TERM; printf 'p1f1d-ready\\n'; printf 'p1f1d-drain\\n' >&2; while :; do :; done",
+            ],
+            token: "6"
+        )
+        let consumer = Task {
+            do {
+                for try await frame in backend.launch(request) {
+                    await frames.append(frame)
+                }
+                await frames.finish()
+            } catch {
+                await frames.finish(error: error)
+            }
+        }
+        let readyDeadline = ContinuousClock.now.advanced(by: .seconds(3))
+        while true {
+            let sawReady = await frames.sawStdout("p1f1d-ready")
+            let streamEnded = await frames.ended()
+            if sawReady || streamEnded || ContinuousClock.now >= readyDeadline {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+
+        let router = p1f1dRouter(50)
+        let commits = P1F1DLockedCounter()
+        let sink = EngineAdapterTerminalRouterSinkV1(
+            router: router,
+            manifestResolver: { _ in [] },
+            commit: { _ in commits.increment() }
+        )
+        let cancelStarted = ContinuousClock.now
+        async let terminalOutcome: P1F1DConcurrentTerminalOutcome = {
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return .duplicate }
+            return await p1f1dConcurrentSubmit {
+                try await sink.submit(
+                    .failed(
+                        code: "provider",
+                        detail: "safe terminal won"
+                    )
+                )
+            }
+        }()
+        let evidence = try await backend.cancel(
+            executionId: p1f1dExecutionID
+        )
+        let winner = await terminalOutcome
+        let cancelElapsed = cancelStarted.duration(to: .now)
+        await consumer.value
+
+        #expect(await frames.sawStdout("p1f1d-ready"))
+        #expect(await frames.failure() == nil)
+        #expect(evidence.pid > 0)
+        #expect(evidence.processGroupID == evidence.pid)
+        #expect(evidence.termSent)
+        #expect(evidence.killSent)
+        #expect(evidence.stdoutEOF)
+        #expect(evidence.stderrEOF)
+        #expect(evidence.childReaped)
+        #expect(cancelElapsed >= .seconds(4.75))
+        #expect(cancelElapsed < .seconds(9))
+        let drained = await frames.snapshot()
+        #expect(drained.contains(.stdoutLine("p1f1d-ready")))
+        #expect(drained.contains { frame in
+            guard case let .stderr(data) = frame else { return false }
+            return String(decoding: data, as: UTF8.self)
+                .contains("p1f1d-drain")
+        })
+        #expect(drained.contains { frame in
+            if case .exited = frame { return true }
+            return false
+        })
+        #expect(winner == .committed)
+        await p1f1dExpectError(
+            EngineDuplicateTerminalErrorV1(executionId: p1f1dExecutionID)
+        ) {
+            try await sink.submit(
+                .canceled(
+                    reasonCode: "engine_canceled",
+                    detail: "safe proven cancellation lost the race"
+                )
+            )
+        }
+        #expect(commits.value == 1)
+        #expect(mainRevalidator.snapshot() == [.cli, .boardBridge])
+        #expect(mainRegistry.activeCount == 0)
+        #expect(mainHarness.processInspector.effectSnapshot.snapshotCalls > 0)
+        #expect(mainHarness.processInspector.effectSnapshot.signalCount > 0)
+    }
+
+    @Test func p1f1_065ColdGateForcedFailureStillJoinsCleanup() async throws {
+        let harness = try P1F1D065MechanicsHarness(label: "cold-error")
+        var removalAllowed = true
+        defer {
+            if removalAllowed {
+                do { try harness.removeChecked() }
+                catch { Issue.record(error) }
+            } else {
+                Issue.record("retained 065 cold-error fixture: \(harness.root.path)")
+            }
+        }
+        let registry = ShellProcessRegistry()
+        let revalidator = P1F1D065SignatureRevalidator(
+            expectedCLI: harness.executableAuthority,
+            expectedBoardBridge: harness.bridgeAuthority
+        )
+        let backend = try p1f1d065GateBackend(
+            harness: harness, registry: registry, revalidator: revalidator
+        )
+        let request = try harness.request(
+            executionId: "00000000-0000-4000-8000-000000000865",
+            arguments: [
+                "-c",
+                "trap '' TERM; : > \"$1\"; while :; do :; done",
+                "p1f1d-065-cold-gate",
+                harness.root.appendingPathComponent("cold-ready").path,
+            ],
+            token: "8"
+        )
+        let socketURL = try harness.socketURL(executionId: request.executionId)
+        let identity = P1F1D065ColdIdentity(
+            fixtureId: UUID(), executionId: request.executionId,
+            rootPath: harness.root.path
+        )
+        try harness.processInspector.configureColdDiagnostics(identity)
+        p1f1d065ColdLog(identity, "fixture-root=\(identity.rootPath)")
+        p1f1d065ColdLog(identity, "launch-called")
+        removalAllowed = false
+        let stream = backend.launch(request)
+        let readyURL = harness.root.appendingPathComponent("cold-ready")
+        let readyDeadline = ContinuousClock.now.advanced(by: .seconds(3))
+        p1f1d065ColdLog(identity, "launch-returned")
+        let report = await p1f1d065RunOwnedColdStream(
+            stream: stream, backend: backend, executionId: request.executionId,
+            identity: identity
+        ) {
+            p1f1d065ColdLog(identity, "readiness-start observed=\(FileManager.default.fileExists(atPath: readyURL.path)) successfulContinuations=\(harness.processInspector.signalObservations().filter { $0.signal == SIGCONT && $0.result == 0 }.count)")
+            defer {
+                p1f1d065ColdLog(identity, "readiness-end observed=\(FileManager.default.fileExists(atPath: readyURL.path)) successfulContinuations=\(harness.processInspector.signalObservations().filter { $0.signal == SIGCONT && $0.result == 0 }.count)")
+            }
+            while (!FileManager.default.fileExists(atPath: readyURL.path)
+                || !harness.processInspector.signalObservations().contains(where: {
+                    $0.signal == SIGCONT && $0.result == 0
+                })),
+                  ContinuousClock.now < readyDeadline
+            {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            guard FileManager.default.fileExists(atPath: readyURL.path) else {
+                throw P1F1D065MechanicsFixtureError.coldGateReadinessTimedOut
+            }
+            let continued = harness.processInspector.signalObservations().filter {
+                $0.signal == SIGCONT && $0.result == 0
+            }
+            try #require(continued.count == 1)
+            let pid = continued[0].group
+            let hasPositivePID: Bool = pid > 0
+            try #require(hasPositivePID)
+            try #require(Darwin.getpgid(pid) == pid)
+            let isProcessAlive: Bool = Darwin.kill(pid, 0) == 0
+            try #require(isProcessAlive)
+            throw P1F1D065ColdForcedFailure.afterReady
+        }
+        var assessment = p1f1d065AssessColdCleanup(
+            report: report, harness: harness, registry: registry,
+            socketURL: socketURL, executionId: request.executionId,
+            removalAllowed: &removalAllowed
+        )
+        do {
+            let evidence = try report.cleanup.cancellation.get()
+            let frames = try report.cleanup.stream.get()
+            try #require(evidence.termSent)
+            try #require(evidence.killSent)
+            let hasPositiveEvidencePID: Bool = evidence.pid > 0
+            try #require(hasPositiveEvidencePID)
+            try #require(evidence.processGroupID == evidence.pid)
+            let continued = harness.processInspector.signalObservations().filter {
+                $0.signal == SIGCONT && $0.result == 0
+            }
+            try #require(continued.count == 1)
+            try #require(evidence.pid == continued[0].group)
+            try #require(revalidator.snapshot() == [.cli, .boardBridge])
+            try #require(frames.contains { if case .exited = $0 { return true }; return false })
+        } catch {
+            assessment.cleanupFailures.append(.init(
+                operation: "forced-error-evidence-verification", error: error
+            ))
+        }
+        guard (assessment.primary as? P1F1D065ColdForcedFailure) == .afterReady,
+              assessment.cleanupFailures.isEmpty
+        else { throw assessment }
+    }
+
+    @Test func p1f1_066UsageCostAndOverflowMatrix() async throws {
+        let durableUsage = EngineUsageV1(
+            inputTokens: 2,
+            outputTokens: 3,
+            cacheReadTokens: 5,
+            costMicros: 7
+        )
+        let router = p1f1dRouter(60, initialUsage: durableUsage)
+        let firstUsage = EngineUsageV1(
+            inputTokens: 3,
+            outputTokens: 5,
+            cacheReadTokens: 7,
+            costMicros: 11
+        )
+        let firstEvent = try await router.route(.usage(firstUsage))
+        #expect(firstEvent.sequence == 60)
+        #expect(
+            firstEvent.payload == .usage(
+                EngineUsageV1(
+                    inputTokens: 5,
+                    outputTokens: 8,
+                    cacheReadTokens: 12,
+                    costMicros: 18
+                )
+            )
+        )
+
+        let secondUsage = EngineUsageV1(
+            inputTokens: 13,
+            outputTokens: 17,
+            cacheReadTokens: 19,
+            costMicros: 23
+        )
+        let second = try await router.route(.usage(secondUsage))
+        #expect(second.sequence == 61)
+        #expect(
+            second.payload == .usage(
+                EngineUsageV1(
+                    inputTokens: 18,
+                    outputTokens: 25,
+                    cacheReadTokens: 31,
+                    costMicros: 41
+                )
+            )
+        )
+
+        let commits = P1F1DLockedCounter()
+        let atomicRouter = p1f1dRouter(70)
+        let sink = EngineProgressRouterSinkV1(
+            router: atomicRouter,
+            commit: { _ in commits.increment() }
+        )
+        try await sink.submit(
+            .usage(
+                EngineUsageV1(
+                    inputTokens: Int.max,
+                    outputTokens: 0,
+                    cacheReadTokens: 0,
+                    costMicros: 0
+                )
+            )
+        )
+        #expect(commits.value == 1)
+        await p1f1dExpectError(EngineUsageV1.UsageOverflowError()) {
+            try await sink.submit(
+                .usage(
+                    EngineUsageV1(
+                        inputTokens: 1,
+                        outputTokens: 0,
+                        cacheReadTokens: 0,
+                        costMicros: 0
+                    )
+                )
+            )
+        }
+        #expect(commits.value == 1)
+        await p1f1dExpectError(P1ContractValidationError.invalidValue) {
+            try await sink.submit(
+                .usage(
+                    EngineUsageV1(
+                        inputTokens: -1,
+                        outputTokens: 0,
+                        cacheReadTokens: 0,
+                        costMicros: 0
+                    )
+                )
+            )
+        }
+        #expect(commits.value == 1)
+        let afterFailures = try await atomicRouter.route(
+            .usage(
+                EngineUsageV1(
+                    inputTokens: 0,
+                    outputTokens: 2,
+                    cacheReadTokens: 3,
+                    costMicros: 5
+                )
+            )
+        )
+        #expect(afterFailures.sequence == 71)
+        #expect(
+            afterFailures.payload == .usage(
+                EngineUsageV1(
+                    inputTokens: Int.max,
+                    outputTokens: 2,
+                    cacheReadTokens: 3,
+                    costMicros: 5
+                )
+            )
+        )
+        let contiguous = try await atomicRouter.route(
+            .progress(message: "still contiguous")
+        )
+        #expect(contiguous.sequence == 72)
+    }
+
+    @Test func p1f1_067SessionBindResumeMatrix() async throws {
+        let firstExternalID = "codex-thread-first-067"
+        let firstRecorder = P1F1DLaunchRecorder()
+        let firstDriver = P1F1DProcessDriver(
+            frames: [
+                .stdoutLine(
+                    #"{"type":"thread.started","thread_id":"codex-thread-first-067"}"#
+                ),
+            ],
+            recorder: firstRecorder,
+            cancelEvidence: p1f1dCancelEvidence
+        )
+        let firstAdapter = try p1f1dAdapter(driver: firstDriver)
+        let firstRequest = try p1f1dRequest()
+        var firstIterator = firstAdapter.execute(request: firstRequest)
+            .makeAsyncIterator()
+        let firstEvent = try await firstIterator.next()
+        var observedFirstID = p1f1dExternalSessionID(from: firstEvent)
+        for _ in 0..<3 where observedFirstID == nil {
+            observedFirstID = p1f1dExternalSessionID(
+                from: try await firstIterator.next()
+            )
+        }
+        #expect(observedFirstID == firstExternalID)
+        let firstLaunch = try #require(firstRecorder.snapshot.first)
+        #expect(firstLaunch.executionId == firstRequest.executionId)
+        #expect(!firstLaunch.spec.arguments.contains("resume"))
+        while let _ = try await firstIterator.next() {}
+
+        let recoveryReference = try EngineSessionReferenceV1(
+            sessionId: p1f1dSessionID,
+            externalSessionId: "codex-thread-resume-exact-067"
+        )
+        let recoveryRecorder = P1F1DLaunchRecorder()
+        let recoveryDriver = P1F1DProcessDriver(
+            frames: [
+                .stdoutLine(
+                    #"{"type":"thread.started","thread_id":"codex-thread-resume-exact-067"}"#
+                ),
+            ],
+            recorder: recoveryRecorder,
+            cancelEvidence: p1f1dCancelEvidence
+        )
+        let recoveryAdapter = try p1f1dRecoveryAdapter(
+            driver: recoveryDriver,
+            resolvedSessionRef: recoveryReference
+        )
+        let recoveryRequest = try p1f1dRequest()
+        let recoveryRequestJSON = recoveryRequest.requestJson
+        let recoveryRequestHash = recoveryRequest.requestHash
+        #expect(recoveryRequest.sessionRef == nil)
+        var recoveryPayloads: [EngineExecutionEventPayloadV1] = []
+        for try await payload in recoveryAdapter.execute(
+            request: recoveryRequest
+        ) {
+            recoveryPayloads.append(payload)
+        }
+        #expect(
+            recoveryPayloads.contains(
+                .sessionBound(
+                    externalSessionId: recoveryReference.externalSessionId
+                )
+            )
+        )
+        let recoveryLaunch = try #require(recoveryRecorder.snapshot.first)
+        #expect(recoveryRecorder.snapshot.count == 1)
+        #expect(recoveryLaunch.executionId == recoveryRequest.executionId)
+        let recoveryArguments = recoveryLaunch.spec.arguments
+        let recoveryContract = [
+            "-a", "never",
+            "-C", "/tmp",
+            "-s", "read-only",
+            "-m", "gpt-test",
+            "exec",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "--strict-config",
+            "--skip-git-repo-check",
+            "--json",
+            "resume", recoveryReference.externalSessionId,
+            "-",
+        ]
+        let recoveryContractIsOrdered = p1f1dContainsOrderedSubsequence(
+            recoveryContract,
+            in: recoveryArguments
+        )
+        #expect(recoveryContractIsOrdered)
+        #expect(
+            recoveryArguments.filter {
+                $0 == recoveryReference.externalSessionId
+            }.count == 1
+        )
+        #expect(!recoveryArguments.contains("--last"))
+        #expect(!recoveryArguments.contains("--continue"))
+        #expect(recoveryRequest.sessionRef == nil)
+        #expect(recoveryRequest.requestJson == recoveryRequestJSON)
+        #expect(recoveryRequest.requestHash == recoveryRequestHash)
+        #expect(
+            String(
+                decoding: try CanonicalJSONV1.encode(recoveryRequest),
+                as: UTF8.self
+            ) == recoveryRequestJSON
+        )
+        try recoveryRequest.validateCanonicalIdentity()
+
+        let codexEvidenceTerminal = P1F1DTerminalRecorder()
+        let codexEvidenceRecorder = P1F1DLaunchRecorder()
+        let wrongCodexExternalID = "codex-thread-wrong-067"
+        let codexEvidenceAdapter = try p1f1dRecoveryAdapter(
+            driver: P1F1DProcessDriver(
+                frames: [
+                    .stdoutLine(
+                        #"{"type":"thread.started","thread_id":"codex-thread-wrong-067"}"#
+                    ),
+                ],
+                recorder: codexEvidenceRecorder,
+                cancelEvidence: p1f1dCancelEvidence
+            ),
+            resolvedSessionRef: recoveryReference,
+            terminal: codexEvidenceTerminal
+        )
+        var codexEvidencePayloads: [EngineExecutionEventPayloadV1] = []
+        for try await payload in codexEvidenceAdapter.execute(
+            request: recoveryRequest
+        ) {
+            codexEvidencePayloads.append(payload)
+        }
+        #expect(
+            !codexEvidencePayloads.contains {
+                p1f1dExternalSessionID(from: $0) != nil
+            }
+        )
+        #expect(codexEvidenceRecorder.snapshot.count == 1)
+        let codexEvidenceIntent = try #require(
+            await codexEvidenceTerminal.snapshot().first
+        )
+        if case let .blocked(_, reasonCode, detail) = codexEvidenceIntent {
+            #expect(reasonCode == "engine_protocol_error")
+            #expect(!detail.contains(wrongCodexExternalID))
+            #expect(!detail.contains(recoveryReference.externalSessionId))
+        } else {
+            Issue.record("Expected sanitized Codex session-evidence failure")
+        }
+
+        let mismatchedReference = try EngineSessionReferenceV1(
+            sessionId: p1f1dSessionID,
+            externalSessionId: "codex-thread-dual-source-wrong-067"
+        )
+        let mismatchLaunches = P1F1DLaunchRecorder()
+        let mismatchTerminal = P1F1DTerminalRecorder()
+        let mismatchBoard = P1F1DBoardTerminalRecorder()
+        let mismatchProgress = P1F1DProgressRecorder()
+        let mismatchAdapter = try p1f1dRecoveryAdapter(
+            driver: P1F1DProcessDriver(
+                frames: [],
+                recorder: mismatchLaunches,
+                cancelEvidence: p1f1dCancelEvidence
+            ),
+            resolvedSessionRef: mismatchedReference,
+            terminal: mismatchTerminal,
+            board: mismatchBoard,
+            progress: mismatchProgress
+        )
+        let mismatchRequest = try p1f1dRequest(
+            sessionRef: recoveryReference
+        )
+        var mismatchIterator = mismatchAdapter.execute(
+            request: mismatchRequest
+        ).makeAsyncIterator()
+        await p1f1dExpectError(EngineSessionScopeMismatchError()) {
+            _ = try await mismatchIterator.next()
+        }
+        #expect(mismatchLaunches.snapshot.isEmpty)
+        #expect(await mismatchTerminal.snapshot().isEmpty)
+        #expect(await mismatchBoard.snapshot().isEmpty)
+        #expect(await mismatchProgress.snapshot().isEmpty)
+
+        let claudeExecutionID = "00000000-0000-4000-8000-000000000167"
+        let claudeConfigDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "p1f1d-067-claude-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        try FileManager.default.createDirectory(
+            at: claudeConfigDirectory,
+            withIntermediateDirectories: false,
+            attributes: [.posixPermissions: 0o700]
+        )
+        defer { try? FileManager.default.removeItem(at: claudeConfigDirectory) }
+        var claudeDirectoryInfo = stat()
+        guard claudeConfigDirectory.path.withCString({
+            Darwin.lstat($0, &claudeDirectoryInfo)
+        }) == 0,
+            claudeDirectoryInfo.st_mode & S_IFMT == S_IFDIR,
+            claudeDirectoryInfo.st_uid == getuid(),
+            claudeDirectoryInfo.st_mode & mode_t(0o777) == mode_t(0o700)
+        else { throw EngineContextValidationErrorV1() }
+        let claudeReference = try EngineSessionReferenceV1(
+            sessionId: p1f1dSessionID,
+            externalSessionId: "00000000-0000-4000-8000-000000000267"
+        )
+        let claudeConfigURL = claudeConfigDirectory
+            .appendingPathComponent(
+                "agentloop-\(claudeExecutionID).mcp.json"
+            )
+        if FileManager.default.fileExists(atPath: claudeConfigURL.path) {
+            try FileManager.default.removeItem(at: claudeConfigURL)
+        }
+        let claudeRecorder = P1F1DLaunchRecorder()
+        let claudeAdapter = try p1f1dRecoveryAdapter(
+            driver: P1F1DProcessDriver(
+                frames: [
+                    .stdoutLine(
+                        #"{"type":"system","subtype":"init","session_id":"00000000-0000-4000-8000-000000000267"}"#
+                    ),
+                    .stdoutLine(
+                        #"{"type":"result","subtype":"success","is_error":false,"result":"done","session_id":"00000000-0000-4000-8000-000000000267","total_cost_usd":1.25,"usage":{"input_tokens":17,"output_tokens":19,"cache_read_input_tokens":4}}"#
+                    ),
+                ],
+                recorder: claudeRecorder,
+                cancelEvidence: p1f1dCancelEvidence
+            ),
+            resolvedSessionRef: claudeReference,
+            profile: p1f1dProfile(.cliClaude),
+            claudeConfigDirectory: claudeConfigDirectory
+        )
+        let claudeRequest = try p1f1dRequest(
+            executionId: claudeExecutionID,
+            kind: .cliClaude,
+            sessionRef: claudeReference
+        )
+        var claudePayloads: [EngineExecutionEventPayloadV1] = []
+        for try await payload in claudeAdapter.execute(request: claudeRequest) {
+            claudePayloads.append(payload)
+        }
+        #expect(
+            claudePayloads.contains(
+                .sessionBound(
+                    externalSessionId: claudeReference.externalSessionId
+                )
+            )
+        )
+        #expect(
+            claudePayloads.contains(
+                .usage(
+                    EngineUsageV1(
+                        inputTokens: 17,
+                        outputTokens: 19,
+                        cacheReadTokens: 4,
+                        costMicros: 1_250_000
+                    )
+                )
+            )
+        )
+        let claudeLaunch = try #require(claudeRecorder.snapshot.first)
+        #expect(claudeRecorder.snapshot.count == 1)
+        #expect(claudeLaunch.spec.cleanupURLs == [claudeConfigURL])
+        try FileManager.default.removeItem(at: claudeConfigURL)
+        let claudeArguments = claudeLaunch.spec.arguments
+        let claudeResumeIndex = try #require(
+            claudeArguments.indices.first {
+                claudeArguments[$0] == "--resume"
+            }
+        )
+        #expect(claudeArguments.indices.contains(claudeResumeIndex + 1))
+        #expect(
+            claudeArguments[claudeResumeIndex + 1]
+                == claudeReference.externalSessionId
+        )
+        #expect(
+            claudeArguments.filter {
+                $0 == claudeReference.externalSessionId
+            }.count == 1
+        )
+        #expect(!claudeArguments.contains("--session-id"))
+
+        let claudeEvidenceExecutionID =
+            "00000000-0000-4000-8000-000000000169"
+        let claudeEvidenceReference = try EngineSessionReferenceV1(
+            sessionId: p1f1dSessionID,
+            externalSessionId: "00000000-0000-4000-8000-000000000269"
+        )
+        let wrongClaudeExternalID =
+            "00000000-0000-4000-8000-000000000969"
+        let claudeEvidenceConfigURL = claudeConfigDirectory
+            .appendingPathComponent(
+                "agentloop-\(claudeEvidenceExecutionID).mcp.json"
+            )
+        if FileManager.default.fileExists(
+            atPath: claudeEvidenceConfigURL.path
+        ) {
+            try FileManager.default.removeItem(at: claudeEvidenceConfigURL)
+        }
+        let claudeEvidenceTerminal = P1F1DTerminalRecorder()
+        let claudeEvidenceRecorder = P1F1DLaunchRecorder()
+        let claudeEvidenceAdapter = try p1f1dRecoveryAdapter(
+            driver: P1F1DProcessDriver(
+                frames: [
+                    .stdoutLine(
+                        #"{"type":"system","subtype":"init","session_id":"00000000-0000-4000-8000-000000000269"}"#
+                    ),
+                    .stdoutLine(
+                        #"{"type":"result","subtype":"success","is_error":false,"result":"done","session_id":"00000000-0000-4000-8000-000000000969","total_cost_usd":1.25,"usage":{"input_tokens":17,"output_tokens":19,"cache_read_input_tokens":4}}"#
+                    ),
+                ],
+                recorder: claudeEvidenceRecorder,
+                cancelEvidence: p1f1dCancelEvidence
+            ),
+            resolvedSessionRef: claudeEvidenceReference,
+            terminal: claudeEvidenceTerminal,
+            profile: p1f1dProfile(.cliClaude),
+            claudeConfigDirectory: claudeConfigDirectory
+        )
+        let claudeEvidenceRequest = try p1f1dRequest(
+            executionId: claudeEvidenceExecutionID,
+            kind: .cliClaude
+        )
+        #expect(claudeEvidenceRequest.sessionRef == nil)
+        var claudeEvidencePayloads: [EngineExecutionEventPayloadV1] = []
+        for try await payload in claudeEvidenceAdapter.execute(
+            request: claudeEvidenceRequest
+        ) {
+            claudeEvidencePayloads.append(payload)
+        }
+        #expect(
+            claudeEvidencePayloads.contains(
+                .sessionBound(
+                    externalSessionId:
+                        claudeEvidenceReference.externalSessionId
+                )
+            )
+        )
+        #expect(
+            !claudeEvidencePayloads.contains {
+                if case .usage = $0 { return true }
+                return false
+            }
+        )
+        let claudeEvidenceLaunch = try #require(
+            claudeEvidenceRecorder.snapshot.first
+        )
+        #expect(claudeEvidenceRecorder.snapshot.count == 1)
+        #expect(
+            claudeEvidenceLaunch.spec.cleanupURLs
+                == [claudeEvidenceConfigURL]
+        )
+        try FileManager.default.removeItem(at: claudeEvidenceConfigURL)
+        let claudeEvidenceArguments = claudeEvidenceLaunch.spec.arguments
+        let claudeEvidenceResumeIndex = try #require(
+            claudeEvidenceArguments.indices.first {
+                claudeEvidenceArguments[$0] == "--resume"
+            }
+        )
+        #expect(
+            claudeEvidenceArguments[claudeEvidenceResumeIndex + 1]
+                == claudeEvidenceReference.externalSessionId
+        )
+        let claudeEvidenceIntent = try #require(
+            await claudeEvidenceTerminal.snapshot().first
+        )
+        if case let .blocked(_, reasonCode, detail) = claudeEvidenceIntent {
+            #expect(reasonCode == "engine_protocol_error")
+            #expect(!detail.contains(wrongClaudeExternalID))
+            #expect(!detail.contains(claudeEvidenceReference.externalSessionId))
+        } else {
+            Issue.record("Expected sanitized Claude session-evidence failure")
+        }
+        try FileManager.default.removeItem(at: claudeConfigDirectory)
+
+        p1f1dExpectError(EngineAdapterSelectionErrorV1.descriptorMismatch) {
+            _ = try EngineAdapterRuntimeV1(
+                descriptor: p1f1dDescriptor(kind: .anthropicAPI),
+                context: p1f1dContext(),
+                workspace: p1f1dWorkspace(),
+                boundCapabilityTools: p1f1dBoundCapabilityTools(),
+                resolvedSessionRef: recoveryReference,
+                terminalSink: P1F1DTerminalRecorder(),
+                boardTerminalSink: P1F1DBoardTerminalRecorder(),
+                progressSink: P1F1DProgressRecorder(),
+                modelLoopDriver: P1F1DModelLoopDriver(),
+                cliProcessDriver: nil,
+                cliConfiguration: nil
+            )
+        }
+    }
+
+    @Test func p1f1_068ResumeMismatchAndUnsupportedMatrix() async throws {
+        let makeCount = P1F1DLockedCounter()
+        let registry = try p1f1dRegistry(makeCounter: makeCount)
+        do {
+            _ = try registry.resolve(
+                profile: p1f1dProfile(.anthropicAPI),
+                requiredCapabilities: [.sessionResume]
+            )
+            Issue.record("Unsupported model-loop resume was selected")
+        } catch let error as EngineAdapterSelectionErrorV1 {
+            #expect(error == .unsupportedCapability(.sessionResume))
+        }
+        #expect(makeCount.value == 0)
+
+        let missingFactory = try EngineAdapterRegistryV1(
+            factories: [
+                try p1f1dFactory(
+                    id: "agentloop.cli.codex",
+                    kinds: [.cliCodex],
+                    makeCounter: makeCount
+                ),
+            ],
+            helpSnapshots: [.cliCodex: try p1f1dHelp(.cliCodex)]
+        )
+        p1f1dExpectError(
+            EngineAdapterSelectionErrorV1.missingFactory(.openAIAPI)
+        ) {
+            _ = try missingFactory.resolve(
+                profile: p1f1dProfile(.openAIAPI),
+                requiredCapabilities: []
+            )
+        }
+
+        let missingHelp = try EngineAdapterRegistryV1(
+            factories: [
+                try p1f1dFactory(
+                    id: "agentloop.cli.codex",
+                    kinds: [.cliCodex],
+                    makeCounter: makeCount
+                ),
+            ],
+            helpSnapshots: [:]
+        )
+        p1f1dExpectError(
+            EngineAdapterSelectionErrorV1.missingHelpSnapshot(.cliCodex)
+        ) {
+            _ = try missingHelp.resolve(
+                profile: p1f1dProfile(.cliCodex),
+                requiredCapabilities: []
+            )
+        }
+
+        let mismatchedDescriptor = try EngineAdapterRegistryV1(
+            factories: [
+                try p1f1dFactory(
+                    id: "agentloop.cli.codex",
+                    kinds: [.cliCodex],
+                    makeCounter: makeCount,
+                    descriptorOverrideID: "agentloop.cli.wrong"
+                ),
+            ],
+            helpSnapshots: [.cliCodex: try p1f1dHelp(.cliCodex)]
+        )
+        p1f1dExpectError(EngineAdapterSelectionErrorV1.descriptorMismatch) {
+            _ = try mismatchedDescriptor.resolve(
+                profile: p1f1dProfile(.cliCodex),
+                requiredCapabilities: []
+            )
+        }
+        #expect(makeCount.value == 0)
+
+        let unsupported = try P1F1DCanonicalExecutionFixture(
+            sessionResume: .unsupported
+        )
+        try p1f1dRequirePredecessorRejected(
+            fixture: unsupported,
+            key: "p1f1d-068-unsupported",
+            fields: { try p1f1dFields($0, predecessorExecutionId: $1) }
+        )
+
+        let missing = try P1F1DCanonicalExecutionFixture()
+        let missingBefore = try p1f1dSharedWriteSnapshot(missing)
+        p1f1dExpectError(EngineSessionScopeMismatchError()) {
+            _ = try missing.begin(
+                key: "p1f1d-068-missing",
+                fields: p1f1dFields(
+                    missing,
+                    predecessorExecutionId:
+                        "00000000-0000-4000-8000-000000000999"
+                )
+            )
+        }
+        #expect(try p1f1dSharedWriteSnapshot(missing) == missingBefore)
+
+        let profile = try P1F1DCanonicalExecutionFixture()
+        let alternateProfile = "00000000-0000-4000-8000-000000000168"
+        try profile.insertProfile(alternateProfile)
+        try p1f1dRequirePredecessorRejected(
+            fixture: profile,
+            key: "p1f1d-068-profile",
+            fields: {
+                try p1f1dFields(
+                    $0,
+                    predecessorExecutionId: $1,
+                    profileId: alternateProfile
+                )
+            }
+        )
+
+        let model = try P1F1DCanonicalExecutionFixture()
+        try p1f1dRequirePredecessorRejected(
+            fixture: model,
+            key: "p1f1d-068-model",
+            fields: {
+                try p1f1dFields(
+                    $0,
+                    predecessorExecutionId: $1,
+                    model: "gpt-mismatch"
+                )
+            }
+        )
+
+        let workspace = try P1F1DCanonicalExecutionFixture()
+        try p1f1dRequirePredecessorRejected(
+            fixture: workspace,
+            key: "p1f1d-068-workspace",
+            fields: {
+                try p1f1dFields(
+                    $0,
+                    predecessorExecutionId: $1,
+                    workspaceHash: String(repeating: "8", count: 64)
+                )
+            }
+        )
+
+        let closed = try P1F1DCanonicalExecutionFixture()
+        try p1f1dRequirePredecessorRejected(
+            fixture: closed,
+            key: "p1f1d-068-closed",
+            mutate: { database, predecessor in
+                try database.pool.write { transaction in
+                    try transaction.execute(
+                        sql: "UPDATE engine_session SET state='closed' WHERE id=(SELECT sessionId FROM engine_execution WHERE id=?)",
+                        arguments: [predecessor.executionId]
+                    )
+                }
+            },
+            fields: { try p1f1dFields($0, predecessorExecutionId: $1) }
+        )
+
+        let missingExternal = try P1F1DCanonicalExecutionFixture()
+        try p1f1dRequirePredecessorRejected(
+            fixture: missingExternal,
+            key: "p1f1d-068-external",
+            mutate: { database, predecessor in
+                try database.pool.write { transaction in
+                    try transaction.execute(
+                        sql: "UPDATE engine_session SET state='invalid',externalSessionId=NULL WHERE id=(SELECT sessionId FROM engine_execution WHERE id=?)",
+                        arguments: [predecessor.executionId]
+                    )
+                }
+            },
+            fields: { try p1f1dFields($0, predecessorExecutionId: $1) }
+        )
+
+        let adapterDrift = try P1F1DCanonicalExecutionFixture()
+        try p1f1dRequirePredecessorRejected(
+            fixture: adapterDrift,
+            key: "p1f1d-068-adapter",
+            mutate: { database, predecessor in
+                try database.pool.write { transaction in
+                    try transaction.execute(
+                        sql: "UPDATE engine_session SET adapterVersion='drift' WHERE id=(SELECT sessionId FROM engine_execution WHERE id=?)",
+                        arguments: [predecessor.executionId]
+                    )
+                }
+            },
+            fields: { try p1f1dFields($0, predecessorExecutionId: $1) }
+        )
+
+        let coordinatorFixture = try P1F1DCanonicalExecutionFixture()
+        let coordinatorFields = try p1f1dFields(
+            coordinatorFixture,
+            predecessorExecutionId:
+                "00000000-0000-4000-8000-000000000998"
+        )
+        let coordinatorBefore = try p1f1dSharedWriteSnapshot(coordinatorFixture)
+        let coordinatorMakeCount = P1F1DLockedCounter()
+        let coordinatorRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "agentloop-p1f1d-068-coordinator-\(UUID().uuidString)"
+            )
+        defer { try? FileManager.default.removeItem(at: coordinatorRoot) }
+        let coordinator = try p1f1dCoordinator(
+            fixture: coordinatorFixture,
+            registry: p1f1dRegistry(makeCounter: coordinatorMakeCount),
+            root: coordinatorRoot
+        )
+        await p1f1dExpectError(EngineSessionScopeMismatchError()) {
+            let prepared = try p1f1d069Prepared(
+                fixture: coordinatorFixture,
+                fields: coordinatorFields,
+                idempotencyKey: "p1f1d-068-coordinator-missing",
+                makeTransport: { _, _, _ in
+                    try p1f1dTransport(
+                        fixture: coordinatorFixture,
+                        fields: coordinatorFields,
+                        driver: P1F1DProcessDriver(
+                            frames: [],
+                            recorder: P1F1DLaunchRecorder(),
+                            cancelEvidence: p1f1dCancelEvidence
+                        )
+                    )
+                }
+            )
+            _ = try await coordinator.execute(
+                prepared,
+                onExecutionBound: { _ in .dispatch }
+            )
+        }
+        #expect(
+            try p1f1dSharedWriteSnapshot(coordinatorFixture)
+                == coordinatorBefore
+        )
+        #expect(coordinatorMakeCount.value == 0)
+        #expect(makeCount.value == 0)
+    }
+
+    @Test func p1f1_069BoardTerminalExactlyOnceMatrix() async throws {
+        try await p1f1d069ExerciseRoutingWinners()
+
+        try await p1f1d069ExerciseActiveCancellationRegistry()
+
+        try await p1f1d069ExerciseSharedAdapterCleanup()
+
+        try await p1f1d069ExerciseModelClaimHandoff()
+
+        try await p1f1d069ExerciseCliHandoffAndImmediateWinners()
+
+        try await p1f1d069ExercisePrelaunchAndQuarantine()
+
+        try await p1f1d069ExerciseGenerationBoundCleanup()
+
+        try await p1f1d069ExerciseCompletionRegistry()
+
+        try await p1f1d069ExerciseDispatchAdmission()
+
+        try await p1f1d069ExerciseBeginRegistrationLatch()
+
+        try await p1f1d069ExerciseSettledPrimaryRetry()
+
+        try await p1f1d069ExercisePostGateAndBindCancellation()
+
+        try await p1f1d069ExerciseObserverAndFinalizerFailure()
+
+        try await p1f1d069ExerciseCompletionRemovalBarriers()
+
+        try await p1f1d069ExerciseObserverStoreFailure()
+
+        print("P1F1D069_STAGE=terminal-winner")
+        let terminalWinner = try P1F1DCanonicalExecutionFixture()
+        let terminalWinnerRequest = try terminalWinner.begin(
+            key: "p1f1d-069-terminal-winner"
+        )
+        try p1f1d069MarkStarted(
+            fixture: terminalWinner,
+            request: terminalWinnerRequest,
+            key: "p1f1d-069-terminal-winner"
+        )
+        let terminalWinnerProposal = try terminalWinner.store
+            .recordEngineTerminalProposal(
+                p1f1TerminalCompletedProposal(
+                    request: terminalWinnerRequest,
+                    key: "p1f1d-069-terminal-winner-proposal"
+                )
+            )
+        let terminalWinnerReceipt = try terminalWinner.store
+            .commitEngineTerminal(
+                proposalId: terminalWinnerProposal.proposal.id,
+                checkedUsage: .zero,
+                now: P1F1DCanonicalExecutionFixture.now
+                    .addingTimeInterval(3)
+            )
+        guard case let .terminalWon(replayedWinner) = try terminalWinner.store
+            .requestCancellation(
+                executionId: terminalWinnerRequest.executionId,
+                reason: "terminal_already_won",
+                now: P1F1DCanonicalExecutionFixture.now
+                    .addingTimeInterval(4)
+            )
+        else {
+            Issue.record("terminal CAS winner must return its exact receipt")
+            return
+        }
+        #expect(replayedWinner == terminalWinnerReceipt)
+
+        print("P1F1D069_STAGE=exact-live-cli-cancellation")
+        try await p1f1d069ExerciseExactLiveCliCancellation()
+
+        print("P1F1D069_STAGE=exact-live-model-cancellation")
+        let exactModelLoop = try P1F1DCanonicalExecutionFixture(
+            profileKind: .openAIAPI
+        )
+        let exactModelFields = try exactModelLoop.fields()
+        let exactModelLedger = P1F1D069CallLedger()
+        let exactModelCell = P1F1D069RunningCell()
+        let exactModelCleanup = P1F1D069CleanupProbe(blocked: true)
+        let exactModelActive = EngineActiveExecutionRegistryV1()
+        let exactModelCompletions = EngineExecutionCompletionRegistryV1()
+        let exactModelBound = P1F1D069RequestProbe()
+        let exactModelCoordinator = try p1f1dCoordinator(
+            fixture: exactModelLoop,
+            registry: p1f1d069RunningRegistry(
+                fixture: exactModelLoop,
+                cell: exactModelCell,
+                cleanup: exactModelCleanup,
+                ledger: exactModelLedger
+            ),
+            root: exactModelLoop.root.appendingPathComponent(
+                "p1f1d-069-exact-live-model"
+            ),
+            activeExecutions: exactModelActive,
+            completionRegistry: exactModelCompletions,
+            transportSeedResolver: { _ in
+                exactModelLedger.record("recovery")
+                throw EngineDispatchConflictErrorV1()
+            }
+        )
+        let exactModelPrepared = try p1f1d069Prepared(
+            fixture: exactModelLoop,
+            fields: exactModelFields,
+            idempotencyKey: "p1f1d-069-exact-model-loop",
+            makeTransport: { _, _, _ in
+                exactModelLedger.record("transport")
+                return try p1f1d069ModelTransport(
+                    fixture: exactModelLoop,
+                    fields: exactModelFields
+                )
+            }
+        )
+        let exactModelExecute = Task {
+            try await exactModelCoordinator.execute(
+                exactModelPrepared,
+                onExecutionBound: { request in
+                    await exactModelBound.bind(request)
+                    return .dispatch
+                }
+            )
+        }
+        let exactModelRequest = await exactModelBound.waitUntilBound()
+        await exactModelCell.waitUntilStarted()
+        #expect(exactModelLedger.count("transport") == 1)
+        #expect(exactModelLedger.count("makeAdapter") == 1)
+        #expect(exactModelLedger.count("execute") == 1)
+        #expect(exactModelLedger.count("recovery") == 0)
+        let exactModelCancel = Task {
+            try await exactModelCoordinator.cancel(
+                executionId: exactModelRequest.executionId,
+                reason: "exact_model_loop_cancel"
+            )
+        }
+        await exactModelCleanup.waitUntilAttemptCount(1)
+        #expect(await exactModelActive.snapshotCounts().inFlight == 1)
+        #expect(await exactModelCompletions.snapshotCount() == 1)
+        await exactModelCleanup.release()
+        try await exactModelCancel.value
+        let exactModelExecutedReceipt = try await exactModelExecute.value
+        guard case let .terminalWon(exactModelReceipt) = try exactModelLoop.store
+            .requestCancellation(
+                executionId: exactModelRequest.executionId,
+                reason: "exact_model_loop_cancel",
+                now: P1F1DCanonicalExecutionFixture.now
+                    .addingTimeInterval(6)
+            )
+        else {
+            Issue.record("live ModelLoop exact-ID cleanup must stay canceled")
+            return
+        }
+        #expect(exactModelReceipt.terminalKind == .canceled)
+        #expect(exactModelReceipt.reasonCode == "exact_model_loop_cancel")
+        #expect(exactModelExecutedReceipt == exactModelReceipt)
+        #expect(exactModelLedger.count("recovery") == 0)
+        #expect(exactModelLedger.count("transport") == 1)
+        #expect(exactModelLedger.count("makeAdapter") == 1)
+        #expect(exactModelLedger.count("execute") == 1)
+        #expect(exactModelLedger.count("cancel") == 1)
+        #expect(
+            exactModelLedger.canceledExecutionIDs()
+                == [exactModelRequest.executionId]
+        )
+        #expect(await exactModelCleanup.count() == 1)
+        #expect(await exactModelActive.snapshotCounts().live == 0)
+        #expect(await exactModelActive.snapshotCounts().pending == 0)
+        #expect(await exactModelActive.snapshotCounts().inFlight == 0)
+        #expect(await exactModelCompletions.snapshotCount() == 0)
+
+        print("P1F1D069_STAGE=exact-recovery-owner")
+        for ownerKind in P1F1D069ExactRecoveryOwnerKind.allCases {
+            for failFirst in [false, true] {
+                print(
+                    "P1F1D069_CASE=exact-owner-\(ownerKind.rawValue)-\(failFirst)"
+                )
+                try await p1f1d069ExerciseExactRecoveryOwner(
+                    kind: ownerKind,
+                    failFirst: failFirst
+                )
+            }
+        }
+
+        print("P1F1D069_STAGE=mission-cli-recovery")
+        try await p1f1d069ExerciseMissionCliRecovery()
+
+        print("P1F1D069_STAGE=mission-model-recovery")
+        try await p1f1d069ExerciseMissionModelRecovery()
+
+        print("P1F1D069_STAGE=shared-recovery-owner")
+        try await p1f1d069ExerciseSharedRecoveryOwner()
+
+        print("P1F1D069_STAGE=recovery-failure-retry")
+        try await p1f1d069ExerciseRecoveryFailureRetry()
+
+        print("P1F1D069_STAGE=shared-recovery-action-matrix")
+        try await p1f1d069ExerciseSharedRecoveryActionMatrix()
+
+        print("P1F1D069_STAGE=nonreplayable-unknown-outcome")
+        let unknownFixture = try P1F1DCanonicalExecutionFixture()
+        let unknownRequest = try unknownFixture.begin(
+            key: "p1f1d-069-noncanceled-nonreplayable"
+        )
+        let unknownPrepared = try p1f1ExecutionRow(
+            unknownFixture.db,
+            id: unknownRequest.executionId
+        )
+        _ = try unknownFixture.store.markEngineDispatchStarted(
+            executionId: unknownRequest.executionId,
+            expectedVersion: unknownPrepared["version"],
+            requestHash: unknownRequest.requestHash,
+            commandIdempotencyKey:
+                "p1f1d-069-noncanceled-nonreplayable-dispatch",
+            now: P1F1DCanonicalExecutionFixture.now.addingTimeInterval(1)
+        )
+        guard case let .receipt(unknownReceipt) = try unknownFixture.store
+            .recoverInterruptedEngineExecution(
+                executionId: unknownRequest.executionId,
+                now: P1F1DCanonicalExecutionFixture.now
+                    .addingTimeInterval(5)
+            )
+        else {
+            Issue.record("ordinary nonreplayable crash must terminalize")
+            return
+        }
+        #expect(unknownReceipt.terminalKind == .blocked)
+        #expect(unknownReceipt.terminalSubtype == .externalEffectUnknown)
+        #expect(unknownReceipt.reasonCode == "external_effect_unknown")
+    }
+
+    @Test func p1f1_070ErrorsAreSecretFree() async throws {
+        let sanitizer = CliEngineSecretSanitizerV1()
+        let protocolFailure = try sanitizer.failure(
+            reason: .protocolViolation,
+            executionId: p1f1dExecutionID
+        )
+        let trace = "7fcae2e2e9636caa"
+        #expect(protocolFailure.reason == .protocolViolation)
+        #expect(protocolFailure.traceLabel == trace)
+        #expect(
+            protocolFailure.intent == .blocked(
+                subtype: .engineProtocolError,
+                reasonCode: "engine_protocol_error",
+                detail: "Engine protocol failure. trace=\(trace)"
+            )
+        )
+
+        let expected: [(CliEngineFailureReasonV1, EngineTerminalIntentV1)] = [
+            (
+                .protocolViolation,
+                .blocked(
+                    subtype: .engineProtocolError,
+                    reasonCode: "engine_protocol_error",
+                    detail: "Engine protocol failure. trace=\(trace)"
+                )
+            ),
+            (
+                .capabilityUnsupported,
+                .blocked(
+                    subtype: .engineProtocolError,
+                    reasonCode: "engine_capability_unsupported",
+                    detail: "Engine capability unavailable. trace=\(trace)"
+                )
+            ),
+            (
+                .processOutcomeUnknown,
+                .blocked(
+                    subtype: .externalEffectUnknown,
+                    reasonCode: "engine_external_effect_unknown",
+                    detail: "Engine process outcome unknown. trace=\(trace)"
+                )
+            ),
+            (
+                .providerFailure,
+                .failed(
+                    code: "engine_provider_error",
+                    detail: "Engine provider failed. trace=\(trace)"
+                )
+            ),
+            (
+                .provenCancellation,
+                .canceled(
+                    reasonCode: "engine_canceled",
+                    detail: "Engine execution canceled. trace=\(trace)"
+                )
+            ),
+        ]
+        var safeText: [String] = []
+        for (offset, row) in expected.enumerated() {
+            let value = try sanitizer.failure(
+                reason: row.0,
+                executionId: p1f1dExecutionID
+            )
+            #expect(value.reason == row.0)
+            #expect(value.traceLabel == trace)
+            #expect(value.traceLabel.utf8.count == 16)
+            #expect(value.traceLabel.allSatisfy { $0.isNumber || ("a"..."f").contains(String($0)) })
+            #expect(value.intent == row.1)
+            #expect(
+                try sanitizer.failure(
+                    reason: row.0,
+                    executionId: p1f1dExecutionID
+                ) == value
+            )
+            safeText.append(p1f1dIntentText(value.intent))
+
+            let router = p1f1dRouter(100 + offset)
+            let event = try await router.routeTerminal(value.intent, artifacts: [])
+            let proposal = try p1f1dTerminal(event)
+            safeText.append(proposal.payload.detail ?? "")
+        }
+
+        let forbidden = [
+            "BOARD_TOKEN_RAW_070",
+            "CREDENTIAL_ACCOUNT_RAW_070",
+            "ENV_SECRET_RAW_070",
+            "/tmp/raw-mcp-config-070.json",
+            "PROMPT_BODY_RAW_070",
+            "STDERR_PROVIDER_ERROR_RAW_070",
+        ]
+        let rawBundle = forbidden.joined(separator: "|")
+        let rawProfile = RuntimeProfileRecord(
+            id: p1f1dProfile(.cliCodex).id,
+            kind: .cliCodex,
+            name: "P1-F1D secret input",
+            baseURL: nil,
+            credentialAccount:
+                "CREDENTIAL_ACCOUNT_RAW_070|ENV_SECRET_RAW_070|/tmp/raw-mcp-config-070.json",
+            isDefault: false,
+            createdAt: Date(timeIntervalSince1970: 0)
+        )
+        let launchRecorder = P1F1DLaunchRecorder()
+        let terminalRecorder = P1F1DTerminalRecorder()
+        let progressRecorder = P1F1DProgressRecorder()
+        let rawDriver = P1F1DRawFailureProcessDriver(
+            frames: [
+                .stderr(Data("STDERR_PROVIDER_ERROR_RAW_070".utf8)),
+                .stdoutLine(
+                    "{\"type\":\"error\",\"message\":\"\(rawBundle)\"}"
+                ),
+            ],
+            failure: P1F1DRawSecretError(raw: rawBundle),
+            recorder: launchRecorder
+        )
+        let rawAdapter = try p1f1dAdapter(
+            driver: rawDriver,
+            terminal: terminalRecorder,
+            progress: progressRecorder,
+            profile: rawProfile,
+            context: p1f1dSecretContext(
+                prompt:
+                    "PROMPT_BODY_RAW_070 BOARD_TOKEN_RAW_070 ENV_SECRET_RAW_070"
+            )
+        )
+        var exposedException = ""
+        do {
+            for try await event in rawAdapter.execute(
+                request: try p1f1dRequest()
+            ) {
+                safeText.append(String(decoding: try CanonicalJSONV1.encode(event), as: UTF8.self))
+            }
+        } catch {
+            exposedException = String(reflecting: error)
+        }
+        let rawIntents = await terminalRecorder.snapshot()
+        #expect(rawIntents.count == 1)
+        let sanitizedIntent = try #require(rawIntents.first)
+        safeText.append(p1f1dIntentText(sanitizedIntent))
+        safeText.append(exposedException)
+        for payload in await progressRecorder.snapshot() {
+            safeText.append(
+                String(decoding: try CanonicalJSONV1.encode(payload), as: UTF8.self)
+            )
+        }
+
+        let launch = try #require(launchRecorder.snapshot.first)
+        let boardSocketURL = try BoardToolServer.makeSocketURL(
+            directoryAuthority: launch.boardSocketDirectoryAuthority,
+            executionId: launch.executionId
+        )
+        #expect(boardSocketURL.lastPathComponent == launch.boardSocketBasename)
+        let actualRawInputs = [
+            launch.boardToken,
+            boardSocketURL.path,
+            launch.spec.environment
+                .sorted { $0.key < $1.key }
+                .map { "\($0.key)=\($0.value)" }
+                .joined(separator: "|"),
+            launch.spec.cleanupURLs.map(\.path).joined(separator: "|"),
+            launch.spec.arguments.joined(separator: "|"),
+            rawBundle,
+        ].filter { !$0.isEmpty }
+
+        let fixture = try P1F1EngineFixture()
+        let request = try fixture.begin(key: "p1f1d-070-persist")
+        let prepared = try p1f1ExecutionRow(fixture.db, id: request.executionId)
+        _ = try fixture.store.markEngineDispatchStarted(
+            executionId: request.executionId,
+            expectedVersion: prepared["version"],
+            requestHash: request.requestHash,
+            commandIdempotencyKey: "p1f1d-070-persist-dispatch",
+            now: p1f1EngineTestNow.addingTimeInterval(1)
+        )
+        let persistedRouter = EngineEventRouterV1(
+            executionId: request.executionId,
+            runId: request.runId,
+            cardId: request.cardId,
+            nextSequence: 0,
+            initialUsage: .zero
+        )
+        let terminalEvent = try await persistedRouter.routeTerminal(
+            sanitizedIntent,
+            artifacts: []
+        )
+        let terminalContent = try p1f1dTerminal(terminalEvent)
+        let recorded = try fixture.store.recordEngineTerminalProposal(
+            terminalContent
+        )
+        let receipt = try fixture.store.commitEngineTerminal(
+            proposalId: recorded.proposal.id,
+            checkedUsage: .zero,
+            now: p1f1EngineTestNow.addingTimeInterval(2)
+        )
+        safeText.append(
+            String(decoding: try CanonicalJSONV1.encode(terminalEvent), as: UTF8.self)
+        )
+        safeText.append(
+            String(decoding: try CanonicalJSONV1.encode(receipt), as: UTF8.self)
+        )
+        safeText.append(receipt.terminalReceiptHash)
+        safeText.append(contentsOf: try fixture.db.events(cardId: request.cardId).map(\.payloadJson))
+
+        let joined = safeText.joined(separator: "\n")
+        for sentinel in forbidden {
+            #expect(!joined.contains(sentinel))
+        }
+        for rawInput in actualRawInputs {
+            #expect(!joined.contains(rawInput))
+        }
+    }
+}

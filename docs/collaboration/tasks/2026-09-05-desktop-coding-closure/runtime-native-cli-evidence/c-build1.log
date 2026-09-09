@@ -1,0 +1,37 @@
+[0/1] Planning build
+Building for debugging...
+[0/4] Write sources
+[1/4] Write swift-version--1AB21518FC5DEDBE.txt
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/9] Compiling AgentLoopTestSuite CliMechanicsFixture.swift
+[4/9] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+[5/9] Emitting module AgentLoopTestSuite
+[6/9] Compiling AgentLoopTestSuite CliBackendTests.swift
+[7/9] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1588:12: warning: no calls to throwing functions occur within 'try' expression
+ 1586 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+ 1587 |     }
+ 1588 |     return try CliEngineAdapter(
+      |            `- warning: no calls to throwing functions occur within 'try' expression
+ 1589 |         profile: profile,
+ 1590 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7912:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+ 7910 |                 progressSink: P1F1DProgressRecorder(),
+ 7911 |                 modelLoopDriver: try #require(
+ 7912 |                     selectedTransport.modelLoopDriver
+      |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+ 7913 |                 ),
+ 7914 |                 cliProcessDriver: nil,
+[7/14] Write sources
+[8/14] Compiling CliMechanicsFixtureRunner main.c
+[9/14] Write Objects.LinkFileList
+[10/14] Linking CliMechanicsFixtureRunner
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[12/16] Compiling RunTests main.swift
+[13/16] Emitting module RunTests
+[13/16] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[14/16] Linking RunTests
+[15/16] Applying RunTests
+Build of product 'RunTests' complete! (36.68s)

@@ -172,13 +172,19 @@ enum CodingRanchPreviewFixtures {
                 evidence: [], origin: "用户明确表达"
             ),
         ],
-        missionDraft: MissionDraftViewState(
-            draftId: "draft-1", ingestionId: "ingestion-review", campId: "camp-1", cow: baseCow,
-            goal: "制作一个三人使用的七天喝水打卡单页",
-            acceptance: ["可以记录三个人每天的喝水次数", "展示连续打卡天数", "双击 HTML 文件即可使用"],
-            knowledge: [MissionKnowledgeItemViewState(id: "note-1", title: "低摩擦打卡的三个原则", sourceLabel: "主动喂牛")],
-            deliverableType: "单页 HTML", workspacePath: "~/Desktop/drink-water",
-            isNewcomer: true, canStart: true, startBlockReason: nil
+        suggestedMission: SuggestedMissionReviewViewState(
+            draft: MissionDraftViewState(
+                draftId: "draft-1", ingestionId: "ingestion-review", campId: "camp-1", cow: baseCow,
+                goal: "制作一个三人使用的七天喝水打卡单页",
+                acceptance: ["可以记录三个人每天的喝水次数", "展示连续打卡天数", "双击 HTML 文件即可使用"],
+                knowledge: [MissionKnowledgeItemViewState(id: "note-1", title: "低摩擦打卡的三个原则", sourceLabel: "主动喂牛")],
+                deliverableType: "单页 HTML", workspacePath: "~/Desktop/drink-water",
+                isNewcomer: true,
+                canStart: false,
+                startBlockReason: "预览不连接真实启动能力",
+                startCapability: nil
+            ),
+            why: "原文和用户补充共同形成了明确目标与验收清单。"
         ),
         source: SourceViewState(
             title: "关于习惯养成的文章",

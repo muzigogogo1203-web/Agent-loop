@@ -1,0 +1,2005 @@
+[0/1] Planning build
+Building for debugging...
+[0/6] Write sources
+[2/6] Write swift-version--1AB21518FC5DEDBE.txt
+[4/8] Compiling AgentLoopCore DesktopGoalWorkflowStore.swift
+[5/9] Compiling AgentLoopCore DesktopGoalWorkflow.swift
+[6/9] Emitting module AgentLoopCore
+[7/15] Emitting module AgentLoopApplication
+[8/15] Compiling AgentLoopApplication AcceptanceWorkflowController.swift
+[9/15] Compiling AgentLoopApplication CampMemoryWorkflowController.swift
+[10/15] Compiling AgentLoopApplication CowResidencyWorkflowController.swift
+[11/15] Compiling AgentLoopApplication ExternalOperationWorkflowCoordinator.swift
+[12/15] Compiling AgentLoopApplication InputWorkflowController.swift
+[13/20] Compiling AgentLoopApplication LocalCaptureIdentity.swift
+[14/20] Compiling AgentLoopApplication McpWorkflowController.swift
+[15/20] Compiling AgentLoopApplication MissionWorkflowController.swift
+[16/20] Compiling AgentLoopApplication RuntimeProfileWorkflowController.swift
+[17/20] Compiling AgentLoopApplication WorkflowLoadState.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[18/43] Emitting module AgentLoopTestSuite
+[19/43] Compiling AgentLoopTestSuite AcceptanceWorkflowTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[20/43] Compiling AgentLoopTestSuite AgentLoopTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[21/43] Compiling AgentLoopTestSuite AnimStateTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[22/43] Compiling AgentLoopTestSuite AnthropicProviderTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[23/43] Compiling AgentLoopTestSuite ApplicationWorkflowTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[24/43] Compiling AgentLoopTestSuite ApprovalGateTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[25/43] Compiling AgentLoopTestSuite ApprovalGrantContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[26/43] Compiling AgentLoopTestSuite ApprovalPolicyTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[27/43] Compiling AgentLoopTestSuite ArtifactBlobStoreTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[28/43] Compiling AgentLoopTestSuite ArtifactOwnershipVerifierTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[29/43] Compiling AgentLoopTestSuite ArtifactStorageOriginTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[30/43] Compiling AgentLoopTestSuite AskUserTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[31/43] Compiling AgentLoopTestSuite BoardServerTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[32/43] Compiling AgentLoopTestSuite BoardToolsTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[33/43] Compiling AgentLoopTestSuite BudgetTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[34/43] Compiling AgentLoopTestSuite CampIsolationTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[35/43] Compiling AgentLoopTestSuite CampLifecycleMigrationTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[36/43] Compiling AgentLoopTestSuite CampProviderDispatchTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[37/43] Compiling AgentLoopTestSuite CanonicalJSONTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[38/43] Compiling AgentLoopTestSuite CardRunnerTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[39/43] Compiling AgentLoopTestSuite ChatServiceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[40/43] Compiling AgentLoopTestSuite CliBackendTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:175:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+173 | @Test func approvedGrantExecutesOnceAndTerminalReplayUsesSanitizedAck() async throws {
+174 |     let h = try makeHarness()
+175 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+176 |         h,
+177 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:217:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+215 | @Test func deniedActionRoutesToErrorAndCardContinues() async throws {
+216 |     let h = try makeHarness()
+217 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+218 |         h,
+219 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:242:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+240 | @Test func standardAutonomyStillRequiresExplicitGrant() async throws {
+241 |     let h = try makeHarness()
+242 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+243 |         h,
+244 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:254:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+252 | @Test func approvedGrantFailsClosedWhenWorkflowPortIsMissing() async throws {
+253 |     let h = try makeHarness()
+254 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+255 |         h,
+256 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ApprovalGateTests.swift:323:15: warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+321 | 
+322 |     let answered = try makeHarness()
+323 |     try await runApprovalScript(
+    |               `- warning: result of call to 'runApprovalScript(_:script:autonomy:injectWorkflow:)' is unused [#no-usage]
+324 |         answered,
+325 |         script: [writeTurn()],
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:934:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 932 |             client.close()
+ 933 |             try server?.stop()
+ 934 |             weak var weakServer = server
+     |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+ 935 |             server = nil
+ 936 |             try harness?.close()
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+[41/87] Compiling AgentLoopTestSuite GoalCoachContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[42/87] Compiling AgentLoopTestSuite GoldenPathTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[43/87] Compiling AgentLoopTestSuite GuideChatTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[44/87] Compiling AgentLoopTestSuite HaltAndCooldownTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[45/87] Compiling AgentLoopTestSuite HandoffTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[46/87] Compiling AgentLoopTestSuite HarvestTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[47/87] Compiling AgentLoopTestSuite IngestionDeletionContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[48/87] Compiling AgentLoopTestSuite InputEnvelopeContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[49/87] Compiling AgentLoopTestSuite JSONValueTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[50/87] Compiling AgentLoopTestSuite KnowledgeGoldenPathTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[51/87] Compiling AgentLoopTestSuite KnowledgeStoreTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[52/87] Compiling AgentLoopTestSuite LegacyScopeMigrationTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[53/87] Compiling AgentLoopTestSuite McpManagerSpikeTest.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[54/87] Compiling AgentLoopTestSuite McpSpikeTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[55/87] Compiling AgentLoopTestSuite McpTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[56/87] Compiling AgentLoopTestSuite MemoryDistillTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[57/87] Compiling AgentLoopTestSuite MemoryProvenanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[58/87] Compiling AgentLoopTestSuite MissionRollupTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[59/87] Compiling AgentLoopTestSuite MockProviderTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[60/87] Compiling AgentLoopTestSuite ModelCatalogPolicyTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[61/87] Compiling AgentLoopTestSuite ModelDefaultsTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[62/87] Compiling AgentLoopTestSuite MultiCampTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/GoldenPathTests.swift:504:26: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 502 |     ) == 0)
+ 503 |     let canonicalSocketRoot = URL(
+ 504 |         fileURLWithPath: String(cString: canonicalPathBytes),
+     |                          `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+ 505 |         isDirectory: true
+ 506 |     )
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[63/108] Compiling AgentLoopTestSuite OpenAIChatGPTAuthTests.swift
+[64/108] Compiling AgentLoopTestSuite OpenAIOAuthSessionTests.swift
+[65/108] Compiling AgentLoopTestSuite OrchestratorTests.swift
+[66/108] Compiling AgentLoopTestSuite OutcomeContractTests.swift
+[67/108] Compiling AgentLoopTestSuite P1ContractIntegrationTests.swift
+[68/108] Compiling AgentLoopTestSuite PlannerTests.swift
+[69/108] Compiling AgentLoopTestSuite PlanningTestFixtures.swift
+[70/108] Compiling AgentLoopTestSuite PlanningTokensTests.swift
+[71/108] Compiling AgentLoopTestSuite RuntimeProfileTests.swift
+[72/108] Compiling AgentLoopTestSuite SQLiteMigrationCompatibilityTests.swift
+[73/108] Compiling AgentLoopTestSuite SSEParserTests.swift
+[74/108] Compiling AgentLoopTestSuite ScheduleTests.swift
+[75/108] Compiling AgentLoopTestSuite ShellToolTests.swift
+[76/108] Compiling AgentLoopTestSuite SmokeTests.swift
+[77/108] Compiling AgentLoopTestSuite SupportTests.swift
+[78/108] Compiling AgentLoopTestSuite ToolAccessTests.swift
+[79/108] Compiling AgentLoopTestSuite ToolExecutorTests.swift
+[80/108] Compiling AgentLoopTestSuite TurnAccumulatorTests.swift
+[81/108] Compiling AgentLoopTestSuite VerificationContractTests.swift
+[82/108] Compiling AgentLoopTestSuite WebFetchTests.swift
+[83/108] Compiling AgentLoopTestSuite WebSearchTests.swift
+[84/108] Compiling AgentLoopTestSuite CodingRanchTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[85/108] Compiling AgentLoopTestSuite ColdStartTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[86/108] Compiling AgentLoopTestSuite ContentBlockTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[87/108] Compiling AgentLoopTestSuite ContextCompactionTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[88/108] Compiling AgentLoopTestSuite ContextPacketTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[89/108] Compiling AgentLoopTestSuite ControlContractMigrationTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[90/108] Compiling AgentLoopTestSuite CowResidencyContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[91/108] Compiling AgentLoopTestSuite CrashRecoveryTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[92/108] Compiling AgentLoopTestSuite DatabaseTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[93/108] Compiling AgentLoopTestSuite DesktopGoalFoundationTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[94/108] Compiling AgentLoopTestSuite DesktopGoalMigrationTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[95/108] Compiling AgentLoopTestSuite DistillerTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[96/108] Compiling AgentLoopTestSuite DomainEventContractTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[97/108] Compiling AgentLoopTestSuite DurablePlanningTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[98/108] Compiling AgentLoopTestSuite DurableWorkTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[99/108] Compiling AgentLoopTestSuite EngineExecutionStoreTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[100/108] Compiling AgentLoopTestSuite EngineSessionTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[101/108] Compiling AgentLoopTestSuite EngineTerminalProposalTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[102/108] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[103/108] Compiling AgentLoopTestSuite FailureVisibilityTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[104/108] Compiling AgentLoopTestSuite FeedTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[105/108] Compiling AgentLoopTestSuite FileToolsTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/EngineExecutionStoreTests.swift:15:16: warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  13 |         throw EngineContextValidationErrorV1()
+  14 |     }
+  15 |     let path = String(cString: pathBytes)
+     |                `- warning: 'init(cString:)' is deprecated: Use String(decoding: array, as: UTF8.self) instead, after truncating the null termination. [#DeprecatedDeclaration]
+  16 |     let url = URL(fileURLWithPath: path, isDirectory: true)
+  17 |     guard url.path == path else {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:7844:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7842 |                 progressSink: P1F1DProgressRecorder(),
+7843 |                 modelLoopDriver: try #require(
+7844 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+7845 |                 ),
+7846 |                 cliProcessDriver: nil,
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[106/110] Emitting module RunTests
+[107/110] Compiling RunTests main.swift
+[107/110] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[108/110] Linking RunTests
+[109/110] Applying RunTests
+Build of product 'RunTests' complete! (153.23s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite DesktopGoalFoundationTests started.
+◇ Test desktopTextConversionAndGoalPreserveInteriorFormatting() started.
+✔ Test desktopTextConversionAndGoalPreserveInteriorFormatting() passed after 0.002 seconds.
+◇ Test desktopTextCoachRecordCommandAndAnswerPreserveFormatting() started.
+✔ Test desktopTextCoachRecordCommandAndAnswerPreserveFormatting() passed after 0.001 seconds.
+◇ Test desktopTextUnderstandingFieldsPreserveFormattingIndependently() started.
+✔ Test desktopTextUnderstandingFieldsPreserveFormattingIndependently() passed after 0.016 seconds.
+◇ Test desktopTextContentDecodingRejectsCanonicalInvalidControlsAndEdges() started.
+✔ Test desktopTextContentDecodingRejectsCanonicalInvalidControlsAndEdges() passed after 0.060 seconds.
+◇ Test desktopTextContentDecodersRejectUnknownAndMissingRawKeys() started.
+✔ Test desktopTextContentDecodersRejectUnknownAndMissingRawKeys() passed after 0.001 seconds.
+◇ Test desktopTextStrictIdentityReferenceAndOperationalFieldsRemainStrict() started.
+✔ Test desktopTextStrictIdentityReferenceAndOperationalFieldsRemainStrict() passed after 0.082 seconds.
+◇ Test desktopTextGoalDecodingRetainsLegitimateActivatedContractState() started.
+✔ Test desktopTextGoalDecodingRetainsLegitimateActivatedContractState() passed after 0.091 seconds.
+◇ Test desktopTextRealFlowPersistsAndReplaysWithoutFormattingDrift() started.
+✔ Test desktopTextRealFlowPersistsAndReplaysWithoutFormattingDrift() passed after 0.213 seconds.
+◇ Test desktopDomainOutputPolicyHasExactCanonicalWireShape() started.
+✔ Test desktopDomainOutputPolicyHasExactCanonicalWireShape() passed after 0.001 seconds.
+◇ Test desktopDomainContextBindsPolicyAndUnresolvedRuntime() started.
+✔ Test desktopDomainContextBindsPolicyAndUnresolvedRuntime() passed after 0.003 seconds.
+◇ Test desktopDomainCaptureIntentSealsNormalizedCallerOwnedCommand() started.
+✔ Test desktopDomainCaptureIntentSealsNormalizedCallerOwnedCommand() passed after 0.001 seconds.
+◇ Test desktopDomainOutputPolicyRejectsUnsupportedWirePayloads() started.
+✔ Test desktopDomainOutputPolicyRejectsUnsupportedWirePayloads() passed after 0.001 seconds.
+◇ Test desktopDomainCaptureIntentRejectsWrongIdentityAndEmptyText() started.
+✔ Test desktopDomainCaptureIntentRejectsWrongIdentityAndEmptyText() passed after 0.001 seconds.
+◇ Test desktopTextCapturePreservesInteriorFormatting() started.
+✔ Test desktopTextCapturePreservesInteriorFormatting() passed after 0.001 seconds.
+◇ Test atomicCaptureCreatesActualInputWorkAndPreparedSubmission() started.
+✘ Test atomicCaptureCreatesActualInputWorkAndPreparedSubmission() recorded an issue at DesktopGoalFoundationTests.swift:874:9: Expectation failed: an error was thrown when none was expected: "checkpoint3" of type DesktopGoalStoreNotImplemented
+✘ Test atomicCaptureCreatesActualInputWorkAndPreparedSubmission() failed after 0.070 seconds with 1 issue.
+◇ Test captureReceiptFailureRollsBackEveryCarrierAndDomainWrite() started.
+✘ Test captureReceiptFailureRollsBackEveryCarrierAndDomainWrite() recorded an issue at DesktopGoalFoundationTests.swift:965:37: Expectation failed: (error → .checkpoint3) as? (DatabaseError → DesktopGoalStoreNotImplemented)
+✘ Test captureReceiptFailureRollsBackEveryCarrierAndDomainWrite() failed after 0.089 seconds with 1 issue.
+◇ Test exactReplayBeforeAndAfterRestartOrInputProgressReturnsSameReceipt() started.
+✘ Test exactReplayBeforeAndAfterRestartOrInputProgressReturnsSameReceipt() recorded an issue at DesktopGoalFoundationTests.swift:977:9: Expectation failed: an error was thrown when none was expected: "checkpoint3" of type DesktopGoalStoreNotImplemented
+✘ Test exactReplayBeforeAndAfterRestartOrInputProgressReturnsSameReceipt() failed after 0.069 seconds with 1 issue.
+◇ Test providerAwareOutputPolicyIsCanonicalAndReplayBound() started.
+✘ Test providerAwareOutputPolicyIsCanonicalAndReplayBound() recorded an issue at DesktopGoalFoundationTests.swift:1010:13: Expectation failed: an error was thrown when none was expected: "checkpoint3" of type DesktopGoalStoreNotImplemented
+✘ Test providerAwareOutputPolicyIsCanonicalAndReplayBound() recorded an issue at DesktopGoalFoundationTests.swift:1010:13: Expectation failed: an error was thrown when none was expected: "checkpoint3" of type DesktopGoalStoreNotImplemented
+✘ Test providerAwareOutputPolicyIsCanonicalAndReplayBound() failed after 0.146 seconds with 2 issues.
+◇ Test changedIntentEnvelopeContextOrStageUnderSameIdentityRejectsWithoutWrites() started.
+✘ Test changedIntentEnvelopeContextOrStageUnderSameIdentityRejectsWithoutWrites() recorded an issue at DesktopGoalFoundationTests.swift:1069:9: Expectation failed: an error was thrown when none was expected: "checkpoint3" of type DesktopGoalStoreNotImplemented
+✘ Test changedIntentEnvelopeContextOrStageUnderSameIdentityRejectsWithoutWrites() failed after 0.074 seconds with 1 issue.
+◇ Test duplicateLiveSessionReservationRejectsWithoutAnyNewDomainWrite() started.
+✘ Test duplicateLiveSessionReservationRejectsWithoutAnyNewDomainWrite() recorded an issue at DesktopGoalFoundationTests.swift:1096:9: Expectation failed: expected error "contextConflict" of type DesktopGoalFoundationErrorV1, but "checkpoint3" of type DesktopGoalStoreNotImplemented was thrown instead
+✘ Test duplicateLiveSessionReservationRejectsWithoutAnyNewDomainWrite() failed after 0.090 seconds with 1 issue.
+◇ Test sealCaptureStageUsesCASAndPreservesExactCommandIdentity() started.
+✘ Test sealCaptureStageUsesCASAndPreservesExactCommandIdentity() recorded an issue at DesktopGoalFoundationTests.swift:1110:9: Expectation failed: expected error "staleOperationVersion" of type DesktopGoalFoundationErrorV1, but "checkpoint3" of type DesktopGoalStoreNotImplemented was thrown instead
+✘ Test sealCaptureStageUsesCASAndPreservesExactCommandIdentity() recorded an issue at DesktopGoalFoundationTests.swift:1115:9: Expectation failed: an error was thrown when none was expected: "checkpoint3" of type DesktopGoalStoreNotImplemented
+✘ Test sealCaptureStageUsesCASAndPreservesExactCommandIdentity() failed after 0.093 seconds with 2 issues.
+◇ Test sealedStageAndReceiptCASIsReplayableButNotReplaceable() started.
+✘ Test sealedStageAndReceiptCASIsReplayableButNotReplaceable() recorded an issue at DesktopGoalFoundationTests.swift:1158:9: Expectation failed: expected error "staleOperationVersion" of type DesktopGoalFoundationErrorV1, but "checkpoint3" of type DesktopGoalStoreNotImplemented was thrown instead
+✘ Test sealedStageAndReceiptCASIsReplayableButNotReplaceable() recorded an issue at DesktopGoalFoundationTests.swift:1165:9: Expectation failed: an error was thrown when none was expected: "checkpoint3" of type DesktopGoalStoreNotImplemented
+✘ Test sealedStageAndReceiptCASIsReplayableButNotReplaceable() failed after 0.100 seconds with 2 issues.
+◇ Test outputPolicyRejectsUnsupportedOrLegacyJSONWithoutWrites() started.
+✘ Test outputPolicyRejectsUnsupportedOrLegacyJSONWithoutWrites() recorded an issue at DesktopGoalFoundationTests.swift:1257:9: Expectation failed: expected error "corruptCanonicalPayload" of type DesktopGoalFoundationErrorV1, but "checkpoint3" of type DesktopGoalStoreNotImplemented was thrown instead
+✘ Test outputPolicyRejectsUnsupportedOrLegacyJSONWithoutWrites() failed after 0.134 seconds with 1 issue.
+✘ Suite DesktopGoalFoundationTests failed after 1.350 seconds with 12 issues.
+✘ Test run with 23 tests in 1 suite failed after 1.351 seconds with 12 issues.

@@ -1,0 +1,45 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.13s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1DOutcomeContractTests started.
+◇ Test outcomeContractMigrationRemainsPresentUnderV17Head() started.
+✔ Test outcomeContractMigrationRemainsPresentUnderV17Head() passed after 0.074 seconds.
+◇ Test outcomeContractMigrationReplaysFreshAndEveryPredecessorTwice() started.
+✔ Test outcomeContractMigrationReplaysFreshAndEveryPredecessorTwice() passed after 0.318 seconds.
+◇ Test outcomeContractMigrationRollbackRestoresV14Snapshot() started.
+✔ Test outcomeContractMigrationRollbackRestoresV14Snapshot() passed after 0.031 seconds.
+◇ Test v15AppendOnlyCarriersRejectNoopUpdateAndDelete() started.
+✔ Test v15AppendOnlyCarriersRejectNoopUpdateAndDelete() passed after 0.096 seconds.
+◇ Test v15RedactionShapesAndPolicySchemaAreExact() started.
+✔ Test v15RedactionShapesAndPolicySchemaAreExact() passed after 0.069 seconds.
+◇ Test v15RawGrantAndReceiptConstraintMatricesFailClosed() started.
+✔ Test v15RawGrantAndReceiptConstraintMatricesFailClosed() passed after 0.065 seconds.
+◇ Test contractContentAndRequirementHashesUseCanonicalJSONV1() started.
+✔ Test contractContentAndRequirementHashesUseCanonicalJSONV1() passed after 0.001 seconds.
+◇ Test draftCreationIsImmutableIdempotentAndConflictDetecting() started.
+✔ Test draftCreationIsImmutableIdempotentAndConflictDetecting() passed after 0.076 seconds.
+◇ Test draftRevisionCreatesNextVersionAndCancelsOnlyPriorDraft() started.
+✔ Test draftRevisionCreatesNextVersionAndCancelsOnlyPriorDraft() passed after 0.082 seconds.
+◇ Test activationRequiresExactConfirmedUnderstandingAndSnapshotRows() started.
+✔ Test activationRequiresExactConfirmedUnderstandingAndSnapshotRows() passed after 0.075 seconds.
+◇ Test codingActivationRequiresDeterministicRequirement() started.
+✔ Test codingActivationRequiresDeterministicRequirement() passed after 0.071 seconds.
+◇ Test activationSupersedesPriorActiveOnlyAfterNewVersionValidates() started.
+✔ Test activationSupersedesPriorActiveOnlyAfterNewVersionValidates() passed after 0.096 seconds.
+◇ Test contractFulfillAndCancelAllowOnlyFrozenTransitions() started.
+✔ Test contractFulfillAndCancelAllowOnlyFrozenTransitions() passed after 0.098 seconds.
+◇ Test goalReadyActivationRequiresActiveExactContractAndSameGoal() started.
+✔ Test goalReadyActivationRequiresActiveExactContractAndSameGoal() passed after 0.082 seconds.
+◇ Test goalPauseResumeAchieveAndSystemReopenAreExhaustive() started.
+✔ Test goalPauseResumeAchieveAndSystemReopenAreExhaustive() passed after 0.093 seconds.
+◇ Test goalMissionLinkIsCampExactCASAndCarriesContractRef() started.
+✔ Test goalMissionLinkIsCampExactCASAndCarriesContractRef() passed after 0.082 seconds.
+◇ Test p1CReadyBehaviorRemainsValidWithoutOutcomeContract() started.
+✔ Test p1CReadyBehaviorRemainsValidWithoutOutcomeContract() passed after 0.062 seconds.
+◇ Test everyP1DContractAndGoalCommandRejectsWrongActorBeforeSQL() started.
+✔ Test everyP1DContractAndGoalCommandRejectsWrongActorBeforeSQL() passed after 0.074 seconds.
+✔ Suite P1DOutcomeContractTests passed after 1.556 seconds.
+✔ Test run with 18 tests in 1 suite passed after 1.556 seconds.

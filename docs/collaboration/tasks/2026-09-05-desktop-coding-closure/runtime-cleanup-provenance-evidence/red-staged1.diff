@@ -1,0 +1,166 @@
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-cleanup-provenance-20260909.gzrfYwt14y/CliProcessBackend.swift.before b/Sources/AgentLoopCore/Loop/CliProcessBackend.swift
+index b3a643e..b450ef2 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-cleanup-provenance-20260909.gzrfYwt14y/CliProcessBackend.swift.before
++++ b/Sources/AgentLoopCore/Loop/CliProcessBackend.swift
+@@ -18,24 +18,56 @@ private struct CliProcessLiveCodeSignatureRevalidatorV1:
+         _ authority: CliExecutableAuthorityV1
+     ) throws {
+         try authority.revalidateStagedCodeSignature()
+     }
+ 
+     func revalidateBoardBridge(
+         _ authority: EngineBoardBridgeExecutableAuthorityV1
+     ) throws {
+         try authority.revalidateStagedCodeSignature()
+     }
+ }
+ 
++package struct CliProcessCleanupFailureV1: Error, Sendable, CustomStringConvertible {
++    package enum Phase: String, Sendable {
++        case boardStop
++        case cleanupAuthority
++        case signal
++        case liveness
++        case descriptor
++    }
++
++    package struct Cause: Sendable {
++        package let phase: Phase
++        package let underlying: any Error
++    }
++
++    package let executionId: String
++    package let pid: Int32?
++    package let processGroupID: Int32?
++    package let primary: any Error
++    package let causes: [Cause]
++
++    package var description: String {
++        let causeTypes = causes.map {
++            "\($0.phase.rawValue):\(String(reflecting: type(of: $0.underlying)))"
++        }.joined(separator: ",")
++        return "CLI cleanup failed execution=\(executionId) "
++            + "pid=\(pid.map(String.init) ?? "none") "
++            + "group=\(processGroupID.map(String.init) ?? "none") "
++            + "primary=\(String(reflecting: type(of: primary))) "
++            + "causes=[\(causeTypes)]"
++    }
++}
++
+ package enum CliAuxiliaryDescriptorFailureV1: Error, Sendable, Equatable {
+     case invalidDescriptor
+     case duplicationFailed
+     case originalCloseFailed
+ }
+ 
+ package enum CliAuxiliaryDescriptorV1 {
+     package static func normalizeOwned(
+         _ descriptor: inout Int32
+     ) throws {
+         guard descriptor >= 0 else {
+             throw CliAuxiliaryDescriptorFailureV1.invalidDescriptor
+diff --git a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-cleanup-provenance-20260909.gzrfYwt14y/ExecutionEngineConformanceTests.swift.before b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+index 3fb85cd..82c0ab7 100644
+--- a/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/agentloop-cleanup-provenance-20260909.gzrfYwt14y/ExecutionEngineConformanceTests.swift.before
++++ b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+@@ -8258,24 +8258,100 @@ struct ExecutionEngineConformanceTests {
+         let eofRequest = try p1f1dRequest()
+         for try await _ in adapter.execute(request: eofRequest) {}
+         let terminalIntents = await terminalRecorder.snapshot()
+         #expect(terminalIntents.count == 1)
+         guard case let .blocked(subtype, reasonCode, _) = terminalIntents.first else {
+             Issue.record("EOF without Board terminal did not fail closed")
+             return
+         }
+         #expect(subtype == .engineProtocolError)
+         #expect(reasonCode == "engine_protocol_error")
+     }
+ 
++    @Test func p1f1_065CleanupFailurePreservesPrimaryAndAuthorityCause() async throws {
++        let harness = try P1F1D065MechanicsHarness(label: "cleanup-cause")
++        defer {
++            do { try harness.removeChecked() }
++            catch { Issue.record(error) }
++        }
++        let executionId = "00000000-0000-4000-8000-000000000765"
++        let cleanup = try harness.makeCleanupAuthority("cleanup.json")
++        let retainedOriginalURL = harness.root.appendingPathComponent(
++            "cleanup-original.json"
++        )
++        try FileManager.default.moveItem(
++            at: cleanup.url, to: retainedOriginalURL
++        )
++        let replacementBytes = Data("replacement-must-survive".utf8)
++        try replacementBytes.write(to: cleanup.url)
++        let request = try harness.request(
++            executionId: executionId,
++            mode: .exitZero,
++            token: "7",
++            cleanupAuthorities: [cleanup.authority]
++        )
++        let socketURL = try harness.socketURL(executionId: executionId)
++        let registry = ShellProcessRegistry()
++        let revalidator = P1F1D065SignatureRevalidator(
++            expectedCLI: harness.executableAuthority,
++            expectedBoardBridge: harness.bridgeAuthority,
++            injectedFailure: .cli
++        )
++        let backend = try p1f1d065GateBackend(
++            harness: harness, registry: registry, revalidator: revalidator
++        )
++        var terminalError: (any Error)?
++        var frameCount = 0
++        do {
++            for try await _ in backend.launch(request) { frameCount += 1 }
++        } catch {
++            terminalError = error
++        }
++
++        // Establish all resource and zero-effect evidence before the intended
++        // RED cast: cleanup must preserve a file outside the captured identity.
++        try #require(revalidator.snapshot() == [.cli])
++        try #require(frameCount == 0)
++        try #require(registry.activeCount == 0)
++        let effects = harness.processInspector.effectSnapshot
++        try #require(effects.snapshotCalls == 0)
++        try #require(effects.signalCount == 0)
++        try #require(harness.processInspector.signalObservations().isEmpty)
++        try #require(!FileManager.default.fileExists(atPath: socketURL.path))
++        let observedReplacement = try Data(contentsOf: cleanup.url)
++        let observedOriginal = try Data(contentsOf: retainedOriginalURL)
++        try #require(observedReplacement == replacementBytes)
++        try #require(observedOriginal == Data("{}".utf8))
++        print(
++            "065-cleanup-provenance pre-cast: cli-rejected=true frames=0 "
++                + "registry=0 snapshots=0 signals=0 socket-absent=true "
++                + "replacement-unchanged=true original-unchanged=true"
++        )
++
++        let failure = try #require(terminalError as? CliProcessCleanupFailureV1)
++        #expect(failure.executionId == executionId)
++        #expect(failure.pid == nil)
++        #expect(failure.processGroupID == nil)
++        #expect(
++            (failure.primary as? P1F1D065SignatureFixtureError)
++                == .injected(.cli)
++        )
++        try #require(failure.causes.count == 1)
++        #expect(failure.causes[0].phase == .cleanupAuthority)
++        #expect(
++            (failure.causes[0].underlying as? CliCleanupFileErrorV1)
++                == .identityMismatch
++        )
++    }
++
+     @Test func p1f1_065CancellationCleansProcessAndCommitsOnce() async throws {
+         let gateHarness = try P1F1D065MechanicsHarness(label: "gate")
+         var gateRemovalAllowed = true
+         defer {
+             if gateRemovalAllowed {
+                 do { try gateHarness.removeChecked() }
+                 catch { Issue.record(error) }
+             } else {
+                 Issue.record("retained 065 gate fixture: \(gateHarness.root.path)")
+             }
+         }
+ 

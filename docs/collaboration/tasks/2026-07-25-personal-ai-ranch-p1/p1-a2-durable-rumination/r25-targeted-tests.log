@@ -1,0 +1,66 @@
+format=r25-targeted-tests-v1
+utc=2026-08-10T21:59:03Z
+source_log=/Users/muzi/Agent-loop/docs/collaboration/tasks/2026-07-25-personal-ai-ranch-p1/p1-a2-durable-rumination/r25-verify.log
+source_sha256=9a0d772ac0f36cf56b2340c741d237dfbc2a4a6a9ecd4314bb5b95319f7b8b5f
+source_bytes=96109
+authoritative_command=swift run RunTests
+authoritative_unfiltered=true
+authoritative_single_invocation=true
+captured_run_started_count=1
+full_test_discovery_count=652
+full_test_pass_count=652
+full_suite_start_count=7
+full_suite_pass_count=7
+full_failure_marker_count=0
+full_summary_count=1
+full_summary_is_last_nonempty_line=true
+required_name_count=46
+name=ruminationStartAndWorkAreAtomic discovery=1 pass=1 failure=0
+name=ruminationCrashIsAdoptedAndCompletesOnce discovery=1 pass=1 failure=0
+name=ruminationFailurePersistenceFailureRemainsRecoverable discovery=1 pass=1 failure=0
+name=ruminationCancelRejectsStaleResponse discovery=1 pass=1 failure=0
+name=legacyRuminatingRowGetsOneRepairWork discovery=1 pass=1 failure=0
+name=repeatedRuminationCommandReturnsExistingWork discovery=1 pass=1 failure=0
+name=ruminationCancelAndQueuedProjectionRollbackTogether discovery=1 pass=1 failure=0
+name=ruminationAttemptClosesExactlyOnce discovery=1 pass=1 failure=0
+name=ruminationWorkInputUsesCanonicalCapturedIdentityAndFirstTrace discovery=1 pass=1 failure=0
+name=ruminationSameKeyDifferentCapturedIdentityConflictsWithoutResolution discovery=1 pass=1 failure=0
+name=ruminationTerminalRetryCreatesReplacementWhileActiveReplayReusesWork discovery=1 pass=1 failure=0
+name=ruminationCapturedProfileAndModelIgnoreDefaultDrift discovery=1 pass=1 failure=0
+name=ruminationClaimResolutionFailureMatrixIsStableSafeAndFailClosed discovery=1 pass=1 failure=0
+name=ruminationResolverNeverFallsBackToCurrentDefaultOrCompanion discovery=1 pass=1 failure=0
+name=ruminationTransientFailureRetriesAtFiveThirtyOneTwentyThenTerminates discovery=1 pass=1 failure=0
+name=ruminationDeterministicFailureDoesNotRetry discovery=1 pass=1 failure=0
+name=ruminationTerminalFailureAndProjectionCommitOrRollbackTogether discovery=1 pass=1 failure=0
+name=ruminationSuccessResultProjectionAndWorkCommitOrRollbackTogether discovery=1 pass=1 failure=0
+name=ruminationLeaseRenewalAllowsOnlyLatestClaimToCommit discovery=1 pass=1 failure=0
+name=ruminationTerminalCommitFailureRetainsProposalAndDoesNotRecallProvider discovery=1 pass=1 failure=0
+name=ruminationProcessRestartMayRecallProviderButCommitsOneResultAndTerminal discovery=1 pass=1 failure=0
+name=ruminationEmergencyHaltCancelsWorkAndQueuesProjectionAtomically discovery=1 pass=1 failure=0
+name=ruminationEmergencyHaltRejectsClaimResolveAndProviderDispatch discovery=1 pass=1 failure=0
+name=ruminationLateProviderResponseCannotOverrideEmergencyHalt discovery=1 pass=1 failure=0
+name=ruminationResumeDoesNotReviveCanceledWork discovery=1 pass=1 failure=0
+name=ruminationWaitUntilIdleIncludesDueRuminationAndIgnoresFutureRetry discovery=1 pass=1 failure=0
+name=ruminationLivePhaseEventsAreOwnedOrderedAndProcessLocal discovery=1 pass=1 failure=0
+name=legacyRuminationWithoutResolvableRuntimeFailsSafelyExactlyOnce discovery=1 pass=1 failure=0
+name=ruminationSanitizesPersistedAndVisibleDiagnostics discovery=1 pass=1 failure=0
+name=ruminationInvalidOutputIsDeterministicAndPreservesSource discovery=1 pass=1 failure=0
+name=ruminationProviderUsesNoToolsAndProducesOneCanonicalResult discovery=1 pass=1 failure=0
+name=singleOrchestratorSupervisorOwnsPlanningAndRuminationLifecycle discovery=1 pass=1 failure=0
+name=ruminationAdapterDelegatesStartRetryCancelWithoutUnownedTask discovery=1 pass=1 failure=0
+name=ruminationUnknownRestartRendersRecoveringWithoutInventingReading discovery=1 pass=1 failure=0
+name=ruminationPhaseProjectionUsesOnlyMatchingSupervisorEvents discovery=1 pass=1 failure=0
+name=genericDurableWorkAPIsSealRuminationWithExactPriority discovery=1 pass=1 failure=0
+name=supervisedWorkPumpIsGlobalFIFOWithoutPlanningRegression discovery=1 pass=1 failure=0
+name=ruminationStartupRemainsSuppressedUntilOrchestratorActivation discovery=1 pass=1 failure=0
+name=legacyRuminationRepairCoversValidHaltedAndEveryTerminalReason discovery=1 pass=1 failure=0
+name=ruminationUsageIsExactOrFailsBeforeAccounting discovery=1 pass=1 failure=0
+name=activeRuminationFencesDiscardDeleteAndArchiveRaces discovery=1 pass=1 failure=0
+name=slowActiveStreamDoesNotIdleTimeout discovery=1 pass=1 failure=0
+name=turnTimeoutRetriesOnceThenBlocks discovery=1 pass=1 failure=0
+name=timeoutThenSuccessDoesNotAccumulate discovery=1 pass=1 failure=0
+name=cancelWinsOverIdleTimeout discovery=1 pass=1 failure=0
+name=turnCompletesUnderTimeout discovery=1 pass=1 failure=0
+required_discovery_total=46
+required_pass_total=46
+status=PASS

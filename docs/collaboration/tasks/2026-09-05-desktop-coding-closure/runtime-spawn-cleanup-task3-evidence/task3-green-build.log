@@ -1,0 +1,34 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+[3/6] Emitting module AgentLoopCore
+[4/6] Compiling AgentLoopCore CliProcessBackend.swift
+[5/7] Emitting module AgentLoopApplication
+[5/9] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[7/13] Emitting module AgentLoopTestSuite
+[8/13] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:2261:12: warning: no calls to throwing functions occur within 'try' expression
+ 2259 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+ 2260 |     }
+ 2261 |     return try CliEngineAdapter(
+      |            `- warning: no calls to throwing functions occur within 'try' expression
+ 2262 |         profile: profile,
+ 2263 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:9900:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+ 9898 |                 progressSink: P1F1DProgressRecorder(),
+ 9899 |                 modelLoopDriver: try #require(
+ 9900 |                     selectedTransport.modelLoopDriver
+      |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+ 9901 |                 ),
+ 9902 |                 cliProcessDriver: nil,
+[9/13] Compiling AgentLoopTestSuite CliBackendTests.swift
+[10/13] Compiling AgentLoopTestSuite CardRunnerTests.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[11/14] Emitting module RunTests
+[11/14] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[12/14] Linking RunTests
+[13/14] Applying RunTests
+Build of product 'RunTests' complete! (33.84s)

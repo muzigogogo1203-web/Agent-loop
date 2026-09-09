@@ -1,0 +1,71 @@
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite ExecutionEngineConformanceTests started.
+◇ Test p1f1_065CancellationCleansProcessAndCommitsOnce() started.
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 fixture-root=/tmp/al65-gate-ad5ee921
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 launch-called
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 launch-returned
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 readiness-start observed=false
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 signal=19 group=60957 target=-60957 result=0 errno=0
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 readiness-end observed=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 cancel-start
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 signal=15 group=60957 target=-60957 result=0 errno=0
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 signal=9 group=60957 target=-60957 result=0 errno=0
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 cancel-result success=true pid=60957 group=60957 status=137 term=true kill=true stdoutEOF=true stderrEOF=true childReaped=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 stream-join-start
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 stream-exited status=137
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 stream-join-result success=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 final-signal-count=3 assessment-execution=00000000-0000-4000-8000-000000000065
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 final-signal=19 group=60957 target=-60957 result=0 errno=0
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 final-signal=15 group=60957 target=-60957 result=0 errno=0
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 final-signal=9 group=60957 target=-60957 result=0 errno=0
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 observation=successful-SIGCONT-identity result=1 errno=0 passed=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 observation=cancellation-identity result=60957 errno=0 passed=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 observation=cancellation-childReaped result=1 errno=0 passed=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 observation=cancellation-stdoutEOF result=1 errno=0 passed=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 observation=cancellation-stderrEOF result=1 errno=0 passed=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 observation=kill(60957,0) result=-1 errno=3 passed=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 observation=kill(-60957,0) result=-1 errno=3 passed=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 observation=waitid(WEXITED|WNOHANG|WNOWAIT) result=-1 errno=10 passed=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 observation=socket-lstat result=-1 errno=2 passed=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 observation=registry-activeCount result=0 errno=0 passed=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 final-stream-exited status=137
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 observation=joined-stream-exited result=1 errno=0 passed=true
+065-cold fixture=D91EE9F6-33EE-461D-9131-CB51336016E2 execution=00000000-0000-4000-8000-000000000065 cleanup-certified=true retained-root=none
+✔ Test p1f1_065CancellationCleansProcessAndCommitsOnce() passed after 12.863 seconds.
+◇ Test p1f1_065ColdGateForcedFailureStillJoinsCleanup() started.
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 fixture-root=/tmp/al65-cold-error-07875867
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 launch-called
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 launch-returned
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 readiness-start observed=false successfulContinuations=0
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 signal=19 group=60967 target=-60967 result=0 errno=0
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 readiness-end observed=true successfulContinuations=1
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 body-error category=forcedFailure.afterReady
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 cancel-start
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 signal=15 group=60967 target=-60967 result=0 errno=0
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 signal=9 group=60967 target=-60967 result=0 errno=0
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 cancel-result success=true pid=60967 group=60967 status=137 term=true kill=true stdoutEOF=true stderrEOF=true childReaped=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 stream-join-start
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 stream-exited status=137
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 stream-join-result success=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 final-signal-count=3 assessment-execution=00000000-0000-4000-8000-000000000865
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 final-signal=19 group=60967 target=-60967 result=0 errno=0
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 final-signal=15 group=60967 target=-60967 result=0 errno=0
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 final-signal=9 group=60967 target=-60967 result=0 errno=0
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 observation=successful-SIGCONT-identity result=1 errno=0 passed=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 observation=cancellation-identity result=60967 errno=0 passed=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 observation=cancellation-childReaped result=1 errno=0 passed=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 observation=cancellation-stdoutEOF result=1 errno=0 passed=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 observation=cancellation-stderrEOF result=1 errno=0 passed=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 observation=kill(60967,0) result=-1 errno=3 passed=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 observation=kill(-60967,0) result=-1 errno=3 passed=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 observation=waitid(WEXITED|WNOHANG|WNOWAIT) result=-1 errno=10 passed=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 observation=socket-lstat result=-1 errno=2 passed=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 observation=registry-activeCount result=0 errno=0 passed=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 final-stream-exited status=137
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 observation=joined-stream-exited result=1 errno=0 passed=true
+065-cold fixture=780C75A3-A844-4913-AF81-512C941C71B2 execution=00000000-0000-4000-8000-000000000865 cleanup-certified=true retained-root=none
+✔ Test p1f1_065ColdGateForcedFailureStillJoinsCleanup() passed after 5.511 seconds.
+✔ Suite ExecutionEngineConformanceTests passed after 18.375 seconds.
+✔ Test run with 2 tests in 1 suite passed after 18.375 seconds.

@@ -178,7 +178,7 @@ import AgentLoopCore
         campName: "c", squadName: "s", goal: "g",
         cardTitle: "t", cardDescription: "d", expectedOutput: "e",
         assigneeId: nil, maxTurns: 3)
-    try db.transitionCard(id: ids.cardId, to: .running, eventKind: "card_started", payload: ["n": 1])
+    try db.startRun(cardId: ids.cardId, runId: "run")
     try db.appendDiagnosticEvent(cardId: ids.cardId, runId: "run", kind: "progress_note", payload: ["text": "2"])
     try db.appendDiagnosticEvent(cardId: ids.cardId, runId: "run", kind: "progress_note", payload: ["text": "3"])
 

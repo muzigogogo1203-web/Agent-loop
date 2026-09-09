@@ -1,0 +1,502 @@
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cli-readiness-before/RuntimeLifecycleDiagnostics.swift	2026-09-06 01:11:07
++++ Sources/AgentLoopCore/Observability/RuntimeLifecycleDiagnostics.swift	2026-09-06 01:12:53
+@@ -11,6 +11,22 @@
+     case probeCompositionStarted, probeCompositionCompleted
+     case cliFinalizeStarted, cliStdinFinished, cliReaped, cliStdoutFinished, cliStderrFinished
+     case cliServerStopStarted, cliServerStopFinished, cliFinalizeFinished
++    case cliRunQueued, cliRunStarted, cliLaunchInputsValidated
++    case cliEnvironmentRequested, cliEnvironmentReady, cliEnvironmentValidated
++    case cliBoardStartCalled, cliBoardStartReturned
++    case cliSpawnPreparationStarted, cliPosixSpawnCalled, cliSpawned, cliSpawnFailed
++    case cliSuspendedValidationCalled, cliSuspendedValidationReturned
++    case cliReapTaskQueued, cliReapTaskStarted, cliWaitpidReturned, cliWaitpidError
++    case cliStdoutTaskQueued, cliStdoutTaskStarted, cliStdoutDrainEntered
++    case cliStdoutFirstBytes, cliStdoutFirstLineYielded
++    case cliStderrTaskQueued, cliStderrTaskStarted
++    case cliSIGCONTCalled, cliSIGCONTReturned
++    case cliFixtureLaunchCalled, cliFixtureLaunchReturned
++    case cliFixtureConsumerQueued, cliFixtureConsumerStarted
++    case cliFixtureBodyStarted, cliFixtureFirstStdoutReceived
++    case cliFixtureFirstStdoutRecorded, cliFixtureStreamFinished
++    case cliFixtureReadyAwaitQueued, cliFixtureReadyWaitStarted, cliFixtureReadyWaitEnded
++    case cliFixtureConsumerJoined
+ }
+ 
+ package enum RuntimeLifecycleDiagnostics {
+@@ -21,6 +37,8 @@
+         subsystem: "com.muzi.agentloop", category: "runtime-lifecycle"
+     )
+ 
++    package static var isEnabled: Bool { enabled }
++
+     package static func event(
+         _ stage: RuntimeLifecycleStage, owner: UUID, value: Int = 0
+     ) {
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cli-readiness-before/CliProcessBackend.swift	2026-09-06 01:11:07
++++ Sources/AgentLoopCore/Loop/CliProcessBackend.swift	2026-09-06 01:13:46
+@@ -568,6 +568,7 @@
+     }
+ 
+     func start() {
++        RuntimeLifecycleDiagnostics.event(.cliRunQueued, owner: diagnosticId)
+         Task { [self] in
+             await run()
+         }
+@@ -600,13 +601,23 @@
+     }
+ 
+     private func run() async {
++        RuntimeLifecycleDiagnostics.event(.cliRunStarted, owner: diagnosticId)
+         var server: BoardToolServer?
+         var registered = false
+         defer { owner.remove(self) }
+ 
+         do {
+             try validateLaunchInputs()
++            RuntimeLifecycleDiagnostics.event(
++                .cliLaunchInputsValidated, owner: diagnosticId
++            )
++            RuntimeLifecycleDiagnostics.event(
++                .cliEnvironmentRequested, owner: diagnosticId
++            )
+             var environment = await LoginShellEnvironment.shared.environment()
++            RuntimeLifecycleDiagnostics.event(
++                .cliEnvironmentReady, owner: diagnosticId
++            )
+             for key in Self.reservedBoardEnvironmentKeys {
+                 environment[key] = nil
+             }
+@@ -634,6 +645,9 @@
+                 .boundCapabilityTools.logicalDefinitions.map(\.name)
+                 .sorted().joined(separator: ",")
+             try validateEnvironment(environment)
++            RuntimeLifecycleDiagnostics.event(
++                .cliEnvironmentValidated, owner: diagnosticId
++            )
+ 
+             let boardServer = try BoardToolServer(
+                 directoryAuthority: request.boardSocketDirectoryAuthority,
+@@ -655,7 +669,13 @@
+                 }
+             )
+             server = boardServer
++            RuntimeLifecycleDiagnostics.event(
++                .cliBoardStartCalled, owner: diagnosticId
++            )
+             try boardServer.start()
++            RuntimeLifecycleDiagnostics.event(
++                .cliBoardStartReturned, owner: diagnosticId
++            )
+ 
+             let core = try await spawn(
+                 environment: environment,
+@@ -790,6 +810,10 @@
+         environment: [String: String],
+         server: BoardToolServer
+     ) async throws -> CliSpawnCore {
++        RuntimeLifecycleDiagnostics.event(
++            .cliSpawnPreparationStarted, owner: diagnosticId
++        )
++        let diagnosticOwner = diagnosticId
+         var stdinRead: Int32 = -1
+         var stdinWrite: Int32 = -1
+         var stdoutRead: Int32 = -1
+@@ -926,6 +950,9 @@
+         defer { Self.freeCStringVector(environmentVector) }
+ 
+         var pid: pid_t = 0
++        RuntimeLifecycleDiagnostics.event(
++            .cliPosixSpawnCalled, owner: diagnosticOwner
++        )
+         code = request.spec.command.withCString { executable in
+             arguments.withUnsafeMutableBufferPointer { argv in
+                 environmentVector.withUnsafeMutableBufferPointer { envp in
+@@ -941,10 +968,16 @@
+             }
+         }
+         guard code == 0 else {
++            RuntimeLifecycleDiagnostics.event(
++                .cliSpawnFailed, owner: diagnosticOwner, value: Int(code)
++            )
+             throw CliProcessBackendError.processLaunchFailed(
+                 "staged process spawn failed"
+             )
+         }
++        RuntimeLifecycleDiagnostics.event(
++            .cliSpawned, owner: diagnosticOwner, value: Int(pid)
++        )
+ 
+         var groupRegistered = false
+         var reapTask: Task<CliProcessReapResult, Never>?
+@@ -961,29 +994,58 @@
+                     "child process group identity mismatch"
+                 )
+             }
++            RuntimeLifecycleDiagnostics.event(
++                .cliSuspendedValidationCalled,
++                owner: diagnosticOwner, value: Int(pid)
++            )
+             try Self.validateSuspendedImage(
+                 pid: pid,
+                 processGroupID: processGroupID,
+                 authority: request.cliExecutableAuthority,
+                 processInspector: processInspector
+             )
++            RuntimeLifecycleDiagnostics.event(
++                .cliSuspendedValidationReturned,
++                owner: diagnosticOwner, value: Int(pid)
++            )
+ 
+             registry.register(-processGroupID)
+             groupRegistered = true
+             let childPID = pid
+             let reapState = CliProcessReapState()
++            RuntimeLifecycleDiagnostics.event(
++                .cliReapTaskQueued, owner: diagnosticOwner
++            )
+             let createdReapTask = Task.detached {
++                RuntimeLifecycleDiagnostics.event(
++                    .cliReapTaskStarted, owner: diagnosticOwner
++                )
+                 var rawStatus: Int32 = 0
+                 while true {
+                     let result = waitpid(childPID, &rawStatus, 0)
++                    let waitError = result < 0 ? errno : 0
+                     if result == childPID {
++                        RuntimeLifecycleDiagnostics.event(
++                            .cliWaitpidReturned,
++                            owner: diagnosticOwner, value: Int(result)
++                        )
+                         reapState.markExited()
+                         return CliProcessReapResult(
+                             status: Self.decodeWaitStatus(rawStatus),
+                             failure: nil
+                         )
+                     }
+-                    if result < 0, errno == EINTR { continue }
++                    if result < 0, waitError == EINTR { continue }
++                    RuntimeLifecycleDiagnostics.event(
++                        .cliWaitpidReturned,
++                        owner: diagnosticOwner, value: Int(result)
++                    )
++                    if result < 0 {
++                        RuntimeLifecycleDiagnostics.event(
++                            .cliWaitpidError,
++                            owner: diagnosticOwner, value: Int(waitError)
++                        )
++                    }
+                     let detail = result < 0
+                         ? "waitpid failed"
+                         : "waitpid returned an unexpected child"
+@@ -999,19 +1061,32 @@
+             stdoutRead = -1
+             let stderrFD = stderrRead
+             stderrRead = -1
++            RuntimeLifecycleDiagnostics.event(
++                .cliStdoutTaskQueued, owner: diagnosticOwner
++            )
+             let createdStdoutTask = Task.detached {
+-                [continuation, pipeDrainGrace] in
+-                await Self.drainStdout(
++                [continuation, pipeDrainGrace, diagnosticOwner] in
++                RuntimeLifecycleDiagnostics.event(
++                    .cliStdoutTaskStarted, owner: diagnosticOwner
++                )
++                return await Self.drainStdout(
+                     fd: stdoutFD,
+                     reapState: reapState,
+                     grace: pipeDrainGrace,
+-                    continuation: continuation
++                    continuation: continuation,
++                    diagnosticOwner: diagnosticOwner
+                 )
+             }
+             stdoutTask = createdStdoutTask
++            RuntimeLifecycleDiagnostics.event(
++                .cliStderrTaskQueued, owner: diagnosticOwner
++            )
+             let createdStderrTask = Task.detached {
+-                [continuation, pipeDrainGrace] in
+-                await Self.drainStderr(
++                [continuation, pipeDrainGrace, diagnosticOwner] in
++                RuntimeLifecycleDiagnostics.event(
++                    .cliStderrTaskStarted, owner: diagnosticOwner
++                )
++                return await Self.drainStderr(
+                     fd: stderrFD,
+                     reapState: reapState,
+                     grace: pipeDrainGrace,
+@@ -1020,10 +1095,18 @@
+             }
+             stderrTask = createdStderrTask
+ 
++            RuntimeLifecycleDiagnostics.event(
++                .cliSIGCONTCalled,
++                owner: diagnosticOwner, value: Int(processGroupID)
++            )
+             try processInspector.send(
+                 signal: SIGCONT,
+                 processGroupId: processGroupID
+             )
++            RuntimeLifecycleDiagnostics.event(
++                .cliSIGCONTReturned,
++                owner: diagnosticOwner, value: Int(processGroupID)
++            )
+             let stdinFD = stdinWrite
+             stdinWrite = -1
+             let stdinGate = CliStdinStartGate()
+@@ -1823,33 +1906,74 @@
+         reapState: CliProcessReapState,
+         grace: Duration,
+         continuation:
+-            AsyncThrowingStream<CliProcessFrameV1, Error>.Continuation
++            AsyncThrowingStream<CliProcessFrameV1, Error>.Continuation,
++        diagnosticOwner: UUID
+     ) async -> Bool {
++        RuntimeLifecycleDiagnostics.event(
++            .cliStdoutDrainEntered, owner: diagnosticOwner
++        )
++        var didLogFirstBytes = false
++        var didLogFirstLine = false
+         var lineBuffer = Data()
+         let reachedEOF = await drainPipe(
+             fd: fd,
+             reapState: reapState,
+             grace: grace,
+             onData: { data in
++                if !didLogFirstBytes {
++                    RuntimeLifecycleDiagnostics.event(
++                        .cliStdoutFirstBytes,
++                        owner: diagnosticOwner, value: data.count
++                    )
++                    didLogFirstBytes = true
++                }
+                 lineBuffer.append(data)
+                 while let newline = lineBuffer.firstIndex(
+                     of: UInt8(ascii: "\n")
+                 ) {
+                     let line = Data(lineBuffer[..<newline])
+                     lineBuffer.removeSubrange(lineBuffer.startIndex...newline)
+-                    continuation.yield(
++                    let yieldResult = continuation.yield(
+                         .stdoutLine(String(decoding: line, as: UTF8.self))
+                     )
++                    if !didLogFirstLine {
++                        didLogFirstLine = true
++                        let outcome: Int
++                        switch yieldResult {
++                        case .enqueued: outcome = 0
++                        case .dropped: outcome = 1
++                        case .terminated: outcome = 2
++                        @unknown default: outcome = 3
++                        }
++                        RuntimeLifecycleDiagnostics.event(
++                            .cliStdoutFirstLineYielded,
++                            owner: diagnosticOwner, value: outcome
++                        )
++                    }
+                 }
+             },
+             onFinish: {
+                 if !lineBuffer.isEmpty {
+-                    continuation.yield(
++                    let yieldResult = continuation.yield(
+                         .stdoutLine(
+                             String(decoding: lineBuffer, as: UTF8.self)
+                         )
+                     )
+                     lineBuffer.removeAll()
++                    if !didLogFirstLine {
++                        didLogFirstLine = true
++                        let outcome: Int
++                        switch yieldResult {
++                        case .enqueued: outcome = 0
++                        case .dropped: outcome = 1
++                        case .terminated: outcome = 2
++                        @unknown default: outcome = 3
++                        }
++                        RuntimeLifecycleDiagnostics.event(
++                            .cliStdoutFirstLineYielded,
++                            owner: diagnosticOwner, value: outcome
++                        )
++                    }
+                 }
+             }
+         )
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-cli-readiness-before/CliBackendTests.swift	2026-09-06 01:11:07
++++ Sources/AgentLoopTestSuite/CliBackendTests.swift	2026-09-06 01:13:46
+@@ -504,6 +504,9 @@
+     removalAllowed = false
+     let report = await cliMechanicsRunOwned(backend: backend, request: request) {
+         frames, cancellation in
++        RuntimeLifecycleDiagnostics.event(
++            .cliFixtureReadyAwaitQueued, owner: frames.diagnosticId
++        )
+         try await frames.waitForStdout("ready")
+         _ = try await cancellation.cancel().get()
+     }
+@@ -564,6 +567,9 @@
+     removalAllowed = false
+     let report = await cliMechanicsRunOwned(backend: backend, request: request) {
+         frames, cancellation in
++        RuntimeLifecycleDiagnostics.event(
++            .cliFixtureReadyAwaitQueued, owner: frames.diagnosticId
++        )
+         try await frames.waitForStdout("ready")
+         _ = try await cancellation.cancel().get()
+     }
+@@ -623,6 +629,9 @@
+     removalAllowed = false
+     let report = await cliMechanicsRunOwned(backend: backend, request: request) {
+         frames, _ in
++        RuntimeLifecycleDiagnostics.event(
++            .cliFixtureReadyAwaitQueued, owner: frames.diagnosticId
++        )
+         try await frames.waitForStdout("ready")
+         let groups = harness.processInspector.continuedProcessGroups()
+         try #require(groups.count == 1)
+@@ -1019,13 +1028,25 @@
+ }
+ 
+ private actor CliMechanicsFrameRecorder {
++    nonisolated let diagnosticId: UUID
+     private var frames: [CliProcessFrameV1] = []
+     private var storedError: (any Error)?
+     private var didFinish = false
+     private var storedResult: Result<[CliProcessFrameV1], any Error>?
++    private var didLogFirstStdout = false
+ 
++    init(diagnosticId: UUID) {
++        self.diagnosticId = diagnosticId
++    }
++
+     func append(_ frame: CliProcessFrameV1) {
+         frames.append(frame)
++        if !didLogFirstStdout, case .stdoutLine = frame {
++            RuntimeLifecycleDiagnostics.event(
++                .cliFixtureFirstStdoutRecorded, owner: diagnosticId
++            )
++            didLogFirstStdout = true
++        }
+     }
+ 
+     func finish(result: Result<[CliProcessFrameV1], any Error>) {
+@@ -1035,6 +1056,15 @@
+         case let .failure(error): storedError = error
+         }
+         didFinish = true
++        let diagnosticOutcome: Int
++        switch result {
++        case .success: diagnosticOutcome = 0
++        case .failure: diagnosticOutcome = 1
++        }
++        RuntimeLifecycleDiagnostics.event(
++            .cliFixtureStreamFinished,
++            owner: diagnosticId, value: diagnosticOutcome
++        )
+     }
+ 
+     func completedResult() -> Result<[CliProcessFrameV1], any Error>? {
+@@ -1043,6 +1073,16 @@
+ 
+     func waitForStdout(_ expected: String) async throws {
+         let deadline = ContinuousClock.now.advanced(by: .seconds(3))
++        RuntimeLifecycleDiagnostics.event(
++            .cliFixtureReadyWaitStarted, owner: diagnosticId, value: 3000
++        )
++        var diagnosticOutcome = 4
++        defer {
++            RuntimeLifecycleDiagnostics.event(
++                .cliFixtureReadyWaitEnded,
++                owner: diagnosticId, value: diagnosticOutcome
++            )
++        }
+         while !frames.contains(.stdoutLine(expected)),
+               !didFinish,
+               ContinuousClock.now < deadline
+@@ -1050,11 +1090,16 @@
+             try await Task.sleep(for: .milliseconds(20))
+         }
+         guard frames.contains(.stdoutLine(expected)) else {
+-            if let storedError { throw storedError }
++            if let storedError {
++                diagnosticOutcome = 1
++                throw storedError
++            }
++            diagnosticOutcome = didFinish ? 2 : 3
+             throw CliProcessBackendError.processLaunchFailed(
+                 "process did not become ready"
+             )
+         }
++        diagnosticOutcome = 0
+     }
+ }
+ 
+@@ -1111,17 +1156,40 @@
+         CliMechanicsFrameRecorder, CliMechanicsCancellationOwner
+     ) async throws -> Void
+ ) async -> CliMechanicsOwnedStreamReport {
+-    let frames = CliMechanicsFrameRecorder()
++    let recorderDiagnosticId = UUID()
++    let frames = CliMechanicsFrameRecorder(diagnosticId: recorderDiagnosticId)
+     let cancellation = CliMechanicsCancellationOwner(
+         backend: backend, executionId: request.executionId
+     )
++    if RuntimeLifecycleDiagnostics.isEnabled {
++        print("CLI readiness identity recorder=\(recorderDiagnosticId.uuidString) execution=\(request.executionId)")
++    }
+     // Synchronous registration must precede both consumption and cancellation.
++    RuntimeLifecycleDiagnostics.event(
++        .cliFixtureLaunchCalled, owner: recorderDiagnosticId
++    )
+     let stream = backend.launch(request)
++    RuntimeLifecycleDiagnostics.event(
++        .cliFixtureLaunchReturned, owner: recorderDiagnosticId
++    )
++    RuntimeLifecycleDiagnostics.event(
++        .cliFixtureConsumerQueued, owner: recorderDiagnosticId
++    )
+     let consumer = Task {
++        RuntimeLifecycleDiagnostics.event(
++            .cliFixtureConsumerStarted, owner: recorderDiagnosticId
++        )
+         var received: [CliProcessFrameV1] = []
+         let result: Result<[CliProcessFrameV1], any Error>
++        var didLogFirstStdout = false
+         do {
+             for try await frame in stream {
++                if !didLogFirstStdout, case .stdoutLine = frame {
++                    RuntimeLifecycleDiagnostics.event(
++                        .cliFixtureFirstStdoutReceived, owner: recorderDiagnosticId
++                    )
++                    didLogFirstStdout = true
++                }
+                 received.append(frame)
+                 await frames.append(frame)
+             }
+@@ -1135,6 +1203,9 @@
+ 
+     let bodyResult: Result<Void, any Error>
+     do {
++        RuntimeLifecycleDiagnostics.event(
++            .cliFixtureBodyStarted, owner: recorderDiagnosticId
++        )
+         try await body(frames, cancellation)
+         bodyResult = .success(())
+     } catch {
+@@ -1145,6 +1216,15 @@
+     }
+     // Keep this consumer uncancelled and joined: onTermination alone is unjoined.
+     let streamResult = await consumer.value
++    let diagnosticOutcome: Int
++    switch streamResult {
++    case .success: diagnosticOutcome = 0
++    case .failure: diagnosticOutcome = 1
++    }
++    RuntimeLifecycleDiagnostics.event(
++        .cliFixtureConsumerJoined,
++        owner: recorderDiagnosticId, value: diagnosticOutcome
++    )
+     return CliMechanicsOwnedStreamReport(
+         body: bodyResult,
+         cancellation: await cancellation.resultIfRequested(),

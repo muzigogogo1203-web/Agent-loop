@@ -1,0 +1,2084 @@
+--- a/Sources/AgentLoopTestSuite/CliBackendTests.swift
++++ b/Sources/AgentLoopTestSuite/CliBackendTests.swift
+@@ -1089,7 +1089,7 @@
+         cleanupURLs: [URL] = []
+     ) throws -> CliProcessLaunchRequestV1 {
+         try request(
+-            command: cliMechanicsCurrentRunnerURL().path,
++            command: cliMechanicsFixtureExecutableURL().path,
+             arguments: [cliMechanicsFixtureSwitch, mode.rawValue] + arguments,
+             cleanupURLs: cleanupURLs
+         )
+--- a/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
++++ b/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift
+@@ -153,8 +153,26 @@
+     case coldGateReadinessTimedOut
+     case resumeFailureReadinessTimedOut
+     case coldDiagnosticsAlreadyConfigured
++}
++
++private enum P1F1D065ResumeReadinessOutcome: String, Sendable {
++    case observed
++    case timedOut
++}
++
++private struct P1F1D065ResumeReadinessObservation: Sendable {
++    let outcome: P1F1D065ResumeReadinessOutcome
++    let polls: Int
++    let pollBudget: Int
++    let pollIntervalMicroseconds: useconds_t
++    let elapsed: Duration
+ }
+ 
++private struct P1F1D065ControlledStreamReport: @unchecked Sendable {
++    let frames: [CliProcessFrameV1]
++    let terminalError: (any Error)?
++}
++
+ private enum P1F1D065ColdForcedFailure: Error, Sendable, Equatable {
+     case afterReady
+ }
+@@ -370,22 +388,26 @@
+ }
+ 
+ private struct P1F1D065CleanupPublicationObservation: Sendable, Equatable {
+-    let expectedFailure: Bool
+     let cleanupRemoved: Bool
+     let socketRemoved: Bool
+     let registryEmpty: Bool
+     let directoryClose: P1F1D065DirectoryCloseObservation
+ }
+ 
++private struct P1F1D065CleanupPublicationReport: @unchecked Sendable {
++    let terminalError: (any Error)?
++    let resources: P1F1D065CleanupPublicationObservation
++}
++
+ private final class P1F1D065PublicationProbe: @unchecked Sendable {
+     private let lock = NSLock()
+-    private var storage: P1F1D065CleanupPublicationObservation?
++    private var storage: P1F1D065CleanupPublicationReport?
+ 
+-    func record(_ observation: P1F1D065CleanupPublicationObservation) {
+-        lock.withLock { storage = observation }
++    func record(_ report: P1F1D065CleanupPublicationReport) {
++        lock.withLock { storage = report }
+     }
+ 
+-    var snapshot: P1F1D065CleanupPublicationObservation? {
++    var snapshot: P1F1D065CleanupPublicationReport? {
+         lock.withLock { storage }
+     }
+ }
+@@ -461,6 +483,7 @@
+     private var signals: [(Int32, Int32)] = []
+     private var injectedResumeFailure = false
+     private var observedSignals: [P1F1D065SignalObservation] = []
++    private var resumeReadiness: P1F1D065ResumeReadinessObservation?
+     private var coldIdentity: P1F1D065ColdIdentity?
+ 
+     init(
+@@ -488,6 +511,10 @@
+         lock.withLock { observedSignals }
+     }
+ 
++    var resumeReadinessSnapshot: P1F1D065ResumeReadinessObservation? {
++        lock.withLock { resumeReadiness }
++    }
++
+     func logCold(_ message: String) {
+         if let identity = lock.withLock({ coldIdentity }) {
+             p1f1d065ColdLog(identity, message)
+@@ -499,6 +526,18 @@
+         logCold("signal=\(observation.signal) group=\(observation.group) target=\(observation.target) result=\(observation.result) errno=\(observation.errorNumber)")
+     }
+ 
++    private func recordResumeReadiness(
++        _ observation: P1F1D065ResumeReadinessObservation
++    ) {
++        lock.withLock { resumeReadiness = observation }
++        print(
++            "065-resume-readiness outcome=\(observation.outcome.rawValue) "
++                + "polls=\(observation.polls)/\(observation.pollBudget) "
++                + "interval-us=\(observation.pollIntervalMicroseconds) "
++                + "elapsed=\(observation.elapsed)"
++        )
++    }
++
+     func snapshots() throws -> [EngineRuntimeProcessSnapshotV1] {
+         lock.withLock {
+             snapshotCalls += 1
+@@ -571,18 +610,36 @@
+             guard result == 0 || errorNumber == ESRCH else {
+                 throw EngineContextValidationErrorV1()
+             }
+-            for _ in 0..<3_000 {
++            let clock = ContinuousClock()
++            let readinessStarted = clock.now
++            let pollBudget = 3_000
++            let pollInterval: useconds_t = 1_000
++            for poll in 0..<pollBudget {
+                 if let resumeReadyURL,
+                    FileManager.default.fileExists(
+                        atPath: resumeReadyURL.path
+                    )
+                 {
++                    recordResumeReadiness(.init(
++                        outcome: .observed,
++                        polls: poll + 1,
++                        pollBudget: pollBudget,
++                        pollIntervalMicroseconds: pollInterval,
++                        elapsed: readinessStarted.duration(to: clock.now)
++                    ))
+                     throw CliProcessBackendError.processLaunchFailed(
+                         "injected resume dispatch failure"
+                     )
+                 }
+-                usleep(1_000)
++                usleep(pollInterval)
+             }
++            recordResumeReadiness(.init(
++                outcome: .timedOut,
++                polls: pollBudget,
++                pollBudget: pollBudget,
++                pollIntervalMicroseconds: pollInterval,
++                elapsed: readinessStarted.duration(to: clock.now)
++            ))
+             throw P1F1D065MechanicsFixtureError
+                 .resumeFailureReadinessTimedOut
+         }
+@@ -652,7 +709,7 @@
+             ofItemAtPath: root.path
+         )
+ 
+-        let source = try cliMechanicsCurrentRunnerURL()
++        let source = try cliMechanicsFixtureExecutableURL()
+         let staged = root.appendingPathComponent("controlled-native-runner")
+         try FileManager.default.copyItem(at: source, to: staged)
+         try FileManager.default.setAttributes(
+@@ -1067,12 +1124,11 @@
+ 
+ private func p1f1d065ObserveCleanupPublication(
+     error: (any Error)?,
+-    expectedError: CliProcessBackendError,
+     harness: P1F1D065MechanicsHarness,
+     cleanupURL: URL,
+     socketURL: URL,
+     registry: ShellProcessRegistry
+-) -> P1F1D065CleanupPublicationObservation {
++) -> P1F1D065CleanupPublicationReport {
+     let cleanupRemoved = !FileManager.default.fileExists(
+         atPath: cleanupURL.path
+     )
+@@ -1091,12 +1147,14 @@
+     } else {
+         closeObservation = .notAttempted
+     }
+-    return P1F1D065CleanupPublicationObservation(
+-        expectedFailure: (error as? CliProcessBackendError) == expectedError,
+-        cleanupRemoved: cleanupRemoved,
+-        socketRemoved: socketRemoved,
+-        registryEmpty: registryEmpty,
+-        directoryClose: closeObservation
++    return P1F1D065CleanupPublicationReport(
++        terminalError: error,
++        resources: P1F1D065CleanupPublicationObservation(
++            cleanupRemoved: cleanupRemoved,
++            socketRemoved: socketRemoved,
++            registryEmpty: registryEmpty,
++            directoryClose: closeObservation
++        )
+     )
+ }
+ 
+@@ -8338,12 +8396,24 @@
+             "injected resume dispatch failure"
+         )
+         let abortStream = abortBackend.launch(abortRequest)
+-        let streamWaiter = Task { () throws -> Void in
++        let streamWaiter = Task { () -> P1F1D065ControlledStreamReport in
+             defer {
+                 missingImageGate.complete(.stream)
+                 cleanupPublicationGate.complete(.stream)
+             }
+-            for try await _ in abortStream {}
++            var frames: [CliProcessFrameV1] = []
++            do {
++                for try await frame in abortStream {
++                    frames.append(frame)
++                }
++                return P1F1D065ControlledStreamReport(
++                    frames: frames, terminalError: nil
++                )
++            } catch {
++                return P1F1D065ControlledStreamReport(
++                    frames: frames, terminalError: error
++                )
++            }
+         }
+         let publicationProbe = P1F1D065PublicationProbe()
+         let cancellationWaiter = Task {
+@@ -8360,27 +8430,27 @@
+             } catch {
+                 failure = error
+             }
+-            let observation = p1f1d065ObserveCleanupPublication(
++            let report = p1f1d065ObserveCleanupPublication(
+                 error: failure,
+-                expectedError: expectedAbortError,
+                 harness: abortHarness,
+                 cleanupURL: abortCleanup.url,
+                 socketURL: abortSocketURL,
+                 registry: abortRegistry
+             )
+-            publicationProbe.record(observation)
+-            return observation
++            publicationProbe.record(report)
++            return report
+         }
+ 
+         switch await missingImageGate.waitUntilEnteredOrCompleted() {
+         case .entered:
+             break
+         case .completed(.stream):
+-            try await streamWaiter.value
++            let report = await streamWaiter.value
++            if let error = report.terminalError { throw error }
+             throw EngineContextValidationErrorV1()
+         case .completed(.cancellation):
+-            let observation = await cancellationWaiter.value
+-            if observation.expectedFailure { throw expectedAbortError }
++            let report = await cancellationWaiter.value
++            if let error = report.terminalError { throw error }
+             throw EngineContextValidationErrorV1()
+         case .completed(.reader):
+             throw EngineContextValidationErrorV1()
+@@ -8419,13 +8489,14 @@
+         case .completed(.stream):
+             abortClient.interruptRead()
+             try await resultReader.value
+-            try await streamWaiter.value
++            let report = await streamWaiter.value
++            if let error = report.terminalError { throw error }
+             throw EngineContextValidationErrorV1()
+         case .completed(.cancellation):
+             abortClient.interruptRead()
+             try await resultReader.value
+-            let observation = await cancellationWaiter.value
+-            if observation.expectedFailure { throw expectedAbortError }
++            let report = await cancellationWaiter.value
++            if let error = report.terminalError { throw error }
+             throw EngineContextValidationErrorV1()
+         case .completed(.reader):
+             try await resultReader.value
+@@ -8435,31 +8506,56 @@
+         let publishedBeforeCleanup = publicationProbe.snapshot != nil
+         cleanupPublicationGate.release()
+         try await resultReader.value
+-        let publicationObservation = await cancellationWaiter.value
+-        let streamObservedExpectedFailure: Bool
+-        do {
+-            try await streamWaiter.value
+-            streamObservedExpectedFailure = false
+-        } catch let error as CliProcessBackendError {
+-            streamObservedExpectedFailure = error == expectedAbortError
+-        } catch {
+-            streamObservedExpectedFailure = false
+-        }
++        let publicationReport = await cancellationWaiter.value
++        let streamReport = await streamWaiter.value
+         abortClient.close()
++
+         #expect(
+-            !publishedBeforeCleanup
+-                && streamObservedExpectedFailure
+-                && publicationObservation
+-                    == P1F1D065CleanupPublicationObservation(
+-                        expectedFailure: true,
+-                        cleanupRemoved: true,
+-                        socketRemoved: true,
+-                        registryEmpty: true,
+-                        directoryClose: .closed
+-                    ),
+-            "065 cleanup-publication: pre-registration failure became visible before socket/config/registry cleanup and checked authority close"
++            !publishedBeforeCleanup,
++            "065 cleanup-publication became visible before cleanup completed"
+         )
+         #expect(
++            (streamReport.terminalError as? CliProcessBackendError)
++                == expectedAbortError,
++            "065 controlled stream terminal mismatch; actual=\(String(describing: streamReport.terminalError)) frames=\(streamReport.frames)"
++        )
++        #expect(
++            (publicationReport.terminalError as? CliProcessBackendError)
++                == expectedAbortError,
++            "065 cancellation terminal mismatch; actual=\(String(describing: publicationReport.terminalError))"
++        )
++        #expect(
++            publicationReport.resources.cleanupRemoved,
++            "065 cleanup authority file remained after joined failure"
++        )
++        #expect(
++            publicationReport.resources.socketRemoved,
++            "065 Board socket remained after joined failure"
++        )
++        #expect(
++            publicationReport.resources.registryEmpty,
++            "065 process registry retained an entry after joined failure"
++        )
++        #expect(
++            publicationReport.resources.directoryClose == .closed,
++            "065 socket directory authority did not close after joined failure"
++        )
++        let resumeReadiness = try #require(
++            abortHarness.processInspector.resumeReadinessSnapshot,
++            "065 resume readiness produced no observation"
++        )
++        #expect(
++            resumeReadiness.outcome == .observed,
++            "065 resume readiness outcome=\(resumeReadiness.outcome.rawValue) polls=\(resumeReadiness.polls)/\(resumeReadiness.pollBudget) elapsed=\(resumeReadiness.elapsed)"
++        )
++        #expect(
++            resumeReadiness.pollBudget == 3_000
++                && resumeReadiness.pollIntervalMicroseconds == 1_000
++                && resumeReadiness.polls > 0
++                && resumeReadiness.polls <= resumeReadiness.pollBudget,
++            "065 resume readiness polling contract drifted; polls=\(resumeReadiness.polls)/\(resumeReadiness.pollBudget) interval-us=\(resumeReadiness.pollIntervalMicroseconds) elapsed=\(resumeReadiness.elapsed)"
++        )
++        #expect(
+             abortHarness.processInspector.signalSnapshot
+                 == [SIGCONT, SIGKILL, SIGCONT]
+         )
+--- a/Sources/RunTests/main.swift
++++ b/Sources/RunTests/main.swift
+@@ -8,7 +8,6 @@
+ // __swiftPMEntryPoint is underscored SPI verified against Swift 6.2.3.
+ @main struct Runner {
+     static func main() async {
+-        runCliMechanicsFixtureIfRequested()
+         await Testing.__swiftPMEntryPoint() as Never
+     }
+ }
+--- a/Sources/AgentLoopTestSuite/DurablePlanningTests.swift
++++ b/Sources/AgentLoopTestSuite/DurablePlanningTests.swift
+@@ -2491,21 +2491,27 @@
+     "Sources/AgentLoopTestSuite/BlockingProcessOperationTests.swift",
+ ]
+ 
+-// The 2026-09-08 hermetic native CLI fixture repair changes one historical
+-// runner and adds one test-library helper. Keep both exact successors separate
+-// from the frozen A3 manifest and from the earlier blocking-progress repair.
+-private let desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908: Set<String> = [
++// The 2026-09-09 native startup amendment adds exactly one Swift resolver and
++// one dependency-free C executable. The historical runner is restored byte
++// exact, so these new paths remain disjoint from the frozen A3 manifest.
++private let desktopCodingClosureNativeCLIFixtureSuccessorFiles20260909: Set<String> = [
+     "Sources/AgentLoopTestSuite/CliMechanicsFixture.swift",
+-    "Sources/RunTests/main.swift",
++    "Sources/CliMechanicsFixtureRunner/main.c",
+ ]
+ 
+-private let desktopCodingClosureNativeCLIFixtureSuccessorHashes20260908 = [
++private let desktopCodingClosureNativeCLIFixtureSuccessorHashes20260909 = [
+     "Sources/AgentLoopTestSuite/CliMechanicsFixture.swift":
+-        "98b11fe7eb485f6833dda059b08523a039924ea19a5e30aa9316d76b03971be2",
+-    "Sources/RunTests/main.swift":
+-        "67d034114d15b735133f5f3749158d885656c6c895365e78fcd35f4c2cca4b37",
++        "75652ca0ea7d7b68d8681a686cf25d3fe9ad02bbbcc162d271a2e3e62ea7b9bb",
++    "Sources/CliMechanicsFixtureRunner/main.c":
++        "e5df5038dd76abd281083f1dfa91c27af1e909a481cf753e46ee028816d56e6f",
+ ]
+ 
++// Package.swift already belongs to the P1-B exact successor set and is
++// therefore outside the historical 102-entry baseline. Pin this bounded
++// construction change separately without changing historical accounting.
++private let desktopCodingClosureNativeCLIFixturePackageHash20260909 =
++    "4ccf840abb35e4d4a8fa12489e2e2cf147b0ea843db60466868772e691e938f6"
++
+ // The 2026-09-06 desktop Coding closure packaging review approved this exact
+ // development launcher successor. Keep the historical A4 manifest unchanged;
+ // package-historical-gate-plan.md records its separately pinned identity.
+@@ -5588,6 +5594,8 @@
+         a4HistoricalManifestExclusions
+     )
+     #expect(p1bSuccessorExclusions.count == 43)
++    #expect(p1bExactAllowlist.contains("Package.swift"))
++    #expect(p1bSuccessorExclusions.contains("Package.swift"))
+     let rawP1CIntersection = manifestPaths.intersection(p1cExactAllowlist)
+     #expect(
+         rawP1CIntersection == [
+@@ -5721,23 +5729,33 @@
+     for path in desktopCodingClosureBlockingProgressSuccessorFiles20260908 {
+         try a3RequireRegularNonSymlink(root.appendingPathComponent(path))
+     }
+-    #expect(desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908.count == 2)
++    #expect(desktopCodingClosureNativeCLIFixtureSuccessorFiles20260909.count == 2)
+     #expect(
+-        desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908 == [
++        desktopCodingClosureNativeCLIFixtureSuccessorFiles20260909 == [
+             "Sources/AgentLoopTestSuite/CliMechanicsFixture.swift",
+-            "Sources/RunTests/main.swift",
++            "Sources/CliMechanicsFixtureRunner/main.c",
+         ]
+     )
+     #expect(
+-        desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908
+-            .intersection(manifestPaths) == ["Sources/RunTests/main.swift"]
++        desktopCodingClosureNativeCLIFixtureSuccessorFiles20260909
++            .intersection(manifestPaths).isEmpty
+     )
+     #expect(
+-        desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908
++        desktopCodingClosureNativeCLIFixtureSuccessorFiles20260909
++            .intersection(historicalSourcePaths).isEmpty
++    )
++    #expect(
++        desktopCodingClosureNativeCLIFixtureSuccessorFiles20260909
++            .intersection(
++                desktopCodingClosureA1FoundationSuccessorFiles20260905
++            ).isEmpty
++    )
++    #expect(
++        desktopCodingClosureNativeCLIFixtureSuccessorFiles20260909
+             .intersection(desktopCodingClosureBlockingProgressSuccessorFiles20260908)
+             .isEmpty
+     )
+-    for path in desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908 {
++    for path in desktopCodingClosureNativeCLIFixtureSuccessorFiles20260909 {
+         try a3RequireRegularNonSymlink(root.appendingPathComponent(path))
+     }
+     let liveEntries = entries.filter {
+@@ -5751,11 +5769,8 @@
+             && !r9fProviderCompletionHandleFiles.contains($0.path)
+     }
+     #expect(liveEntries.count == 102)
+-    let unaffectedHistoricalEntries = liveEntries.filter {
+-        !desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908
+-            .contains($0.path)
+-    }
+-    #expect(unaffectedHistoricalEntries.count == 101)
++    let unaffectedHistoricalEntries = liveEntries
++    #expect(unaffectedHistoricalEntries.count == 102)
+     let originalRunnerEntry = try #require(entries.first {
+         $0.path == "Sources/RunTests/main.swift"
+     })
+@@ -5778,14 +5793,14 @@
+             && !desktopCodingClosureRuntimeDiagnosticsSuccessorFiles.contains($0)
+             && !desktopCodingClosureA1FoundationSuccessorFiles20260905.contains($0)
+             && !desktopCodingClosureBlockingProgressSuccessorFiles20260908.contains($0)
+-            && !desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908.contains($0)
++            && !desktopCodingClosureNativeCLIFixtureSuccessorFiles20260909.contains($0)
+     }
+     enumerated.append("Package.resolved")
+     enumerated.removeAll {
+         a4HistoricalManifestExclusions.contains($0)
+     }
+     enumerated.sort()
+-    #expect(enumerated.count == 101)
++    #expect(enumerated.count == 102)
+     #expect(enumerated == unaffectedHistoricalEntries.map(\.path))
+ 
+     for entry in unaffectedHistoricalEntries {
+@@ -5797,16 +5812,23 @@
+         )
+     }
+ 
+-    #expect(desktopCodingClosureNativeCLIFixtureSuccessorHashes20260908.count == 2)
++    #expect(desktopCodingClosureNativeCLIFixtureSuccessorHashes20260909.count == 2)
+     #expect(
+-        Set(desktopCodingClosureNativeCLIFixtureSuccessorHashes20260908.keys)
+-            == desktopCodingClosureNativeCLIFixtureSuccessorFiles20260908
++        Set(desktopCodingClosureNativeCLIFixtureSuccessorHashes20260909.keys)
++            == desktopCodingClosureNativeCLIFixtureSuccessorFiles20260909
+     )
+     for (path, expectedHash) in
+-        desktopCodingClosureNativeCLIFixtureSuccessorHashes20260908
++        desktopCodingClosureNativeCLIFixtureSuccessorHashes20260909
+     {
+         #expect(try a3SHA256(at: root.appendingPathComponent(path)) == expectedHash)
+     }
++
++    let packageURL = root.appendingPathComponent("Package.swift")
++    try a3RequireRegularNonSymlink(packageURL)
++    #expect(
++        try a3SHA256(at: packageURL)
++            == desktopCodingClosureNativeCLIFixturePackageHash20260909
++    )
+ 
+     let frozenEntryHashes = [
+         "Package.resolved":
+--- a/Sources/AgentLoopTestSuite/CliMechanicsFixture.swift
++++ b/Sources/AgentLoopTestSuite/CliMechanicsFixture.swift
+@@ -1,5 +1,6 @@
+ import Darwin
+ import Foundation
++import MachO
+ 
+ let cliMechanicsFixtureSwitch = "--agentloop-cli-mechanics-fixture"
+ 
+@@ -16,563 +17,222 @@
+     case environmentSentinel = "environment-sentinel"
+ }
+ 
+-private enum CliMechanicsNativeFixtureError: Error, CustomStringConvertible {
+-    case invalidArguments
++private enum CliMechanicsFixtureResolutionError: Error,
++    CustomStringConvertible
++{
++    case invalidCurrentRunner
++    case invalidFixtureArtifact(String)
+     case systemCall(String, Int32)
+-    case invalidReadinessAuthority
+-    case invalidEnvironment
+-    case childProcessGroup
+-    case childAcknowledgement
+-    case cleanup(primary: String, failures: [String])
+ 
+     var description: String {
+         switch self {
+-        case .invalidArguments:
+-            return "invalid fixture arguments"
+-        case let .systemCall(operation, code):
+-            return "fixture \(operation) failed errno=\(code)"
+-        case .invalidReadinessAuthority:
+-            return "fixture readiness authority is invalid"
+-        case .invalidEnvironment:
+-            return "fixture environment sentinel is invalid"
+-        case .childProcessGroup:
+-            return "fixture child did not inherit the parent process group"
+-        case .childAcknowledgement:
+-            return "fixture child acknowledgement was invalid"
+-        case let .cleanup(primary, failures):
+-            return "fixture failure primary=[\(primary)] cleanup=[\(failures.joined(separator: "; "))]"
++        case .invalidCurrentRunner:
++            return "current RunTests executable identity is invalid"
++        case .invalidFixtureArtifact(let detail):
++            return "CliMechanicsFixtureRunner artifact is invalid: \(detail)"
++        case .systemCall(let operation, let code):
++            return "CliMechanicsFixtureRunner \(operation) failed errno=\(code)"
+         }
+     }
+ }
+ 
+-func cliMechanicsCurrentRunnerURL() throws -> URL {
+-    guard let first = CommandLine.arguments.first, !first.isEmpty else {
+-        throw CliMechanicsNativeFixtureError.invalidArguments
+-    }
+-    let url = URL(fileURLWithPath: first).resolvingSymlinksInPath()
+-        .standardizedFileURL
+-    var info = stat()
+-    let result = url.path.withCString { Darwin.lstat($0, &info) }
+-    guard result == 0,
+-          info.st_mode & S_IFMT == S_IFREG,
+-          info.st_uid == getuid(),
+-          info.st_nlink == 1,
+-          info.st_mode & S_IXUSR != 0
++func cliMechanicsFixtureExecutableURL() throws -> URL {
++    guard let firstArgument = CommandLine.arguments.first,
++          !firstArgument.isEmpty
+     else {
+-        throw CliMechanicsNativeFixtureError.systemCall(
+-            "current runner identity", result == 0 ? EINVAL : errno
+-        )
++        throw CliMechanicsFixtureResolutionError.invalidCurrentRunner
+     }
+-    return url
+-}
+ 
+-public func runCliMechanicsFixtureIfRequested() {
+-    let arguments = CommandLine.arguments
+-    guard arguments.count >= 2, arguments[1] == cliMechanicsFixtureSwitch else {
+-        return
++    let currentRunner = URL(fileURLWithPath: firstArgument)
++        .resolvingSymlinksInPath()
++        .standardizedFileURL
++    var runnerInformation = stat()
++    let runnerResult = currentRunner.path.withCString {
++        Darwin.lstat($0, &runnerInformation)
+     }
+-    do {
+-        try runCliMechanicsFixture(arguments: Array(arguments.dropFirst(2)))
+-        Darwin.exit(EXIT_SUCCESS)
+-    } catch {
+-        let message = "AgentLoop CLI mechanics fixture: \(error)\n"
+-        try? cliMechanicsWrite(Data(message.utf8), to: STDERR_FILENO)
+-        Darwin.exit(64)
++    guard runnerResult == 0,
++          runnerInformation.st_mode & S_IFMT == S_IFREG,
++          runnerInformation.st_uid == getuid(),
++          runnerInformation.st_nlink == 1,
++          runnerInformation.st_mode & S_IXUSR != 0
++    else {
++        throw CliMechanicsFixtureResolutionError.invalidCurrentRunner
+     }
+-}
+ 
+-private func runCliMechanicsFixture(arguments: [String]) throws {
+-    guard let rawMode = arguments.first,
+-          let mode = CliMechanicsFixtureMode(rawValue: rawMode)
+-    else { throw CliMechanicsNativeFixtureError.invalidArguments }
+-    let trailing = Array(arguments.dropFirst())
+-
+-    switch mode {
+-    case .exitZero:
+-        try requireNoArguments(trailing)
+-        try cliMechanicsDrainStdin()
+-    case .printFinalLine:
+-        try requireNoArguments(trailing)
+-        try cliMechanicsDrainStdin()
+-        try cliMechanicsWrite(Data("final-line".utf8), to: STDOUT_FILENO)
+-    case .waitTerm:
+-        try requireNoArguments(trailing)
+-        try cliMechanicsDrainStdin()
+-        try cliMechanicsWrite(Data("ready\n".utf8), to: STDOUT_FILENO)
+-        try cliMechanicsWaitForever()
+-    case .ignoreTerm:
+-        try requireNoArguments(trailing)
+-        try cliMechanicsIgnoreTerm()
+-        try cliMechanicsDrainStdin()
+-        try cliMechanicsWrite(Data("ready\n".utf8), to: STDOUT_FILENO)
+-        try cliMechanicsWaitForever()
+-    case .readyFileIgnoreTerm:
+-        try cliMechanicsIgnoreTerm()
+-        try cliMechanicsDrainStdin()
+-        try cliMechanicsCreateReadyFile(arguments: trailing)
+-        try cliMechanicsWaitForever()
+-    case .readyFile:
+-        // The backend creates its stdin writer only after the inspector's
+-        // synchronous SIGCONT call returns, so readiness must precede draining.
+-        try cliMechanicsCreateReadyFile(arguments: trailing)
+-        try cliMechanicsWaitForever()
+-    case .readyAndDrainIgnoreTerm:
+-        try requireNoArguments(trailing)
+-        try cliMechanicsIgnoreTerm()
+-        try cliMechanicsDrainStdin()
+-        try cliMechanicsWrite(Data("p1f1d-ready\n".utf8), to: STDOUT_FILENO)
+-        try cliMechanicsWrite(Data("p1f1d-drain\n".utf8), to: STDERR_FILENO)
+-        try cliMechanicsWaitForever()
+-    case .heldStderrParent:
+-        try requireNoArguments(trailing)
+-        try cliMechanicsDrainStdin()
+-        try cliMechanicsRunHeldStderrParent()
+-    case .heldStderrChild:
+-        try cliMechanicsRunHeldStderrChild(arguments: trailing)
+-    case .environmentSentinel:
+-        try requireNoArguments(trailing)
+-        try cliMechanicsDrainStdin()
+-        try cliMechanicsReportEnvironmentSentinel()
++    let sibling = currentRunner.deletingLastPathComponent()
++        .appendingPathComponent("CliMechanicsFixtureRunner")
++        .standardizedFileURL
++    guard sibling.lastPathComponent == "CliMechanicsFixtureRunner",
++          sibling.deletingLastPathComponent()
++            == currentRunner.deletingLastPathComponent()
++    else {
++        throw CliMechanicsFixtureResolutionError.invalidFixtureArtifact(
++            "artifact is not the exact RunTests sibling"
++        )
+     }
+-}
+ 
+-private func requireNoArguments(_ arguments: [String]) throws {
+-    guard arguments.isEmpty else {
+-        throw CliMechanicsNativeFixtureError.invalidArguments
+-    }
++    try cliMechanicsValidateFixtureArtifact(sibling)
++    return sibling
+ }
+ 
+-private func cliMechanicsDrainStdin() throws {
+-    var bytes = [UInt8](repeating: 0, count: 4_096)
+-    while true {
+-        let count = bytes.withUnsafeMutableBytes {
+-            Darwin.read(STDIN_FILENO, $0.baseAddress, $0.count)
+-        }
+-        if count > 0 { continue }
+-        if count == 0 { return }
+-        if errno == EINTR { continue }
+-        throw CliMechanicsNativeFixtureError.systemCall("stdin read", errno)
++private func cliMechanicsValidateFixtureArtifact(_ url: URL) throws {
++    var pathInformation = stat()
++    let pathResult = url.path.withCString {
++        Darwin.lstat($0, &pathInformation)
+     }
+-}
+-
+-private func cliMechanicsWrite(_ data: Data, to descriptor: Int32) throws {
+-    try data.withUnsafeBytes { bytes in
+-        var offset = 0
+-        while offset < bytes.count {
+-            let result = Darwin.write(
+-                descriptor,
+-                bytes.baseAddress!.advanced(by: offset),
+-                bytes.count - offset
+-            )
+-            if result > 0 {
+-                offset += result
+-                continue
+-            }
+-            if result < 0, errno == EINTR { continue }
+-            throw CliMechanicsNativeFixtureError.systemCall("write", errno)
+-        }
++    guard pathResult == 0 else {
++        throw CliMechanicsFixtureResolutionError.systemCall(
++            "artifact lstat", errno
++        )
+     }
+-}
++    try cliMechanicsRequireFixtureIdentity(pathInformation)
+ 
+-private func cliMechanicsIgnoreTerm() throws {
+-    var action = sigaction()
+-    action.__sigaction_u.__sa_handler = SIG_IGN
+-    action.sa_flags = 0
+-    guard sigemptyset(&action.sa_mask) == 0,
+-          sigaction(SIGTERM, &action, nil) == 0 else {
+-        throw CliMechanicsNativeFixtureError.systemCall("signal", errno)
++    var descriptor = url.path.withCString {
++        Darwin.open($0, O_RDONLY | O_CLOEXEC | O_NOFOLLOW)
+     }
+-}
+-
+-private func cliMechanicsWaitForever() throws -> Never {
+-    while true {
+-        if Darwin.pause() == -1, errno == EINTR { continue }
+-        throw CliMechanicsNativeFixtureError.systemCall("pause", errno)
++    guard descriptor >= 0 else {
++        throw CliMechanicsFixtureResolutionError.systemCall(
++            "artifact open", errno
++        )
+     }
+-}
+ 
+-private func cliMechanicsCreateReadyFile(arguments: [String]) throws {
+-    guard arguments.count == 2 else {
+-        throw CliMechanicsNativeFixtureError.invalidArguments
+-    }
+-    let root = URL(fileURLWithPath: arguments[0], isDirectory: true)
+-        .standardizedFileURL
+-    let leaf = arguments[1]
+-    let readyURL = root.appendingPathComponent(leaf).standardizedFileURL
+-    let workspace = root.appendingPathComponent("workspace", isDirectory: true)
+-        .standardizedFileURL
+-    let currentDirectory = URL(
+-        fileURLWithPath: FileManager.default.currentDirectoryPath,
+-        isDirectory: true
+-    ).resolvingSymlinksInPath().standardizedFileURL
+-    guard root.path.hasPrefix("/tmp/al65-"),
+-          currentDirectory.path
+-            == workspace.resolvingSymlinksInPath().standardizedFileURL.path,
+-          readyURL.deletingLastPathComponent().path == root.path,
+-          ["cold-ready", "resume-ready"].contains(leaf)
+-    else { throw CliMechanicsNativeFixtureError.invalidReadinessAuthority }
+-
+-    var rootFD: Int32 = -1
+-    var readyFD: Int32 = -1
+     do {
+-        rootFD = root.path.withCString {
+-            Darwin.open($0, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW)
+-        }
+-        guard rootFD >= 0 else {
+-            throw CliMechanicsNativeFixtureError.systemCall(
+-                "readiness root open", errno
++        var openedInformation = stat()
++        guard Darwin.fstat(descriptor, &openedInformation) == 0 else {
++            throw CliMechanicsFixtureResolutionError.systemCall(
++                "artifact fstat", errno
+             )
+         }
+-        var rootInfo = stat()
+-        guard Darwin.fstat(rootFD, &rootInfo) == 0,
+-              rootInfo.st_mode & S_IFMT == S_IFDIR,
+-              rootInfo.st_uid == getuid(),
+-              rootInfo.st_mode & mode_t(0o777) == mode_t(0o700)
+-        else { throw CliMechanicsNativeFixtureError.invalidReadinessAuthority }
+-        readyFD = leaf.withCString {
+-            Darwin.openat(
+-                rootFD, $0,
+-                O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW,
+-                mode_t(0o600)
++        try cliMechanicsRequireFixtureIdentity(openedInformation)
++        guard cliMechanicsSameFixtureIdentity(
++            pathInformation, openedInformation
++        ) else {
++            throw CliMechanicsFixtureResolutionError.invalidFixtureArtifact(
++                "artifact identity changed while opening"
+             )
+         }
+-        guard readyFD >= 0 else {
+-            throw CliMechanicsNativeFixtureError.systemCall(
+-                "readiness file open", errno
+-            )
+-        }
+-        if let error = cliMechanicsCloseOwned(
+-            &readyFD, operation: "readiness file close"
+-        ) { throw error }
+-        if let error = cliMechanicsCloseOwned(
+-            &rootFD, operation: "readiness root close"
+-        ) { throw error }
+-    } catch {
+-        var cleanupFailures: [any Error] = []
+-        if let failure = cliMechanicsCloseOwned(
+-            &readyFD, operation: "readiness file cleanup close"
+-        ) { cleanupFailures.append(failure) }
+-        if let failure = cliMechanicsCloseOwned(
+-            &rootFD, operation: "readiness root cleanup close"
+-        ) { cleanupFailures.append(failure) }
+-        try cliMechanicsThrow(error, cleanupFailures: cleanupFailures)
+-    }
+-}
+ 
+-private func cliMechanicsRunHeldStderrParent() throws {
+-    var pipeFDs: [Int32] = [-1, -1]
+-    guard Darwin.pipe(&pipeFDs) == 0 else {
+-        throw CliMechanicsNativeFixtureError.systemCall("ack pipe", errno)
+-    }
+-    var readFD = pipeFDs[0]
+-    var writeFD = pipeFDs[1]
+-    var actions: posix_spawn_file_actions_t?
+-    var attributes: posix_spawnattr_t?
+-    var actionsInitialized = false
+-    var attributesInitialized = false
+-    var child: pid_t = 0
+-    var ownsChild = false
+-    do {
+-        let childAckFD = Int32(3)
+-        try cliMechanicsNormalizeOwnedDescriptor(
+-            &readFD, minimum: childAckFD + 1
+-        )
+-        try cliMechanicsNormalizeOwnedDescriptor(
+-            &writeFD, minimum: childAckFD + 1
+-        )
+-        var code = posix_spawn_file_actions_init(&actions)
+-        guard code == 0 else {
+-            throw CliMechanicsNativeFixtureError.systemCall(
+-                "spawn actions init", code
++        var header = [UInt8](repeating: 0, count: 16)
++        var offset = 0
++        while offset < header.count {
++            let count = header.withUnsafeMutableBytes { bytes in
++                Darwin.pread(
++                    descriptor,
++                    bytes.baseAddress!.advanced(by: offset),
++                    bytes.count - offset,
++                    off_t(offset)
++                )
++            }
++            if count > 0 {
++                offset += count
++                continue
++            }
++            if count < 0, errno == EINTR { continue }
++            if count == 0 {
++                throw CliMechanicsFixtureResolutionError
++                    .invalidFixtureArtifact("truncated Mach-O header")
++            }
++            throw CliMechanicsFixtureResolutionError.systemCall(
++                "artifact header read", errno
+             )
+         }
+-        actionsInitialized = true
+-        try cliMechanicsCheckSpawn(
+-            posix_spawn_file_actions_addclose(&actions, readFD)
+-        )
+-        try "/dev/null".withCString { path in
+-            try cliMechanicsCheckSpawn(posix_spawn_file_actions_addopen(
+-                &actions, STDIN_FILENO, path, O_RDONLY, 0
+-            ))
+-            try cliMechanicsCheckSpawn(posix_spawn_file_actions_addopen(
+-                &actions, STDOUT_FILENO, path, O_WRONLY, 0
+-            ))
++
++        let magic = header.withUnsafeBytes {
++            $0.loadUnaligned(as: UInt32.self)
+         }
+-        try cliMechanicsCheckSpawn(posix_spawn_file_actions_adddup2(
+-            &actions, STDERR_FILENO, STDERR_FILENO
+-        ))
+-        try cliMechanicsCheckSpawn(posix_spawn_file_actions_adddup2(
+-            &actions, writeFD, childAckFD
+-        ))
+-        try cliMechanicsCheckSpawn(
+-            posix_spawn_file_actions_addclose(&actions, writeFD)
+-        )
+-
+-        code = posix_spawnattr_init(&attributes)
+-        guard code == 0 else {
+-            throw CliMechanicsNativeFixtureError.systemCall(
+-                "spawn attributes init", code
+-            )
++        let rawFileType = header.withUnsafeBytes {
++            $0.loadUnaligned(fromByteOffset: 12, as: UInt32.self)
+         }
+-        attributesInitialized = true
+-        var defaultSignals = sigset_t()
+-        var signalMask = sigset_t()
+-        guard sigemptyset(&defaultSignals) == 0,
+-              sigaddset(&defaultSignals, SIGTERM) == 0,
+-              sigemptyset(&signalMask) == 0
+-        else {
+-            throw CliMechanicsNativeFixtureError.systemCall(
+-                "spawn signals", errno
+-            )
++        let fileType: UInt32
++        switch magic {
++        case UInt32(MH_MAGIC), UInt32(MH_MAGIC_64):
++            fileType = rawFileType
++        case UInt32(MH_CIGAM), UInt32(MH_CIGAM_64):
++            fileType = rawFileType.byteSwapped
++        default:
++            throw CliMechanicsFixtureResolutionError
++                .invalidFixtureArtifact("artifact is not a Mach-O image")
+         }
+-        try cliMechanicsCheckSpawn(posix_spawnattr_setsigdefault(
+-            &attributes, &defaultSignals
+-        ))
+-        try cliMechanicsCheckSpawn(
+-            posix_spawnattr_setsigmask(&attributes, &signalMask)
+-        )
+-        try cliMechanicsCheckSpawn(posix_spawnattr_setflags(
+-            &attributes,
+-            Int16(
+-                POSIX_SPAWN_CLOEXEC_DEFAULT
+-                    | POSIX_SPAWN_SETSIGDEF
+-                    | POSIX_SPAWN_SETSIGMASK
+-            )
+-        ))
+-
+-        let executable = try cliMechanicsCurrentRunnerURL().path
+-        var argv = try cliMechanicsCStringVector([
+-            executable, cliMechanicsFixtureSwitch,
+-            CliMechanicsFixtureMode.heldStderrChild.rawValue,
+-            String(childAckFD),
+-        ])
+-        defer { cliMechanicsFreeCStringVector(argv) }
+-        var envp = try cliMechanicsCStringVector([
+-            "LC_ALL=C", "PATH=/usr/bin:/bin",
+-        ])
+-        defer { cliMechanicsFreeCStringVector(envp) }
+-        code = executable.withCString { path in
+-            argv.withUnsafeMutableBufferPointer { argvBuffer in
+-                envp.withUnsafeMutableBufferPointer { envBuffer in
+-                    posix_spawn(
+-                        &child, path, &actions, &attributes,
+-                        argvBuffer.baseAddress, envBuffer.baseAddress
+-                    )
+-                }
+-            }
++        guard fileType == UInt32(MH_EXECUTE) else {
++            throw CliMechanicsFixtureResolutionError
++                .invalidFixtureArtifact("Mach-O image is not executable")
+         }
+-        guard code == 0 else {
+-            throw CliMechanicsNativeFixtureError.systemCall(
+-                "spawn held child", code
++
++        var finalInformation = stat()
++        guard Darwin.fstat(descriptor, &finalInformation) == 0 else {
++            throw CliMechanicsFixtureResolutionError.systemCall(
++                "artifact final fstat", errno
+             )
+         }
+-        ownsChild = true
+-        let teardownFailures = cliMechanicsReleaseSpawnStructures(
+-            actions: &actions,
+-            actionsInitialized: &actionsInitialized,
+-            attributes: &attributes,
+-            attributesInitialized: &attributesInitialized
+-        )
+-        if let primary = teardownFailures.first {
+-            try cliMechanicsThrow(
+-                primary,
+-                cleanupFailures: Array(teardownFailures.dropFirst())
++        guard cliMechanicsSameFixtureIdentity(
++            openedInformation, finalInformation
++        ) else {
++            throw CliMechanicsFixtureResolutionError.invalidFixtureArtifact(
++                "artifact identity changed while validating"
+             )
+         }
+-        if let error = cliMechanicsCloseOwned(
+-            &writeFD, operation: "parent ack write close"
+-        ) { throw error }
+-        let acknowledgement = try cliMechanicsReadAcknowledgement(from: readFD)
+-        guard acknowledgement == 0x41 else {
+-            throw CliMechanicsNativeFixtureError.childAcknowledgement
+-        }
+-        guard Darwin.getpgid(child) == Darwin.getpgrp() else {
+-            throw CliMechanicsNativeFixtureError.childProcessGroup
+-        }
+-        if let error = cliMechanicsCloseOwned(
+-            &readFD, operation: "parent ack read close"
+-        ) { throw error }
+-        try cliMechanicsWrite(Data("parent-exited\n".utf8), to: STDOUT_FILENO)
+-        ownsChild = false
++        try cliMechanicsCloseFixtureDescriptor(&descriptor)
+     } catch {
+-        var cleanupFailures = cliMechanicsReleaseSpawnStructures(
+-            actions: &actions,
+-            actionsInitialized: &actionsInitialized,
+-            attributes: &attributes,
+-            attributesInitialized: &attributesInitialized
+-        )
+-        if ownsChild {
++        if descriptor >= 0 {
+             do {
+-                try cliMechanicsTerminateOwnedChild(child)
+-                ownsChild = false
+-            } catch {
+-                cleanupFailures.append(error)
++                try cliMechanicsCloseFixtureDescriptor(&descriptor)
++            } catch let closeError {
++                throw CliMechanicsFixtureResolutionError
++                    .invalidFixtureArtifact(
++                        "validation failed [\(error)]; close failed [\(closeError)]"
++                    )
+             }
+         }
+-        if let failure = cliMechanicsCloseOwned(
+-            &readFD, operation: "parent ack read cleanup close"
+-        ) { cleanupFailures.append(failure) }
+-        if let failure = cliMechanicsCloseOwned(
+-            &writeFD, operation: "parent ack write cleanup close"
+-        ) { cleanupFailures.append(failure) }
+-        try cliMechanicsThrow(error, cleanupFailures: cleanupFailures)
++        throw error
+     }
+ }
+ 
+-private func cliMechanicsNormalizeOwnedDescriptor(
+-    _ descriptor: inout Int32,
+-    minimum: Int32
+-) throws {
+-    guard descriptor >= 0 else {
+-        throw CliMechanicsNativeFixtureError.systemCall("ack descriptor", EBADF)
++private func cliMechanicsRequireFixtureIdentity(_ information: stat) throws {
++    guard information.st_mode & S_IFMT == S_IFREG else {
++        throw CliMechanicsFixtureResolutionError
++            .invalidFixtureArtifact("artifact is not a regular file")
+     }
+-    if descriptor >= minimum {
+-        guard Darwin.fcntl(descriptor, F_SETFD, FD_CLOEXEC) == 0 else {
+-            throw CliMechanicsNativeFixtureError.systemCall("ack cloexec", errno)
+-        }
+-        return
++    guard information.st_uid == getuid() else {
++        throw CliMechanicsFixtureResolutionError
++            .invalidFixtureArtifact("artifact is not owned by the current uid")
+     }
+-    let original = descriptor
+-    let duplicate = Darwin.fcntl(original, F_DUPFD_CLOEXEC, minimum)
+-    guard duplicate >= minimum else {
+-        throw CliMechanicsNativeFixtureError.systemCall("ack duplicate", errno)
++    guard information.st_nlink == 1 else {
++        throw CliMechanicsFixtureResolutionError
++            .invalidFixtureArtifact("artifact link count is not one")
+     }
+-    descriptor = duplicate
+-    guard Darwin.close(original) == 0 else {
+-        throw CliMechanicsNativeFixtureError.systemCall("ack original close", errno)
++    guard information.st_mode & S_IXUSR != 0 else {
++        throw CliMechanicsFixtureResolutionError
++            .invalidFixtureArtifact("artifact is not user-executable")
+     }
++    guard information.st_mode & mode_t(S_IWGRP | S_IWOTH) == 0 else {
++        throw CliMechanicsFixtureResolutionError.invalidFixtureArtifact(
++            "artifact is group- or world-writable"
++        )
++    }
+ }
+ 
+-private func cliMechanicsRunHeldStderrChild(arguments: [String]) throws -> Never {
+-    guard arguments.count == 1,
+-          let descriptor = Int32(arguments[0]), descriptor == 3,
+-          Darwin.fcntl(descriptor, F_GETFD) >= 0
+-    else { throw CliMechanicsNativeFixtureError.invalidArguments }
+-    try cliMechanicsWrite(Data([0x41]), to: descriptor)
+-    guard Darwin.close(descriptor) == 0 else {
+-        throw CliMechanicsNativeFixtureError.systemCall("child ack close", errno)
+-    }
+-    try cliMechanicsWaitForever()
++private func cliMechanicsSameFixtureIdentity(
++    _ lhs: stat,
++    _ rhs: stat
++) -> Bool {
++    lhs.st_dev == rhs.st_dev
++        && lhs.st_ino == rhs.st_ino
++        && lhs.st_uid == rhs.st_uid
++        && lhs.st_nlink == rhs.st_nlink
++        && lhs.st_mode == rhs.st_mode
++        && lhs.st_size == rhs.st_size
++        && lhs.st_mtimespec.tv_sec == rhs.st_mtimespec.tv_sec
++        && lhs.st_mtimespec.tv_nsec == rhs.st_mtimespec.tv_nsec
+ }
+ 
+-private func cliMechanicsCloseOwned(
+-    _ descriptor: inout Int32,
+-    operation: String
+-) -> (any Error)? {
+-    guard descriptor >= 0 else { return nil }
++private func cliMechanicsCloseFixtureDescriptor(
++    _ descriptor: inout Int32
++) throws {
+     let owned = descriptor
+     descriptor = -1
+     guard Darwin.close(owned) == 0 else {
+-        return CliMechanicsNativeFixtureError.systemCall(operation, errno)
++        throw CliMechanicsFixtureResolutionError.systemCall(
++            "artifact close", errno
++        )
+     }
+-    return nil
+ }
+-
+-private func cliMechanicsReleaseSpawnStructures(
+-    actions: inout posix_spawn_file_actions_t?,
+-    actionsInitialized: inout Bool,
+-    attributes: inout posix_spawnattr_t?,
+-    attributesInitialized: inout Bool
+-) -> [any Error] {
+-    var failures: [any Error] = []
+-    if attributesInitialized {
+-        attributesInitialized = false
+-        let code = posix_spawnattr_destroy(&attributes)
+-        if code != 0 {
+-            failures.append(CliMechanicsNativeFixtureError.systemCall(
+-                "spawn attributes destroy", code
+-            ))
+-        }
+-    }
+-    if actionsInitialized {
+-        actionsInitialized = false
+-        let code = posix_spawn_file_actions_destroy(&actions)
+-        if code != 0 {
+-            failures.append(CliMechanicsNativeFixtureError.systemCall(
+-                "spawn actions destroy", code
+-            ))
+-        }
+-    }
+-    return failures
+-}
+-
+-private func cliMechanicsThrow(
+-    _ primary: any Error,
+-    cleanupFailures: [any Error]
+-) throws -> Never {
+-    guard !cleanupFailures.isEmpty else { throw primary }
+-    throw CliMechanicsNativeFixtureError.cleanup(
+-        primary: String(describing: primary),
+-        failures: cleanupFailures.map { String(describing: $0) }
+-    )
+-}
+-
+-private func cliMechanicsTerminateOwnedChild(_ child: pid_t) throws {
+-    if Darwin.kill(child, SIGKILL) != 0, errno != ESRCH {
+-        throw CliMechanicsNativeFixtureError.systemCall("child kill", errno)
+-    }
+-    var status: Int32 = 0
+-    while true {
+-        let result = Darwin.waitpid(child, &status, 0)
+-        if result == child { return }
+-        if result < 0, errno == EINTR { continue }
+-        if result < 0, errno == ECHILD { return }
+-        throw CliMechanicsNativeFixtureError.systemCall("child reap", errno)
+-    }
+-}
+-
+-private func cliMechanicsReadAcknowledgement(from descriptor: Int32) throws -> UInt8 {
+-    var acknowledgement: UInt8 = 0
+-    while true {
+-        let count = withUnsafeMutableBytes(of: &acknowledgement) { bytes in
+-            Darwin.read(descriptor, bytes.baseAddress, 1)
+-        }
+-        if count == 1 { return acknowledgement }
+-        if count < 0, errno == EINTR { continue }
+-        if count == 0 { throw CliMechanicsNativeFixtureError.childAcknowledgement }
+-        throw CliMechanicsNativeFixtureError.systemCall("ack read", errno)
+-    }
+-}
+-
+-private func cliMechanicsReportEnvironmentSentinel() throws {
+-    func value(_ key: String) -> String? {
+-        key.withCString { keyPointer in
+-            guard let raw = getenv(keyPointer) else { return nil }
+-            return String(cString: raw)
+-        }
+-    }
+-    guard let sentinel = value("AGENTLOOP_FIXTURE_SENTINEL"),
+-          sentinel == "present" else {
+-        throw CliMechanicsNativeFixtureError.invalidEnvironment
+-    }
+-    let report = "environment-sentinel=present;path=\(value("PATH") == "/usr/bin:/bin" ? 1 : 0);locale=\(value("LC_ALL") == "C" ? 1 : 0);home=\(value("HOME") == nil ? 0 : 1);tmpdir=\(value("TMPDIR") == nil ? 0 : 1)\n"
+-    try cliMechanicsWrite(Data(report.utf8), to: STDOUT_FILENO)
+-}
+-
+-private func cliMechanicsCheckSpawn(_ code: Int32) throws {
+-    guard code == 0 else {
+-        throw CliMechanicsNativeFixtureError.systemCall("spawn setup", code)
+-    }
+-}
+-
+-private func cliMechanicsCStringVector(
+-    _ strings: [String]
+-) throws -> [UnsafeMutablePointer<CChar>?] {
+-    var result: [UnsafeMutablePointer<CChar>?] = []
+-    result.reserveCapacity(strings.count + 1)
+-    for string in strings {
+-        guard let pointer = strdup(string) else {
+-            cliMechanicsFreeCStringVector(result)
+-            throw CliMechanicsNativeFixtureError.systemCall("argv allocation", ENOMEM)
+-        }
+-        result.append(pointer)
+-    }
+-    result.append(nil)
+-    return result
+-}
+-
+-private func cliMechanicsFreeCStringVector(
+-    _ vector: [UnsafeMutablePointer<CChar>?]
+-) {
+-    for case let pointer? in vector { free(pointer) }
+-}
+--- a/Package.swift
++++ b/Package.swift
+@@ -65,16 +65,31 @@
+             name: "AgentLoopBoardBridge",
+             dependencies: ["AgentLoopCore"]
+         ),
++        // Dependency-free native process-mechanics fixture. Only test runners
++        // depend on this executable; no product target links or launches it.
++        .executableTarget(
++            name: "CliMechanicsFixtureRunner",
++            dependencies: [],
++            path: "Sources/CliMechanicsFixtureRunner"
++        ),
+         .testTarget(
+             name: "AgentLoopCoreTests",
+-            dependencies: ["AgentLoopCore", "AgentLoopTestSuite"],
++            dependencies: [
++                "AgentLoopCore",
++                "AgentLoopTestSuite",
++                "CliMechanicsFixtureRunner",
++            ],
+             swiftSettings: cltSwiftSettings,
+             linkerSettings: cltLinkerSettings
+         ),
+         // Standalone test runner — bypasses swiftpm-testing-helper for CI/subshell use
+         .executableTarget(
+             name: "RunTests",
+-            dependencies: ["AgentLoopCore", "AgentLoopTestSuite"],
++            dependencies: [
++                "AgentLoopCore",
++                "AgentLoopTestSuite",
++                "CliMechanicsFixtureRunner",
++            ],
+             path: "Sources/RunTests",
+             swiftSettings: cltSwiftSettings,
+             linkerSettings: cltLinkerSettings
+--- a/Sources/CliMechanicsFixtureRunner/main.c
++++ b/Sources/CliMechanicsFixtureRunner/main.c
+@@ -0,0 +1,804 @@
++#define _DARWIN_C_SOURCE
++
++#include <errno.h>
++#include <fcntl.h>
++#include <limits.h>
++#include <signal.h>
++#include <spawn.h>
++#include <stdarg.h>
++#include <stdbool.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/stat.h>
++#include <sys/types.h>
++#include <sys/wait.h>
++#include <unistd.h>
++
++#define FIXTURE_SWITCH "--agentloop-cli-mechanics-fixture"
++#define MODE_EXIT_ZERO "exit-zero"
++#define MODE_PRINT_FINAL_LINE "print-final-line"
++#define MODE_WAIT_TERM "wait-term"
++#define MODE_IGNORE_TERM "ignore-term"
++#define MODE_READY_FILE_IGNORE_TERM "ready-file-ignore-term"
++#define MODE_READY_FILE "ready-file"
++#define MODE_READY_AND_DRAIN_IGNORE_TERM "ready-and-drain-ignore-term"
++#define MODE_HELD_STDERR_PARENT "held-stderr-parent"
++#define MODE_HELD_STDERR_CHILD "held-stderr-child"
++#define MODE_ENVIRONMENT_SENTINEL "environment-sentinel"
++
++#define FIXTURE_ERROR_EXIT 64
++#define FIXTURE_REPORT_ERROR_EXIT 74
++#define FIXTURE_REPORT_LOST_EXIT 75
++#define MAX_CLEANUP_FAILURES 8
++
++typedef struct {
++    const char *operation;
++    int code;
++    bool message_only;
++} fixture_failure;
++
++typedef struct {
++    fixture_failure primary;
++    bool has_primary;
++    fixture_failure cleanup[MAX_CLEANUP_FAILURES];
++    size_t cleanup_count;
++    bool cleanup_overflow;
++} fixture_errors;
++
++static void set_system_failure(fixture_errors *errors, const char *operation,
++                               int code) {
++    if (!errors->has_primary) {
++        errors->primary = (fixture_failure){operation, code, false};
++        errors->has_primary = true;
++    }
++}
++
++static void set_message_failure(fixture_errors *errors, const char *message) {
++    if (!errors->has_primary) {
++        errors->primary = (fixture_failure){message, 0, true};
++        errors->has_primary = true;
++    }
++}
++
++static void add_cleanup_failure(fixture_errors *errors, const char *operation,
++                                int code) {
++    if (errors->cleanup_count == MAX_CLEANUP_FAILURES) {
++        errors->cleanup_overflow = true;
++        return;
++    }
++    errors->cleanup[errors->cleanup_count++] =
++        (fixture_failure){operation, code, false};
++}
++
++static int write_all_raw(int descriptor, const void *bytes, size_t count,
++                         int *failure_code) {
++    const unsigned char *cursor = bytes;
++    size_t offset = 0;
++    while (offset < count) {
++        ssize_t written = write(descriptor, cursor + offset, count - offset);
++        if (written > 0) {
++            offset += (size_t)written;
++            continue;
++        }
++        if (written < 0 && errno == EINTR) {
++            continue;
++        }
++        *failure_code = written == 0 ? EIO : errno;
++        return -1;
++    }
++    return 0;
++}
++
++static int write_fixture(int descriptor, const void *bytes, size_t count,
++                         fixture_errors *errors) {
++    int code = 0;
++    if (write_all_raw(descriptor, bytes, count, &code) == 0) {
++        return 0;
++    }
++    set_system_failure(errors, "write", code);
++    return -1;
++}
++
++static bool append_format(char *buffer, size_t capacity, size_t *length,
++                          const char *format, ...) {
++    if (*length >= capacity) {
++        return false;
++    }
++    va_list arguments;
++    va_start(arguments, format);
++    int count = vsnprintf(buffer + *length, capacity - *length, format,
++                          arguments);
++    va_end(arguments);
++    if (count < 0 || (size_t)count >= capacity - *length) {
++        return false;
++    }
++    *length += (size_t)count;
++    return true;
++}
++
++static bool append_failure(char *buffer, size_t capacity, size_t *length,
++                           fixture_failure failure) {
++    if (failure.message_only) {
++        return append_format(buffer, capacity, length, "%s", failure.operation);
++    }
++    return append_format(buffer, capacity, length, "fixture %s failed errno=%d",
++                         failure.operation, failure.code);
++}
++
++static int report_errors(const fixture_errors *errors) {
++    char message[4096];
++    size_t length = 0;
++    bool formatted = append_format(message, sizeof(message), &length,
++                                   "AgentLoop CLI mechanics fixture: ");
++    fixture_failure primary = errors->has_primary
++        ? errors->primary
++        : (fixture_failure){"unknown fixture failure", 0, true};
++    formatted = formatted
++        && append_failure(message, sizeof(message), &length, primary);
++    if (errors->cleanup_count > 0 || errors->cleanup_overflow) {
++        formatted = formatted
++            && append_format(message, sizeof(message), &length, "; cleanup=[");
++        for (size_t index = 0; formatted && index < errors->cleanup_count;
++             ++index) {
++            if (index > 0) {
++                formatted = append_format(message, sizeof(message), &length,
++                                          "; ");
++            }
++            formatted = formatted
++                && append_failure(message, sizeof(message), &length,
++                                  errors->cleanup[index]);
++        }
++        if (formatted && errors->cleanup_overflow) {
++            formatted = append_format(message, sizeof(message), &length,
++                                      "%scleanup failure capacity exceeded",
++                                      errors->cleanup_count > 0 ? "; " : "");
++        }
++        formatted = formatted
++            && append_format(message, sizeof(message), &length, "]");
++    }
++    formatted = formatted
++        && append_format(message, sizeof(message), &length, "\n");
++    if (!formatted) {
++        static const char overflow[] =
++            "AgentLoop CLI mechanics fixture: error report overflow\n";
++        memcpy(message, overflow, sizeof(overflow) - 1);
++        length = sizeof(overflow) - 1;
++    }
++
++    int stderr_code = 0;
++    if (write_all_raw(STDERR_FILENO, message, length, &stderr_code) == 0) {
++        return FIXTURE_ERROR_EXIT;
++    }
++
++    char fallback[4608];
++    int prefix = snprintf(
++        fallback, sizeof(fallback),
++        "AgentLoop CLI mechanics fixture: stderr error report failed errno=%d; "
++        "original report follows:\n",
++        stderr_code
++    );
++    if (prefix < 0 || (size_t)prefix + length > sizeof(fallback)) {
++        static const char lost[] =
++            "AgentLoop CLI mechanics fixture: stderr error report and fallback "
++            "formatting failed\n";
++        int stdout_code = 0;
++        if (write_all_raw(STDOUT_FILENO, lost, sizeof(lost) - 1,
++                          &stdout_code) != 0) {
++            return FIXTURE_REPORT_LOST_EXIT;
++        }
++        return FIXTURE_REPORT_ERROR_EXIT;
++    }
++    memcpy(fallback + prefix, message, length);
++    int stdout_code = 0;
++    if (write_all_raw(STDOUT_FILENO, fallback, (size_t)prefix + length,
++                      &stdout_code) != 0) {
++        return FIXTURE_REPORT_LOST_EXIT;
++    }
++    return FIXTURE_REPORT_ERROR_EXIT;
++}
++
++static bool bounded_equal(const char *value, const char *expected,
++                          size_t maximum) {
++    if (value == NULL) {
++        return false;
++    }
++    size_t length = strnlen(value, maximum + 1);
++    size_t expected_length = strlen(expected);
++    return length <= maximum && length == expected_length
++        && memcmp(value, expected, length) == 0;
++}
++
++static bool bounded_present(const char *value, size_t maximum) {
++    return value != NULL && strnlen(value, maximum + 1) <= maximum;
++}
++
++static int require_exact_arguments(int argc, int expected,
++                                   fixture_errors *errors) {
++    if (argc == expected) {
++        return 0;
++    }
++    set_message_failure(errors, "invalid fixture arguments");
++    return -1;
++}
++
++static int install_ignored_signal(int signal_number, fixture_errors *errors) {
++    struct sigaction action;
++    memset(&action, 0, sizeof(action));
++    action.sa_handler = SIG_IGN;
++    if (sigemptyset(&action.sa_mask) != 0
++        || sigaction(signal_number, &action, NULL) != 0) {
++        set_system_failure(errors, "signal", errno);
++        return -1;
++    }
++    return 0;
++}
++
++static int drain_stdin(fixture_errors *errors) {
++    unsigned char bytes[4096];
++    for (;;) {
++        ssize_t count = read(STDIN_FILENO, bytes, sizeof(bytes));
++        if (count > 0) {
++            continue;
++        }
++        if (count == 0) {
++            return 0;
++        }
++        if (errno == EINTR) {
++            continue;
++        }
++        set_system_failure(errors, "stdin read", errno);
++        return -1;
++    }
++}
++
++static int wait_forever(fixture_errors *errors) {
++    for (;;) {
++        if (pause() == -1 && errno == EINTR) {
++            continue;
++        }
++        set_system_failure(errors, "pause", errno);
++        return -1;
++    }
++}
++
++static int close_owned(int *descriptor, const char *operation,
++                       fixture_errors *errors, bool cleanup) {
++    if (*descriptor < 0) {
++        return 0;
++    }
++    int owned = *descriptor;
++    *descriptor = -1;
++    if (close(owned) == 0) {
++        return 0;
++    }
++    if (cleanup) {
++        add_cleanup_failure(errors, operation, errno);
++    } else {
++        set_system_failure(errors, operation, errno);
++    }
++    return -1;
++}
++
++static int create_ready_file(const char *root, const char *leaf,
++                             fixture_errors *errors) {
++    if (!bounded_present(root, PATH_MAX - 1)
++        || (!bounded_equal(leaf, "cold-ready", 32)
++            && !bounded_equal(leaf, "resume-ready", 32))) {
++        set_message_failure(errors, "fixture readiness authority is invalid");
++        return -1;
++    }
++
++    struct stat supplied_root;
++    if (lstat(root, &supplied_root) != 0) {
++        set_system_failure(errors, "readiness root lstat", errno);
++        return -1;
++    }
++    if (!S_ISDIR(supplied_root.st_mode)) {
++        set_message_failure(errors, "fixture readiness authority is invalid");
++        return -1;
++    }
++
++    char resolved_root[PATH_MAX];
++    char resolved_tmp[PATH_MAX];
++    char allowed_prefix[PATH_MAX];
++    char workspace[PATH_MAX];
++    char resolved_workspace[PATH_MAX];
++    char resolved_cwd[PATH_MAX];
++    if (realpath(root, resolved_root) == NULL) {
++        set_system_failure(errors, "readiness root realpath", errno);
++        return -1;
++    }
++    if (realpath("/tmp", resolved_tmp) == NULL) {
++        set_system_failure(errors, "temporary root realpath", errno);
++        return -1;
++    }
++    int prefix_count = snprintf(allowed_prefix, sizeof(allowed_prefix),
++                                "%s/al65-", resolved_tmp);
++    int workspace_count = snprintf(workspace, sizeof(workspace), "%s/workspace",
++                                   root);
++    if (prefix_count < 0 || (size_t)prefix_count >= sizeof(allowed_prefix)
++        || workspace_count < 0
++        || (size_t)workspace_count >= sizeof(workspace)
++        || strncmp(resolved_root, allowed_prefix,
++                   (size_t)prefix_count) != 0) {
++        set_message_failure(errors, "fixture readiness authority is invalid");
++        return -1;
++    }
++    if (realpath(workspace, resolved_workspace) == NULL) {
++        set_system_failure(errors, "readiness workspace realpath", errno);
++        return -1;
++    }
++    if (realpath(".", resolved_cwd) == NULL) {
++        set_system_failure(errors, "current workspace realpath", errno);
++        return -1;
++    }
++    if (strcmp(resolved_workspace, resolved_cwd) != 0) {
++        set_message_failure(errors, "fixture readiness authority is invalid");
++        return -1;
++    }
++
++    int root_descriptor = open(root, O_RDONLY | O_DIRECTORY | O_CLOEXEC
++                                      | O_NOFOLLOW);
++    int ready_descriptor = -1;
++    if (root_descriptor < 0) {
++        set_system_failure(errors, "readiness root open", errno);
++        return -1;
++    }
++    struct stat root_info;
++    if (fstat(root_descriptor, &root_info) != 0) {
++        set_system_failure(errors, "readiness root fstat", errno);
++        goto cleanup;
++    }
++    if (!S_ISDIR(root_info.st_mode) || root_info.st_uid != getuid()
++        || (root_info.st_mode & 0777) != 0700
++        || root_info.st_dev != supplied_root.st_dev
++        || root_info.st_ino != supplied_root.st_ino) {
++        set_message_failure(errors, "fixture readiness authority is invalid");
++        goto cleanup;
++    }
++    ready_descriptor = openat(root_descriptor, leaf,
++                              O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC
++                                  | O_NOFOLLOW,
++                              0600);
++    if (ready_descriptor < 0) {
++        set_system_failure(errors, "readiness file open", errno);
++        goto cleanup;
++    }
++    if (close_owned(&ready_descriptor, "readiness file close", errors,
++                    false) != 0) {
++        goto cleanup;
++    }
++    if (close_owned(&root_descriptor, "readiness root close", errors,
++                    false) != 0) {
++        return -1;
++    }
++    return 0;
++
++cleanup:
++    close_owned(&ready_descriptor, "readiness file cleanup close", errors,
++                true);
++    close_owned(&root_descriptor, "readiness root cleanup close", errors,
++                true);
++    return -1;
++}
++
++static int current_executable(const char *argument, char output[PATH_MAX],
++                              fixture_errors *errors) {
++    if (!bounded_present(argument, PATH_MAX - 1)) {
++        set_system_failure(errors, "current runner identity", EINVAL);
++        return -1;
++    }
++    if (realpath(argument, output) == NULL) {
++        set_system_failure(errors, "current runner identity", errno);
++        return -1;
++    }
++    struct stat information;
++    if (lstat(output, &information) != 0) {
++        set_system_failure(errors, "current runner identity", errno);
++        return -1;
++    }
++    if (!S_ISREG(information.st_mode) || information.st_uid != getuid()
++        || information.st_nlink != 1 || (information.st_mode & S_IXUSR) == 0) {
++        set_system_failure(errors, "current runner identity", EINVAL);
++        return -1;
++    }
++    return 0;
++}
++
++static int normalize_owned_descriptor(int *descriptor, int minimum,
++                                      fixture_errors *errors) {
++    if (*descriptor < 0) {
++        set_system_failure(errors, "ack descriptor", EBADF);
++        return -1;
++    }
++    if (*descriptor >= minimum) {
++        if (fcntl(*descriptor, F_SETFD, FD_CLOEXEC) == 0) {
++            return 0;
++        }
++        set_system_failure(errors, "ack cloexec", errno);
++        return -1;
++    }
++    int original = *descriptor;
++    int duplicate = fcntl(original, F_DUPFD_CLOEXEC, minimum);
++    if (duplicate < 0) {
++        set_system_failure(errors, "ack duplicate", errno);
++        return -1;
++    }
++    if (duplicate < minimum) {
++        set_system_failure(errors, "ack duplicate", EINVAL);
++        if (close(duplicate) != 0) {
++            add_cleanup_failure(errors, "ack unexpected duplicate close",
++                                errno);
++        }
++        return -1;
++    }
++    *descriptor = duplicate;
++    if (close(original) != 0) {
++        set_system_failure(errors, "ack original close", errno);
++        return -1;
++    }
++    return 0;
++}
++
++static void record_release_failure(fixture_errors *errors,
++                                   const char *operation, int code,
++                                   bool cleanup_only) {
++    if (cleanup_only || errors->has_primary) {
++        add_cleanup_failure(errors, operation, code);
++    } else {
++        set_system_failure(errors, operation, code);
++    }
++}
++
++static void release_spawn_structures(posix_spawn_file_actions_t *actions,
++                                     bool *actions_initialized,
++                                     posix_spawnattr_t *attributes,
++                                     bool *attributes_initialized,
++                                     fixture_errors *errors,
++                                     bool cleanup_only) {
++    if (*attributes_initialized) {
++        *attributes_initialized = false;
++        int code = posix_spawnattr_destroy(attributes);
++        if (code != 0) {
++            record_release_failure(errors, "spawn attributes destroy", code,
++                                   cleanup_only);
++        }
++    }
++    if (*actions_initialized) {
++        *actions_initialized = false;
++        int code = posix_spawn_file_actions_destroy(actions);
++        if (code != 0) {
++            record_release_failure(errors, "spawn actions destroy", code,
++                                   cleanup_only);
++        }
++    }
++}
++
++static int terminate_owned_child(pid_t child, fixture_errors *errors) {
++    if (kill(child, SIGKILL) != 0 && errno != ESRCH) {
++        add_cleanup_failure(errors, "child kill", errno);
++        return -1;
++    }
++    int status = 0;
++    for (;;) {
++        pid_t result = waitpid(child, &status, 0);
++        if (result == child || (result < 0 && errno == ECHILD)) {
++            return 0;
++        }
++        if (result < 0 && errno == EINTR) {
++            continue;
++        }
++        add_cleanup_failure(errors, "child reap",
++                            result < 0 ? errno : ECHILD);
++        return -1;
++    }
++}
++
++static int read_acknowledgement(int descriptor, fixture_errors *errors) {
++    unsigned char acknowledgement = 0;
++    for (;;) {
++        ssize_t count = read(descriptor, &acknowledgement, 1);
++        if (count == 1) {
++            if (acknowledgement == 0x41) {
++                return 0;
++            }
++            set_message_failure(errors,
++                                "fixture child acknowledgement was invalid");
++            return -1;
++        }
++        if (count < 0 && errno == EINTR) {
++            continue;
++        }
++        if (count == 0) {
++            set_message_failure(errors,
++                                "fixture child acknowledgement was invalid");
++        } else {
++            set_system_failure(errors, "ack read", errno);
++        }
++        return -1;
++    }
++}
++
++static int check_spawn_setup(int code, fixture_errors *errors) {
++    if (code == 0) {
++        return 0;
++    }
++    set_system_failure(errors, "spawn setup", code);
++    return -1;
++}
++
++static int run_held_stderr_parent(const char *self_argument,
++                                  fixture_errors *errors) {
++    int pipe_descriptors[2] = {-1, -1};
++    if (pipe(pipe_descriptors) != 0) {
++        set_system_failure(errors, "ack pipe", errno);
++        return -1;
++    }
++    int read_descriptor = pipe_descriptors[0];
++    int write_descriptor = pipe_descriptors[1];
++    posix_spawn_file_actions_t actions;
++    posix_spawnattr_t attributes;
++    bool actions_initialized = false;
++    bool attributes_initialized = false;
++    pid_t child = 0;
++    bool owns_child = false;
++    char executable[PATH_MAX];
++
++    if (normalize_owned_descriptor(&read_descriptor, 4, errors) != 0
++        || normalize_owned_descriptor(&write_descriptor, 4, errors) != 0) {
++        goto cleanup;
++    }
++    int code = posix_spawn_file_actions_init(&actions);
++    if (code != 0) {
++        set_system_failure(errors, "spawn actions init", code);
++        goto cleanup;
++    }
++    actions_initialized = true;
++    if (check_spawn_setup(
++            posix_spawn_file_actions_addclose(&actions, read_descriptor),
++            errors) != 0
++        || check_spawn_setup(posix_spawn_file_actions_addopen(
++               &actions, STDIN_FILENO, "/dev/null", O_RDONLY, 0), errors) != 0
++        || check_spawn_setup(posix_spawn_file_actions_addopen(
++               &actions, STDOUT_FILENO, "/dev/null", O_WRONLY, 0), errors) != 0
++        || check_spawn_setup(posix_spawn_file_actions_adddup2(
++               &actions, STDERR_FILENO, STDERR_FILENO), errors) != 0
++        || check_spawn_setup(posix_spawn_file_actions_adddup2(
++               &actions, write_descriptor, 3), errors) != 0
++        || check_spawn_setup(posix_spawn_file_actions_addclose(
++               &actions, write_descriptor), errors) != 0) {
++        goto cleanup;
++    }
++
++    code = posix_spawnattr_init(&attributes);
++    if (code != 0) {
++        set_system_failure(errors, "spawn attributes init", code);
++        goto cleanup;
++    }
++    attributes_initialized = true;
++    sigset_t default_signals;
++    sigset_t signal_mask;
++    if (sigemptyset(&default_signals) != 0
++        || sigaddset(&default_signals, SIGTERM) != 0
++        || sigemptyset(&signal_mask) != 0) {
++        set_system_failure(errors, "spawn signals", errno);
++        goto cleanup;
++    }
++    if (check_spawn_setup(posix_spawnattr_setsigdefault(
++                              &attributes, &default_signals), errors) != 0
++        || check_spawn_setup(posix_spawnattr_setsigmask(
++               &attributes, &signal_mask), errors) != 0
++        || check_spawn_setup(posix_spawnattr_setflags(
++               &attributes,
++               (short)(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETSIGDEF
++                       | POSIX_SPAWN_SETSIGMASK)), errors) != 0) {
++        goto cleanup;
++    }
++    if (current_executable(self_argument, executable, errors) != 0) {
++        goto cleanup;
++    }
++
++    char *child_arguments[] = {
++        executable,
++        FIXTURE_SWITCH,
++        MODE_HELD_STDERR_CHILD,
++        "3",
++        NULL,
++    };
++    char *child_environment[] = {
++        "LC_ALL=C",
++        "PATH=/usr/bin:/bin",
++        NULL,
++    };
++    code = posix_spawn(&child, executable, &actions, &attributes,
++                       child_arguments, child_environment);
++    if (code != 0) {
++        set_system_failure(errors, "spawn held child", code);
++        goto cleanup;
++    }
++    owns_child = true;
++    release_spawn_structures(&actions, &actions_initialized, &attributes,
++                             &attributes_initialized, errors, false);
++    if (errors->has_primary) {
++        goto cleanup;
++    }
++    if (close_owned(&write_descriptor, "parent ack write close", errors,
++                    false) != 0
++        || read_acknowledgement(read_descriptor, errors) != 0) {
++        goto cleanup;
++    }
++    if (getpgid(child) != getpgrp()) {
++        set_message_failure(errors,
++                            "fixture child did not inherit the parent process group");
++        goto cleanup;
++    }
++    if (close_owned(&read_descriptor, "parent ack read close", errors,
++                    false) != 0
++        || write_fixture(STDOUT_FILENO, "parent-exited\n",
++                         sizeof("parent-exited\n") - 1, errors) != 0) {
++        goto cleanup;
++    }
++    owns_child = false;
++    return 0;
++
++cleanup:
++    release_spawn_structures(&actions, &actions_initialized, &attributes,
++                             &attributes_initialized, errors, true);
++    if (owns_child) {
++        terminate_owned_child(child, errors);
++    }
++    close_owned(&read_descriptor, "parent ack read cleanup close", errors,
++                true);
++    close_owned(&write_descriptor, "parent ack write cleanup close", errors,
++                true);
++    return -1;
++}
++
++static int run_held_stderr_child(int argc, char *argv[],
++                                 fixture_errors *errors) {
++    if (require_exact_arguments(argc, 4, errors) != 0
++        || !bounded_equal(argv[3], "3", 8)
++        || fcntl(3, F_GETFD) < 0) {
++        if (!errors->has_primary) {
++            set_message_failure(errors, "invalid fixture arguments");
++        }
++        return -1;
++    }
++    unsigned char acknowledgement = 0x41;
++    if (write_fixture(3, &acknowledgement, 1, errors) != 0) {
++        return -1;
++    }
++    int descriptor = 3;
++    if (close_owned(&descriptor, "child ack close", errors, false) != 0) {
++        return -1;
++    }
++    return wait_forever(errors);
++}
++
++static int report_environment(fixture_errors *errors) {
++    const char *sentinel = getenv("AGENTLOOP_FIXTURE_SENTINEL");
++    const char *path = getenv("PATH");
++    const char *locale = getenv("LC_ALL");
++    const char *home = getenv("HOME");
++    const char *temporary = getenv("TMPDIR");
++    if (!bounded_equal(sentinel, "present", 64)) {
++        set_message_failure(errors, "fixture environment sentinel is invalid");
++        return -1;
++    }
++    char report[128];
++    int count = snprintf(
++        report, sizeof(report),
++        "environment-sentinel=present;path=%d;locale=%d;home=%d;tmpdir=%d\n",
++        bounded_equal(path, "/usr/bin:/bin", 256) ? 1 : 0,
++        bounded_equal(locale, "C", 64) ? 1 : 0,
++        bounded_present(home, PATH_MAX - 1) ? 1 : 0,
++        bounded_present(temporary, PATH_MAX - 1) ? 1 : 0
++    );
++    if (count < 0 || (size_t)count >= sizeof(report)) {
++        set_message_failure(errors, "fixture environment report is invalid");
++        return -1;
++    }
++    return write_fixture(STDOUT_FILENO, report, (size_t)count, errors);
++}
++
++static int run_mode(int argc, char *argv[], fixture_errors *errors) {
++    const char *mode = argv[2];
++    if (bounded_equal(mode, MODE_EXIT_ZERO, 64)) {
++        return require_exact_arguments(argc, 3, errors) == 0
++            ? drain_stdin(errors) : -1;
++    }
++    if (bounded_equal(mode, MODE_PRINT_FINAL_LINE, 64)) {
++        if (require_exact_arguments(argc, 3, errors) != 0
++            || drain_stdin(errors) != 0) {
++            return -1;
++        }
++        return write_fixture(STDOUT_FILENO, "final-line",
++                             sizeof("final-line") - 1, errors);
++    }
++    if (bounded_equal(mode, MODE_WAIT_TERM, 64)) {
++        if (require_exact_arguments(argc, 3, errors) != 0
++            || drain_stdin(errors) != 0
++            || write_fixture(STDOUT_FILENO, "ready\n",
++                             sizeof("ready\n") - 1, errors) != 0) {
++            return -1;
++        }
++        return wait_forever(errors);
++    }
++    if (bounded_equal(mode, MODE_IGNORE_TERM, 64)) {
++        if (require_exact_arguments(argc, 3, errors) != 0
++            || install_ignored_signal(SIGTERM, errors) != 0
++            || drain_stdin(errors) != 0
++            || write_fixture(STDOUT_FILENO, "ready\n",
++                             sizeof("ready\n") - 1, errors) != 0) {
++            return -1;
++        }
++        return wait_forever(errors);
++    }
++    if (bounded_equal(mode, MODE_READY_FILE_IGNORE_TERM, 64)) {
++        if (require_exact_arguments(argc, 5, errors) != 0
++            || install_ignored_signal(SIGTERM, errors) != 0
++            || drain_stdin(errors) != 0
++            || create_ready_file(argv[3], argv[4], errors) != 0) {
++            return -1;
++        }
++        return wait_forever(errors);
++    }
++    if (bounded_equal(mode, MODE_READY_FILE, 64)) {
++        if (require_exact_arguments(argc, 5, errors) != 0
++            || create_ready_file(argv[3], argv[4], errors) != 0) {
++            return -1;
++        }
++        /* The pre-registration inspector must observe this before stdin exists. */
++        return wait_forever(errors);
++    }
++    if (bounded_equal(mode, MODE_READY_AND_DRAIN_IGNORE_TERM, 64)) {
++        if (require_exact_arguments(argc, 3, errors) != 0
++            || install_ignored_signal(SIGTERM, errors) != 0
++            || drain_stdin(errors) != 0
++            || write_fixture(STDOUT_FILENO, "p1f1d-ready\n",
++                             sizeof("p1f1d-ready\n") - 1, errors) != 0
++            || write_fixture(STDERR_FILENO, "p1f1d-drain\n",
++                             sizeof("p1f1d-drain\n") - 1, errors) != 0) {
++            return -1;
++        }
++        return wait_forever(errors);
++    }
++    if (bounded_equal(mode, MODE_HELD_STDERR_PARENT, 64)) {
++        if (require_exact_arguments(argc, 3, errors) != 0
++            || drain_stdin(errors) != 0) {
++            return -1;
++        }
++        return run_held_stderr_parent(argv[0], errors);
++    }
++    if (bounded_equal(mode, MODE_HELD_STDERR_CHILD, 64)) {
++        return run_held_stderr_child(argc, argv, errors);
++    }
++    if (bounded_equal(mode, MODE_ENVIRONMENT_SENTINEL, 64)) {
++        if (require_exact_arguments(argc, 3, errors) != 0
++            || drain_stdin(errors) != 0) {
++            return -1;
++        }
++        return report_environment(errors);
++    }
++    set_message_failure(errors, "invalid fixture arguments");
++    return -1;
++}
++
++int main(int argc, char *argv[]) {
++    fixture_errors errors = {0};
++    if (install_ignored_signal(SIGPIPE, &errors) != 0) {
++        return report_errors(&errors);
++    }
++    if (argc < 3 || argc > 5 || argv[0] == NULL || argv[1] == NULL
++        || argv[2] == NULL || !bounded_present(argv[0], PATH_MAX - 1)
++        || !bounded_equal(argv[1], FIXTURE_SWITCH, 64)
++        || !bounded_present(argv[2], 64)) {
++        set_message_failure(&errors, "invalid fixture arguments");
++        return report_errors(&errors);
++    }
++    if (run_mode(argc, argv, &errors) == 0) {
++        return EXIT_SUCCESS;
++    }
++    return report_errors(&errors);
++}

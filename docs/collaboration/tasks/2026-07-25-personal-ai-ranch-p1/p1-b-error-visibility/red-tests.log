@@ -1,0 +1,28 @@
+phase=step2-failure-first
+cwd=/Users/muzi/Agent-loop
+command=swift run RunTests --filter 'observabilityMigrationExactDDLAndConstraints|observabilityMigrationRollbackLeavesV12ScheduleUntouched'
+env.DYLD_LIBRARY_PATH=unset
+env.DYLD_FALLBACK_LIBRARY_PATH=unset
+env.DYLD_INSERT_LIBRARIES=unset
+env.SWIFT_EXEC=unset
+env.SDKROOT=unset
+--- command output begin ---
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test observabilityMigrationExactDDLAndConstraints() started.
+◇ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() started.
+✘ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() recorded an issue at FailureVisibilityTests.swift:106:2: Caught error: missing required migration v13-p1-observability; actual final migration is v12-p1-schedule-fire
+✘ Test observabilityMigrationExactDDLAndConstraints() recorded an issue at FailureVisibilityTests.swift:34:2: Caught error: missing required migration v13-p1-observability; actual final migration is v12-p1-schedule-fire
+✘ Test observabilityMigrationExactDDLAndConstraints() failed after 0.001 seconds with 1 issue.
+✘ Test observabilityMigrationRollbackLeavesV12ScheduleUntouched() failed after 0.001 seconds with 1 issue.
+✘ Test run with 2 tests in 0 suites failed after 0.001 seconds with 2 issues.
+--- command output end ---
+exit_status=1
+red.compile_success=pass
+red.target_tests_started_once=pass count=2
+red.only_missing_v13_failures=pass count=2
+red.expected_missing_v13=pass

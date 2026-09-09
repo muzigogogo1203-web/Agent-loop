@@ -1,0 +1,141 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+[3/7] Compiling AgentLoopCore RuntimeLifecycleDiagnostics.swift
+[4/7] Emitting module AgentLoopCore
+[5/7] Compiling AgentLoopCore Orchestrator.swift
+[6/9] Compiling AgentLoopCore BoardToolServer.swift
+[7/9] Compiling AgentLoopCore CliProcessBackend.swift
+[8/10] Emitting module AgentLoopApplication
+[8/12] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[10/16] Compiling AgentLoopTestSuite CliBackendTests.swift
+[11/16] Compiling AgentLoopTestSuite HaltAndCooldownTests.swift
+[12/16] Emitting module AgentLoopTestSuite
+[13/16] Compiling AgentLoopTestSuite ExecutionEngineConformanceTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:1520:12: warning: no calls to throwing functions occur within 'try' expression
+1518 |         throw EngineAdapterSelectionErrorV1.descriptorMismatch
+1519 |     }
+1520 |     return try CliEngineAdapter(
+     |            `- warning: no calls to throwing functions occur within 'try' expression
+1521 |         profile: profile,
+1522 |         descriptor: runtime.descriptor,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:4914:21: warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+4912 |                 progressSink: P1F1DProgressRecorder(),
+4913 |                 modelLoopDriver: try #require(
+4914 |                     selectedTransport.modelLoopDriver
+     |                     `- warning: '#require(_:_:)' is redundant because 'selectedTransport.modelLoopDriver' never equals 'nil' (from macro 'require')
+4915 |                 ),
+4916 |                 cliProcessDriver: nil,
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:5778:17: warning: expression of type 'Bool' is unused [#no-usage]
+5776 |             try #require(continued.count == 1)
+5777 |             let pid = continued[0].group
+5778 |             try #require(pid > 0)
+     |                 `- warning: expression of type 'Bool' is unused [#no-usage]
+5779 |             try #require(Darwin.getpgid(pid) == pid)
+5780 |             try #require(Darwin.kill(pid, 0) == 0)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:5780:17: warning: expression of type 'Bool' is unused [#no-usage]
+5778 |             try #require(pid > 0)
+5779 |             try #require(Darwin.getpgid(pid) == pid)
+5780 |             try #require(Darwin.kill(pid, 0) == 0)
+     |                 `- warning: expression of type 'Bool' is unused [#no-usage]
+5781 |             throw P1F1D065ColdForcedFailure.afterReady
+5782 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:5778:26: warning: '#require(_:_:)' is redundant because 'pid > 0' never equals 'nil' (from macro 'require')
+5776 |             try #require(continued.count == 1)
+5777 |             let pid = continued[0].group
+5778 |             try #require(pid > 0)
+     |                          `- warning: '#require(_:_:)' is redundant because 'pid > 0' never equals 'nil' (from macro 'require')
+5779 |             try #require(Darwin.getpgid(pid) == pid)
+5780 |             try #require(Darwin.kill(pid, 0) == 0)
+
+macro expansion #require:1:219: error: cannot convert value of type 'Void' to type 'Bool' in coercion
+`- /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:5778:34: note: expanded code originates here
+5776 |             try #require(continued.count == 1)
+5777 |             let pid = continued[0].group
+5778 |             try #require(pid > 0)
+     |                 `- note: in expansion of macro 'require' here
+     +--- macro expansion #require -------------------------------------
+     |1 | Testing.__checkBinaryOperation(pid,{ $0 > $1() },0,expression: .__fromBinaryOperation(.__fromSyntaxNode("pid"),">",.__fromSyntaxNode("0")),comments: [],isRequired: true,sourceLocation: Testing.SourceLocation.__here()).__required()
+     |  |                                                                                                                                                                                                                           `- error: cannot convert value of type 'Void' to type 'Bool' in coercion
+     +------------------------------------------------------------------
+5779 |             try #require(Darwin.getpgid(pid) == pid)
+5780 |             try #require(Darwin.kill(pid, 0) == 0)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:5780:26: warning: '#require(_:_:)' is redundant because 'Darwin.kill(pid, 0) == 0' never equals 'nil' (from macro 'require')
+5778 |             try #require(pid > 0)
+5779 |             try #require(Darwin.getpgid(pid) == pid)
+5780 |             try #require(Darwin.kill(pid, 0) == 0)
+     |                          `- warning: '#require(_:_:)' is redundant because 'Darwin.kill(pid, 0) == 0' never equals 'nil' (from macro 'require')
+5781 |             throw P1F1D065ColdForcedFailure.afterReady
+5782 |         }
+
+macro expansion #require:1:253: error: cannot convert value of type 'Void' to type 'Bool' in coercion
+`- /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:5780:51: note: expanded code originates here
+5778 |             try #require(pid > 0)
+5779 |             try #require(Darwin.getpgid(pid) == pid)
+5780 |             try #require(Darwin.kill(pid, 0) == 0)
+     |                 `- note: in expansion of macro 'require' here
+     +--- macro expansion #require -------------------------------------
+     |1 | Testing.__checkBinaryOperation(Darwin.kill(pid, 0),{ $0 == $1() },0,expression: .__fromBinaryOperation(.__fromSyntaxNode("Darwin.kill(pid, 0)"),"==",.__fromSyntaxNode("0")),comments: [],isRequired: true,sourceLocation: Testing.SourceLocation.__here()).__required()
+     |  |                                                                                                                                                                                                                                                             `- error: cannot convert value of type 'Void' to type 'Bool' in coercion
+     +------------------------------------------------------------------
+5781 |             throw P1F1D065ColdForcedFailure.afterReady
+5782 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:5793:26: warning: '#require(_:_:)' is redundant because 'evidence.pid > 0' never equals 'nil' (from macro 'require')
+5791 |             try #require(evidence.termSent)
+5792 |             try #require(evidence.killSent)
+5793 |             try #require(evidence.pid > 0)
+     |                          `- warning: '#require(_:_:)' is redundant because 'evidence.pid > 0' never equals 'nil' (from macro 'require')
+5794 |             try #require(evidence.processGroupID == evidence.pid)
+5795 |             let continued = harness.processInspector.signalObservations().filter {
+
+macro expansion #require:1:237: error: cannot convert value of type 'Void' to type 'Bool' in coercion
+`- /Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:5793:43: note: expanded code originates here
+5791 |             try #require(evidence.termSent)
+5792 |             try #require(evidence.killSent)
+5793 |             try #require(evidence.pid > 0)
+     |                 `- note: in expansion of macro 'require' here
+     +--- macro expansion #require -------------------------------------
+     |1 | Testing.__checkBinaryOperation(evidence.pid,{ $0 > $1() },0,expression: .__fromBinaryOperation(.__fromSyntaxNode("evidence.pid"),">",.__fromSyntaxNode("0")),comments: [],isRequired: true,sourceLocation: Testing.SourceLocation.__here()).__required()
+     |  |                                                                                                                                                                                                                                             `- error: cannot convert value of type 'Void' to type 'Bool' in coercion
+     +------------------------------------------------------------------
+5794 |             try #require(evidence.processGroupID == evidence.pid)
+5795 |             let continued = harness.processInspector.signalObservations().filter {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:5793:17: warning: expression of type 'Bool' is unused [#no-usage]
+5791 |             try #require(evidence.termSent)
+5792 |             try #require(evidence.killSent)
+5793 |             try #require(evidence.pid > 0)
+     |                 `- warning: expression of type 'Bool' is unused [#no-usage]
+5794 |             try #require(evidence.processGroupID == evidence.pid)
+5795 |             let continued = harness.processInspector.signalObservations().filter {
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:5778:13: warning: no calls to throwing functions occur within 'try' expression
+5776 |             try #require(continued.count == 1)
+5777 |             let pid = continued[0].group
+5778 |             try #require(pid > 0)
+     |             `- warning: no calls to throwing functions occur within 'try' expression
+5779 |             try #require(Darwin.getpgid(pid) == pid)
+5780 |             try #require(Darwin.kill(pid, 0) == 0)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:5780:13: warning: no calls to throwing functions occur within 'try' expression
+5778 |             try #require(pid > 0)
+5779 |             try #require(Darwin.getpgid(pid) == pid)
+5780 |             try #require(Darwin.kill(pid, 0) == 0)
+     |             `- warning: no calls to throwing functions occur within 'try' expression
+5781 |             throw P1F1D065ColdForcedFailure.afterReady
+5782 |         }
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/ExecutionEngineConformanceTests.swift:5793:13: warning: no calls to throwing functions occur within 'try' expression
+5791 |             try #require(evidence.termSent)
+5792 |             try #require(evidence.killSent)
+5793 |             try #require(evidence.pid > 0)
+     |             `- warning: no calls to throwing functions occur within 'try' expression
+5794 |             try #require(evidence.processGroupID == evidence.pid)
+5795 |             let continued = harness.processInspector.signalObservations().filter {

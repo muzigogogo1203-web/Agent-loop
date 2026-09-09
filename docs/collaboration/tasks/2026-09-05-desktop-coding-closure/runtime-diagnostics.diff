@@ -1,0 +1,416 @@
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-diagnostics-before/Sources/AgentLoopCore/Loop/BoardToolServer.swift	2026-08-30 17:52:50
++++ Sources/AgentLoopCore/Loop/BoardToolServer.swift	2026-09-05 23:03:47
+@@ -52,6 +52,7 @@
+     private let onTerminalAccepted: @Sendable () -> Void
+     private let acceptQueue: DispatchQueue
+     private let handlerQueue: DispatchQueue
++    private let diagnosticId = UUID()
+     private let acceptGroup = DispatchGroup()
+     private let handlerGroup = DispatchGroup()
+     private let cleanupLock = NSLock()
+@@ -320,17 +321,44 @@
+         }
+ 
+         let group = acceptGroup
++        let diagnosticId = diagnosticId
+         group.enter()
+-        acceptQueue.async { [weak self, group] in
+-            defer { group.leave() }
++        RuntimeLifecycleDiagnostics.event(
++            .boardAcceptQueued,
++            owner: diagnosticId
++        )
++        acceptQueue.async { [weak self, group, diagnosticId] in
++            RuntimeLifecycleDiagnostics.event(
++                .boardAcceptStarted,
++                owner: diagnosticId
++            )
++            defer {
++                RuntimeLifecycleDiagnostics.event(
++                    .boardAcceptFinished,
++                    owner: diagnosticId
++                )
++                group.leave()
++            }
+             self?.acceptLoop(claiming: fd)
+         }
+     }
+ 
+     package func stop() throws {
++        RuntimeLifecycleDiagnostics.event(
++            .boardStopStarted,
++            owner: diagnosticId
++        )
+         signalStop()
+         acceptGroup.wait()
++        RuntimeLifecycleDiagnostics.event(
++            .boardAcceptJoined,
++            owner: diagnosticId
++        )
+         handlerGroup.wait()
++        RuntimeLifecycleDiagnostics.event(
++            .boardHandlersJoined,
++            owner: diagnosticId
++        )
+         var firstError: (any Error)? = lock.withLock { asyncFailure }
+         do {
+             try unlinkOwnedSocket()
+@@ -514,6 +542,7 @@
+     }
+ 
+     private func acceptLoop(claiming expectedFD: Int32) {
++        let diagnosticId = diagnosticId
+         // 锁内校验自己 start 时捕获的 fd 仍是当前 listener 且无人认领，防止 stop→start 后
+         // 滞留的旧 block 抢占新 listener。不匹配时对应 fd 已被 stop()/其 owner 关闭，直接退出。
+         lock.lock()
+@@ -535,6 +564,10 @@
+                 )
+                 break
+             }
++            RuntimeLifecycleDiagnostics.event(
++                .boardConnectionAccepted,
++                owner: diagnosticId
++            )
+             if isStopped() {
+                 closeConnection(connection)
+                 break
+@@ -555,8 +588,22 @@
+             }
+             let group = handlerGroup
+             group.enter()
+-            handlerQueue.async { [self, group] in
+-                defer { group.leave() }
++            RuntimeLifecycleDiagnostics.event(
++                .boardHandlerQueued,
++                owner: diagnosticId
++            )
++            handlerQueue.async { [self, group, diagnosticId] in
++                RuntimeLifecycleDiagnostics.event(
++                    .boardHandlerStarted,
++                    owner: diagnosticId
++                )
++                defer {
++                    RuntimeLifecycleDiagnostics.event(
++                        .boardHandlerFinished,
++                        owner: diagnosticId
++                    )
++                    group.leave()
++                }
+                 handle(connection: connection)
+             }
+         }
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-diagnostics-before/Sources/AgentLoopCore/Kernel/Orchestrator.swift	2026-09-05 22:51:40
++++ Sources/AgentLoopCore/Kernel/Orchestrator.swift	2026-09-05 23:12:03
+@@ -8120,6 +8120,7 @@
+     private let control = EngineManagedProbeDrainControlV1()
+     private let group = DispatchGroup()
+     private let barrier = EngineManagedProbeDrainBarrierV1()
++    private let diagnosticId = UUID()
+ 
+     package init(
+         stdoutDescriptor: Int32,
+@@ -8150,11 +8151,24 @@
+     }
+ 
+     package func finish() throws -> EngineManagedProbeCapturedOutputV1 {
+-        try barrier.join(
+-            waitUntilClosed: { _ in
+-                group.wait(
++        let diagnosticId = diagnosticId
++        return try barrier.join(
++            waitUntilClosed: { retryingAfterTimeout in
++                let attempt = retryingAfterTimeout ? 2 : 1
++                RuntimeLifecycleDiagnostics.event(
++                    .drainJoinStarted,
++                    owner: diagnosticId,
++                    value: attempt
++                )
++                let joined = group.wait(
+                     timeout: .now() + .seconds(1)
+                 ) == .success
++                RuntimeLifecycleDiagnostics.event(
++                    joined ? .drainJoinCompleted : .drainJoinTimedOut,
++                    owner: diagnosticId,
++                    value: attempt
++                )
++                return joined
+             },
+             result: { try state.result() }
+         )
+@@ -8167,10 +8181,22 @@
+         standardError: Bool,
+         maximumOutputBytes: Int
+     ) {
++        let diagnosticId = diagnosticId
++        let streamValue = standardError ? 1 : 0
+         group.enter()
+         control.workerStarted()
++        RuntimeLifecycleDiagnostics.event(
++            .drainQueued,
++            owner: diagnosticId,
++            value: streamValue
++        )
+         DispatchQueue.global(qos: .utility).async {
+-            [state, control, group] in
++            [state, control, group, diagnosticId] in
++            RuntimeLifecycleDiagnostics.event(
++                .drainStarted,
++                owner: diagnosticId,
++                value: streamValue
++            )
+             var ownedDescriptor = descriptor
+             defer {
+                 do {
+@@ -8181,6 +8207,11 @@
+                     state.record(error)
+                 }
+                 control.workerFinished()
++                RuntimeLifecycleDiagnostics.event(
++                    .drainFinished,
++                    owner: diagnosticId,
++                    value: streamValue
++                )
+                 group.leave()
+             }
+             let flags = Darwin.fcntl(ownedDescriptor, F_GETFL)
+@@ -8214,7 +8245,14 @@
+                     }
+                     continue
+                 }
+-                if count == 0 { return }
++                if count == 0 {
++                    RuntimeLifecycleDiagnostics.event(
++                        .drainEOF,
++                        owner: diagnosticId,
++                        value: streamValue
++                    )
++                    return
++                }
+                 let failure = errno
+                 if failure == EINTR { continue }
+                 if failure == EAGAIN || failure == EWOULDBLOCK {
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-diagnostics-before/Sources/AgentLoopCore/Loop/CliProcessBackend.swift	2026-08-30 08:11:53
++++ Sources/AgentLoopCore/Loop/CliProcessBackend.swift	2026-09-05 23:03:47
+@@ -529,6 +529,7 @@
+     private let codeSignatureRevalidator:
+         any CliProcessCodeSignatureRevalidatingV1
+     private let owner: CliProcessMechanicsState
++    private let diagnosticId = UUID()
+     private let continuation:
+         AsyncThrowingStream<CliProcessFrameV1, Error>.Continuation
+     private let lock = NSLock()
+@@ -1124,10 +1125,33 @@
+     private func finalize(
+         _ core: CliSpawnCore
+     ) async throws -> CliProcessExitEvidenceV1 {
++        let diagnosticId = diagnosticId
++        var successful = false
++        RuntimeLifecycleDiagnostics.event(
++            .cliFinalizeStarted,
++            owner: diagnosticId
++        )
++        defer {
++            RuntimeLifecycleDiagnostics.event(
++                .cliFinalizeFinished,
++                owner: diagnosticId,
++                value: successful ? 0 : 1
++            )
++        }
+         var firstFailure: (any Error)?
+         do {
+             try await core.stdinTask.value
++            RuntimeLifecycleDiagnostics.event(
++                .cliStdinFinished,
++                owner: diagnosticId,
++                value: 0
++            )
+         } catch {
++            RuntimeLifecycleDiagnostics.event(
++                .cliStdinFinished,
++                owner: diagnosticId,
++                value: 1
++            )
+             if !isCancellationRequested() {
+                 firstFailure = error as? CliProcessBackendError
+                     ?? CliProcessBackendError.processLaunchFailed(
+@@ -1142,8 +1166,23 @@
+         }
+ 
+         let reap = await core.reapTask.value
++        RuntimeLifecycleDiagnostics.event(
++            .cliReaped,
++            owner: diagnosticId,
++            value: reap.status == nil ? 1 : 0
++        )
+         let stdoutEOF = await core.stdoutTask.value
++        RuntimeLifecycleDiagnostics.event(
++            .cliStdoutFinished,
++            owner: diagnosticId,
++            value: stdoutEOF ? 0 : 1
++        )
+         let stderrEOF = await core.stderrTask.value
++        RuntimeLifecycleDiagnostics.event(
++            .cliStderrFinished,
++            owner: diagnosticId,
++            value: stderrEOF ? 0 : 1
++        )
+         if let failure = reap.failure {
+             firstFailure = firstFailure
+                 ?? CliProcessBackendError.processCleanupFailed(
+@@ -1166,9 +1205,23 @@
+         } catch {
+             firstFailure = firstFailure ?? error
+         }
++        RuntimeLifecycleDiagnostics.event(
++            .cliServerStopStarted,
++            owner: diagnosticId
++        )
+         do {
+             try core.server.stop()
++            RuntimeLifecycleDiagnostics.event(
++                .cliServerStopFinished,
++                owner: diagnosticId,
++                value: 0
++            )
+         } catch {
++            RuntimeLifecycleDiagnostics.event(
++                .cliServerStopFinished,
++                owner: diagnosticId,
++                value: 1
++            )
+             firstFailure = firstFailure ?? error
+         }
+         do {
+@@ -1179,7 +1232,7 @@
+         if let firstFailure { throw firstFailure }
+ 
+         let flags = currentSignalFlags()
+-        return CliProcessExitEvidenceV1(
++        let evidence = CliProcessExitEvidenceV1(
+             pid: core.pid,
+             processGroupID: core.processGroupID,
+             status: reap.status ?? -1,
+@@ -1189,6 +1242,8 @@
+             stderrEOF: stderrEOF,
+             childReaped: reap.status != nil
+         )
++        successful = true
++        return evidence
+     }
+ 
+     private func removeCleanupFiles() throws {
+--- docs/collaboration/tasks/2026-09-05-desktop-coding-closure/runtime-diagnostics-before/Sources/AgentLoopTestSuite/CliBackendTests.swift	2026-08-30 17:55:45
++++ Sources/AgentLoopTestSuite/CliBackendTests.swift	2026-09-05 23:03:47
+@@ -3464,18 +3464,79 @@
+ }
+ 
+ private func p1f1d075AssertR9DCompositionContract() async throws {
++    let diagnosticId = UUID()
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 0
++    )
+     try await p1f1d075AssertGenerationComposition()
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 0
++    )
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 1
++    )
+     try await p1f1d075AssertFailedAttemptOwnership()
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 1
++    )
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 2
++    )
+     try await p1f1d075AssertAcquisitionTransactionUnwind()
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 2
++    )
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 3
++    )
+     try await p1f1d075AssertOuterAcquisitionGuard()
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 3
++    )
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 4
++    )
+     try await p1f1d075AssertBridgeAttemptOwnership()
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 4
++    )
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 5
++    )
+     try await p1f1d075AssertSynchronousLazySeed()
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 5
++    )
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 6
++    )
+     try p1f1d075AssertLiveDrainOwnership()
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 6
++    )
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 7
++    )
+     try p1f1d075AssertSurvivingGroupStopsLiveDrain(entry: .run)
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 7
++    )
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 8
++    )
+     try p1f1d075AssertSurvivingGroupStopsLiveDrain(
+         entry: .abortSuspended
+     )
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 8
++    )
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionStarted, owner: diagnosticId, value: 9
++    )
+     try p1f1d075AssertManagedProbeCleanup()
++    RuntimeLifecycleDiagnostics.event(
++        .probeCompositionCompleted, owner: diagnosticId, value: 9
++    )
+ }
+ 
+ @Test func p1f1_075CLIHelpCapabilityMismatchIsUnsupported() async throws {
+--- /dev/null	2026-09-05 23:13:19
++++ Sources/AgentLoopCore/Observability/RuntimeLifecycleDiagnostics.swift	2026-09-05 23:03:47
+@@ -0,0 +1,30 @@
++import Dispatch
++import Foundation
++import os
++
++package enum RuntimeLifecycleStage: String, Sendable {
++    case boardAcceptQueued, boardAcceptStarted, boardAcceptFinished
++    case boardConnectionAccepted, boardHandlerQueued, boardHandlerStarted, boardHandlerFinished
++    case boardStopStarted, boardAcceptJoined, boardHandlersJoined
++    case drainQueued, drainStarted, drainEOF, drainFinished
++    case drainJoinStarted, drainJoinCompleted, drainJoinTimedOut
++    case probeCompositionStarted, probeCompositionCompleted
++    case cliFinalizeStarted, cliStdinFinished, cliReaped, cliStdoutFinished, cliStderrFinished
++    case cliServerStopStarted, cliServerStopFinished, cliFinalizeFinished
++}
++
++package enum RuntimeLifecycleDiagnostics {
++    private static let enabled = ProcessInfo.processInfo.environment[
++        "AGENTLOOP_RUNTIME_DIAGNOSTICS"
++    ] == "1"
++    private static let logger = Logger(
++        subsystem: "com.muzi.agentloop", category: "runtime-lifecycle"
++    )
++
++    package static func event(
++        _ stage: RuntimeLifecycleStage, owner: UUID, value: Int = 0
++    ) {
++        guard enabled else { return }
++        logger.notice("stage=\(stage.rawValue, privacy: .public) owner=\(owner.uuidString, privacy: .public) mono=\(DispatchTime.now().uptimeNanoseconds, privacy: .public) value=\(value, privacy: .public)")
++    }
++}

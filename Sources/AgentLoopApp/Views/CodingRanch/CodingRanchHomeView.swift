@@ -16,6 +16,7 @@ struct CodingRanchHomeView: View {
     var onOpenGuide: () -> Void = {}
     var onOpenNotes: () -> Void = {}
     var onOpenSettings: () -> Void = {}
+    var onArchiveCamp: () -> Void = {}
 
     @State private var quickText = ""
     @State private var showFeedComposer = false
@@ -131,6 +132,16 @@ struct CodingRanchHomeView: View {
             .buttonStyle(CampSecondaryButtonStyle())
         Button("驿站设置", action: onOpenSettings)
             .buttonStyle(CampSecondaryButtonStyle())
+        Menu {
+            Button("归档营地…", role: .destructive) {
+                onArchiveCamp()
+            }
+        } label: {
+            Label("营地操作", systemImage: "ellipsis.circle")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("归档或管理这个营地")
     }
 
     private var feedHero: some View {

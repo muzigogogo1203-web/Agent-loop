@@ -1,0 +1,34 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[3/6] Compiling AgentLoopTestSuite CliBackendTests.swift
+[4/6] Emitting module AgentLoopTestSuite
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[4/7] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[5/7] Linking RunTests
+[6/7] Applying RunTests
+Build of product 'RunTests' complete! (53.78s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test p1f1d075FDChildFailureReachesParent() started.
+◇ Test p1f1d075FDClaimRejectsOccupiedTargetWithoutClosingIt() started.
+✔ Test p1f1d075FDClaimRejectsOccupiedTargetWithoutClosingIt() passed after 0.009 seconds.
+
+=== FD CHILD BEGIN mode=expected-failure pid=4279 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-A9E3DD3E-B2E9-47B9-876D-5B5FAEA8BAC9/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-A9E3DD3E-B2E9-47B9-876D-5B5FAEA8BAC9/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() started.
+✘ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() recorded an issue at CliBackendTests.swift:3911:2: Caught error: deliberateChildFailure
+✘ Test p1f1_075CLIHelpCapabilityMismatchIsUnsupported() failed after 0.002 seconds with 1 issue.
+✘ Test run with 1 test in 0 suites failed after 0.002 seconds with 1 issue.
+
+=== FD CHILD PHASE EVIDENCE mode=expected-failure pid=4279 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-A9E3DD3E-B2E9-47B9-876D-5B5FAEA8BAC9/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-A9E3DD3E-B2E9-47B9-876D-5B5FAEA8BAC9/phases.evidence ===
+
+=== FD CHILD END mode=expected-failure pid=4279 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-A9E3DD3E-B2E9-47B9-876D-5B5FAEA8BAC9/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/p1f1d-075-fd-child-A9E3DD3E-B2E9-47B9-876D-5B5FAEA8BAC9/phases.evidence read-errors=[] ===
+✔ Test p1f1d075FDChildFailureReachesParent() passed after 0.215 seconds.
+✔ Test run with 2 tests in 0 suites passed after 0.217 seconds.

@@ -1,0 +1,21 @@
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test cliResumeSignalPreservesCooperativeProgress() started.
+
+=== FD CHILD BEGIN label=cli-resume-signal-progress-child mode=1 pid=60131 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/cli-resume-signal-progress-child-03C26C0B-15B3-4D28-8994-23FF1CBDA68A/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/cli-resume-signal-progress-child-03C26C0B-15B3-4D28-8994-23FF1CBDA68A/phases.evidence ===
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test cliResumeSignalPreservesCooperativeProgress() started.
+CLI RESUME SIGNAL PROGRESS PHASES cancelled=true invocations=1 signal=Optional(19) group=Optional(31415) entered=true sibling=true rescue=true entry-timeout=false read=Optional(1) read-byte=Optional(211) read-errno=nil read-close-errno=nil write=Optional(1) write-errno=nil write-close-errno=nil controller=true
+✘ Test cliResumeSignalPreservesCooperativeProgress() recorded an issue at BlockingProcessOperationTests.swift:804:9: Expectation failed: !((snapshot → BlockingProgressSnapshot(readEntered: true, siblingProgressed: true, rescueUsed: true, entryTimedOut: false, readCount: Optional(1), readByte: Optional(211), readError: nil, readerCloseError: nil, writeCount: Optional(1), writeError: nil, writerCloseError: nil, controllerCompleted: true)).rescueUsed → true → true)
+✘ Test cliResumeSignalPreservesCooperativeProgress() failed after 1.017 seconds with 1 issue.
+✘ Test run with 1 test in 0 suites failed after 1.017 seconds with 1 issue.
+
+=== FD CHILD PHASE EVIDENCE label=cli-resume-signal-progress-child mode=1 pid=60131 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/cli-resume-signal-progress-child-03C26C0B-15B3-4D28-8994-23FF1CBDA68A/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/cli-resume-signal-progress-child-03C26C0B-15B3-4D28-8994-23FF1CBDA68A/phases.evidence ===
+
+=== FD CHILD END label=cli-resume-signal-progress-child mode=1 pid=60131 raw-status=256 log=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/cli-resume-signal-progress-child-03C26C0B-15B3-4D28-8994-23FF1CBDA68A/child.log evidence=/var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/cli-resume-signal-progress-child-03C26C0B-15B3-4D28-8994-23FF1CBDA68A/phases.evidence read-errors=[] ===
+✘ Test cliResumeSignalPreservesCooperativeProgress() recorded an issue at BlockingProcessOperationTests.swift:859:2: Caught error: childStatus(pid: 60131, status: 256, log: file:///var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/cli-resume-signal-progress-child-03C26C0B-15B3-4D28-8994-23FF1CBDA68A/child.log, evidence: file:///var/folders/_9/2080h8b50s94v1ympg0mm8pr0000gn/T/cli-resume-signal-progress-child-03C26C0B-15B3-4D28-8994-23FF1CBDA68A/phases.evidence)
+✘ Test cliResumeSignalPreservesCooperativeProgress() failed after 1.188 seconds with 1 issue.
+✘ Test run with 1 test in 0 suites failed after 1.188 seconds with 1 issue.

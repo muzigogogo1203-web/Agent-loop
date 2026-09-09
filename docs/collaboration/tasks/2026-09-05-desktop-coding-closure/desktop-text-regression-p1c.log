@@ -1,0 +1,223 @@
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'RunTests' complete! (0.14s)
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite P1CGoalCoachContractTests started.
+◇ Suite P1CInputEnvelopeContractTests started.
+◇ Suite P1CControlContractMigrationTests started.
+◇ Suite P1EContractIntegrationTests started.
+◇ Suite P1CDomainEventContractTests started.
+◇ Test p1e32P1DInvalidationAndMemoryRollbackAtomically() started.
+◇ Test controlContractMigrationExactDDLAndConstraints() started.
+◇ Test persistedControlContractConstantsAndWorkKeyDerivationsAreExact() started.
+◇ Test captureAndInputParsingWorkCommitAtomically() started.
+◇ Test crossCampAmbiguityBlocksGoalCreationWithoutWrites() started.
+✔ Test persistedControlContractConstantsAndWorkKeyDerivationsAreExact() passed after 0.001 seconds.
+◇ Test workerCommandEnvelopeFactoriesAreExactAttemptScopedAndReplayStable() started.
+✔ Test controlContractMigrationExactDDLAndConstraints() passed after 0.076 seconds.
+◇ Test controlContractMigrationReplaysFromFreshAndV11Twice() started.
+✔ Test workerCommandEnvelopeFactoriesAreExactAttemptScopedAndReplayStable() passed after 0.121 seconds.
+◇ Test preparedCommandIsPreReceiptAuthorityAndNewResultIsPostMutationOnly() started.
+✔ Test preparedCommandIsPreReceiptAuthorityAndNewResultIsPostMutationOnly() passed after 0.001 seconds.
+◇ Test commandEnvelopeWholeHashCoversEveryFieldAndNullability() started.
+✔ Test commandEnvelopeWholeHashCoversEveryFieldAndNullability() passed after 0.001 seconds.
+◇ Test canonicalContractCodingReusesCanonicalJSONV1GoldenBytes() started.
+✔ Test canonicalContractCodingReusesCanonicalJSONV1GoldenBytes() passed after 0.001 seconds.
+◇ Test campSafeJSONRejectsUnknownForbiddenIdentityAndNoncanonicalBytes() started.
+✔ Test campSafeJSONRejectsUnknownForbiddenIdentityAndNoncanonicalBytes() passed after 0.003 seconds.
+◇ Test campSafeJSONRejectsSemanticallyForbiddenReferenceValues() started.
+✔ Test campSafeJSONRejectsSemanticallyForbiddenReferenceValues() passed after 0.001 seconds.
+◇ Test everyCommandResultAndAuditShapeIsExactAndOrdered() started.
+✔ Test everyCommandResultAndAuditShapeIsExactAndOrdered() passed after 0.001 seconds.
+◇ Test executeCommandCommitsReceiptProjectionEventsAndOutboxAtomically() started.
+✔ Test captureAndInputParsingWorkCommitAtomically() passed after 0.131 seconds.
+◇ Test inputCaptureReplayAndPayloadDriftConflict() started.
+✔ Test crossCampAmbiguityBlocksGoalCreationWithoutWrites() passed after 0.143 seconds.
+◇ Test convertToGoalCommitsInputGoalEventsAndOutboxesAtomically() started.
+✔ Test controlContractMigrationReplaysFromFreshAndV11Twice() passed after 0.110 seconds.
+◇ Test controlContractMigrationRollbackLeavesV13Untouched() started.
+✔ Test p1e32P1DInvalidationAndMemoryRollbackAtomically() passed after 0.224 seconds.
+✔ Suite P1EContractIntegrationTests passed after 0.225 seconds.
+✔ Test controlContractMigrationRollbackLeavesV13Untouched() passed after 0.038 seconds.
+◇ Test controlContractAppendOnlyTablesRejectNoopUpdateAndDelete() started.
+✔ Test executeCommandCommitsReceiptProjectionEventsAndOutboxAtomically() passed after 0.104 seconds.
+◇ Test executeCommandReplayReturnsOldResultWithoutMutation() started.
+✔ Test inputCaptureReplayAndPayloadDriftConflict() passed after 0.114 seconds.
+◇ Test inputCaptureReplayUsesCallerOwnedIDAndExistingWorkResult() started.
+✔ Test controlContractAppendOnlyTablesRejectNoopUpdateAndDelete() passed after 0.037 seconds.
+◇ Test controlContractSchemaHasExactInboxRedactionShape() started.
+✔ Test convertToGoalCommitsInputGoalEventsAndOutboxesAtomically() passed after 0.135 seconds.
+◇ Test convertToGoalReplayUsesCallerOwnedGoalIDAfterProjectionAdvances() started.
+✔ Test controlContractSchemaHasExactInboxRedactionShape() passed after 0.033 seconds.
+◇ Test inputSchemaHasNoParseAttemptColumn() started.
+✔ Test inputSchemaHasNoParseAttemptColumn() passed after 0.028 seconds.
+◇ Test inputSchemaRejectsDeletedStatusWithActiveRetention() started.
+✔ Test executeCommandReplayReturnsOldResultWithoutMutation() passed after 0.109 seconds.
+◇ Test creationReplayUsesPersistedResultBeforeIDFactoryOrProjectionBranch() started.
+✔ Test inputSchemaRejectsDeletedStatusWithActiveRetention() passed after 0.039 seconds.
+◇ Test activeInputRequiresExactlyOneInlineOrPayloadRef() started.
+✔ Test inputCaptureReplayUsesCallerOwnedIDAndExistingWorkResult() passed after 0.119 seconds.
+◇ Test inputParsingCrashIsAdopted() started.
+✔ Test activeInputRequiresExactlyOneInlineOrPayloadRef() passed after 0.034 seconds.
+◇ Test inputSchemaRejectsTombstoneRetentionWithLiveStatus() started.
+✔ Test convertToGoalReplayUsesCallerOwnedGoalIDAfterProjectionAdvances() passed after 0.135 seconds.
+◇ Test goalP1CTransitionsOnlyClarifyingReadyAbandonedAndFailed() started.
+✔ Test goalP1CTransitionsOnlyClarifyingReadyAbandonedAndFailed() passed after 0.001 seconds.
+◇ Test openCoachSessionEnqueuesDurableCoachWorkAtomically() started.
+✔ Test inputSchemaRejectsTombstoneRetentionWithLiveStatus() passed after 0.032 seconds.
+✔ Suite P1CControlContractMigrationTests passed after 0.432 seconds.
+✔ Test creationReplayUsesPersistedResultBeforeIDFactoryOrProjectionBranch() passed after 0.107 seconds.
+◇ Test replayValidatesCompleteStoredEventAndOutboxGraph() started.
+✔ Test inputParsingCrashIsAdopted() passed after 0.106 seconds.
+◇ Test controlWorkAdoptionRequiresExpiredLeaseAndRecoversSameOwnerAcrossKinds() started.
+✔ Test openCoachSessionEnqueuesDurableCoachWorkAtomically() passed after 0.132 seconds.
+◇ Test openCoachReplayUsesCallerOwnedSessionAndQuestionIDs() started.
+✔ Test controlWorkAdoptionRequiresExpiredLeaseAndRecoversSameOwnerAcrossKinds() passed after 0.182 seconds.
+◇ Test inputParsingRenewalHandsLatestClaimToTerminalCommit() started.
+✔ Test openCoachReplayUsesCallerOwnedSessionAndQuestionIDs() passed after 0.131 seconds.
+◇ Test oneCoachSessionPerGoalControlsConcurrentOpenResumeAndTerminalBranches() started.
+✔ Test replayValidatesCompleteStoredEventAndOutboxGraph() passed after 0.271 seconds.
+◇ Test executeCommandRejectsTypeHashOrEventCountDriftTotally() started.
+✔ Test inputParsingRenewalHandsLatestClaimToTerminalCommit() passed after 0.105 seconds.
+◇ Test inputParsingTerminalTimeIsMonotonicAndRetryBackoffStartsAtFailure() started.
+✔ Test oneCoachSessionPerGoalControlsConcurrentOpenResumeAndTerminalBranches() passed after 0.122 seconds.
+◇ Test coachSessionAllowsExactlyOneOpenQuestion() started.
+✔ Test executeCommandRejectsTypeHashOrEventCountDriftTotally() passed after 0.095 seconds.
+◇ Test multiAggregateCommandUsesStableOrdinalsAndVersionChains() started.
+✔ Test inputParsingTerminalTimeIsMonotonicAndRetryBackoffStartsAtFailure() passed after 0.105 seconds.
+◇ Test inputParsingRenewalFailureCancelsParserWithoutProjectionCommit() started.
+✔ Test multiAggregateCommandUsesStableOrdinalsAndVersionChains() passed after 0.092 seconds.
+◇ Test eventCountOrdinalOrProjectionFailureRollsBackEverything() started.
+✔ Test coachSessionAllowsExactlyOneOpenQuestion() passed after 0.131 seconds.
+◇ Test coachQuestionAndAnswerEnforceCoachAndUserActors() started.
+✔ Test coachQuestionAndAnswerEnforceCoachAndUserActors() passed after 0.001 seconds.
+◇ Test everyGoalCoachCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() started.
+✔ Test everyGoalCoachCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() passed after 0.001 seconds.
+◇ Test coachSealedDecisionKeyNeverComesFromProvider() started.
+✔ Test inputParsingRenewalFailureCancelsParserWithoutProjectionCommit() passed after 0.094 seconds.
+◇ Test inputParsingRetriesBoundedlyThenParseFailed() started.
+✔ Test eventCountOrdinalOrProjectionFailureRollsBackEverything() passed after 0.085 seconds.
+◇ Test domainEventCopiesEnvelopeAndOwnsRecordedAt() started.
+✔ Test coachSealedDecisionKeyNeverComesFromProvider() passed after 0.132 seconds.
+◇ Test coachProviderInterfaceOrdersPersistedHistoryBeforeAwait() started.
+✔ Test domainEventCopiesEnvelopeAndOwnsRecordedAt() passed after 0.090 seconds.
+◇ Test domainEventRejectsMissingCampBadTimeAndVersionPreSQL() started.
+✔ Test inputParsingRetriesBoundedlyThenParseFailed() passed after 0.133 seconds.
+◇ Test inputParsingCancelRejectsStaleResult() started.
+✔ Test domainEventRejectsMissingCampBadTimeAndVersionPreSQL() passed after 0.083 seconds.
+◇ Test outboxClaimReleaseSentCASAndReplayAreDeterministic() started.
+✔ Test inputParsingCancelRejectsStaleResult() passed after 0.091 seconds.
+◇ Test cancelParsingAndDeleteRejectsNoActiveBranchBeforeMutation() started.
+✔ Test cancelParsingAndDeleteRejectsNoActiveBranchBeforeMutation() passed after 0.001 seconds.
+◇ Test inputParsingTerminalMutationRollbackIsTotal() started.
+✔ Test coachProviderInterfaceOrdersPersistedHistoryBeforeAwait() passed after 0.151 seconds.
+◇ Test coachProviderInvalidOutputFailsDeterministicallyExactlyOnce() started.
+✔ Test outboxClaimReleaseSentCASAndReplayAreDeterministic() passed after 0.085 seconds.
+◇ Test inboxApplyReplayConflictAndTypedRejectionAreDurable() started.
+✔ Test inputParsingTerminalMutationRollbackIsTotal() passed after 0.097 seconds.
+◇ Test inputTransitionMatrixAcceptsOnlyStageSpecEdges() started.
+✔ Test inputTransitionMatrixAcceptsOnlyStageSpecEdges() passed after 0.001 seconds.
+◇ Test ordinaryInputTransitionsRejectEveryActiveParsingStateWithoutWrites() started.
+✔ Test inboxApplyReplayConflictAndTypedRejectionAreDurable() passed after 0.089 seconds.
+◇ Test inboxTypedRejectionRollsBackHandlerSavepointBeforeDurableEvidence() started.
+✔ Test coachProviderInvalidOutputFailsDeterministicallyExactlyOnce() passed after 0.134 seconds.
+◇ Test coachAnswerEnqueuesNextDurableTurnAtomically() started.
+✔ Test inboxTypedRejectionRollsBackHandlerSavepointBeforeDurableEvidence() passed after 0.085 seconds.
+◇ Test inboxSameKeyAndStoredHashButDifferentBytesFailsClosedWithoutHandler() started.
+✔ Test coachAnswerEnqueuesNextDurableTurnAtomically() passed after 0.137 seconds.
+◇ Test coachAnswerReplayDoesNotEnqueueSecondTurn() started.
+✔ Test inboxSameKeyAndStoredHashButDifferentBytesFailsClosedWithoutHandler() passed after 0.085 seconds.
+◇ Test inboxConflictCASPersistsExactRejectedShapeAndThrowsAfterCommit() started.
+✔ Test ordinaryInputTransitionsRejectEveryActiveParsingStateWithoutWrites() passed after 0.304 seconds.
+◇ Test everyInputCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() started.
+✔ Test inboxConflictCASPersistsExactRejectedShapeAndThrowsAfterCommit() passed after 0.087 seconds.
+◇ Test inboxOrdinaryRedactionIsRejectedWithoutCASOrHandler() started.
+✔ Test coachAnswerReplayDoesNotEnqueueSecondTurn() passed after 0.141 seconds.
+◇ Test coachProposalReplayUsesGoalIDAsUnderstandingID() started.
+✔ Test everyInputCommandEnforcesExactActorAndDeviceMatrixBeforeSQL() passed after 0.085 seconds.
+◇ Test inputParserInterfaceUsesOnePersistedPreAwaitSnapshotAndClosedOutcome() started.
+✔ Test inboxOrdinaryRedactionIsRejectedWithoutCASOrHandler() passed after 0.088 seconds.
+◇ Test inboxOrdinaryRedactionFencePreservesEveryOrigin() started.
+✔ Test coachProposalReplayUsesGoalIDAsUnderstandingID() passed after 0.136 seconds.
+◇ Test coachFailureRetriesAtomicallyAndKeepsSessionInterviewing() started.
+✔ Test inputParserInterfaceUsesOnePersistedPreAwaitSnapshotAndClosedOutcome() passed after 0.108 seconds.
+◇ Test inputParserInvalidOutputFailsDeterministicallyExactlyOnce() started.
+✔ Test inputParserInvalidOutputFailsDeterministicallyExactlyOnce() passed after 0.105 seconds.
+◇ Test crossCampAmbiguityNeverSelectsDefaultCamp() started.
+✔ Test coachFailureRetriesAtomicallyAndKeepsSessionInterviewing() passed after 0.130 seconds.
+◇ Test coachFailureExhaustionFailsSessionAndGoalAtomically() started.
+✔ Test inboxOrdinaryRedactionFencePreservesEveryOrigin() passed after 0.265 seconds.
+◇ Test domainEventsReadInValidatedAggregateOrder() started.
+✔ Test crossCampAmbiguityNeverSelectsDefaultCamp() passed after 0.102 seconds.
+◇ Test inputCampScopeIsStableFromCaptureThroughAssignment() started.
+✔ Test domainEventsReadInValidatedAggregateOrder() passed after 0.104 seconds.
+✔ Suite P1CDomainEventContractTests passed after 2.062 seconds.
+✔ Test coachFailureExhaustionFailsSessionAndGoalAtomically() passed after 0.165 seconds.
+◇ Test coachReopenedTerminalFailuresAndReplayPreserveReadyGoalAndConfirmedHead() started.
+✔ Test inputCampScopeIsStableFromCaptureThroughAssignment() passed after 0.111 seconds.
+◇ Test inputRejectsInitialOrAssignedCampDifferentFromAuditCamp() started.
+✔ Test inputRejectsInitialOrAssignedCampDifferentFromAuditCamp() passed after 0.095 seconds.
+◇ Test inputParsingWorkAlwaysUsesAuditCampAndArchivedCampFailsClosed() started.
+✔ Test coachReopenedTerminalFailuresAndReplayPreserveReadyGoalAndConfirmedHead() passed after 0.177 seconds.
+◇ Test readyRevisionWorkSealsAndValidatesJoinedConfirmedUnderstandingHash() started.
+✔ Test inputParsingWorkAlwaysUsesAuditCampAndArchivedCampFailsClosed() passed after 0.091 seconds.
+◇ Test inputTombstoneRetainsOnlyExactIdentityHashAndTimes() started.
+✔ Test inputTombstoneRetainsOnlyExactIdentityHashAndTimes() passed after 0.092 seconds.
+◇ Test inputTombstoneNullsDeviceConnectorAuthorBodyRefErrorAndParent() started.
+✔ Test readyRevisionWorkSealsAndValidatesJoinedConfirmedUnderstandingHash() passed after 0.148 seconds.
+◇ Test coachWorkerRestartAdoptsInterruptedTurn() started.
+✔ Test inputTombstoneNullsDeviceConnectorAuthorBodyRefErrorAndParent() passed after 0.090 seconds.
+◇ Test inputTombstoneForcesEmptyCandidatesUnspecifiedIntentLocalOnlyAndEqualDeleteTime() started.
+✔ Test coachWorkerRestartAdoptsInterruptedTurn() passed after 0.122 seconds.
+◇ Test coachRenewalHandsLatestClaimToTerminalCommit() started.
+✔ Test inputTombstoneForcesEmptyCandidatesUnspecifiedIntentLocalOnlyAndEqualDeleteTime() passed after 0.090 seconds.
+◇ Test localCaptureIdentityPersistsOnceAndFailsOnCorruption() started.
+✔ Test localCaptureIdentityPersistsOnceAndFailsOnCorruption() passed after 0.001 seconds.
+◇ Test localCaptureIdentityConcurrentFirstUseAcrossCopiesIsAtomic() started.
+✔ Test localCaptureIdentityConcurrentFirstUseAcrossCopiesIsAtomic() passed after 0.001 seconds.
+◇ Test localCaptureIdentityConcurrentFirstUseAcrossIndependentAdaptersIsAtomic() started.
+✔ Test localCaptureIdentityConcurrentFirstUseAcrossIndependentAdaptersIsAtomic() passed after 0.008 seconds.
+◇ Test localCaptureUsesLocalOwnerAndInstallationDeviceWithoutAccountIdentity() started.
+✔ Test coachRenewalHandsLatestClaimToTerminalCommit() passed after 0.120 seconds.
+◇ Test coachTerminalTimeIsMonotonicAfterRenewalAndBackoffStartsAtFailure() started.
+✔ Test localCaptureUsesLocalOwnerAndInstallationDeviceWithoutAccountIdentity() passed after 0.084 seconds.
+◇ Test localCapturePortAndInitializerRemainSourceCompatible() started.
+✔ Test localCapturePortAndInitializerRemainSourceCompatible() passed after 0.077 seconds.
+◇ Test localCaptureTraceCorrelationAndRequestIDsAreExact() started.
+✔ Test coachTerminalTimeIsMonotonicAfterRenewalAndBackoffStartsAtFailure() passed after 0.122 seconds.
+◇ Test coachWorkerCancellationLeavesRecoverableRunningWork() started.
+✔ Test localCaptureTraceCorrelationAndRequestIDsAreExact() passed after 0.080 seconds.
+◇ Test loadInputUsesReadPortAndMapsMissingRecordToFailure() started.
+✔ Test coachWorkerCancellationLeavesRecoverableRunningWork() passed after 0.113 seconds.
+◇ Test coachTerminalMutationRollbackRestoresWorkSessionGoal() started.
+✔ Test loadInputUsesReadPortAndMapsMissingRecordToFailure() passed after 0.071 seconds.
+◇ Test legacyIngestionAdapterIsDisplayOnlyAndCreatesNoInputOrGoal() started.
+✔ Test legacyIngestionAdapterIsDisplayOnlyAndCreatesNoInputOrGoal() passed after 0.075 seconds.
+◇ Test nilInputCampNeverInfersAuthority() started.
+✔ Test coachTerminalMutationRollbackRestoresWorkSessionGoal() passed after 0.124 seconds.
+◇ Test understandingEditAlwaysCreatesNewVersion() started.
+✔ Test nilInputCampNeverInfersAuthority() passed after 0.098 seconds.
+✔ Suite P1CInputEnvelopeContractTests passed after 3.061 seconds.
+✔ Test understandingEditAlwaysCreatesNewVersion() passed after 0.163 seconds.
+◇ Test requestConfirmationDoesNotRewriteUnderstandingBody() started.
+✔ Test requestConfirmationDoesNotRewriteUnderstandingBody() passed after 0.127 seconds.
+◇ Test requestUnderstandingRevisionWithdrawsOrReopensAndEnqueuesTurn() started.
+✔ Test requestUnderstandingRevisionWithdrawsOrReopensAndEnqueuesTurn() passed after 0.416 seconds.
+◇ Test coachCannotConfirmUnderstanding() started.
+✔ Test coachCannotConfirmUnderstanding() passed after 0.001 seconds.
+◇ Test confirmUnderstandingSupersedesPriorVersionAndMakesGoalReady() started.
+✔ Test confirmUnderstandingSupersedesPriorVersionAndMakesGoalReady() passed after 0.179 seconds.
+◇ Test coachRestartRestoresExactlyOneOpenQuestionWithoutChatMemory() started.
+✔ Test coachRestartRestoresExactlyOneOpenQuestionWithoutChatMemory() passed after 0.111 seconds.
+◇ Test goalAbandonAndFailCancelActiveControlWorkAtomically() started.
+✔ Test goalAbandonAndFailCancelActiveControlWorkAtomically() passed after 0.224 seconds.
+◇ Test goalAbandonReplayUsesSealedSessionBranchAfterProjectionChanges() started.
+✔ Test goalAbandonReplayUsesSealedSessionBranchAfterProjectionChanges() passed after 0.119 seconds.
+◇ Test goalFailReplayUsesSealedSessionBranchAfterProjectionChanges() started.
+✔ Test goalFailReplayUsesSealedSessionBranchAfterProjectionChanges() passed after 0.115 seconds.
+◇ Test goalReadyRemainsContractFreeBeforeExplicitActivation() started.
+✔ Test goalReadyRemainsContractFreeBeforeExplicitActivation() passed after 0.137 seconds.
+✔ Suite P1CGoalCoachContractTests passed after 4.592 seconds.
+✔ Test run with 103 tests in 5 suites passed after 4.592 seconds.

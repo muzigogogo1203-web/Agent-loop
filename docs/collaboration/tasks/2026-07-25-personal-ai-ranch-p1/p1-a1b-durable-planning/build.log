@@ -1,0 +1,173 @@
+===== A1B AUTHORITATIVE APP BUILD — 2026-07-27 =====
+command=swift build --product AgentLoopApp
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[2/40] Compiling AgentLoopApp CodingRanchCommonViews.swift
+[3/40] Compiling AgentLoopApp CodingRanchHomeView.swift
+[4/40] Compiling AgentLoopApp CodingRanchLiveHosts.swift
+[5/40] Compiling AgentLoopApp CodingRanchOnboardingView.swift
+[6/43] Compiling AgentLoopApp CompanionAvatarView.swift
+[7/43] Compiling AgentLoopApp FeedView.swift
+[8/43] Compiling AgentLoopApp McpStationSection.swift
+[9/43] Compiling AgentLoopApp NoteListPane.swift
+[10/43] Compiling AgentLoopApp Theme.swift
+[11/43] Compiling AgentLoopApp TrophyCenterView.swift
+[12/43] Compiling AgentLoopApp resource_bundle_accessor.swift
+[13/43] Compiling AgentLoopApp AgentLoopApp.swift
+[14/43] Compiling AgentLoopApp AppStore.swift
+[15/43] Compiling AgentLoopApp CodingRanchContracts.swift
+[16/43] Compiling AgentLoopApp CodingRanchStoreAdapter.swift
+[17/43] Compiling AgentLoopApp ScheduleManagerView.swift
+[18/43] Compiling AgentLoopApp SettingsView.swift
+[19/43] Compiling AgentLoopApp TaskRunView.swift
+[20/43] Emitting module AgentLoopApp
+[21/43] Compiling AgentLoopApp RanchArtView.swift
+[22/43] Compiling AgentLoopApp ReturnSummaryView.swift
+[23/43] Compiling AgentLoopApp RuminationViews.swift
+[24/43] Compiling AgentLoopApp CompanionEditorView.swift
+[25/43] Compiling AgentLoopApp McpStore.swift
+[26/43] Compiling AgentLoopApp MissionScheduler.swift
+[27/43] Compiling AgentLoopApp ScheduledMissionNotifications.swift
+[28/43] Compiling AgentLoopApp CampHomeView.swift
+[29/43] Compiling AgentLoopApp CowRosterView.swift
+[30/43] Compiling AgentLoopApp FeedComposerView.swift
+[31/43] Compiling AgentLoopApp CodingRanchPreviewFixtures.swift
+[32/43] Compiling AgentLoopApp MissionDraftConfirmationView.swift
+[33/43] Compiling AgentLoopApp TypingIndicatorView.swift
+[34/43] Compiling AgentLoopApp DMChatView.swift
+[35/43] Compiling AgentLoopApp RootView.swift
+[36/43] Compiling AgentLoopApp RuntimeProfileViews.swift
+[37/43] Compiling AgentLoopApp AskUserPromptView.swift
+[38/43] Compiling AgentLoopApp CardDetailInspector.swift
+[39/43] Compiling AgentLoopApp CardRowView.swift
+[40/43] Compiling AgentLoopApp CodingPastureTheaterView.swift
+[40/43] Write Objects.LinkFileList
+[41/43] Linking AgentLoopApp
+[42/43] Applying AgentLoopApp
+Build of product 'AgentLoopApp' complete! (14.78s)
+===== A1B RELEASE CORE AND DEBUG-SEAM GATE — 2026-07-27 =====
+command=total-plan §11 release/source gate
+[0/1] Planning build
+Building for production...
+warning: '--product' cannot be used with the automatic product 'AgentLoopCore'; building the default target instead
+[0/6] Write sources
+[4/14] Copying RanchArt
+[5/14] Write swift-version--1AB21518FC5DEDBE.txt
+[6/14] Write Objects.LinkFileList
+[7/15] Linking libGRDB-dynamic.dylib
+[9/15] Compiling AgentLoopCore ChatService.swift
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[10/18] Compiling P1MigrationMatrixRunner main.swift
+[10/18] Write Objects.LinkFileList
+[11/18] Linking P1MigrationMatrixRunner
+[13/18] Compiling AgentLoopApp AgentLoopApp.swift
+[13/18] Write Objects.LinkFileList
+[14/18] Linking AgentLoopApp
+[16/18] Compiling AgentLoopTestSuite AgentLoopTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[17/19] Compiling RunTests main.swift
+[17/19] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[18/19] Linking RunTests
+Build of product 'AgentLoopCore' complete! (122.68s)
+assert_rg_absent:9: read-only variable: status
+===== A1B RELEASE CORE AND DEBUG-SEAM GATE — BASH RERUN — 2026-07-27 =====
+command=total-plan §11 release/source gate (shell=/bin/bash)
+[0/1] Planning build
+Building for production...
+warning: '--product' cannot be used with the automatic product 'AgentLoopCore'; building the default target instead
+[0/6] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'AgentLoopCore' complete! (1.27s)
+release.core_build=pass
+release.debug_seam_core_total=1
+release.debug_seam_core_guarded=1
+release.debug_seam_test_total=3
+release.debug_seam_test_guarded=3
+release.debug_seam_symbol_absent=pass
+
+command=swift build --product AgentLoopApp
+reason=final exact-source rebuild after narrowing the preview defaults comment to its proven API surface
+===== A1B APP BUILD AFTER PREVIEW KEYCHAIN ROOT FIX — 2026-07-27 =====
+command=swift build --product AgentLoopApp
+[0/1] Planning build
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+[1/4] Write sources
+[3/6] Emitting module AgentLoopApp
+[4/6] Compiling AgentLoopApp AppStore.swift
+[4/7] Write Objects.LinkFileList
+[5/7] Linking AgentLoopApp
+[6/7] Applying AgentLoopApp
+Build of product 'AgentLoopApp' complete! (6.69s)
+
+=== 2026-07-27 Review01 bounded P1 repair ===
+command=swift build --product AgentLoopApp
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'AgentLoopApp' complete! (0.20s)
+app.build.after_review01=pass
+
+command=total-plan §11 release/source gate after Review01 repair (shell=/bin/bash)
+[0/1] Planning build
+Building for production...
+warning: '--product' cannot be used with the automatic product 'AgentLoopCore'; building the default target instead
+[0/9] Write sources
+[3/9] Write swift-version--1AB21518FC5DEDBE.txt
+[5/8] Compiling AgentLoopCore ChatService.swift
+[5/11] Write Objects.LinkFileList
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[6/13] Linking P1MigrationMatrixRunner
+[8/13] Compiling AgentLoopApp AgentLoopApp.swift
+[8/13] Write Objects.LinkFileList
+[9/13] Linking AgentLoopApp
+[11/13] Compiling AgentLoopTestSuite AgentLoopTests.swift
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:132:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+130 |             probe.close()
+131 |             server?.stop()
+132 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+133 |             server = nil
+134 |             usleep(300_000)
+
+/Users/muzi/Agent-loop/Sources/AgentLoopTestSuite/BoardServerTests.swift:163:22: warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+161 |             client.close()
+162 |             server?.stop()
+163 |             weak var weakServer = server
+    |                      `- warning: weak variable 'weakServer' was never mutated; consider changing to 'let' constant [#WeakMutability]
+164 |             server = nil
+165 |             let deadline = Date().addingTimeInterval(5)
+
+[#WeakMutability]: <https://docs.swift.org/compiler/documentation/diagnostics/weak-mutability>
+warning: save unknown driver flag -disable-cross-import-overlays as additional swift-frontend flag
+[12/14] Compiling RunTests main.swift
+[12/14] Write Objects.LinkFileList
+ld: warning: duplicate -rpath '/Library/Developer/CommandLineTools/Library/Developer/Frameworks' ignored
+[13/14] Linking RunTests
+Build of product 'AgentLoopCore' complete! (116.59s)
+release.core_build=pass
+release.reactive_resuppress_absent=pass
+release.debug_seam_core_total=1
+release.debug_seam_core_guarded=1
+release.debug_seam_test_total=3
+release.debug_seam_test_guarded=3
+release.debug_seam_symbol_absent=pass
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'AgentLoopApp' complete! (0.25s)
